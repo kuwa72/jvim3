@@ -159,7 +159,7 @@ track_vcol(line, cvcol, mode)
 		}
 		else
 #endif
-		vcol += chartabsize(* line++, vcol);
+		vcol += chartabsize(line++, vcol);
 	}
 
 	switch(mode) {
@@ -391,7 +391,7 @@ track_ins(dir)
 	/* padd preceeding space */
 	for (; fpad > 0; fpad--)
 #ifdef KANJI
-		inschar(' ', NUL);
+		inschar1(' ');
 #else
 		inschar(' ');
 #endif
@@ -399,8 +399,8 @@ track_ins(dir)
 	/* insert track */
 	cpos = curwin->w_cursor;
 #ifdef KANJI
-	for (; *ins; ins += ISkanji(*ins) ? 2 : 1)
-		inschar(*ins, *(ins + 1));
+	for (; *ins; ins += utf_len(*ins))
+		inschar(ins, utf_lenat(ins, 0));
 #else
 	inschar(*ins);
 #endif
@@ -408,7 +408,7 @@ track_ins(dir)
 	/* padd tailing space */
 	for (; bpad > 0; bpad--)
 #ifdef KANJI
-		inschar(' ', NUL);
+		inschar1(' ');
 #else
 		inschar(' ');
 #endif
@@ -418,7 +418,7 @@ track_ins(dir)
 		line = ml_get_pos(&curwin->w_cursor);
 		if (!*line)
 #ifdef KANJI
-			inschar('X', NUL);
+			inschar1('X');
 #else
 			inschar('X');
 #endif

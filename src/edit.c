@@ -50,6 +50,10 @@ edit(count)
 	char_u		*saved_line = NULL;		/* saved line for replace mode */
 	linenr_t	 saved_lnum = 0;		/* lnum of saved line */
 	int			 saved_char = NUL;		/* char replaced by NL */
+	char_u		 cbuf[UTF8_MAXLEN];		/* the character just typed */
+	int			 clen = 1;				/* its length in bytes */
+	char_u		 saved_bytes[UTF8_MAXLEN];	/* character replaced by NL */
+	int			 saved_nbytes = 0;
 	linenr_t	 lnum;
 	int 		 temp = 0;
 	int			 mode;
@@ -60,7 +64,6 @@ edit(count)
 	static int	 o_eol = FALSE;
 #ifdef KANJI
 	int			 k = NUL;
-	int			 saved_kchar = NUL;
 #endif
 #ifdef WEBB_KEYWORD_COMPL
 	FPOS		 complete_pos;
@@ -176,8 +179,20 @@ edit(count)
 		{
 			c = vgetc();
 #ifdef KANJI
+			/*
+			 * Take the whole character, not just two bytes: in REPLACE state a
+			 * character has to be put down in one piece.
+			 */
+			cbuf[0] = c;
+			clen = 1;
 			if (ISkanji(c))
-				k = vgetc();
+			{
+				int		want = utf_len(c);
+
+				while (clen < want)
+					cbuf[clen++] = vgetc();
+			}
+			k = (clen > 1) ? cbuf[1] : NUL;
 #endif
 #if defined(MSDOS) && defined(TERMCAP)		/* DOSGEN */
 			chk_ctlkey(&c, &k);
@@ -276,8 +291,12 @@ edit(count)
 #ifdef KANJI
 			{
 				int			 k;
+				char_u		 lit[UTF8_MAXLEN];
+
 				c = get_literal(&nextc, &k);
-				insertchar(c, k);
+				lit[0] = c;
+				lit[1] = k;
+				insertchar(lit, ISkanji(c) ? 2 : 1);
 			}
 #else
 			c = get_literal(&nextc);
@@ -488,8 +507,8 @@ dodel:
 						{
 							State = NORMAL;			/* no replace for this char */
 #ifdef KANJI
-							inschar(saved_char, saved_kchar);
-							saved_kchar = NUL;
+							inschar(saved_bytes, saved_nbytes);
+							saved_nbytes = 0;
 #else
 							inschar(saved_char);	/* but no showmatch */
 #endif
@@ -552,8 +571,8 @@ dodel:
 									s = (char *)saved_line;
 									while(*p && *s)
 									{
-										p += ISkanji(*p) ? 2 : 1;
-										s += ISkanji(*s) ? 2 : 1;
+										p += utf_len(*p);
+										s += utf_len(*s);
 									}
 
 									if (*p)
@@ -572,8 +591,8 @@ dodel:
 											delchar(FALSE);
 										delchar(FALSE);
 										State = INSERT;
-										inschar(*(char *)saved_line,
-													*((char *)saved_line + 1));
+										inschar(saved_line,
+													utf_lenat(saved_line, 0));
 										State = REPLACE;
 									}
 								}
@@ -586,8 +605,8 @@ dodel:
 									s = (char *)saved_line;
 									while (p < c && *s)
 									{
-										p += ISkanji(*p) ? 2 : 1;
-										s += ISkanji(*s) ? 2 : 1;
+										p += utf_len(*p);
+										s += utf_len(*s);
 									}
 
 									if (*s)
@@ -596,7 +615,7 @@ dodel:
 											delchar(FALSE);
 										delchar(FALSE);
 										State = INSERT;
-										inschar(*s, *(s + 1));
+										inschar(s, utf_lenat(s, 0));
 										State = REPLACE;
 										if (!p_ri)
 											dec_cursor();
@@ -630,7 +649,7 @@ dodel:
 											delchar(FALSE);
 											delchar(FALSE);
 											State = INSERT;
-											inschar(*s, *(s + 1));
+											inschar(s, utf_lenat(s, 0));
 											State = REPLACE;
 											break;
 										case 2:		/* kanji 2nd byte */
@@ -641,8 +660,8 @@ dodel:
 												State = INSERT;
 												if (ISkanji(*(s+1)))
 													delchar(FALSE);
-												inschar(' ', NUL);
-												inschar(*(s + 1), *(s + 2));
+												inschar1(' ');
+												inschar(s + 1, utf_lenat(s + 1, 0));
 												dec_cursor();
 												State = REPLACE;
 												break;
@@ -651,7 +670,7 @@ dodel:
 											default:
 												delchar(FALSE);
 												State = INSERT;
-												inschar(' ', NUL);
+												inschar1(' ');
 												State = REPLACE;
 												break;
 											}
@@ -668,10 +687,10 @@ dodel:
 											}
 											delchar(FALSE);
 											State = INSERT;
-											inschar(*s, *(s + 1));
+											inschar(s, utf_lenat(s, 0));
 											if (i == TRUE)
 											{
-												inschar(*(s + 1), *(s + 2));
+												inschar(s + 1, utf_lenat(s + 1, 0));
 												dec_cursor();
 											}
 											State = REPLACE;
@@ -821,8 +840,7 @@ redraw:
 			  	if (oneup(1L))
 #ifdef KANJI
 				{
-					if (ISkanjiCur() == 2)
-						curwin->w_cursor.col++;
+					kanji_align();		/* stay on a character boundary */
 					start_arrow();
 				}
 #else
@@ -843,8 +861,7 @@ redraw:
 			  	if (onedown(1L))
 #ifdef KANJI
 				{
-					if (ISkanjiCur() == 2)
-						curwin->w_cursor.col++;
+					kanji_align();		/* stay on a character boundary */
 					start_arrow();
 				}
 #else
@@ -883,7 +900,7 @@ redraw:
 					temp = (int)curbuf->b_p_ts;
 				temp -= curwin->w_cursor.col % temp;
 #ifdef KANJI
-				inschar(' ', NUL);
+				inschar1(' ');
 #else
 				inschar(' ');			/* delete one char in replace mode */
 #endif
@@ -900,15 +917,19 @@ redraw:
 				{
 					saved_char = gchar_cursor();
 #ifdef KANJI
-					if (ISkanji(saved_char))
 					{
-						saved_kchar = *(ml_get_cursor() + 1);
-						(void)delchar(FALSE);
+						char_u	*cp = ml_get_cursor();
+						int		 n;
+
+						saved_nbytes = utf_lenat(cp, 0);
+						memmove((char *)saved_bytes, (char *)cp,
+											(size_t)saved_nbytes);
+						for (n = saved_nbytes; n > 0; n--)
+							(void)delchar(FALSE);
 					}
-					else
-						saved_kchar = NUL;
-#endif
+#else
 					(void)delchar(FALSE);
+#endif
 				}
 				/*
 				 * When 'autoindent' set delete white space after the cursor.
@@ -943,7 +964,7 @@ redraw:
 			  	c = vgetc();
 				if (c != ESC)
 				{
-					if (charsize(c) == 1)
+					if (transcharsize(c) == 1)
 					{
 						screen_start();
 						screen_outchar(c, curwin->w_row, curwin->w_col);
@@ -976,7 +997,7 @@ redraw:
 					complete_col = complete_pos.col;
 					temp = complete_col - 1;
 #ifdef KANJI
-					ocls = jpcls('A', NUL);
+					ocls = jpcls((char_u *)"A");
 					onarow = FALSE;
 					if (temp < 0
 							|| !((ISkanjiPosition(ptr, temp + 1) == 2)
@@ -991,22 +1012,16 @@ redraw:
 					else
 					{
 #ifdef KANJI
-						if (ISkanjiPosition(ptr, temp + 1) == 2)
-							ocls = jpcls(ptr[temp - 1], ptr[temp]);
-						else
-							ocls = jpcls(ptr[temp], ptr[temp + 1]);
+						ocls = jpcls(utf_head(ptr, ptr + temp));
 						while (temp >= 0)
 						{
 							if (ISkanjiPosition(ptr, temp + 1) == 2)
-								temp -= 2;
+								temp = (int)(utf_head(ptr, ptr + temp) - ptr) - 1;
 							else if (isidchar(ptr[temp]))
 								temp --;
 							else
 								break;
-							if (ISkanjiPosition(ptr, temp + 1) == 2)
-								scls = jpcls(ptr[temp - 1], ptr[temp]);
-							else
-								scls = jpcls(ptr[temp], ptr[temp + 1]);
+							scls = jpcls(utf_head(ptr, ptr + temp));
 							if (ocls != scls)
 								break;
 						}
@@ -1068,15 +1083,12 @@ redraw:
 						while (temp >= 0)
 						{
 							if (ISkanjiPosition(ptr, temp + 1) == 2)
-								temp -= 2;
+								temp = (int)(utf_head(ptr, ptr + temp) - ptr) - 1;
 							else if (isidchar(ptr[temp]))
 								temp --;
 							else
 								break;
-							if (ISkanjiPosition(ptr, temp + 1) == 2)
-								scls = jpcls(ptr[temp - 1], ptr[temp]);
-							else
-								scls = jpcls(ptr[temp], ptr[temp + 1]);
+							scls = jpcls(utf_head(ptr, ptr + temp));
 							if (ocls != scls)
 								break;
 						}
@@ -1125,7 +1137,7 @@ redraw:
 #ifdef KANJI
 					while (*tmp_ptr != NUL)
 					{
-						scls = jpcls(tmp_ptr[0], tmp_ptr[1]);
+						scls = jpcls(tmp_ptr);
 						if (!onarow && EQ_TYPE(ocls, scls))
 							;
 						else if (ocls != scls)
@@ -1157,7 +1169,7 @@ redraw:
 #ifdef KANJI
 					while (*ptr != NUL)
 					{
-						scls = jpcls(ptr[0], ptr[1]);
+						scls = jpcls(ptr);
 						if (!onarow && EQ_TYPE(ocls, scls))
 							;
 						else if (ocls != scls)
@@ -1232,7 +1244,7 @@ copychar:
 					}
 					else
 #endif
-						temp += chartabsize(*ptr++, (long)temp);
+						temp += chartabsize(ptr++, (long)temp);
 
 				if (temp > curwin->w_virtcol)
 #ifdef KANJI
@@ -1284,7 +1296,7 @@ normalchar:
 
 				if (isidchar(c) || !echeck_abbr(c))
 #ifdef KANJI
-					insertchar(c, k);
+					insertchar(cbuf, clen);
 #else
 					insertchar(c);
 #endif
@@ -1426,9 +1438,9 @@ get_literal(nextc)
 
 	void
 #ifdef KANJI
-insertchar(c, k)
-	unsigned	c;
-	unsigned	k;
+insertchar(bytes, nbytes)
+	char_u	   *bytes;
+	int			nbytes;
 #else
 insertchar(c)
 	unsigned	c;
@@ -1436,6 +1448,10 @@ insertchar(c)
 {
 	int		haveto_redraw = FALSE;
 	int		textwidth;
+#ifdef KANJI
+	unsigned	c = bytes[0];
+	unsigned	k = nbytes > 1 ? bytes[1] : NUL;
+#endif
 
 	stop_arrow();
 
@@ -1482,13 +1498,18 @@ insertchar(c)
 			while (curwin->w_cursor.col > 0)			/* find position to break at */
 			{
 #ifdef KANJI
-				/* check the last byte of a multi-byte char. */
+				/* inside a multi-byte character: a line can break here */
 				if (ISkanjiFpos(&curwin->w_cursor) == 2)
 				{
-					foundcol = curwin->w_cursor.col + 1;
+					char_u	*base = ml_get(curwin->w_cursor.lnum);
+					int		 h = utf_headoff(base,
+										(int)curwin->w_cursor.col);
+
+					foundcol = h + utf_lenat(base, h);
 					if (curwin->w_cursor.col < wantcol)
 						break;
-					curwin->w_cursor.col -= 2;
+					curwin->w_cursor.col = (colnr_t)(utf_prev(base,
+													base + h) - base);
 					kborder = TRUE;
 					continue;
 				}
@@ -1524,7 +1545,7 @@ insertchar(c)
 #ifdef KANJI	/* KINSOKU syori */
 			if (foundcol == startcol)
 			{
-				if (!c || (ISkanji(c) ? isjppunc((char_u)c, (char_u)k, TRUE)
+				if (!c || (ISkanji(c) ? isjppunc(bytes, TRUE)
 									  : isaspunc((char_u)c, TRUE)) )
 					break;
 			}
@@ -1534,8 +1555,8 @@ insertchar(c)
 
 				if (ISkanji(*ptr))
 				{
-					if (isjppunc(*ptr, *(ptr + 1), TRUE))
-						foundcol += 2;
+					if (isjppunc(ptr, TRUE))
+						foundcol += utf_lenat(ptr, 0);
 				}
 				else if (*ptr && isaspunc(*ptr, TRUE))
 					foundcol ++;
@@ -1543,13 +1564,16 @@ insertchar(c)
 			}
 			if (foundcol > 0)				/* for opening symbols */
 			{
+				char_u *base = ml_get(curwin->w_cursor.lnum);
 				char_u *ptr = ml_get_cursor() - 1;
-				if (ISkanjiPointer(ml_get(curwin->w_cursor.lnum), ptr) == 2)
+				if (ISkanjiPointer(base, ptr) == 2)
 				{
-					if (isjppunc(*(ptr - 1), *ptr, FALSE))
+					char_u	*head = utf_head(base, ptr);
+
+					if (isjppunc(head, FALSE))
 					{
 						if ((foundcol == wantcol) || (!curbuf->b_p_ai))
-							foundcol -= 2;
+							foundcol -= utf_lenat(head, 0);
 					}
 				}
 				else if ((isaspunc(*ptr, FALSE)) && (foundcol == wantcol))
@@ -1596,17 +1620,18 @@ insertchar(c)
 		char_u			p[MAX_COLUMNS + 1];
 		int 			i;
 
+#ifdef KANJI
+		for (i = 0; i < nbytes; i++)
+			p[i] = bytes[i];
+#else
 		p[0] = c;
 		i = 1;
-#ifdef KANJI
-		if (ISkanji(c))
-			p[i++] = k;
 #endif
 		while ((c = vpeekc()) != NUL && !ISSPECIAL(c) && i < MAX_COLUMNS &&
 #ifdef KANJI
 					!ISkanji(c) &&
 #endif
-					(textwidth == 0 || (curwin->w_virtcol += charsize(p[i - 1])) < textwidth) &&
+					(textwidth == 0 || (curwin->w_virtcol += charsize(p + i - 1)) < textwidth) &&
 					!(!no_abbr && !isidchar(c) && isidchar(p[i - 1])))
 			p[i++] = vgetc();
 #ifdef DIGRAPHS
@@ -1620,14 +1645,19 @@ insertchar(c)
 	else
 	{
 #ifdef KANJI
-		inschar(c, k);
+		inschar(bytes, nbytes);
 #else
 		inschar(c);
 #endif
-		AppendCharToRedobuff(c);
 #ifdef KANJI
-		if (ISkanji(c))
-			AppendCharToRedobuff(k);
+		{
+			int		n;
+
+			for (n = 0; n < nbytes; n++)
+				AppendCharToRedobuff(bytes[n]);
+		}
+#else
+		AppendCharToRedobuff(c);
 #endif
 	}
 
@@ -1737,22 +1767,23 @@ oneright()
 	char_u *ptr;
 
 	ptr = ml_get_cursor();
+#ifdef KANJI
+	{
+		int		len = utf_lenat(ptr, 0);
+
+		if (ptr[0] == NUL || ptr[len] == NUL)
+			return FAIL;			/* already on the last character */
+		curwin->w_set_curswant = TRUE;
+		curwin->w_cursor.col += len;
+		return OK;
+	}
+#else
 	if (*ptr++ == NUL || *ptr == NUL)
 		return FAIL;
 	curwin->w_set_curswant = TRUE;
 	++curwin->w_cursor.col;
-#ifdef KANJI
-	if (ISkanjiCur() == 2)
-	{
-		if (ptr[1] == NUL)
-		{
-			curwin->w_cursor.col--;
-			return	FAIL;
-		}
-		curwin->w_cursor.col++;
-	}
-#endif
 	return OK;
+#endif
 }
 
 	int
@@ -1761,10 +1792,15 @@ oneleft()
 	if (curwin->w_cursor.col == 0)
 		return FAIL;
 	curwin->w_set_curswant = TRUE;
-	--curwin->w_cursor.col;
 #ifdef KANJI
-	if (ISkanjiCur() == 2 && curwin->w_cursor.col != 0)
-		--curwin->w_cursor.col;
+	{
+		char_u	*base = ml_get(curwin->w_cursor.lnum);
+
+		curwin->w_cursor.col =
+				(colnr_t)(utf_prev(base, base + curwin->w_cursor.col) - base);
+	}
+#else
+	--curwin->w_cursor.col;
 #endif
 	return OK;
 }
@@ -1873,8 +1909,7 @@ onepage(dir, count)
 	}
 	beginline(TRUE);
 #ifdef KANJI
-	if (ISkanjiCur() == 2 && curwin->w_cursor.col != 0)
-		curwin->w_cursor.col--;
+	kanji_align();
 #endif
 	updateScreen(VALID);
 	return OK;

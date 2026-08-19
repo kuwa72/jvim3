@@ -275,6 +275,7 @@ EXTERN int		GuiConfig	INIT(= 0);		/* Windows GUI config No. */
 EXTERN char_u	GuiIni[MAXPATHL]	INIT(= "vim");	/* Windows GUI Init file */
 EXTERN int		SubSysCon	INIT(= TRUE);	/* Console Sub System */
 EXTERN char_u **WinScreen	INIT(= NULL);	/* Windows Screen Buffer Copy */
+EXTERN int	  **WinScreenCP	INIT(= NULL);	/* code point per cell, see screen.c */
 EXTERN int		DoMake		INIT(= FALSE);	/* domake() call */
 EXTERN int		NoResize	INIT(= FALSE);	/* fexrc is doset() call */
 EXTERN long_u	BenchTime	INIT(= 0);		/* bench mark time */

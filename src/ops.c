@@ -885,8 +885,9 @@ doyank(deleting)
 			{
 					j = curbuf->b_endop.col - curbuf->b_startop.col + 1 - !mincl;
 #ifdef KANJI
-					if (ISkanjiFpos(&curbuf->b_endop) == 2)
-						j++;
+					/* never yank half of a character */
+					j = kanji_fixlen(ml_get(lnum),
+									(int)curbuf->b_startop.col, (int)j);
 #endif
 					if ((y_current->y_array[0] = strnsave(ml_get(lnum) + curbuf->b_startop.col, (int)j)) == NULL)
 					{
@@ -1009,10 +1010,10 @@ doput(dir, count, fix_indent)
 	curbuf->b_startop = curwin->w_cursor;			/* default for "'[" command */
 	if (dir == FORWARD)
 #ifdef KANJI
-	{
-		curbuf->b_startop.col++;
-		if (ISkanjiFpos(&curbuf->b_startop) == 2)
-			curbuf->b_startop.col++;
+	{			/* put after the character the cursor is on, not inside it */
+		curbuf->b_startop.col += utf_lenat(
+						ml_get_buf(curbuf, curbuf->b_startop.lnum, FALSE),
+						(int)curbuf->b_startop.col);
 	}
 #else
 		curbuf->b_startop.col++;
@@ -1124,7 +1125,7 @@ doput(dir, count, fix_indent)
 				}
 				else
 #endif
-				incr = chartabsize(*ptr, (long)vcol);
+				incr = chartabsize(ptr, (long)vcol);
 				vcol += incr;
 				++textcol;
 			}
@@ -1202,15 +1203,15 @@ doput(dir, count, fix_indent)
 				++col;
 				if (yanklen)
 				{
+#ifdef KANJI
+					int		n = utf_lenat(ml_get_cursor(), 0);
+
+					col                  += n - 1;
+					curwin->w_cursor.col += n;
+					curbuf->b_endop.col  += n;
+#else
 					++curwin->w_cursor.col;
 					++curbuf->b_endop.col;
-#ifdef KANJI
-					if (ISkanjiCur() == 2)
-					{
-						++col;
-						++curwin->w_cursor.col;
-						++curbuf->b_endop.col;
-					}
 #endif
 				}
 			}
@@ -1356,8 +1357,7 @@ error:
 		}
 	}
 #ifdef KANJI
-	if (ISkanjiCur() == 2)
-		curwin->w_cursor.col--;
+	kanji_align();
 #endif
 
 	msgmore(nlines);
@@ -1434,7 +1434,7 @@ dodis()
 				else
 					n -= msg_outtrans(p, n);
 #else
-				for (p = yb->y_array[j]; *p && (n -= charsize(*p)) >= 0; ++p)
+				for (p = yb->y_array[j]; *p && (n -= charsize(p)) >= 0; ++p)
 					msg_outtrans(p, 1);
 #endif
 			}
@@ -1486,7 +1486,7 @@ dis_msg(p, skip_esc)
 	n = (int)Columns - 6;
 #ifdef KANJI
 	while (*p && !(*p == ESC && skip_esc && *(p + 1) == NUL) &&
-						(n -= ISkanji(*p) ? 2 : charsize(*p)) >= 0)
+						(n -= charsize(p)) >= 0)
 		if (ISkanji(*p))
 		{
 			msg_outtrans(p, 2);
@@ -1496,7 +1496,7 @@ dis_msg(p, skip_esc)
 			msg_outtrans(p++, 1);
 #else
 	while (*p && !(*p == ESC && skip_esc && *(p + 1) == NUL) &&
-						(n -= charsize(*p)) >= 0)
+						(n -= charsize(p)) >= 0)
 		msg_outtrans(p++, 1);
 #endif
 }
@@ -1638,8 +1638,7 @@ dojoin(insert_space, redraw)
 	{
 		curwin->w_cursor.col = currsize - 1;
 #ifdef KANJI
-		if (ISkanjiCur() == 2)
-			curwin->w_cursor.col--;
+		kanji_align();
 #endif
 		(void)oneright();
 	}
@@ -1763,7 +1762,7 @@ block_prep(lnum, delete)
 			continue;
 		}
 #endif
-		incr = chartabsize(*textstart, (long)vcol);
+		incr = chartabsize(textstart, (long)vcol);
 		vcol += incr;
 		++textstart;
 		++textcol;
@@ -1812,7 +1811,7 @@ block_prep(lnum, delete)
 					continue;
 				}
 #endif
-				incr = chartabsize(*pend, (long)vcol);
+				incr = chartabsize(pend, (long)vcol);
 				vcol += incr;
 				++pend;
 			}

@@ -360,7 +360,9 @@ flush_buffers(typeahead)
 		*typestr = NUL;
 	}
 	else					/* remove mapped characters only */
-		STRCPY(typestr, typestr + typemaplen);
+		/* The ranges overlap, so this cannot be strcpy(). */
+		memmove((char *)typestr, (char *)typestr + typemaplen,
+						STRLEN(typestr + typemaplen) + 1);
 	typemaplen = 0;
 	no_abbr_cnt = 0;
 	noremaplist.nr_len = 0;
@@ -651,7 +653,7 @@ del_typestr(len)
 {
 	struct noremap *p;
 
-	STRCPY(typestr, typestr + len);
+	STRMOVE(typestr, typestr + len);
 										/* remove chars from the buffer */
 	if ((typemaplen -= len) < 0)		/* adjust typemaplen */
 		typemaplen = 0;
@@ -1191,7 +1193,7 @@ domap(maptype, keys, mode)
 	while (*p && (maptype == 1 || !iswhite(*p)))
 	{
 		if (*p == Ctrl('V') && p[1] != NUL)
-			STRCPY(p, p + 1);			/* remove CTRL-V */
+			STRMOVE(p, p + 1);			/* remove CTRL-V */
 		++p;
 	}
 	if (*p != NUL)
@@ -1216,7 +1218,7 @@ domap(maptype, keys, mode)
 		else
 #endif
 		if (*p == Ctrl('V') && p[1] != NUL)
-			STRCPY(p, p + 1);			/* remove CTRL-V */
+			STRMOVE(p, p + 1);			/* remove CTRL-V */
 		++p;
 	}
 

@@ -434,10 +434,10 @@ OBJ =	alloc.o unix.o buffer.o charset.o cmdcmds.o cmdline.o \
 	linefunc.o main.o mark.o memfile.o memline.o message.o misccmds.o \
 	normal.o ops.o param.o quickfix.o regexp.o \
 	regsub.o screen.o search.o \
-	tag.o term.o undo.o window.o $(TERMLIB) kanji.o track.o \
+	tag.o term.o undo.o window.o $(TERMLIB) kanji.o track.o utf8.o \
 	u2s.o s2u.o $(FEPOBJS)
 
-GOBJ = grep.o alloc.o charset.o kanji.o regexp.o regsub.o u2s.o s2u.o
+GOBJ = grep.o alloc.o charset.o kanji.o regexp.o regsub.o u2s.o s2u.o utf8.o
 
 all: $(TARGET) grep
 
@@ -592,8 +592,11 @@ mkcmdtab: mkcmdtab.o
 mkcmdtab.o: mkcmdtab.c
 	$(CC) $(CFLAGS) mkcmdtab.c
 
-kanji.o: kanji.c $(INCL) jptab.h
+kanji.o: kanji.c $(INCL) jptab.h utf8.h
 	$(CC) $(CFLAGS) kanji.c
+
+utf8.o: utf8.c $(INCL) utf8.h
+	$(CC) $(CFLAGS) utf8.c
 
 s2u.o: s2u.c
 	$(CC) $(CFLAGS) s2u.c

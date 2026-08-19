@@ -286,7 +286,7 @@ msg_outtrans(str, len)
 		}
 #endif
 		msg_outstr(transchar(*str));
-		retval += charsize(*str);
+		retval += charsize(str);
 		++str;
 	}
 	return retval;
@@ -348,7 +348,7 @@ msg_prt_line(s)
 				n_extra = 1;
 				c = '$';
 			}
-			else if (c != NUL && (n = charsize(c)) > 1)
+			else if (c != NUL && (n = transcharsize(c)) > 1)
 			{
 				n_extra = n - 1;
 				p = transchar(c);

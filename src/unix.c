@@ -18,6 +18,7 @@
 #include "proto.h"
 
 #include <sys/param.h>
+#include <errno.h>
 #include <fcntl.h>
 #if !defined(pyr) && !defined(NOT_BOTH_TIME)
 # include <time.h>			/* on some systems time.h should not be
@@ -659,14 +660,11 @@ vim_dirname(buf, len)
 	int len;
 {
 #if defined(SYSV_UNIX) || defined(USL) || defined(hpux) || defined(linux)
-	extern int		errno;
-# ifndef linux
-	extern char		*sys_errlist[];
-# endif
-
+	/* Was "extern int errno" plus sys_errlist[]: errno is thread local now and
+	 * sys_errlist[] is gone from current libcs. */
 	if (getcwd((char *)buf, len) == NULL)
 	{
-	    STRCPY(buf, sys_errlist[errno]);
+	    STRCPY(buf, strerror(errno));
 	    return FAIL;
 	}
     return OK;

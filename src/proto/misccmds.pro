@@ -7,7 +7,8 @@ int plines_win __PARMS((struct window *wp, long p));
 int plines_m __PARMS((long first, long last));
 int plines_m_win __PARMS((struct window *wp, long first, long last));
 #ifdef KANJI
-void inschar __PARMS((int c, int k));
+void inschar __PARMS((unsigned char *bytes, int nbytes));
+void inschar1 __PARMS((int c));
 #else
 void inschar __PARMS((int c));
 #endif

@@ -16,12 +16,37 @@
 #include "param.h"
 #ifdef KANJI
 #include "kanji.h"
+#include "utf8.h"
 #endif
 
 char *tgoto __PARMS((char *cm, int col, int line));
 
 static char_u 	*Nextscreen = NULL; 	/* What is currently on the screen. */
 static char_u 	**LinePointers = NULL;	/* array of pointers into Nextscreen */
+
+#ifdef KANJI
+/*
+ * Code point of the character in each screen cell, parallel to the character
+ * plane of Nextscreen:
+ *
+ *	0			the byte in the character plane is the whole character
+ *	> 0			this cell starts a multi-byte character with this code point
+ *	SCRCP_CONT	this cell is the right half of a double width character
+ *
+ * The character plane still holds the first byte of the character. That byte is
+ * never a space for multi-byte text, so the "skip over blanks" scans that look
+ * at the character plane keep working unchanged.
+ *
+ * This is what lets the internal representation be UTF-8: a character can be
+ * one to four bytes wide but only ever one or two cells wide, so bytes and
+ * cells can no longer be the same thing.
+ */
+# define SCRCP_CONT		(-1)
+static int		*ScreenCP = NULL;
+static int		**CPPointers = NULL;
+# define SCRCP(row, col)	(CPPointers[row][col])
+static int	out_cell __ARGS((int, int));
+#endif
 
 /*
  * Cline_height is set (in cursupdate) to the number of physical
@@ -582,6 +607,12 @@ win_line(wp, lnum, startrow, endrow)
 {
 	char_u 			*screenp;
 	int				c;
+#ifdef KANJI
+	char_u		   *c_start = NULL;	/* first byte of the character in c */
+	int				c_cp = 0;		/* its code point, 0 when c is the whole
+									 * character (see SCRCP above) */
+	int				c_wid = 1;		/* its width in screen cells */
+#endif
 	int				col;				/* visual column on screen */
 	long			vcol;				/* visual column for tabs */
 	int				row;				/* row in the window, excluding w_winpos */
@@ -704,12 +735,12 @@ win_line(wp, lnum, startrow, endrow)
 # endif
 			if (ISkanji(*ptr))
 			{
-				vcol += 2;
-				ptr  += 2;
+				vcol += utf_width(ptr);
+				ptr  += utf_lenat(ptr, 0);
 			}
 			else
 #endif
-			vcol += chartabsize(*ptr++, vcol);
+			vcol += chartabsize(ptr++, vcol);
 		}
 		if (vcol > wp->w_leftcol)
 		{
@@ -757,6 +788,10 @@ win_line(wp, lnum, startrow, endrow)
 		 * represent special characters (non-printable stuff).
 		 */
 
+#ifdef KANJI
+		c_cp = 0;					/* anything but the multi-byte path below */
+		c_wid = 1;
+#endif
 		if (n_extra)
 		{
 			c = *p_extra++;
@@ -789,7 +824,9 @@ win_line(wp, lnum, startrow, endrow)
 			}
 #endif
 #ifdef KANJI
-			if ((c = *ptr++) < ' ' || c == DEL || (c >=0x80 && !ISdisp(c)))
+			c_start = ptr;
+			if ((c = *ptr++) < ' ' || c == DEL
+					|| (c >= 0x80 && utf_decode(c_start, NULL) == UTF8_ERROR))
 #else
 			if ((c = *ptr++) < ' ' || (c > '~' && c <= 0xa0))
 #endif
@@ -851,12 +888,30 @@ win_line(wp, lnum, startrow, endrow)
 				else if (c != NUL)
 				{
 					p_extra = transchar(c);
-					n_extra = charsize(c) - 1;
+					n_extra = transcharsize(c) - 1;
 					c = *p_extra++;
 				}
 			}
+#ifdef KANJI
+			else if (c >= 0x80)
+			{
+				/*
+				 * A valid multi-byte character. It is one to four bytes long
+				 * but only zero, one or two cells wide, so remember its code
+				 * point and width and let the store below place it.
+				 */
+				c_cp = utf_decode(c_start, NULL);
+				c_wid = utf_width(c_start);
+				ptr = c_start + utf_lenat(c_start, 0);
+			}
+#endif
 		}
 
+#ifdef KANJI
+		/* A zero width character (a combining mark) takes no cell of its own. */
+		if (c_wid == 0)
+			continue;
+#endif
 		if (c == NUL)
 		{
 			if (invert)
@@ -864,10 +919,12 @@ win_line(wp, lnum, startrow, endrow)
 				if (vcol == 0)	/* invert first char of empty line */
 				{
 #ifdef KANJI
-					if (*screenp != ' ' || SCRINV(screenp, invert))
+					if (*screenp != ' ' || SCRCP(screen_row, col) != 0
+							|| SCRINV(screenp, invert))
 					{
 							*screenp = ' ';
 							SCREEN(screenp) = invert;
+							SCRCP(screen_row, col) = 0;
 							screen_char(screenp, screen_row, col);
 					}
 #else
@@ -904,12 +961,15 @@ win_line(wp, lnum, startrow, endrow)
 			break;
 		}
 #ifdef KANJI
-		if (col >= (ISkanji(c) ? Columns - 1 : Columns)) /* continuous line */
+		if (col >= (c_wid == 2 ? Columns - 1 : Columns)) /* continuous line */
 		{
-			if (col == Columns - 1 && (*screenp != BRCHAR || !SCRCMP(screenp, invert)))
+			if (col == Columns - 1 && (*screenp != BRCHAR
+					|| SCRCP(screen_row, col) != 0
+					|| !SCRCMP(screenp, invert)))
 			{
 				*screenp = BRCHAR;
 				SCREEN(screenp) = invert;
+				SCRCP(screen_row, col) = 0;
 				screen_char(screenp, screen_row, col);
 			}
 			col = 0;
@@ -947,43 +1007,40 @@ win_line(wp, lnum, startrow, endrow)
 		 * confused with spaces inserted by scrolling.
 		 */
 #ifdef KANJI
-		if (ISkanji(c))
+		if (c_cp != 0)
 		{
-			char_u	c1, c2;
-
-			c1 = c;
-			c2 = *ptr++;
-			if (*screenp != c1 || *(screenp + 1) != c2 || SCRINV(screenp, invert))
-			{
-				if (invert)
-				{
-					SCREEN(screenp)	  = invert;
-					SCREEN(screenp+1) = invert;
-				}
-				else
-				{
-					SCREEN(screenp)	  = 0;
-					SCREEN(screenp+1) = 0;
-				}
-				*screenp++ = c1;
-				*screenp++ = c2;
-				screen_char(screenp - 2, screen_row, col);
-				col  += 2;
-				vcol += 2;
-			}
-			else
-			{
-				screenp += 2;
-				vcol    += 2;
-				col     += 2;
-			}
-		}
-		else
-		{
-			if (SCRINV(screenp, invert) || *screenp != c)
+			/*
+			 * Multi-byte character. The first cell keeps its first byte, which
+			 * is never a space, so the "skip blanks" scans still work; the code
+			 * point plane carries the character itself. A double width one
+			 * marks the cell to its right as a continuation.
+			 */
+			if (*screenp != c || SCRCP(screen_row, col) != c_cp
+					|| SCRINV(screenp, invert))
 			{
 				*screenp = c;
 				SCREEN(screenp) = invert;
+				SCRCP(screen_row, col) = c_cp;
+				if (c_wid == 2)
+				{
+					screenp[1] = c_start[1];
+					SCREEN(screenp + 1) = invert;
+					SCRCP(screen_row, col + 1) = SCRCP_CONT;
+				}
+				screen_char(screenp, screen_row, col);
+			}
+			screenp += c_wid;
+			col     += c_wid;
+			vcol    += c_wid;
+		}
+		else
+		{
+			if (SCRINV(screenp, invert) || *screenp != c
+					|| SCRCP(screen_row, col) != 0)
+			{
+				*screenp = c;
+				SCREEN(screenp) = invert;
+				SCRCP(screen_row, col) = 0;
 				screen_char(screenp, screen_row, col);
 			}
 			++screenp;
@@ -1043,31 +1100,45 @@ screen_msg(msg, row, col)
 	while (*msg && col < Columns)
 	{
 #ifdef KANJI
-		if ((*screenp != *msg) || (ISkanji(*msg) && screenp[1] != msg[1])
-				|| !SCRCMP(screenp, invert) || (*msg == ' ' && SCRTST(screenp)))
+		if (ISkanji(*msg))
 		{
-			if (ISkanji(*msg))
+			int		cp = utf_decode(msg, NULL);
+			int		wid = utf_width(msg);
+			int		len = utf_lenat(msg, 0);
+
+			if (cp == UTF8_ERROR || wid < 1)
+			{							/* junk or zero width: skip the bytes */
+				msg += len;
+				continue;
+			}
+			if (wid == 2 && col + 1 >= Columns)
+				break;					/* no room for a double width one */
+			if (*screenp != msg[0] || SCRCP(row, col) != cp
+					|| !SCRCMP(screenp, invert))
 			{
 				*screenp = msg[0];
 				SCREEN(screenp) = invert;
-				screenp++;
-				*screenp = msg[1];
-				SCREEN(screenp) = invert;
-				screenp++;
-				screen_char(screenp - 2, row, col);
-				col += 2;
-				msg	+=2;
-				continue;
+				SCRCP(row, col) = cp;
+				if (wid == 2)
+				{
+					screenp[1] = msg[1];
+					SCREEN(screenp + 1) = invert;
+					SCRCP(row, col + 1) = SCRCP_CONT;
+				}
+				screen_char(screenp, row, col);
 			}
+			screenp += wid;
+			col     += wid;
+			msg     += len;
+			continue;
+		}
+		if ((*screenp != *msg) || SCRCP(row, col) != 0
+				|| !SCRCMP(screenp, invert) || (*msg == ' ' && SCRTST(screenp)))
+		{
 			*screenp = *msg;
 			SCREEN(screenp) = invert;
+			SCRCP(row, col) = 0;
 			screen_char(screenp, row, col);
-		}
-		if (ISkanji(*msg))
-		{
-			++screenp;
-			++col;
-			++msg;
 		}
 #else
 		if (*screenp != (*msg ^ invert) || *msg == (' ' ^ INVERTCODE))
@@ -1216,18 +1287,10 @@ screen_char(p, row, col)
 			if (i <= 4 + noinvcurs && canopt)
 			{
 #ifdef KANJI
-				char_u		*ptr;
-				ptr = p - i;
-				while (ptr < p)
-				{
-					if (ISkanji(*ptr))
-					{
-						outchar2(*ptr, *(ptr + 1));
-						ptr += 2;
-					}
-					else
-						outchar(*ptr++);
-				}
+				int		cc;
+
+				for (cc = col - i; cc < col; cc++)
+					out_cell(row, cc);
 #else	/* KANJI */
 				while (i)
 				{
@@ -1272,19 +1335,46 @@ screen_char(p, row, col)
 			outstr(unhighlight);
 	}
 #ifdef KANJI
-	if (ISkanji(*p))
-	{
-		outchar2(*p, *(p + 1));
-		p++;
-		oldcol++;
-	}
-	else
-		outchar(*p);
+	oldcol += out_cell(row, col);
 #else
 	outchar(*p ^ invert);
-#endif
 	oldcol++;
+#endif
 }
+
+#ifdef KANJI
+/*
+ * Write the character held in one screen cell to the terminal and return how
+ * many cells it covered. flushbuf() converts from the internal UTF-8 to the
+ * display encoding, so we emit UTF-8 here.
+ */
+	static int
+out_cell(row, col)
+	int		row;
+	int		col;
+{
+	int		cp;
+	int		i;
+	int		len;
+	char_u	buf[UTF8_MAXLEN];
+
+	if (CPPointers == NULL)
+		return 1;
+	cp = SCRCP(row, col);
+	if (cp == SCRCP_CONT)
+		return 1;				/* drawn together with the cell to its left */
+	if (cp <= 0)
+	{
+		outchar(LinePointers[row][col]);
+		return 1;
+	}
+	len = utf_encode(cp, buf);
+	for (i = 0; i < len; i++)
+		outchar(buf[i]);
+	i = utf_cpwidth(cp);
+	return i < 1 ? 1 : i;
+}
+#endif
 
 /*
  * Fill the screen from 'start_row' to 'end_row', from 'start_col' to 'end_col'
@@ -1351,7 +1441,7 @@ screen_fill(start_row, end_row, start_col, end_col, c1, c2)
 		for (col = start_col; col < end_col; ++col)
 		{
 #ifdef KANJI
-			if (*screenp != c || !SCRCMP(screenp, invert))
+			if (*screenp != c || SCRCP(row, col) != 0 || !SCRCMP(screenp, invert))
 #else
 			if (*screenp != c)
 #endif
@@ -1359,6 +1449,7 @@ screen_fill(start_row, end_row, start_col, end_col, c1, c2)
 #ifdef KANJI
 				*screenp = c;
 				SCREEN(screenp) = invert;
+				SCRCP(row, col) = 0;
 				if (!did_delete || c != ' ' || invert)
 #else
 				*screenp = c;
@@ -1438,6 +1529,10 @@ screenalloc(clear)
 	 */
 	free(Nextscreen);
 	free(LinePointers);
+#ifdef KANJI
+	free(ScreenCP);
+	free(CPPointers);
+#endif
 	for (wp = firstwin; wp; wp = wp->w_next)
 		win_free_lsize(wp);
 
@@ -1450,6 +1545,13 @@ screenalloc(clear)
 	WinScreen =
 #endif
 	LinePointers = (char_u **)malloc(sizeof(char_u *) * Rows);
+#ifdef KANJI
+	ScreenCP = (int *)malloc((size_t)(Rows * Columns) * sizeof(int));
+	CPPointers = (int **)malloc(sizeof(int *) * Rows);
+# ifdef NT
+	WinScreenCP = CPPointers;
+# endif
+#endif
 	for (wp = firstwin; wp; wp = wp->w_next)
 	{
 		if (win_alloc_lsize(wp) == FAIL)
@@ -1459,17 +1561,34 @@ screenalloc(clear)
 		}
 	}
 
-	if (Nextscreen == NULL || LinePointers == NULL || outofmem)
+	if (Nextscreen == NULL || LinePointers == NULL || outofmem
+#ifdef KANJI
+			|| ScreenCP == NULL || CPPointers == NULL
+#endif
+			)
 	{
 		emsg(e_outofmem);
 		free(Nextscreen);
 		Nextscreen = NULL;
+#ifdef KANJI
+		free(ScreenCP);
+		ScreenCP = NULL;
+		free(CPPointers);
+		CPPointers = NULL;
+# ifdef NT
+		WinScreenCP = NULL;
+# endif
+#endif
 	}
 	else
 	{
 #ifdef KANJI
 		for (i = 0; i < Rows; ++i)
+		{
 			LinePointers[i] = Nextscreen + i * Columns * 2;
+			CPPointers[i] = ScreenCP + i * Columns;
+		}
+		memset((char *)ScreenCP, 0, (size_t)(Rows * Columns) * sizeof(int));
 #else
 		for (i = 0; i < Rows; ++i)
 			LinePointers[i] = Nextscreen + i * Columns;
@@ -1515,6 +1634,7 @@ screenclear2()
 			memset(&Nextscreen[i * Columns * 2], ' ', Columns);
 			memset(&Nextscreen[i * Columns * 2 + Columns], 0, Columns);
 		}
+		memset((char *)ScreenCP, 0, (size_t)(Rows * Columns) * sizeof(int));
 	}
 #else
 	memset((char *)Nextscreen, ' ', (size_t)(Rows * Columns));
@@ -1720,7 +1840,7 @@ curs_columns(scroll)
 				}
 				else
 				{
-					col += chartabsize(*p, col);
+					col += chartabsize(p, col);
 					p++;
 				}
 				if (col >= Columns)
@@ -1816,10 +1936,16 @@ getvcol(wp, pos, type)
 	ptr = ml_get_buf(wp->w_buffer, pos->lnum, FALSE);
 	for (col = pos->col; col >= 0; --col)
 	{
+		char_u	   *cptr = ptr;		/* start of the character we are on */
+		int			clen = 1;		/* its length in bytes */
+
 		c = *ptr++;
 #ifdef KANJI
 		if (ISkanji(c))
-			ptr++;
+		{
+			clen = utf_lenat(cptr, 0);
+			ptr += clen - 1;
+		}
 		else
 #endif
 		if (c == NUL)		/* make sure we don't go past the end of the line */
@@ -1829,13 +1955,16 @@ getvcol(wp, pos, type)
 #ifdef KANJI
 		if (ISkanji(c))
 		{
-			if (type == 99 && (vcol % Columns) == (Columns - 1))
+			int		cwid = utf_width(cptr);
+
+			/* a double width character is not split over the right edge */
+			if (type == 99 && cwid == 2 && (vcol % Columns) == (Columns - 1))
 				vcol++;
-			incr = 2;
+			incr = cwid;
 		}
 		else
 #endif
-		incr = chartabsize(c, (long)vcol);
+		incr = chartabsize(cptr, (long)vcol);
 
 #ifdef KANJI
 		if (type == 99 && *ptr == NUL && c < ' ' && c != TAB
@@ -1855,7 +1984,7 @@ getvcol(wp, pos, type)
 		}
 #ifdef KANJI
 		if (ISkanji(c))
-			col--;
+			col -= clen - 1;
 #endif
 		vcol += incr;
 	}
@@ -2181,14 +2310,28 @@ screen_ins_lines(off, row, nlines, end)
 	end += off;
 	for (i = 0; i < nlines; ++i)
 	{
+#ifdef KANJI
+		int		*tempcp;
+#endif
+
 		j = end - 1 - i;
 		temp = LinePointers[j];
+#ifdef KANJI
+		tempcp = CPPointers[j];
+#endif
 		while ((j -= nlines) >= row)
+		{
 				LinePointers[j + nlines] = LinePointers[j];
+#ifdef KANJI
+				CPPointers[j + nlines] = CPPointers[j];
+#endif
+		}
 		LinePointers[j + nlines] = temp;
 		memset((char *)temp, ' ', (size_t)Columns);
 #ifdef KANJI
+		CPPointers[j + nlines] = tempcp;
 		memset((char *)&temp[Columns], 0, (size_t)Columns);
+		memset((char *)tempcp, 0, (size_t)Columns * sizeof(int));
 #endif
 	}
 	return OK;
@@ -2270,14 +2413,28 @@ screen_del_lines(off, row, nlines, end)
 	end += off;
 	for (i = 0; i < nlines; ++i)
 	{
+#ifdef KANJI
+		int		*tempcp;
+#endif
+
 		j = row + i;
 		temp = LinePointers[j];
+#ifdef KANJI
+		tempcp = CPPointers[j];
+#endif
 		while ((j += nlines) <= end - 1)
+		{
 			LinePointers[j - nlines] = LinePointers[j];
+#ifdef KANJI
+			CPPointers[j - nlines] = CPPointers[j];
+#endif
+		}
 		LinePointers[j - nlines] = temp;
 		memset((char *)temp, ' ', (size_t)Columns);
 #ifdef KANJI
+		CPPointers[j - nlines] = tempcp;
 		memset((char *)&temp[Columns], 0, (size_t)Columns);
+		memset((char *)tempcp, 0, (size_t)Columns * sizeof(int));
 #endif
 	}
 	return OK;

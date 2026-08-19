@@ -19,6 +19,7 @@
 #include	"ops.h"
 #include	"kanji.h"
 #include	"jptab.h"
+#include	"utf8.h"
 
 #define	JP_EUC_G2		0x8e
 #define	JP_EUC_G3		0x8f
@@ -33,6 +34,25 @@ static char_u *	asciiin			__ARGS((int));
 static char_u *	kanain			__ARGS((int));
 static char_u *	JPdisp			__ARGS((int *, int, int));
 static int		jisx0201rto0208	__ARGS((char_u, char_u, char_u *, char_u *));
+
+/*
+ * The internal representation is UTF-8; see utf8.c. The conversion engines
+ * below still speak Shift-JIS, because that is the pivot the EUC/JIS/Shift-JIS
+ * tables are built around, so the public kanjiconvsfrom()/kanjiconvsto() wrap
+ * them with a Shift-JIS <-> UTF-8 step. UTF-8 and UCS-2 files skip the pivot
+ * entirely, which is what keeps characters outside CP932 intact.
+ */
+static int		sjis_convsfrom __ARGS((char_u *, int, char_u *, int, char *,
+											char, int *));
+static char_u  *sjis_convsto __ARGS((char_u *, int, int));
+static int		sjis_islead __ARGS((int));
+static int		sjis_iskana __ARGS((int));
+static int		sjis_isdisp __ARGS((int));
+static int		sjis2cp __ARGS((char_u *, int));
+static int		cp2sjis __ARGS((int, char_u *));
+static int		sjis2utf8_n __ARGS((char_u *, int, char_u *, int));
+static char_u  *utf82sjis __ARGS((char_u *));
+static char_u  *utf82ucs2 __ARGS((char_u *, int));
 
 static char_u	kanji_map_sjis[]= {
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -474,22 +494,40 @@ static struct {
 	{{0xFC, 0x4B}, {0x8F, 0xF4, 0xFE}}, {{0x00, 0x00}, {0x00, 0x00, 0x00}},
 };
 
+/*
+ * Byte classification of the internal representation, which is UTF-8.
+ *
+ * These keep the names and the meaning the Shift-JIS version had, so the call
+ * sites all over the editor still read correctly:
+ *
+ *   ISkanji(c)  the byte starts a multi-byte character
+ *   ISkana(c)   the byte is a one-byte kana - impossible in UTF-8, see below
+ *   ISdisp(c)   the byte is part of a multi-byte character (lead or trailing)
+ *
+ * What did change is that a multi-byte character is no longer always two
+ * bytes. Use utf_len()/utf_lenat() for the length and utf_width() for the
+ * number of columns; never assume 2.
+ */
 	int
 ISkanji(code)
 int			code;
 {
 	if (code >= 0x100)
 		return 0;
-	return(kanji_map_sjis[code & 0xff] & 1);
+	return UTF8_ISLEAD(code) ? 1 : 0;
 }
 
+/*
+ * Halfwidth kana used to be a single byte in Shift-JIS (0xa1-0xdf). In UTF-8
+ * they are ordinary multi-byte characters (U+FF61..U+FF9F), so no byte is a
+ * one-byte kana any more and this is always false. Callers that really want to
+ * know whether a character is kana use utf_iskana().
+ */
 	int
 ISkana(code)
 int			code;
 {
-	if (code >= 0x100)
-		return 0;
-	return(kanji_map_sjis[code & 0xff] & 2);
+	return 0;
 }
 
 	int
@@ -498,34 +536,44 @@ int			code;
 {
 	if (code >= 0x100)
 		return 0;
-	return(kanji_map_sjis[code & 0xff]);
+	return (UTF8_ISLEAD(code) || UTF8_ISTAIL(code)) ? 1 : 0;
 }
 
 /* input pos : 1..strlen
-   return  0 : not kanji
-	   1 : kanji first byte
-	   2 : kanji last byte
+   return  0 : single byte character
+	   1 : first byte of a multi-byte character
+	   2 : trailing byte of a multi-byte character
 */
 	int
 ISkanjiPosition(ptr, pos)
 char_u	*	ptr;
 int			pos;
 {
-	int	kanji = 0;
+	char_u	*p;
+	char_u	*head;
 
-	for (; *ptr && pos--; ptr++)
-	{
-		if (kanji == 1)
-			kanji= 2;
-		else
-		{
-			if (ISkanji(*ptr))
-				kanji= 1;
-			else
-				kanji= 0;
-		}
-	}
-	return(kanji);
+	if (ptr == NULL || pos <= 0)
+		return 0;
+	/* pos is 1 based, and must not run past the end of the string. */
+	for (p = ptr; pos > 1; pos--, p++)
+		if (*p == NUL)
+			return 0;
+	if (*p == NUL)
+		return 0;
+	if (UTF8_ISLEAD(*p))
+		return 1;
+	if (!UTF8_ISTAIL(*p))
+		return 0;
+	/*
+	 * A trailing byte only counts as one if it really belongs to a character
+	 * that starts earlier; a stray 0x80 byte is a single byte of its own.
+	 */
+	head = utf_head(ptr, p);
+	if (head == p || !UTF8_ISLEAD(*head))
+		return 0;
+	if ((int)(p - head) >= utf_len(*head))
+		return 0;
+	return 2;
 }
 
 	int
@@ -544,6 +592,77 @@ colnr_t		col;
 	return(ISkanjiPosition(ml_get_buf(curbuf, lnum, FALSE), col + 1));
 }
 
+
+/*
+ * Bytes in the character at 'col' of line 'lnum'; the counterpart of
+ * ISkanjiCol() for stepping over a character.
+ */
+	int
+kanjilenCol(lnum, col)
+linenr_t	lnum;
+colnr_t		col;
+{
+	return utf_lenat(ml_get_buf(curbuf, lnum, FALSE), (int)col);
+}
+
+/*
+ * Snap the cursor onto the start of the character it is in. Nothing moves when
+ * it is already on a boundary.
+ */
+	void
+kanji_align()
+{
+	curwin->w_cursor.col = (colnr_t)utf_headoff(
+								ml_get(curwin->w_cursor.lnum),
+								(int)curwin->w_cursor.col);
+}
+
+/*
+ * Move the cursor forward to the next character boundary, if it is not on one
+ * already. The counterpart of kanji_align().
+ */
+	void
+kanji_align_next()
+{
+	char_u	*base = ml_get(curwin->w_cursor.lnum);
+	int		 h = utf_headoff(base, (int)curwin->w_cursor.col);
+
+	if (h < (int)curwin->w_cursor.col)
+		curwin->w_cursor.col = (colnr_t)(h + utf_lenat(base, h));
+}
+
+/*
+ * Byte index of the last byte of the character that covers 'col'. Used where an
+ * inclusive end of range has to cover the whole character.
+ */
+	int
+kanji_endcol(lnum, col)
+linenr_t	lnum;
+colnr_t		col;
+{
+	char_u	*base = ml_get_buf(curbuf, lnum, FALSE);
+	int		 h = utf_headoff(base, (int)col);
+
+	return h + utf_lenat(base, h) - 1;
+}
+
+/*
+ * Grow 'len' bytes starting at 'startcol' of 'base' so that the range ends on a
+ * character boundary. Returns the adjusted length.
+ */
+	int
+kanji_fixlen(base, startcol, len)
+char_u	*	base;
+int			startcol;
+int			len;
+{
+	int		endcol = startcol + len;		/* one past the last byte */
+	int		h = utf_headoff(base, endcol);
+
+	if (h < endcol)							/* ends inside a character */
+		len += utf_lenat(base, h) - (endcol - h);
+	return len;
+}
 
 	int
 ISkanjiCur()
@@ -582,31 +701,34 @@ int			colum;
 	{
 		if (ISkanji(c))
 		{
-			if (colum && ((int)(vcol % colum) == (colum - 1)))
+			int		clen = utf_lenat(ptr, 0);
+			int		cwid = utf_width(ptr);
+
+			/* A double width character does not straddle the right edge: a
+			 * filler column is inserted before it. */
+			if (cwid == 2 && colum && ((int)(vcol % colum) == (colum - 1)))
 			{
 				vcol++;
 				if (vcol > maxcol)
 				{
-					ptr --;
-					if (ISkanjiPointer(line, ptr) == 2)
-						ptr --;
+					ptr = utf_prev(line, ptr);
 					break;
 				}
 			}
-			vcol += 2;
+			vcol += cwid;
 			if (vcol > maxcol)
 				break;
-			ptr += 2;
+			ptr += clen;
 			continue;
 		}
 		if (colum && ptr[1] != NUL && c < ' ' && c != TAB
 									&& ((int)(vcol % colum) == (colum - 1)))
 		{
-			vcol += chartabsize(c, vcol);
+			vcol += chartabsize(ptr, vcol);
 			ptr ++;
 			continue;
 		}
-		vcol += chartabsize(c, vcol);
+		vcol += chartabsize(ptr, vcol);
 		if (vcol > maxcol)
 			break;
 		ptr ++;
@@ -616,7 +738,7 @@ int			colum;
 		if (c == NUL)
 			*wantcol = ptr - line;
 		else if (ISkanji(c))
-			*wantcol = ptr - line + 1;
+			*wantcol = ptr - line + utf_lenat(ptr, 0) - 1;
 		else
 			*wantcol = ptr - line;
 	}
@@ -999,19 +1121,52 @@ kanato(k1, k2, code)
  *		6 - symbols
  *		7 - other multi-char letter
  */
+
+/*
+ * Character class of a code point, used to decide where a word ends.
+ */
 	int
-jpcls(c, k)
-char_u		c;
-char_u		k;
+jpclscp(cp)
+	int		cp;
 {
-	if (c == ' ' || c == '\t' || c == NUL)
-		return 0;
-	if (ISkanji(c))
+	char_u	sjis[2];
+
+	if (cp >= 0x3041 && cp <= 0x309f)
+		return JPC_HIRA;
+	if ((cp >= 0x30a0 && cp <= 0x30ff) || (cp >= 0x31f0 && cp <= 0x31ff))
+		return JPC_KATA;
+	if (cp >= 0xff61 && cp <= 0xff9f)
+		return JPC_KANA;					/* halfwidth katakana */
+	if ((cp >= 0xff10 && cp <= 0xff19)
+			|| (cp >= 0xff21 && cp <= 0xff3a)
+			|| (cp >= 0xff41 && cp <= 0xff5a))
+		return JPC_ALNUM;					/* fullwidth alphanumerics */
+	if ((cp >= 0x3400 && cp <= 0x4dbf)
+			|| (cp >= 0x4e00 && cp <= 0x9fff)
+			|| (cp >= 0xf900 && cp <= 0xfaff)
+			|| (cp >= 0x20000 && cp <= 0x3ffff))
+		return JPC_KANJI;
+	/*
+	 * Letters of other scripts are word characters, like ASCII letters: a word
+	 * of Hangul or Cyrillic should be one "w" motion, not one per character.
+	 */
+	if ((cp >= 0x00c0 && cp <= 0x024f)			/* latin extended */
+			|| (cp >= 0x0370 && cp <= 0x052f)	/* greek, cyrillic */
+			|| (cp >= 0x0590 && cp <= 0x08ff)	/* hebrew, arabic */
+			|| (cp >= 0x0e00 && cp <= 0x0e7f)	/* thai */
+			|| (cp >= 0x1100 && cp <= 0x11ff)	/* hangul jamo */
+			|| (cp >= 0xac00 && cp <= 0xd7a3))	/* hangul syllables */
+		return 1;
+	/*
+	 * Anything else that has a Shift-JIS form keeps the class the JIS table
+	 * gives it, so Japanese punctuation behaves as it always did.
+	 */
+	if (cp2sjis(cp, sjis) == 2)
 	{
-		int		ret;
-		ret = sjistojis(c, k);
-		c = ((int_u)ret & 0xff00) >> 8;
-		k =  (int_u)ret & 0xff;
+		int		ret = sjistojis(sjis[0], sjis[1]);
+		int		c = ((int_u)ret & 0xff00) >> 8;
+		int		k = (int_u)ret & 0xff;
+
 		ret = jptab[c & 0x7f].cls1;
 		if (ret == JPC_KIGOU)
 			ret = jptab[k & 0x7f].cls2;
@@ -1019,11 +1174,29 @@ char_u		k;
 			ret = JPC_KIGOU;
 		return ret;
 	}
-	if (ISkana(c))
-		return JPC_KANA;
-	if (isidchar(c))
-		return 1;
-	return -1;
+	return JPC_KIGOU;						/* some other wide symbol */
+}
+
+/*
+ * Character class of the character at 'ptr'. 0 for white space, 1 for a word
+ * character, -1 for anything else, or one of the JPC_ classes.
+ */
+	int
+jpcls(ptr)
+char_u	*	ptr;
+{
+	int		cp;
+
+	if (ptr == NULL)
+		return 0;
+	if (*ptr == ' ' || *ptr == '\t' || *ptr == NUL)
+		return 0;
+	if (*ptr < 0x80)
+		return isidchar(*ptr) ? 1 : -1;
+	cp = utf_decode(ptr, NULL);
+	if (cp == UTF8_ERROR)
+		return -1;
+	return jpclscp(cp);
 }
 
 /*
@@ -1031,14 +1204,19 @@ char_u		k;
  *	processing or not.
  */
 	int
-isjppunc(c, k, type)
-char_u		c;
-char_u		k;
+isjppunc(ptr, type)
+char_u	*	ptr;
 int			type;
 {
+	char_u	sjis[2];
+	int		cp;
 	int		jis;
+	char_u	c, k;
 
-	jis = sjistojis(c, k);
+	cp = utf_decode(ptr, NULL);
+	if (cp == UTF8_ERROR || cp2sjis(cp, sjis) != 2)
+		return FALSE;					/* no line breaking rule for it */
+	jis = sjistojis(sjis[0], sjis[1]);
 	c = ((int_u)jis & 0xff00) >> 8;
 	k =  (int_u)jis & 0xff;
 	switch(jptab[c & 0x7f].cls1)
@@ -1130,22 +1308,19 @@ int			tocase;
  *	isspace(c, k) returns whether a kanji character ck space
  */
 	int
-isjpspace(c, k)
-char_u		c;
-char_u		k;
+isjpspace(ptr)
+char_u	*	ptr;
 {
-	int		jis;
+	int		cp;
 
-	jis = sjistojis(c, k);
-	c = ((int_u)jis & 0xff00) >> 8;
-	k =  (int_u)jis & 0xff;
-	switch(jptab[c & 0x7f].cls1)
-	{
-	case JPC_KIGOU:
-		return jptab[k & 0x7f].cls2 == 0 ? TRUE : FALSE;
-	default:
+	if (ptr == NULL || *ptr < 0x80)
 		return FALSE;
-	}
+	cp = utf_decode(ptr, NULL);
+	return (cp == 0x3000					/* ideographic space */
+			|| cp == 0x00a0					/* no-break space */
+			|| (cp >= 0x2000 && cp <= 0x200a)
+			|| cp == 0x202f || cp == 0x205f
+			|| cp == 0x3164) ? TRUE : FALSE;
 }
 
 /*
@@ -1210,6 +1385,8 @@ long		size;
 #ifdef UCODE
 	int		utf8 = 0;
 	int		bfu  = 0;
+	int		utf8ok = TRUE;	/* everything so far parses as UTF-8 */
+	int		utf8seq = 0;	/* multi-byte sequences seen */
 #endif
 
 	code = '\0';
@@ -1242,6 +1419,7 @@ long		size;
 		{
 			/* malformed */
 			utf8 = 0;
+			utf8ok = FALSE;
 			break;
 		}
 		else if (ptr[i] < 0xe0)
@@ -1259,9 +1437,11 @@ long		size;
 				{
 					/* malformed */
 					utf8 = 0;
+					utf8ok = FALSE;
 					break;
 				}
 			}
+			utf8seq++;
 			i += 2;
 		}
 		else if (ptr[i] < 0xf0)
@@ -1280,14 +1460,21 @@ long		size;
 				{
 					/* malformed */
 					utf8 = 0;
+					utf8ok = FALSE;
 					break;
 				}
 			}
+			utf8seq++;
 			i += 3;
 		}
-		else if (ptr[i] < 0xf8)
+		else if (ptr[i] < 0xf5)
 		{
-			/* valid but not supported */
+			/*
+			 * Four byte sequence, i.e. a character outside the BMP. Neither
+			 * Shift-JIS nor EUC ever produces this pattern, so it is strong
+			 * evidence; it used to be skipped without counting, which made a
+			 * single emoji tip the whole file over to Shift-JIS.
+			 */
 			if (size - i > 3)
 			{
 				if (!(ptr[i + 1] >= 0x80 && ptr[i + 1] < 0xc0
@@ -1296,10 +1483,20 @@ long		size;
 				{
 					/* malformed */
 					utf8 = 0;
+					utf8ok = FALSE;
 					break;
 				}
+				utf8 += 2;
 			}
+			utf8seq++;
 			i += 4;
+		}
+		else if (ptr[i] < 0xf8)
+		{
+			/* 0xf5..0xf7: not valid UTF-8 */
+			utf8 = 0;
+			utf8ok = FALSE;
+			break;
 		}
 		else if (ptr[i] < 0xfc)
 		{
@@ -1313,6 +1510,7 @@ long		size;
 				{
 					/* malformed */
 					utf8 = 0;
+					utf8ok = FALSE;
 					break;
 				}
 			}
@@ -1331,6 +1529,7 @@ long		size;
 				{
 					/* malformed */
 					utf8 = 0;
+					utf8ok = FALSE;
 					break;
 				}
 			}
@@ -1340,8 +1539,22 @@ long		size;
 		{
 			/* malformed */
 			utf8 = 0;
+			utf8ok = FALSE;
 			break;
 		}
+	}
+	/*
+	 * If the whole buffer parses as UTF-8 and holds at least one multi-byte
+	 * character, it is UTF-8. Shift-JIS and EUC never pass this test on real
+	 * text: their trailing bytes fall outside the UTF-8 continuation range
+	 * (0x80-0xbf), and a one byte halfwidth kana is not a valid lead byte
+	 * either. Without this, Japanese UTF-8 was regularly taken for Shift-JIS,
+	 * because most of its two byte prefixes also look like valid Shift-JIS.
+	 */
+	if (utf8ok && utf8seq > 0)
+	{
+		code = 'T';
+		goto breakBreak;
 	}
 	if (utf8 > 1)
 	{
@@ -1423,13 +1636,18 @@ long		size;
 				else if ((i >= 2) && (ptr[i-2] == 0xa4) && (0xa0 <= ptr[i-1]))
 					euc  += 40;		/* hiragana */
 #ifdef UCODE
-				else if ((0xa1 <= ptr[i-2] && ptr[i-2] <= 0xfe)
+				/*
+				 * These look back two or three bytes, so there have to be
+				 * that many: a file that starts with a newline used to read
+				 * before the start of the buffer here.
+				 */
+				else if ((i >= 2) && (0xa1 <= ptr[i-2] && ptr[i-2] <= 0xfe)
 								&& (0xa1 <= ptr[i-1] && ptr[i-1] <= 0xfe))
 					;	/* EUC */
-				else if (0x8e == ptr[i-2]
+				else if ((i >= 2) && 0x8e == ptr[i-2]
 								&& (0xa1 <= ptr[i-1] && ptr[i-1] <= 0xdf))
 					;	/* EUC */
-				else if (((0x81 <= ptr[i-2] && ptr[i-2] <= 0x9f)
+				else if ((i >= 2) && ((0x81 <= ptr[i-2] && ptr[i-2] <= 0x9f)
 								|| (0xe0 <= ptr[i-2] && ptr[i-2] <= 0xef))
 						&& ((0x40 <= ptr[i-1] && ptr[i-1] <= 0x7e)
 								|| (0x80 <= ptr[i-1] && ptr[i-1] <= 0xfc)))
@@ -1468,7 +1686,7 @@ long		size;
 #endif
 				if (bfr == TRUE)
 				{
-					if ((i >= 1) && (0x40 <= ptr[i] && ptr[i] <= 0xa0) && ISkanji(ptr[i-1]))
+					if ((i >= 1) && (0x40 <= ptr[i] && ptr[i] <= 0xa0) && sjis_islead(ptr[i-1]))
 					{
 						code = 'S';
 						goto breakBreak;
@@ -1639,8 +1857,434 @@ breakBreak:
 	return(code);
 }
 
+/*
+ * Shift-JIS byte tests, for the pivot only. The editor itself uses ISkanji(),
+ * which classifies UTF-8.
+ */
+	static int
+sjis_islead(c)
+	int		c;
+{
+	return (kanji_map_sjis[c & 0xff] & 1) != 0;
+}
+
+	static int
+sjis_iskana(c)
+	int		c;
+{
+	return (kanji_map_sjis[c & 0xff] & 2) != 0;	/* one byte halfwidth kana */
+}
+
+	static int
+sjis_isdisp(c)
+	int		c;
+{
+	return kanji_map_sjis[c & 0xff] != 0;
+}
+
+/*
+ * One or two Shift-JIS bytes at src -> code point, or UTF8_ERROR.
+ */
+/*
+ * Is this a well formed Shift-JIS sequence? The conversion tables index on the
+ * two bytes without checking them, so anything else has to be rejected here.
+ */
+	static int
+sjis_valid(c1, c2, len)
+	int		c1;
+	int		c2;
+	int		len;
+{
+	if (c1 < 0x80)
+		return TRUE;
+	if (c1 >= 0xa1 && c1 <= 0xdf)
+		return len >= 1;					/* one byte halfwidth kana */
+	if (!((c1 >= 0x81 && c1 <= 0x9f) || (c1 >= 0xe0 && c1 <= 0xfc)))
+		return FALSE;
+	if (len < 2)
+		return FALSE;
+	return ((c2 >= 0x40 && c2 <= 0x7e) || (c2 >= 0x80 && c2 <= 0xfc));
+}
+
+	static int
+sjis2cp(src, len)
+	char_u	*src;
+	int		len;
+{
+	char_u	buf[2];
+	int		cp;
+
+	if (src[0] < 0x80)
+		return src[0];
+	if (!sjis_valid(src[0], (len > 1) ? src[1] : 0, len))
+		return UTF8_ERROR;
+	buf[0] = src[0];
+	buf[1] = (len > 1) ? src[1] : NUL;
+	multi2wide(&buf[0], &buf[1], len, TRUE);		/* TRUE: big endian out */
+	cp = (buf[0] << 8) | buf[1];
+	return cp == 0 ? UTF8_ERROR : cp;
+}
+
+/*
+ * Code point -> Shift-JIS bytes in buf (needs 2). Returns the length, or 0 when
+ * the character has no Shift-JIS form.
+ */
+	static int
+cp2sjis(cp, buf)
+	int		cp;
+	char_u	*buf;
+{
+	char_u	w[2];
+	int		len;
+
+	if (cp < 0)
+		return 0;
+	if (cp < 0x80)
+	{
+		buf[0] = cp;
+		return 1;
+	}
+	if (cp > 0xffff)			/* outside the BMP: nothing to map onto */
+		return 0;
+	w[0] = (cp >> 8) & 0xff;	/* big endian, wide2multi() swaps it back */
+	w[1] = cp & 0xff;
+	len = wide2multi(w, 2, TRUE, FALSE);
+	if (len <= 0)
+		return 0;
+	if (len == 1 && w[0] == '?' && cp != '?')
+		return 0;				/* the code page has no such character */
+	memcpy((char *)buf, (char *)w, (size_t)len);
+	return len;
+}
+
+/*
+ * Shift-JIS -> UTF-8. Returns the length written, or -1 when dst is too small.
+ */
+	static int
+sjis2utf8_n(src, srclen, dst, dstlen)
+	char_u	*src;
+	int		srclen;
+	char_u	*dst;
+	int		dstlen;
+{
+	char_u	*d = dst;
+	int		i = 0;
+
+	while (i < srclen)
+	{
+		char_u	buf[UTF8_MAXLEN];
+		int		n, cp, len;
+
+		if (src[i] < 0x80)
+		{
+			if (d - dst >= dstlen)
+				return -1;
+			*d++ = src[i++];
+			continue;
+		}
+		n = (sjis_islead(src[i]) && i + 1 < srclen) ? 2 : 1;
+		cp = sjis2cp(&src[i], n);
+		if (cp == UTF8_ERROR)
+		{
+			cp = '?';
+			n = 1;					/* not a real character: skip one byte */
+		}
+		len = utf_encode(cp, buf);
+		if ((int)(d - dst) + len > dstlen)
+			return -1;
+		memcpy((char *)d, (char *)buf, (size_t)len);
+		d += len;
+		i += n;
+	}
+	return (int)(d - dst);
+}
+
+/*
+ * UTF-8 -> Shift-JIS, into a fresh buffer. Characters with no Shift-JIS form
+ * become '?'; that loss is inherent in writing a legacy encoding.
+ */
+	static char_u *
+utf82sjis(src)
+	char_u	*src;
+{
+	char_u	*top;
+	char_u	*d;
+
+	if (src == NULL)
+		return NULL;
+	/* Shift-JIS is never longer than the UTF-8 it came from. */
+	if ((top = alloc((unsigned)(STRLEN(src) + 1))) == NULL)
+		return NULL;
+	d = top;
+	while (*src != NUL)
+	{
+		int		len;
+		int		cp;
+		int		n;
+
+		if (*src < 0x80)
+		{
+			*d++ = *src++;
+			continue;
+		}
+		cp = utf_decode(src, &len);
+		src += len;
+		if (cp == UTF8_ERROR)
+		{
+			*d++ = '?';
+			continue;
+		}
+		n = cp2sjis(cp, d);
+		if (n == 0)
+			*d++ = '?';
+		else
+			d += n;
+	}
+	*d = NUL;
+	return top;
+}
+
+/*
+ * UTF-8 -> UCS-2, in a fresh buffer terminated by a 16 bit NUL. Characters
+ * outside the BMP become a surrogate pair, so nothing is lost.
+ */
+	static char_u *
+utf82ucs2(src, ubig)
+	char_u	*src;
+	int		ubig;
+{
+	char_u	*top;
+	char_u	*d;
+
+	if (src == NULL)
+		return NULL;
+	/* At worst every input byte turns into one 16 bit unit. */
+	if ((top = alloc((unsigned)(STRLEN(src) * 2 + 4))) == NULL)
+		return NULL;
+	d = top;
+	for (;;)
+	{
+		int		cp;
+		int		len;
+		int		units[2];
+		int		n = 1;
+		int		i;
+
+		if (*src == NUL)
+		{
+			cp = 0;
+			len = 0;
+		}
+		else
+		{
+			cp = utf_decode(src, &len);
+			if (cp == UTF8_ERROR)
+				cp = '?';
+		}
+		if (cp > 0xffff)
+		{
+			cp -= 0x10000;
+			units[0] = 0xd800 + (cp >> 10);
+			units[1] = 0xdc00 + (cp & 0x3ff);
+			n = 2;
+		}
+		else
+			units[0] = cp;
+		for (i = 0; i < n; i++)
+		{
+			if (ubig)
+			{
+				*d++ = (units[i] >> 8) & 0xff;
+				*d++ = units[i] & 0xff;
+			}
+			else
+			{
+				*d++ = units[i] & 0xff;
+				*d++ = (units[i] >> 8) & 0xff;
+			}
+		}
+		if (len == 0)
+			break;					/* the terminating NUL is written */
+		src += len;
+	}
+	return top;
+}
+
+/*
+ * UCS-2 -> UTF-8. 'srclen' is in bytes. Returns the length written to dst, or
+ * -1 when it does not fit. Surrogate pairs are joined back together.
+ */
+	int
+ucs22utf8_n(src, srclen, dst, dstlen, ubig)
+	char_u	*src;
+	int		srclen;
+	char_u	*dst;
+	int		dstlen;
+	int		ubig;
+{
+	char_u	*d = dst;
+	int		i = 0;
+
+	while (i + 1 < srclen)
+	{
+		char_u	buf[UTF8_MAXLEN];
+		int		unit;
+		int		cp;
+		int		len;
+
+		unit = ubig ? ((src[i] << 8) | src[i + 1])
+					: ((src[i + 1] << 8) | src[i]);
+		i += 2;
+		if (unit >= 0xd800 && unit <= 0xdbff && i + 1 < srclen)
+		{							/* high surrogate: take the low one too */
+			int		low = ubig ? ((src[i] << 8) | src[i + 1])
+							   : ((src[i + 1] << 8) | src[i]);
+
+			if (low >= 0xdc00 && low <= 0xdfff)
+			{
+				cp = 0x10000 + ((unit - 0xd800) << 10) + (low - 0xdc00);
+				i += 2;
+			}
+			else
+				cp = '?';			/* unpaired */
+		}
+		else if (unit >= 0xd800 && unit <= 0xdfff)
+			cp = '?';				/* unpaired surrogate */
+		else
+			cp = unit;
+		len = utf_encode(cp, buf);
+		if ((int)(d - dst) + len > dstlen)
+			return -1;
+		memcpy((char *)d, (char *)buf, (size_t)len);
+		d += len;
+	}
+	return (int)(d - dst);
+}
+
+/*
+ * Convert 'ptrlen' bytes at 'ptr' from encoding 'code' into the internal UTF-8,
+ * writing at most 'dstlen' bytes to 'dst'. Returns the length written, or -1
+ * when it does not fit.
+ */
 	int				/* return the length of dst */
 kanjiconvsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
+	char_u	*ptr;
+	int		ptrlen;
+	char_u	*dst;
+	int		dstlen;
+	char	*tail;
+	char	code;
+	int		*charsetp;
+{
+	char_u	*tmp;
+	int		n;
+
+	if (tail)
+		tail[0] = NUL;
+#ifdef UCODE
+	if (code == JP_UTF8)
+	{
+		/*
+		 * Already the internal encoding. Copy it through, replacing anything
+		 * malformed so the buffer only ever holds valid UTF-8.
+		 */
+		char_u	*d = dst;
+		int		i = 0;
+
+		while (i < ptrlen)
+		{
+			int		cp, len;
+			char_u	buf[UTF8_MAXLEN];
+
+			if (ptr[i] < 0x80)
+			{
+				if (d - dst >= dstlen)
+					return -1;
+				*d++ = ptr[i++];
+				continue;
+			}
+			cp = utf_decode(&ptr[i], &len);
+			if (cp == UTF8_ERROR)
+			{
+				if (d - dst >= dstlen)
+					return -1;
+				*d++ = '?';
+				i += len;
+				continue;
+			}
+			if (i + len > ptrlen)
+			{			/* truncated at the end of the chunk: hand it back */
+				if (tail)
+				{
+					int		k;
+
+					for (k = 0; i + k < ptrlen && k < UTF8_MAXLEN; k++)
+						tail[k] = ptr[i + k];
+					tail[k] = NUL;
+				}
+				break;
+			}
+			len = utf_encode(cp, buf);
+			if ((int)(d - dst) + len > dstlen)
+				return -1;
+			memcpy((char *)d, (char *)buf, (size_t)len);
+			d += len;
+			i += len;
+		}
+		return (int)(d - dst);
+	}
+#endif
+	/* Legacy encodings pivot through Shift-JIS. */
+	if ((tmp = lalloc((long_u)(ptrlen * 2 + 8), TRUE)) == NULL)
+		return -1;
+	n = sjis_convsfrom(ptr, ptrlen, tmp, ptrlen * 2 + 8, tail, code, charsetp);
+	if (n < 0)
+	{
+		free(tmp);
+		return -1;
+	}
+	n = sjis2utf8_n(tmp, n, dst, dstlen);
+	free(tmp);
+	return n;
+}
+
+/*
+ * Convert the internal UTF-8 string 'ptr' to encoding 'code', into a fresh
+ * buffer that the caller frees.
+ */
+	char_u *
+kanjiconvsto(ptr, code, ubig)
+	char_u	*ptr;
+	int		code;
+	int		ubig;
+{
+	char_u	*sjis;
+	char_u	*res;
+
+	if (ptr == NULL)
+		return ptr;
+#ifdef UCODE
+	if (code == JP_UTF8)
+	{								/* already the internal encoding */
+		int		len = STRLEN(ptr) + 1;
+
+		if ((res = alloc((unsigned)len)) == NULL)
+			return NULL;
+		memcpy((char *)res, (char *)ptr, (size_t)len);
+		return res;
+	}
+	if (code == JP_WIDE)
+		return utf82ucs2(ptr, ubig);
+#endif
+	if ((sjis = utf82sjis(ptr)) == NULL)
+		return NULL;
+	res = sjis_convsto(sjis, code, ubig);
+	free(sjis);
+	return res;
+}
+
+	static int		/* return the length of dst */
+sjis_convsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
 	char_u	*ptr;
 	int		ptrlen;
 	char_u	*dst;
@@ -1723,7 +2367,7 @@ kanjiconvsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
 					case 2:
 						if (ptr[1] != NUL)
 						{
-							if (p_jkc && ISkana(ptr[1]))
+							if (p_jkc && sjis_iskana(ptr[1]))
 							{
 								char_u c1 = NUL;
 								char_u c2 = NUL;
@@ -1770,7 +2414,7 @@ kanjiconvsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
 						}
 						break;
 					default:
-						if (!ISdisp(*ptr))
+						if (!sjis_isdisp(*ptr))
 							*dst ++ = *ptr ++;
 						else
 						{
@@ -1783,7 +2427,7 @@ kanjiconvsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
 					break;
 				case JP_SJIS:
 					c = *dst ++ = *ptr ++;
-					if (ISkanji(c))
+					if (sjis_islead(c))
 					{
 						if (ptrlen >= 1 && *ptr != NUL)
 						{
@@ -1804,7 +2448,7 @@ kanjiconvsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
 						}
 						continue;
 					}
-					else if (p_jkc && ISkana(c))
+					else if (p_jkc && sjis_iskana(c))
 					{					/* JIS X 0201R 8bit encoding */
 						char_u c1 = NUL;
 
@@ -1880,7 +2524,7 @@ kanjiconvsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
 					break;
 #endif /* UCODE */
 				default:
-					if (!ISdisp(*ptr))
+					if (!sjis_isdisp(*ptr))
 						*dst ++ = *ptr ++;
 					else
 					{
@@ -2077,8 +2721,8 @@ kanjiconvsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
 					*ptr ++ = (ucs & 0x3f) | 0x80; }
 #endif
 
-	char_u *
-kanjiconvsto(ptr, code, ubig)
+	static char_u *
+sjis_convsto(ptr, code, ubig)
 	char_u	*ptr;
 	int		code;
 	int		ubig;
@@ -2106,12 +2750,12 @@ kanjiconvsto(ptr, code, ubig)
 	case JP_UTF8:
 		for(nshift = 0; *ptr; ptr++)
 		{
-			if (ISkanji(*ptr))
+			if (sjis_islead(*ptr))
 			{
 				nshift += 2;
 				ptr++;
 			}
-			else if (ISkana(*ptr))
+			else if (sjis_iskana(*ptr))
 				nshift += 2;
 		}
 		ptr = top;
@@ -2119,7 +2763,7 @@ kanjiconvsto(ptr, code, ubig)
 		while (*ptr)
 		{
 			char_u buf[2];
-			if (ISkanji(*ptr))
+			if (sjis_islead(*ptr))
 			{
 				buf[0] = ptr[0];
 				buf[1] = ptr[1];
@@ -2128,7 +2772,7 @@ kanjiconvsto(ptr, code, ubig)
 				TO_UTF8(kanji, ptr2);
 				ptr += 2;
 			}
-			else if (ISkana(*ptr))
+			else if (sjis_iskana(*ptr))
 			{
 				buf[0] = ptr[0];
 				buf[1] = '\0';
@@ -2145,7 +2789,7 @@ kanjiconvsto(ptr, code, ubig)
 	case JP_WIDE:		/* UNICODE */
 		for (nshift = 0; *ptr; ptr++)
 		{
-			if (ISkanji(*ptr))
+			if (sjis_islead(*ptr))
 				ptr++;
 			else
 				nshift++;
@@ -2154,7 +2798,7 @@ kanjiconvsto(ptr, code, ubig)
 		top = ptr2 = alloc(STRLEN(top) + nshift + 2);
 		while (*ptr)
 		{
-			if (ISkanji(*ptr))
+			if (sjis_islead(*ptr))
 			{
 				ptr2[0] = ptr[0];
 				ptr2[1] = ptr[1];
@@ -2179,20 +2823,20 @@ kanjiconvsto(ptr, code, ubig)
 	case JP_EUC:
 		for(nshift = 0; *ptr; ptr++)
 		{
-			if (ISkanji(*ptr))
+			if (sjis_islead(*ptr))
 			{
 				if (IS_X0212(*ptr))
 					nshift++;
 				ptr++;
 			}
-			else if (ISkana(*ptr))
+			else if (sjis_iskana(*ptr))
 				nshift++;
 		}
 		ptr = top;
 		top = ptr2 = alloc(STRLEN(top) + nshift + 1);
 		while (*ptr)
 		{
-			if (ISkanji(*ptr))
+			if (sjis_islead(*ptr))
 			{
 				kanji = sjistoeuc(ptr[0], ptr[1], &ss3);
 				if (ss3)
@@ -2201,7 +2845,7 @@ kanjiconvsto(ptr, code, ubig)
 				*ptr2 ++ = kanji & 0xff;
 				ptr += 2;
 			}
-			else if (ISkana(*ptr))
+			else if (sjis_iskana(*ptr))
 			{
 				*ptr2 ++ = JP_EUC_G2;
 				*ptr2 ++ = *ptr ++;
@@ -2215,14 +2859,14 @@ kanjiconvsto(ptr, code, ubig)
 		kanji = 0;
 		for(nshift = 0; *ptr; ptr++)
 		{
-			if (ISkanji(*ptr))
+			if (sjis_islead(*ptr))
 			{
 				ptr++;
 				if (kanji != 1)
 					nshift++;
 				kanji = 1;
 			}
-			else if (ISkana(*ptr))
+			else if (sjis_iskana(*ptr))
 			{
 				if (kanji != 2)
 					nshift++;
@@ -2243,7 +2887,7 @@ kanjiconvsto(ptr, code, ubig)
 		mode = JP_ASCII;
 		while (*ptr)
 		{
-			if (ISkanji(*ptr))
+			if (sjis_islead(*ptr))
 			{
 				cp = JPdisp(&mode, JP_KANJI, code);
 				for(; *cp;)
@@ -2253,7 +2897,7 @@ kanjiconvsto(ptr, code, ubig)
 				*ptr2 ++ = kanji & 0xff;
 				ptr += 2;
 			}
-			else if (ISkana(*ptr))
+			else if (sjis_iskana(*ptr))
 			{
 				cp = JPdisp(&mode, JP_KANA, code);
 				for(; *cp;)
@@ -2320,8 +2964,10 @@ fileconvsfrom(org)
 	{
 		if (ISkanji(*p))
 		{
-			*t++ = *p++;
-			*t++ = *p++;
+			int		n = utf_lenat(p, 0);
+
+			while (n-- > 0)
+				*t++ = *p++;
 		}
 		else if (cygnus && p[0] == '\\')
 			p++;
@@ -2367,8 +3013,10 @@ fileconvsto(org)
 	{
 		if (ISkanji(*p))
 		{
-			*t++ = *p++;
-			*t++ = *p++;
+			int		n = utf_lenat(p, 0);
+
+			while (n-- > 0)
+				*t++ = *p++;
 		}
 		else if (cygnus && p[0] == '\\')
 			p++;
@@ -2450,7 +3098,7 @@ binaryconvsfrom(lnum, code, tail, ptr, len, dst)
 				goto normal;
 			break;
 		case JP_SJIS:
-			if (ISkanji(*ptr)
+			if (sjis_islead(*ptr)
 					&& ((0x40 <= ptr[1] && ptr[1] <= 0x7e) || (0x80 <= ptr[1] && ptr[1] <= 0xfc)))
 			{
 				*dst++ = *ptr++;
@@ -2459,7 +3107,7 @@ binaryconvsfrom(lnum, code, tail, ptr, len, dst)
 				if (i > len)
 					*tail = TRUE;
 			}
-			else if (ISkana(*ptr))
+			else if (sjis_iskana(*ptr))
 			{
 				*dst++ = *ptr++;
 				i += 1;
@@ -2551,29 +3199,23 @@ binaryconvsto(code, ptr, len, ubig)
 				top[(*len)++] = *ptr;
 			else
 			{
-				char_u		buf[3];
+				char_u		buf[UTF8_MAXLEN + 1];
 				char_u		*tmpptr;
 				char_u		*p;
 
 				if (ISkanji(*ptr))
 				{
-					buf[0] = ptr[0];
-					buf[1] = ptr[1];
-					buf[2] = NUL;
+					int		n = utf_lenat(ptr, 0);
+					int		k;
+
+					for (k = 0; k < n; k++)
+						buf[k] = ptr[k];
+					buf[n] = NUL;
 					p = tmpptr = kanjiconvsto(buf, code, ubig);
 					while (*p)
 						top[(*len)++] = *p++;
 					free(tmpptr);
-					ptr++;
-				}
-				else if (ISkana(*ptr))
-				{
-					buf[0] = ptr[0];
-					buf[1] = NUL;
-					p = tmpptr = kanjiconvsto(buf, code, ubig);
-					while (*p)
-						top[(*len)++] = *p++;
-					free(tmpptr);
+					ptr += n - 1;
 				}
 				else
 					top[(*len)++] = *ptr;
@@ -2676,7 +3318,7 @@ jisx0201rto0208(src0, src1, dst0, dst1)
 	c = (char_u)src0;
 	x0201p = (char_u *)jisx0201r + 2 * (c - 0xa0);
 
-	if (! ISkanji(y = *x0201p))
+	if (! sjis_islead(y = *x0201p))
 	{
 		*dst0 = y;
 		*dst1 = NUL;
@@ -2713,132 +3355,133 @@ jisx0201rto0208(src0, src1, dst0, dst1)
  * compare two strings, ignoring case
  * return 0 for match, 1 for difference
  */
+/*
+ * Halfwidth forms U+FF61..U+FF9F folded to their fullwidth equivalent
+ * (the NFKC mapping). Used by the Japanese insensitive compare below.
+ */
+static short	halfwidth_fold[] = {
+	0x3002, 0x300c, 0x300d, 0x3001, 0x30fb, 0x30f2, 0x30a1, 0x30a3,
+	0x30a5, 0x30a7, 0x30a9, 0x30e3, 0x30e5, 0x30e7, 0x30c3, 0x30fc,
+	0x30a2, 0x30a4, 0x30a6, 0x30a8, 0x30aa, 0x30ab, 0x30ad, 0x30af,
+	0x30b1, 0x30b3, 0x30b5, 0x30b7, 0x30b9, 0x30bb, 0x30bd, 0x30bf,
+	0x30c1, 0x30c4, 0x30c6, 0x30c8, 0x30ca, 0x30cb, 0x30cc, 0x30cd,
+	0x30ce, 0x30cf, 0x30d2, 0x30d5, 0x30d8, 0x30db, 0x30de, 0x30df,
+	0x30e0, 0x30e1, 0x30e2, 0x30e4, 0x30e6, 0x30e8, 0x30e9, 0x30ea,
+	0x30eb, 0x30ec, 0x30ed, 0x30ef, 0x30f3, 0x3099, 0x309a,
+};
+
+/*
+ * Katakana that take a voiced or semi voiced mark. The voiced form is the next
+ * code point, the semi voiced one the one after that.
+ */
+	static int
+jp_voiced(cp, semi)
+	int		cp;
+	int		semi;
+{
+	if (semi)
+	{
+		if (cp >= 0x30cf && cp <= 0x30db && ((cp - 0x30cf) % 3) == 0)
+			return cp + 2;					/* ha..ho */
+		return 0;
+	}
+	if (cp == 0x30a6)						/* u -> vu */
+		return 0x30f4;
+	if (cp == 0x30ef)						/* wa -> va */
+		return 0x30f7;
+	if ((cp >= 0x30ab && cp <= 0x30c8 && ((cp - 0x30ab) % 2) == 0)
+			|| (cp >= 0x30cf && cp <= 0x30db && ((cp - 0x30cf) % 3) == 0))
+		return cp + 1;						/* ka..to, ha..ho */
+	return 0;
+}
+
+/*
+ * Fold the character at *pp for the Japanese case and width insensitive
+ * compare, advancing *pp past everything it consumed:
+ *
+ *	ASCII lower case	-> upper case
+ *	fullwidth ASCII		-> plain ASCII, then upper case
+ *	hiragana			-> katakana
+ *	halfwidth katakana	-> fullwidth, combining a following sound mark
+ */
+	static int
+jp_foldstep(pp)
+	char_u	**pp;
+{
+	char_u	*p = *pp;
+	int		cp;
+	int		len;
+
+	cp = utf_decode(p, &len);
+	*pp = p + (len < 1 ? 1 : len);
+	if (cp == UTF8_ERROR)
+		return *p;
+	if (cp >= 'a' && cp <= 'z')
+		return cp - 'a' + 'A';
+	if (cp >= 0xff01 && cp <= 0xff5e)		/* fullwidth ASCII */
+	{
+		cp = cp - 0xff01 + '!';
+		return (cp >= 'a' && cp <= 'z') ? cp - 'a' + 'A' : cp;
+	}
+	if (cp >= 0x3041 && cp <= 0x3096)		/* hiragana -> katakana */
+		return cp + 0x60;
+	if (cp >= 0xff61 && cp <= 0xff9f)
+	{
+		int		full = halfwidth_fold[cp - 0xff61];
+		int		next;
+		int		nlen;
+		int		mark;
+
+		next = utf_decode(*pp, &nlen);
+		if (next == 0xff9e || next == 0xff9f)
+		{
+			mark = jp_voiced(full, next == 0xff9f);
+			if (mark != 0)
+			{
+				*pp += nlen;
+				return mark;
+			}
+		}
+		return full;
+	}
+	return cp;
+}
+
+/*
+ * How many bytes at the start of 's1' match the first 'len' bytes of 's2',
+ * ignoring case, kana width and hiragana/katakana? 0 when they do not match.
+ * Tab and space are considered equal, as they were before.
+ */
 	int
 jp_strnicmp(s1, s2, len)
 	char_u	*s1;
 	char_u	*s2;
 	size_t	len;
 {
-	char_u	*	str[2];
-	char_u		wrk[2][2];
-	int			slen[2];
-	char_u	*	s;
-	char_u	*	w;
-	int		*	l;
-	size_t		wlen;
-	int			i;
-	int			class;
-	int			flg = TRUE;
-	size_t		tlen = len;
+	char_u	*p1 = s1;
+	char_u	*p2 = s2;
+	long	rest = (long)len;
+	int		tlen = 0;
 
-	wlen = len;
-	s = s1;
-	w = s2;
-	while (wlen)
+	while (rest > 0)
 	{
-		if ((*s == '\t' && *w == ' ') || (*s == ' ' && *w == '\t'))
-			;
-		else if (ISkanji(*s))
-		{
-			if (ISkanji(*w) && *s == *w && *(s + 1) == *(w + 1))
-			{
-				++s;
-				++w;
-				--wlen;
-			}
-			else
-			{
-				flg = FALSE;
-				break;
-			}
-		}
-		else if (TO_UPPER(*s) != TO_UPPER(*w))
-		{
-			flg = FALSE;
-			break;
-		}
-		if (*s == NUL)
-			break;
-		++s;
-		++w;
-		--wlen;
-	}
-	if (flg)
-		return tlen;						/* strings match */
-	str[0]	= s1;
-	str[1]	= s2;
-	tlen	= 0;
-	while (len > 0)
-	{
-		if (*str[1] == NUL)
+		char_u	*q1 = p1;
+		char_u	*q2 = p2;
+		int		c1, c2;
+
+		if (*p2 == NUL)
 			return tlen;
-		if (*str[0] == NUL)
+		if (*p1 == NUL)
 			return 0;
-		for (i = 0; i < 2; i++)
-		{
-			s = str[i];
-			w = &wrk[i][0];
-			l = &slen[i];
-			*l = 1;
-			if (ISkanji(*s))
-			{
-				*l = 2;
-				w[0] = *s;
-				w[1] = *(s + 1);
-			}
-			else if (ISkana(*s))
-			{
-				if (jisx0201rto0208(*s, *(s + 1), &w[0], &w[1]))
-					*l = 2;
-			}
-			else if (isalpha(*s))
-			{
-				if (islower(*s))
-				{
-					w[0] = 0x82;
-					w[1] = 0x60 + (*s - 'a');
-				}
-				else
-				{
-					w[0] = 0x82;
-					w[1] = 0x60 + (*s - 'A');
-				}
-			}
-			else if (isdigit(*s))
-			{
-				w[0] = 0x82;
-				w[1] = 0x4f + (*s - '0');
-			}
-			else
-			{
-				char_u	**	cnv = (char_u **)Asconv;
-				char	*	c;
-
-				while (*cnv[0])
-				{
-					c = *cnv;
-					if (c[0] == *s)
-					{
-						w[0] = c[1];
-						w[1] = c[2];
-						break;
-					}
-					cnv++;
-				}
-			}
-			class = jpcls(w[0], w[1]);
-			if (class == JPC_HIRA
-					|| (class == JPC_ALNUM && !(0x4f <= w[1] && w[1] <= 0x58)))
-				jptocase(&w[0], &w[1], UPPER);
-		}
-		if (!(wrk[0][0] == wrk[1][0] && wrk[0][1] == wrk[1][1]))
+		c1 = jp_foldstep(&p1);
+		c2 = jp_foldstep(&p2);
+		if (c1 != c2 && !((*q1 == '\t' && *q2 == ' ')
+						|| (*q1 == ' ' && *q2 == '\t')))
 			return 0;
-		str[0] += slen[0];
-		str[1] += slen[1];
-		len -= slen[1];
-		tlen += slen[0];
+		tlen += (int)(p1 - q1);
+		rest -= (long)(p2 - q2);
 	}
-	return tlen;							/* strings match */
+	return tlen;
 }
 
 #ifdef UCODE

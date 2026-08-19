@@ -91,6 +91,8 @@ normal()
 	int				nchar = NUL;
 #ifdef KANJI
 	int				kchar = NUL;
+	char_u			nbytes[UTF8_MAXLEN];	/* nchar as its full byte sequence */
+	int				nlen = 1;
 #endif
 	int				finish_op;
 	linenr_t		Prenum1;
@@ -249,8 +251,17 @@ retry_input:
 			goto retry_input;
 		}
 #  endif
+		nbytes[0] = nchar;
+		nlen = 1;
 		if (ISkanji(nchar))
-			kchar = vgetc();
+		{
+			int		want = utf_len(nchar);
+
+			/* the internal encoding is UTF-8, so take the whole character */
+			while (nlen < want)
+				nbytes[nlen++] = vgetc();
+			kchar = nbytes[1];
+		}
 #else	/* KANJI */
 		State = NOMAPPING;
 		nchar = vgetc();		/* no macro mapping for this char */
@@ -539,9 +550,10 @@ retry_input:
 				if (ISkanji(ptr[col]))
 				{
 					int class;
-					class = jpcls(ptr[col], ptr[col+1]);
-					while (col > 0 && class == jpcls(ptr[col-2],ptr[col-1]))
-						col -= 2;
+					class = jpcls(ptr + col);
+					while (col > 0
+							&& class == jpcls(utf_prev(ptr, ptr + col)))
+						col = (int)(utf_prev(ptr, ptr + col) - ptr);
 				}
 				else
 				{
@@ -607,11 +619,13 @@ sow:				if (i == 0)
 			if (ISkanji(ptr[col]))
 			{
 				int class;
-				class = jpcls(ptr[col], ptr[col+1]);
-				while (ptr[col] != NUL && class == jpcls(ptr[col],ptr[col+1]))
+				class = jpcls(ptr + col);
+				while (ptr[col] != NUL && class == jpcls(ptr + col))
 				{
-					stuffcharReadbuff(ptr[col++]);
-					stuffcharReadbuff(ptr[col++]);
+					int		n = utf_lenat(ptr, col);
+
+					while (n-- > 0 && ptr[col] != NUL)
+						stuffcharReadbuff(ptr[col++]);
 				}
 			}
 			else
@@ -1220,6 +1234,9 @@ docsearch:
 			c = Ctrl('V');
 #ifdef KANJI
 			nchar = get_literal(&type, &kchar);
+			nbytes[0] = nchar;
+			nbytes[1] = kchar;
+			nlen = ISkanji(nchar) ? 2 : 1;
 #else
 			nchar = get_literal(&type);
 #endif
@@ -1230,6 +1247,12 @@ docsearch:
 			c = NUL;
 #ifdef KANJI
 		prep_redo(Prenum1, 'r', c, nchar, kchar);
+		{							/* prep_redo only knows about two bytes */
+			int		n;
+
+			for (n = 2; n < nlen; n++)
+				AppendCharToRedobuff(nbytes[n]);
+		}
 #else
 		prep_redo(Prenum1, 'r', c, nchar);
 #endif
@@ -1248,7 +1271,7 @@ docsearch:
 			pos = curwin->w_cursor;
 			State = REPLACE;
 			while (Prenum1--)
-				inschar(nchar, kchar);
+				inschar(nbytes, nlen);
 			State = state;
 			curwin->w_cursor = pos;
 		}
@@ -1539,8 +1562,8 @@ cursormark:
 			if (flag)
 				beginline(TRUE);
 #ifdef KANJI
-			else if (ISkanjiCur() == 2)		/* kanji_align */
-				curwin->w_cursor.col--;
+			else
+				kanji_align();
 #endif
 		}
 		mtype = flag ? MLINE : MCHAR;
@@ -1949,8 +1972,9 @@ error:
 								curbuf->b_endop = curbuf->b_startop;
 								curbuf->b_startop = curwin->w_cursor;
 							}
-							if (ISkanjiFpos(&curbuf->b_endop))
-								curbuf->b_endop.col++;
+							curbuf->b_endop.col = (colnr_t)kanji_endcol(
+										curbuf->b_endop.lnum,
+										curbuf->b_endop.col);
 							if (curbuf->b_startop.lnum == curbuf->b_endop.lnum
 															&& mtype == MCHAR)
 								count = curbuf->b_endop.col - curbuf->b_startop.col + 1;
@@ -2101,11 +2125,8 @@ error:
 								curwin->w_cursor.col++;
 							}
 							if (p[curwin->w_cursor.col] == NUL)
-							{
-								if (ISkanjiPosition(p, curwin->w_cursor.col) == 2)
-									curwin->w_cursor.col--;
-								curwin->w_cursor.col--;
-							}
+								curwin->w_cursor.col = (colnr_t)(utf_prev(p,
+										p + curwin->w_cursor.col) - p);
 							curs_columns(TRUE);
 						}
 						else
@@ -2353,8 +2374,11 @@ error:
 		if (mincl && curbuf->b_endop.col != VISUALLINE
 										&& ISkanji(gchar(&curbuf->b_endop)))
 		{
+			/* An inclusive end has to cover the whole character. */
 			mincl = FALSE;
-			curbuf->b_endop.col += 2;
+			curbuf->b_endop.col += utf_lenat(
+							ml_get_buf(curbuf, curbuf->b_endop.lnum, FALSE),
+							(int)curbuf->b_endop.col);
 		}
 #endif
 

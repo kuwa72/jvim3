@@ -12,6 +12,7 @@
 #include "param.h"
 #ifdef KANJI
 #include "kanji.h"
+#include "utf8.h"
 #endif
 
 
@@ -60,15 +61,42 @@ transchar(c)
 }
 
 /*
- * return the number of characters 'c' will take on the screen
+ * Return the number of screen columns the character at 'p' takes.
+ *
+ * KANJI: this is per character, not per byte. A trailing byte of a multi-byte
+ * character counts 0, so a loop that walks bytes and sums charsize() still ends
+ * up with the width of the text.
  */
 	int
-charsize(c)
+charsize(p)
+	char_u *p;
+{
+#ifdef KANJI
+	int		c = *p;
+
+	if (c < ' ' || c == DEL)
+		return 2;					/* shown as ^X */
+	if (c < 0x80)
+		return 1;
+	return utf_width(p);			/* 0 for a trailing byte, 4 for junk */
+#else
+	int		c = *p;
+
+	return ((c >= ' ' && (p_gr || c <= '~')) || c > 0xa0 ? 1 : 2);
+#endif
+}
+
+/*
+ * Columns taken by the transchar() form of a single byte: "^X" is 2, "[XX]" is
+ * 4, a printable ASCII byte is 1. For bytes only; use charsize() for text.
+ */
+	int
+transcharsize(c)
 	int c;
 {
 #ifdef KANJI
 	c &= 0xff;
-	return	(c < ' ' || c == DEL) ? 2 : ((c < 0x80 || ISdisp(c)) ? 1 : 4);
+	return (c < ' ' || c == DEL) ? 2 : (c < 0x80 ? 1 : 4);
 #else
 	return ((c >= ' ' && (p_gr || c <= '~')) || c > 0xa0 ? 1 : 2);
 #endif
@@ -84,7 +112,10 @@ strsize(s)
 	int	len = 0;
 
 	while (*s)
-		len += charsize(*s++);
+	{
+		len += charsize(s);
+		s++;
+	}
 	return len;
 }
 
@@ -93,16 +124,18 @@ strsize(s)
  * into account the size of a tab
  */
 	int
-chartabsize(c, col)
-	register int	c;
+chartabsize(p, col)
+	char_u			*p;
 	long			col;
 {
+	register int	c = *p;
+
 #ifdef KANJI
 	if (c >= ' ' &&  c != DEL)
 	{
-		if (c < 0x80 || ISdisp(c))
+		if (c < 0x80)
 			return(1);
-		return(4);
+		return utf_width(p);	/* 0 for a trailing byte, 4 for junk */
 	}
 #else
 	if ((c >= ' ' && (c <= '~' || p_gr)) || c > 0xa0)

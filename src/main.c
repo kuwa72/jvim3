@@ -159,11 +159,20 @@ main(argc, argv)
 	int				kopt = FALSE;
 	int				fopt = FALSE;
 	char_u			jcode[2];
-	char_u			jmask[4];
+	char_u			jmask[JP_MASKLEN + 1];
 #endif
 
 #ifdef USE_LOCALE
 	setlocale(LC_ALL, "");		/* for ctype() and the like */
+#endif
+
+#ifdef NT
+	/*
+	 * Report where we die instead of resuming on a fault. Set VIM32DEBUG to
+	 * keep our hands off, so a debugger or WER gets the exception instead.
+	 */
+	if (vimgetenv((char_u *)"VIM32DEBUG") == NULL)
+		w32crash_init(!SubSysCon);
 #endif
 
 /*
@@ -325,7 +334,7 @@ main(argc, argv)
 				}
 				break;
 			case 'K':
-				if (STRLEN(argv[0]) == 3)
+				if (STRLEN(argv[0]) == 3 || STRLEN(argv[0]) == JP_MASKLEN)
 				{
 					char_u	*	cp;
 
@@ -342,6 +351,12 @@ main(argc, argv)
 				{
 					kopt = TRUE;
 					STRCPY(jmask, p_jp);
+					if (STRLEN(jmask) == 3)
+					{			/* new files follow the system code */
+						jmask[3] = jmask[2];
+						jmask[4] = NUL;
+					}
+					p_jp = jmask;
 				}
 				break;
 #endif

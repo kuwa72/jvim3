@@ -15,16 +15,25 @@
 #define JP_NONE		'X'			/* No Kanji */
 #define JP_FSTR		"EJSejs"
 #define JP_STR		"EJS"
-#define	JP_KEY		*p_jp		/* file/key in code */
+/*
+ * 'jmask' is "key display system [file]". The fourth character is the code a
+ * brand new file is written in; it used to share the system code, which is the
+ * wrong default now that the internal representation is UTF-8: on Windows the
+ * system code has to stay CP932 for the ANSI file APIs and the IME, while a new
+ * file should be UTF-8. A three character jmask still works and means "write
+ * new files in the system code", as before.
+ */
+#define	JP_KEY		*p_jp		/* key input code */
 #define	JP_DISP		*(p_jp + 1)	/* terminal display code */
-#define	JP_FILE		*(p_jp + 2)	/* write code for new file */
-#define	JP_SYS		*(p_jp + 2)	/* system code for pipe */
+#define	JP_SYS		*(p_jp + 2)	/* system code for pipes and file names */
+#define	JP_FILE		*(p_jp + 3)	/* write code for a new file */
+#define JP_MASKLEN	4
 
 # ifndef JP_DEF
 #  if defined(MSDOS) || defined(__CYGWIN__)
-#   define	JP_DEF	"SSS"
+#   define	JP_DEF	"SSST"
 #  else
-#   define	JP_DEF	"EEE"
+#   define	JP_DEF	"EEET"
 #  endif
 # endif
 
@@ -54,5 +63,8 @@
 #define JP1_KIGOU2	'"'
 
 #define HexChar(_c)	((_c) >= 10 ? 'A' + (_c) - 10 : '0' + (_c));
+
+/* The internal representation is UTF-8; utf8.h has the primitives. */
+#include "utf8.h"
 
 #endif /* KANJI */

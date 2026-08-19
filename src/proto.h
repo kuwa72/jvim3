@@ -29,6 +29,10 @@
 #endif
 #ifdef KANJI
 # include "proto/kanji.pro"
+# include "proto/utf8.pro"
+#endif
+#ifdef NT
+# include "proto/w32crash.pro"
 #endif
 #ifdef TRACK
 # include "proto/track.pro"

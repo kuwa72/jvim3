@@ -402,7 +402,7 @@ set_init()
 #ifdef KANJI
 	if (p_jp == NULL)
 	{
-		static char p_jp_init[4];
+		static char p_jp_init[JP_MASKLEN + 1];
 
 		STRCPY(p_jp_init, JP_DEF);
 # ifdef UNIX
@@ -439,6 +439,16 @@ set_init()
 #  endif
 		}
 # endif
+		if (STRLEN(p_jp_init) == 3)
+		{
+			/*
+			 * A locale only says which code the outside world uses, so let a
+			 * new file follow the system code, as it always did. JP_DEF has a
+			 * fourth character and asks for UTF-8 instead.
+			 */
+			p_jp_init[3] = p_jp_init[2];
+			p_jp_init[4] = NUL;
+		}
 		p_jp = p_jp_init;
 	}
 	if (JP_SYS == JP_SJIS)
@@ -922,15 +932,29 @@ doset(arg)
 					{
 						char_u	*	cp;
 
-						if (STRLEN(p_jp) != 3)
+						if (STRLEN(p_jp) == 3)
 						{
-							emsg("key, display, and system");
+							/* old form: a new file uses the system code */
+							s = alloc(JP_MASKLEN + 1);
+							if (s == NULL)
+								break;
+							STRCPY(s, p_jp);
+							s[3] = s[2];
+							s[4] = NUL;
+							free(*(char **)(varp));
+							p_jp = s;
+							*(char_u **)(varp) = s;
+						}
+						else if (STRLEN(p_jp) != JP_MASKLEN)
+						{
+							emsg("key, display, system, and file");
 							s = alloc(STRLEN(JP_DEF) + 1);
 							if (s == NULL)
 								break;
 							free(*(char **)(varp));
 							STRCPY(s, JP_DEF);
 							p_jp = s;
+							*(char_u **)(varp) = s;
 						}
 						for (cp = p_jp; *cp; cp++)
 						{
@@ -1677,6 +1701,7 @@ buf_copy_options(bp_from, bp_to)
 	bp_to->b_p_jc = strsave(bp_from->b_p_jc);
 # ifdef UCODE
 	bp_to->b_p_ubig = bp_from->b_p_ubig;
+	bp_to->b_p_bom = bp_from->b_p_bom;
 # endif
 #endif
 #ifdef FEPCTRL

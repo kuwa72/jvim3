@@ -369,6 +369,8 @@ struct buffer
 #ifdef KANJI
 	char			*b_p_jc;			/* kanji file code */
 	int				 b_p_ubig;			/* unicode big endian */
+	int				 b_p_bom;			/* the file started with a UTF-8 BOM
+										 * and should be written back with one */
 #endif
 #ifdef FEPCTRL
 	int				 b_p_fc;			/* fep control */

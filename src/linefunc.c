@@ -44,13 +44,15 @@ coladvance(wcol)
 #ifdef KANJI
 		if (ISkanji(*ptr))
 		{
-			col += 2;
-			++ptr;
-			++index;
+			int		len = utf_lenat(ptr, 0);
+
+			col   += utf_width(ptr);
+			index += len - 1;
+			ptr   += len - 1;
 		}
 		else
 #endif
-		col += chartabsize(*ptr, (long)col);
+		col += chartabsize(ptr, (long)col);
 		++ptr;
 	}
 	/*
@@ -63,8 +65,9 @@ coladvance(wcol)
 	else
 		curwin->w_cursor.col = index;
 #ifdef KANJI
-	if (ISkanjiCur() == 2 && curwin->w_cursor.col != 0)
-		curwin->w_cursor.col--;
+	/* never leave the cursor inside a character */
+	curwin->w_cursor.col = utf_headoff(ml_get(curwin->w_cursor.lnum),
+											(int)curwin->w_cursor.col);
 #endif
 }
 
@@ -89,19 +92,14 @@ inc(lp)
 	if (*p != NUL)
 	{			/* still within line */
 #ifdef KANJI
-		if (ISkanji(*p))
-		{
-			lp->col += 2;
-			p++;
-		}
-		else
-		{
-			lp->col++;
-		}
+		int		len = utf_lenat(p, 0);
+
+		lp->col += len;
+		return ((p[len] != NUL) ? 0 : 1);
 #else
 		lp->col++;
-#endif
 		return ((p[1] != NUL) ? 0 : 1);
+#endif
 	}
 	if (lp->lnum != curbuf->b_ml.ml_line_count)
 	{			/* there is a next line */
@@ -144,10 +142,12 @@ dec(lp)
 {
 	if (lp->col > 0)
 	{			/* still within line */
-		lp->col--;
 #ifdef KANJI
-		if (ISkanjiFpos(lp) == 2 && lp->col > 0)
-			lp->col--;
+		char_u	*base = ml_get(lp->lnum);
+
+		lp->col = (colnr_t)(utf_prev(base, base + lp->col) - base);
+#else
+		lp->col--;
 #endif
 		return 0;
 	}
@@ -193,8 +193,8 @@ adjust_cursor()
 	else if (curwin->w_cursor.col >= len){
 		curwin->w_cursor.col = len - 1;
 #ifdef KANJI
-		if (ISkanjiCur() == 2 && curwin->w_cursor.col > 0)
-			curwin->w_cursor.col--;
+		curwin->w_cursor.col = utf_headoff(ml_get(curwin->w_cursor.lnum),
+											(int)curwin->w_cursor.col);
 #endif
 	}
 }

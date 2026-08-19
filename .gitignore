@@ -1,0 +1,15 @@
+# build output
+*.o
+*.obj
+*.exe
+*.exe.debug
+*.res
+*.res.o
+dist/
+src/obj-mingw/
+src/makefile
+src/jvim3
+src/grep/grep
+src/mkcmdtab
+src/jptab
+core

@@ -58,6 +58,7 @@
 #include <ocidl.h>
 #include <olectl.h>
 #include <crtdbg.h>
+#include <process.h>	/* _beginthread */
 #define HIMETRIC_INCH	2540
 
 #define CUST_MENU					0
@@ -320,7 +321,21 @@ static BOOL		syntax_on();
 # define italicplus()	(0)
 #endif
 #ifdef KANJI
-# define iskanakan(c)	(ISkanji(c) ? 1 : (ISkana(c) ? 2 : 0))
+# define iskanakan(c)	(ISkanji(c) ? 1 : 0)
+/*
+ * The screen holds UTF-8, so the character in a cell comes from the code point
+ * plane (see screen.c): 0 means the byte in the character plane is all there
+ * is, -1 means the cell is the right half of a double width character.
+ */
+# define CELLCP(row, col)	(WinScreenCP != NULL ? WinScreenCP[row][col] : 0)
+# define CELLCONT(row, col)	(CELLCP(row, col) == -1)
+# define CELLWIDE(row, col)	(CELLCP(row, col) > 0 \
+									&& utf_cpwidth(CELLCP(row, col)) == 2)
+/* Font choice: 1 for a character the Japanese font should draw. */
+# define CELLKANA(row, col)	(CELLCP(row, col) > 0 ? 1 : 0)
+static int	cell_head __ARGS((int, int));
+static int	cell_class __ARGS((int, int));
+static int	cell_width __ARGS((int, int));
 #endif
 
 #if defined(KANJI) && defined(SYNTAX)
@@ -372,7 +387,7 @@ LoadConfig(BOOL init)
 		if ((p = STRCHR(GuiIni, ':')) != NULL && getperm(p + 1) != (-1))
 		{
 			ZeroMemory(szSecName, sizeof(szSecName));
-			strncpy(szSecName, GuiIni, p - GuiIni);
+			strncpy(szSecName, (char *)GuiIni, p - (char *)GuiIni);
 			strcpy(szIniFile, p + 1);
 		}
 		else
@@ -1357,6 +1372,44 @@ ResetScreen(HWND hWnd)
 	return(TRUE);
 }
 
+/*
+ * Which cell does the character covering 'col' start at?
+ */
+	static int
+cell_head(row, col)
+	int		row;
+	int		col;
+{
+	if (col > 0 && CELLCONT(row, col))
+		return col - 1;
+	return col;
+}
+
+/*
+ * Character class of the character in a cell, or -1 when the cell holds a plain
+ * byte rather than a multi-byte character.
+ */
+	static int
+cell_class(row, col)
+	int		row;
+	int		col;
+{
+	int		cp = CELLCP(row, cell_head(row, col));
+
+	return cp > 0 ? jpclscp(cp) : -1;
+}
+
+/*
+ * Cells covered by the character starting at 'col'.
+ */
+	static int
+cell_width(row, col)
+	int		row;
+	int		col;
+{
+	return CELLWIDE(row, col) ? 2 : 1;
+}
+
 static VOID
 MoveCursor(HWND hWnd)
 {
@@ -1368,7 +1421,7 @@ MoveCursor(HWND hWnd)
 		if (WinScreen == NULL || v_row >= Rows)
 			width = 1;
 		else
-			width = ISkanji(*(WinScreen[v_row] + v_col)) ? 2 : 1;
+			width = CELLWIDE(v_row, v_col) ? 2 : 1;
 #else
 		width = 1;
 #endif
@@ -1401,11 +1454,12 @@ WindowSize(HWND hWnd, WORD wVertSize, WORD wHorzSize)
 	}
 	if (nowCols > v_ssize)
 	{
+		/* Two UTF-16 units per cell, for characters outside the BMP. */
 		v_ssize = nowCols;
 		free(v_space);
-		v_space = malloc(sizeof(INT) * nowCols);
+		v_space = malloc(sizeof(INT) * nowCols * 2);
 		free(v_char);
-		v_char = malloc(sizeof(short) * nowCols);
+		v_char = malloc(sizeof(short) * nowCols * 2);
 	}
 	for (i = 0; i < v_ssize; i++)
 		v_space[i] = v_xchar;
@@ -1637,7 +1691,8 @@ GetColor(char_u mode, int tb)
 #endif
 
 static void
-PrintChar(HDC hdc, RECT *rt, HFONT *phOldFont, char_u *p, int size, char_u mode)
+PrintChar(HDC hdc, RECT *rt, HFONT *phOldFont, char_u *p, int size, char_u mode,
+			int row, int col)
 {
 #if defined(KANJI) && defined(SYNTAX)
 	HBRUSH		hbrush;
@@ -1676,7 +1731,7 @@ PrintChar(HDC hdc, RECT *rt, HFONT *phOldFont, char_u *p, int size, char_u mode)
 		SelectObject(hdc, *phOldFont);
 		if (NULL != v_font)
 			DeleteObject(v_font);
-		if (p != NULL && iskanakan(*p))
+		if (p != NULL && CELLKANA(row, col))
 			v_font = CreateFontIndirect(&config_jfont);
 		else
 			v_font = CreateFontIndirect(&config_font);
@@ -1691,66 +1746,54 @@ PrintChar(HDC hdc, RECT *rt, HFONT *phOldFont, char_u *p, int size, char_u mode)
 					GetTextColor(hdc), GetBkColor(hdc), v_cspace, v_lspace);
 	else
 #endif
-	if (config_unicode)
 	{
-		if (ver_info.dwPlatformId == VER_PLATFORM_WIN32_NT)
-		{
-			int				i;
-			int			*	w = v_space;
+		/*
+		 * Draw the run as UTF-16. Each cell contributes one unit (two for a
+		 * character outside the BMP) and v_space carries the advance, so a
+		 * double width character gets both of its cells and everything stays
+		 * on the character grid.
+		 */
+		int		i;
+		int		n = 0;
 
-			for (i = 0; i < size; i++, w++)
-			{
-				if (ISkanji(p[i]))
-				{
-					*w = v_xchar * 2;
-					i++;
-				}
-				else
-					*w = v_xchar;
-			}
-			size = MultiByteToWideChar(p_cpage, MB_PRECOMPOSED,
-												p, size, v_char, v_ssize);
-			ExtTextOutW(hdc, rt->left, rt->top,
-					istrans() ? 0 : ETO_OPAQUE, rt, v_char, size, v_space);
-		}
-		else if (v_ttfont)
+		for (i = 0; i < size; i++)
 		{
-			int				i;
-			int			*	w = v_space;
-			LONG			left;
+			int		cp = CELLCP(row, col + i);
+			int		wid;
 
-			for (i = 0; i < size; i++, w++)
-			{
-				if (ISkanji(p[i]))
-				{
-					*w = v_xchar * 2;
-					i++;
-				}
-				else
-					*w = v_xchar;
+			if (cp == -1)
+				continue;				/* right half, drawn with its left */
+			if (cp <= 0)
+			{							/* the character plane byte is it */
+				v_char[n] = (short)(unsigned char)p[i];
+				v_space[n] = v_xchar;
+				n++;
+				continue;
 			}
-			w = v_space;
-			size = MultiByteToWideChar(p_cpage, MB_PRECOMPOSED,
-												p, size, v_char, v_ssize);
-			for (i = 0, left = rt->left; i < size; left += *w, i++, w++)
+			wid = utf_cpwidth(cp);
+			if (wid < 1)
+				wid = 1;
+			if (cp > 0xffff)
+			{							/* surrogate pair */
+				int		v = cp - 0x10000;
+
+				v_char[n] = (short)(0xd800 + (v >> 10));
+				v_space[n] = wid * v_xchar;
+				n++;
+				v_char[n] = (short)(0xdc00 + (v & 0x3ff));
+				v_space[n] = 0;
+				n++;
+			}
+			else
 			{
-				rt->left  = left;
-				rt->right = left + *w;
-				ExtTextOutW(hdc, left, rt->top,
-						istrans() ? 0 : ETO_OPAQUE, rt, &v_char[i], 1, w);
+				v_char[n] = (short)cp;
+				v_space[n] = wid * v_xchar;
+				n++;
 			}
 		}
-		else
-		{
-			size = MultiByteToWideChar(p_cpage, MB_PRECOMPOSED,
-												p, size, v_char, v_ssize);
-			ExtTextOutW(hdc, rt->left, rt->top,
-						istrans() ? 0 : ETO_OPAQUE, rt, v_char, size, NULL);
-		}
+		ExtTextOutW(hdc, rt->left, rt->top, istrans() ? 0 : ETO_OPAQUE, rt,
+					(LPCWSTR)v_char, n, v_space);
 	}
-	else
-		ExtTextOutA(hdc, rt->left, rt->top,
-					istrans() ? 0 : ETO_OPAQUE, rt, p, size, v_space);
 }
 
 static BOOL
@@ -1836,12 +1879,12 @@ PaintWindow(HWND hWnd)
 		p = WinScreen[nRow];
 		attr = 0xff;
 #ifdef KANJI
-		kanji = iskanakan(p[nCol]);
+		kanji = CELLKANA(nRow, nCol);
 #endif
 		for (i = i0 = nCol; i <= nEndCol; i++)
 		{
 #ifdef KANJI
-			if (attr != p[Columns + i] || kanji != iskanakan(p[i]))
+			if (attr != p[Columns + i] || kanji != CELLKANA(nRow, i))
 #else
 			if (attr != (p[i] & 0x80))
 #endif
@@ -1893,33 +1936,36 @@ PaintWindow(HWND hWnd)
 				{
 					rect.right	= i * v_xchar;
 #ifdef KANJI
-					if ((ISkanjiPosition(p, i0 + 1) == 2)
-									&& (ISkanjiPosition(p, i) == 1))
+					if (CELLCONT(nRow, i0) && CELLWIDE(nRow, i))
 					{
 						rect.left  = (i0 + 1) * v_xchar;
 						rect.right = (i + 1) * v_xchar;
-						PrintChar(hDC, &rect, &hOldFont, p + i0 + 1, i - i0, p[Columns + i0]);
+						PrintChar(hDC, &rect, &hOldFont, p + i0 + 1, i - i0,
+									p[Columns + i0], nRow, i0 + 1);
 					}
-					else if (ISkanjiPosition(p, i0 + 1) == 2)
+					else if (CELLCONT(nRow, i0))
 					{
 						rect.left  = (i0 + 1) * v_xchar;
 						if ((i - (i0 + 1)) > 0)
-							PrintChar(hDC, &rect, &hOldFont, p + i0 + 1, i - (i0 + 1), p[Columns + i0]);
+							PrintChar(hDC, &rect, &hOldFont, p + i0 + 1,
+									i - (i0 + 1), p[Columns + i0], nRow, i0 + 1);
 					}
-					else if (ISkanjiPosition(p, i) == 1)
+					else if (CELLWIDE(nRow, i))
 					{
 						rect.right = (i + 1) * v_xchar;
-						PrintChar(hDC, &rect, &hOldFont, p + i0, (i - i0) + 1, p[Columns + i0]);
+						PrintChar(hDC, &rect, &hOldFont, p + i0, (i - i0) + 1,
+									p[Columns + i0], nRow, i0);
 					}
 					else
 #endif
-					PrintChar(hDC, &rect, &hOldFont, p + i0, i - i0, p[Columns + i0]);
+					PrintChar(hDC, &rect, &hOldFont, p + i0, i - i0,
+								p[Columns + i0], nRow, i0);
 					rect.left	= i * v_xchar;
 					i0 = i;
 				}
 #ifdef KANJI
 				attr = p[Columns + i];
-				kanji = iskanakan(p[i]);
+				kanji = CELLKANA(nRow, i);
 #else
 				attr = (p[i] & 0x80);
 #endif
@@ -1972,27 +2018,30 @@ PaintWindow(HWND hWnd)
 			}
 			rect.right	= i * v_xchar;
 #ifdef KANJI
-			if ((ISkanjiPosition(p, i0 + 1) == 2)
-							&& (ISkanjiPosition(p, i) == 1))
+			if (CELLCONT(nRow, i0) && CELLWIDE(nRow, i))
 			{
 				rect.left  = (i0 + 1) * v_xchar;
 				rect.right = (i + 1) * v_xchar;
-				PrintChar(hDC, &rect, &hOldFont, p + i0 + 1, i - i0, p[Columns + i0]);
+				PrintChar(hDC, &rect, &hOldFont, p + i0 + 1, i - i0,
+							p[Columns + i0], nRow, i0 + 1);
 			}
-			else if (ISkanjiPosition(p, i0 + 1) == 2)
+			else if (CELLCONT(nRow, i0))
 			{
 				rect.left  = (i0 + 1) * v_xchar;
 				if ((i - (i0 + 1)) > 0)
-					PrintChar(hDC, &rect, &hOldFont, p + i0 + 1, i - (i0 + 1), p[Columns + i0]);
+					PrintChar(hDC, &rect, &hOldFont, p + i0 + 1,
+							i - (i0 + 1), p[Columns + i0], nRow, i0 + 1);
 			}
-			else if (ISkanjiPosition(p, i) == 1)
+			else if (CELLWIDE(nRow, i))
 			{
 				rect.right = (i + 1) * v_xchar;
-				PrintChar(hDC, &rect, &hOldFont, p + i0, (i - i0) + 1, p[Columns + i0]);
+				PrintChar(hDC, &rect, &hOldFont, p + i0, (i - i0) + 1,
+							p[Columns + i0], nRow, i0);
 			}
 			else
 #endif
-			PrintChar(hDC, &rect, &hOldFont, p + i0, i - i0, p[Columns + i0]);
+			PrintChar(hDC, &rect, &hOldFont, p + i0, i - i0,
+						p[Columns + i0], nRow, i0);
 		}
 	}
 #if defined(KANJI) && defined(SYNTAX)
@@ -2042,7 +2091,7 @@ get_linecol(LPARAM lParam, FPOS *pos, int *row, int *col)
 	*col = x = min(Columns - 1, max(0, LOWORD(lParam) / v_xchar));
 	*row = y = min(Rows - 1, (HIWORD(lParam) - 1) / v_ychar);
 #ifdef KANJI
-	if (ISkanjiPosition(WinScreen[y], x + 1) == 2)
+	if (CELLCONT(y, x))
 		x--;
 #endif
 	wp = firstwin;
@@ -2183,7 +2232,7 @@ draw_cmode(HWND hWnd, int cs_row, int cs_col, int ce_row, int ce_col)
 #ifdef KANJI
 			if (j == nCol)
 			{
-				if (ISkanjiPosition(p, j + 1) == 2)
+				if (CELLCONT(i, j))
 # ifdef SYNTAX
 					p[Columns + j - 1]  = CMODE;
 # else
@@ -2192,7 +2241,7 @@ draw_cmode(HWND hWnd, int cs_row, int cs_col, int ce_row, int ce_col)
 			}
 			else if (j == nEndCol)
 			{
-				if (ISkanjiPosition(p, j + 1) == 1)
+				if (CELLWIDE(i, j))
 # ifdef SYNTAX
 					p[Columns + j - 1]  = CMODE;
 # else
@@ -3948,8 +3997,8 @@ SetColor:
 				{
 					i = curbuf->b_endop.col - curbuf->b_startop.col + 1 - !mincl;
 #ifdef KANJI
-					if (ISkanjiFpos(&curbuf->b_endop) == 2)
-						i++;
+					i = kanji_fixlen(ml_get(curbuf->b_startop.lnum),
+									(int)curbuf->b_startop.col, (int)i);
 #endif
 				}
 				if (i == 0 || i >= MAXPATHL || i >= IOSIZE)
@@ -4143,7 +4192,7 @@ get_clipdata:
 				return(FALSE);
 			break;
 		case IDM_BITMAP:
-			DialogBoxParam(hInst, "BITMAP", hWnd, BitmapDialog, (LPARAM)NULL);
+			DialogBoxParam(hInst, "BITMAPSEL", hWnd, BitmapDialog, (LPARAM)NULL);
 			if (!config_ini && config_bitmap)
 			{
 				v_tbcolor = &config_tbbitmap;
@@ -4863,32 +4912,45 @@ share:
 		{
 			p = WinScreen[row];
 #ifdef KANJI
-			if (col > 0 && ISkanjiPosition(p, col + 1) == 2)
-				col--;
-			if (ISkanji(p[col]))
+			col = cell_head(row, col);
+			if (CELLCP(row, col) > 0)
 			{
-				int class;
-				class = jpcls(p[col], p[col+1]);
-				while (col > 0 && class == jpcls(p[col-2],p[col-1]))
-					col -= 2;
-				while (col < Columns && class == jpcls(p[col],p[col+1]))
+				int class = cell_class(row, col);
+
+				while (col > 0)
 				{
+					int		prev = cell_head(row, col - 1);
+
+					if (CELLCP(row, prev) <= 0
+							|| cell_class(row, prev) != class)
+						break;
+					col = prev;
+				}
+				while (col < Columns && CELLCP(row, col) > 0
+						&& cell_class(row, col) == class)
+				{
+					int		w = cell_width(row, col);
+
 # ifdef SYNTAX
-					p[Columns + col + 0]  = CMODE;
-					p[Columns + col + 1]  = CMODE;
+					p[Columns + col]  = CMODE;
+					if (w == 2)
+						p[Columns + col + 1]  = CMODE;
 # else
-					p[Columns + col + 0] |= CMODE;
-					p[Columns + col + 1] |= CMODE;
+					p[Columns + col] |= CMODE;
+					if (w == 2)
+						p[Columns + col + 1] |= CMODE;
 # endif
-					col += 2;
+					col += w;
 					cmode = TRUE;
 				}
 			}
 			else
 			{
-				while (col > 0 && ISkanjiPosition(p, col) == 0 && isidchar(p[col - 1]))
+				while (col > 0 && CELLCP(row, col - 1) == 0
+						&& isidchar(p[col - 1]))
 					--col;
-				while (col < Columns && !ISkanji(p[col]) && isidchar(p[col]))
+				while (col < Columns && CELLCP(row, col) == 0
+						&& isidchar(p[col]))
 				{
 # ifdef SYNTAX
 					p[Columns + col]  = CMODE;
@@ -4936,7 +4998,8 @@ share:
 			i = pos.col;
 			while (i > 0 && !iswhite(p[i - 1]))
 #ifdef KANJI
-				if (ISkanjiPosition(p, i) == 2 && isjpspace(p[i-2], p[i-1]))
+				if (ISkanjiPosition(p, i) == 2
+						&& isjpspace(utf_prev(p, p + i)))
 					break;
 				else
 #endif
@@ -4945,7 +5008,7 @@ share:
 			i = 0;
 			while (p[i] != NUL && !iswhite(p[i]))
 #ifdef KANJI
-				if (isjpspace(p[i], p[i + 1]))
+				if (isjpspace(p + i))
 					break;
 				else
 #endif
@@ -6501,17 +6564,14 @@ int nCmdShow;
 end:
 		;
 	}
-	if (vimgetenv("VIM32DEBUG") == NULL)
-	{
-		__try {
-			main(argc, argv);
-		}
-		__except (EXCEPTION_CONTINUE_EXECUTION) {
-			;
-		}
-	}
-	else
-		main(argc, argv);
+	/*
+	 * No SEH wrapper here on purpose: it used to be
+	 *   __try { main(); } __except (EXCEPTION_CONTINUE_EXECUTION) { ; }
+	 * which swallowed access violations and resumed at the faulting
+	 * instruction, so crashes turned into silent corruption. main() installs
+	 * w32crash_init() instead, which reports and then dies.
+	 */
+	main(argc, argv);
 	return(0);
 }
 
@@ -6588,9 +6648,9 @@ mch_windinit(argc, argv, command)
 		v_font					= NULL;
 
 		v_ssize = 256;
-		if ((v_space = malloc(sizeof(INT) * v_ssize)) == NULL)
+		if ((v_space = malloc(sizeof(INT) * v_ssize * 2)) == NULL)
 			ExitProcess(99);
-		if ((v_char = malloc(sizeof(short) * v_ssize)) == NULL)
+		if ((v_char = malloc(sizeof(short) * v_ssize * 2)) == NULL)
 			ExitProcess(99);
 		wndclass.style			= CS_DBLCLKS;
 		wndclass.lpfnWndProc	= WndProc;
@@ -6650,7 +6710,7 @@ mch_windinit(argc, argv, command)
 		lpCurrCurs	= IDC_IBEAM;
 		SetCursor(hIbeamCurs);
 		hAcc = LoadAccelerators(hInst, "ACCKEYS");
-		SetClassLong(hVimWnd, GCL_HICON, (LONG)LoadIcon(hInst, "vim"));
+		SetClassLongPtr(hVimWnd, GCLP_HICON, (LONG_PTR)LoadIcon(hInst, "vim"));
 		hTColor= CreatePopupMenu();
 		AppendMenu(hTColor,MF_STRING,    IDM_FWHITE,   "&White");
 		AppendMenu(hTColor,MF_STRING,    IDM_FBLACK,   "&Black");

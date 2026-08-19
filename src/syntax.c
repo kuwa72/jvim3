@@ -251,19 +251,18 @@ char_u		*	str;
 }
 
 static int
-syn_cls(c, k)
-int				c;
-int				k;
+syn_cls(ptr)
+char_u		*	ptr;
 {
+	int				c = *ptr;
+
 	if (ISkanji(c))
 	{
 		int		ret;
 
-		if ((ret = jpcls((char_u)c, (char_u)k)) >= 0)
+		if ((ret = jpcls(ptr)) >= 0)
 			return(ret);
 	}
-	if (ISkana(c))
-		return JPC_KANA;
 	if (c == ' ' || c == '\t' || c == '\0')
 		return(0);
 
@@ -287,7 +286,7 @@ char_u		*	ptr;
 	memset(synhash, 0, sizeof(synhash));
 	while (*ptr)
 	{
-		sclass = syn_cls(ptr[0], ptr[1]);
+		sclass = syn_cls(ptr);
 		if (sclass != oclass)
 		{
 			if (oclass != (-1) && synhash[incase % HASH_SIZE].cnt < 0x80)
@@ -1337,21 +1336,15 @@ int				find;
 
 			if (top != ptr)
 			{
-				if (ISkanjiPointer(top, ptr - 1) == 2)
-					sclass = syn_cls(ptr[-2], ptr[-1]);
-				else
-					sclass = syn_cls(ptr[-1], ptr[-1]);
-				oclass = syn_cls(ptr[0], ptr[1]);
+				sclass = syn_cls(utf_prev(top, ptr));
+				oclass = syn_cls(ptr);
 				if (sclass == oclass)
 					return(NULL);
 			}
 			if (ptr[strlen(synp->str) + 0] != '\0')
 			{
-				if (ISkanjiPointer(ptr, ptr + strlen(synp->str) - 1) == 2)
-					sclass = syn_cls(ptr[strlen(synp->str) - 2], ptr[strlen(synp->str) - 1]);
-				else
-					sclass = syn_cls(ptr[strlen(synp->str) - 1], ptr[strlen(synp->str) - 0]);
-				oclass = syn_cls(ptr[strlen(synp->str) + 0], ptr[strlen(synp->str) + 1]);
+				sclass = syn_cls(utf_prev(ptr, ptr + strlen(synp->str)));
+				oclass = syn_cls(ptr + strlen(synp->str));
 				if (sclass == oclass)
 					return(NULL);
 			}

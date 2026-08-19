@@ -303,7 +303,7 @@ char_u		**	matchend;
 					cp++;
 				else if (ISkanji(*cp))
 				{
-					if (isjpspace(cp[0], cp[1]))
+					if (isjpspace(cp))
 						cp += 2;
 					else
 						break;
@@ -329,7 +329,7 @@ char_u		**	matchend;
 					if (ep == NULL)
 						ep = cp;
 				}
-				else if (ISkanji(*cp) && isjpspace(cp[0], cp[1]))
+				else if (ISkanji(*cp) && isjpspace(cp))
 				{
 					if (ep == NULL)
 						ep = cp;
@@ -615,7 +615,7 @@ retry:
 		lnum = pos->lnum;
 		if (dir == FORWARD)
 		{
-			i += ISkanjiCol(lnum, i) == 1 ? 2 : 1;
+			i += kanjilenCol(lnum, i);
 		}
 		else /* dir == BACKWARD */
 		{
@@ -662,9 +662,9 @@ retry:
 						 */
 #ifdef KANJI
 # ifdef USE_GREP
-						while (*match && grepexec(prog, match + (ISkanji(*match) ? 2 : 1), (int)FALSE, lnum))
+						while (*match && grepexec(prog, match + utf_len(*match), (int)FALSE, lnum))
 # else
-						while (*match && regexec(prog, match + (ISkanji(*match) ? 2 : 1), (int)FALSE))
+						while (*match && regexec(prog, match + utf_len(*match), (int)FALSE))
 # endif
 #else
 						while (*match != NUL && regexec(prog, match + 1, (int)FALSE))
@@ -1819,7 +1819,7 @@ cls()
 			return 1;
 		if ((stype != 0) && (p_ww & 32))
 			return JPC_HIRA;
-		if ((ret = jpcls((char_u)c, *(ml_get_cursor() + 1))) >= 0)
+		if ((ret = jpcls(ml_get_cursor())) >= 0)
 		{
 			if (ret != JPC_KIGOU && stype != 0)
 				return JPC_HIRA;

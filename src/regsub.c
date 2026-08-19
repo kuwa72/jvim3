@@ -239,9 +239,9 @@ regtilde(source, magic)
 				}
 			}
 			else if (magic)
-				STRCPY(p, p + 1);				/* remove '~' */
+				STRMOVE(p, p + 1);				/* remove '~' */
 			else
-				STRCPY(p, p + 2);				/* remove '\~' */
+				STRMOVE(p, p + 2);				/* remove '\~' */
 		}
 		else if (*p == '\\' && p[1])			/* skip escaped characters */
 			++p;

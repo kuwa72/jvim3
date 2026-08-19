@@ -500,14 +500,21 @@ flushbuf()
 	if (bpos != 0)
 	{
 #ifdef KANJI
-		if (JP_DISP != JP_SJIS)
+		/*
+		 * The screen is written in the internal encoding, which is UTF-8, so a
+		 * terminal that wants anything else needs a conversion here.
+		 */
+		if (JP_DISP != JP_UTF8)
 		{
 			char_u *tmpptr;
 
 			outbuf[bpos] = NUL;
 			tmpptr = kanjiconvsto(outbuf, JP_DISP, TRUE);
-			mch_write(tmpptr, STRLEN(tmpptr));
-			free(tmpptr);
+			if (tmpptr != NULL)
+			{
+				mch_write(tmpptr, STRLEN(tmpptr));
+				free(tmpptr);
+			}
 		}
 		else
 #endif

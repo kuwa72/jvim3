@@ -39,6 +39,16 @@ typedef unsigned long	long_u;
 # include <string.h>
 #endif
 
+#if defined(NT) && !defined(NO_EARLY_WINDOWS_H)
+/*
+ * mingw-w64's <winnt.h> declares struct bit-fields named CR, NL and friends
+ * (IMAGE_ARM64_RUNTIME_FUNCTION_ENTRY). They are parsed as the macros from
+ * ascii.h if that is included first, which breaks every file. Pull in the
+ * Win32 headers before the macros are defined.
+ */
+# include <windows.h>
+#endif
+
 #include "ascii.h"
 #include "keymap.h"
 #include "term.h"
@@ -52,7 +62,7 @@ typedef unsigned long	long_u;
 #  include <sys/stat.h>
 # else
 #  ifdef MSDOS 
-#   include <sys\stat.h>
+#   include <sys/stat.h>
 #  else
 #   ifdef UNIX
 #	 ifndef linux
@@ -347,6 +357,12 @@ typedef unsigned long	long_u;
 #define STRRCHR(s, c)		(char_u *)strrchr((char *)(s), c)
 #define STRLEN(s)			strlen((char *)(s))
 #define STRCPY(d, s)		strcpy((char *)(d), (char *)(s))
+/*
+ * Move a string over itself, e.g. STRMOVE(p, p + 1) to drop the first
+ * character. strcpy() may not be used when the ranges overlap.
+ */
+#define STRMOVE(d, s)			memmove((char *)(d), (char *)(s), \
+											STRLEN(s) + 1)
 #define STRNCPY(d, s, n)	strncpy((char *)(d), (char *)(s), n)
 #define STRCMP(d, s)		strcmp((char *)(d), (char *)(s))
 #define STRNCMP(d, s, n)	strncmp((char *)(d), (char *)(s), n)

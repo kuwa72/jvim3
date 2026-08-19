@@ -1,0 +1,99 @@
+# vi:ts=8:sw=8
+# Makefile for JVim 3 on Windows, using mingw-w64 (gcc).
+#
+# Works both natively under MSYS2 and as a cross build from Linux/WSL:
+#
+#   make -f makefile.mingw                        native (MSYS2 MINGW32 shell)
+#   make -f makefile.mingw CROSS=i686-w64-mingw32-	cross, 32 bit
+#   make -f makefile.mingw CROSS=x86_64-w64-mingw32- cross, 64 bit (see below)
+#
+# Targets: jvim32w.exe (GUI, default), jvim32.exe (console), both, clean.
+#
+# 32 bit is the supported configuration. The sources cast pointers through int
+# in ~37 places, which 64 bit silently truncates; build 64 bit only to work on
+# that. Use "make ... WARN=1" to list those casts.
+#
+# This is the minimal feature set: core editor + Win32 GUI + kanji/UTF-8 I/O.
+# Not built here (see makjnt.mak for the full set): USE_EXFILE (archive and
+# ftp editing), USE_BDF (BDF fonts), USE_MATOME (MIME decode), and the
+# separate grep.exe / clip.exe / vim32s.exe tools.
+
+CROSS	=
+CC	= $(CROSS)gcc
+RC	= $(CROSS)windres
+STRIP	= $(CROSS)strip
+
+# Feature defines. Keep in sync with the comment above.
+DEFINES = -DKANJI -DUCODE -DTRACK -DFEPCTRL -DCRMARK -DFEXRC -DNT106KEY \
+	  -DWEBB_COMPLETE -DWEBB_KEYWORD_COMPL -DNO_FREE_NULL -DXARGS \
+	  -DTERMCAP -DSYNTAX -DUSE_GREP -DUSE_TAGEX -DUSE_OPT -DUSE_HISTORY
+
+# -std=gnu89: the sources use K&R function definitions throughout, which C23
+#             (gcc's default since 14) rejects.
+# -fno-omit-frame-pointer: w32crash.c walks the frame pointer chain to report
+#             the stack on a crash.
+STD	= -std=gnu89 -fcommon -fno-omit-frame-pointer
+OPT	= -O2 -g
+# make ... WARN=1 shows the warnings that matter, mainly the pointer/int casts
+# that make a 64 bit build unsafe. -Wpointer-sign is suppressed: the sources mix
+# char and unsigned char everywhere on purpose (char_u), which buries the rest.
+WARNFLAGS = -w
+ifdef WARN
+WARNFLAGS = -Wall -Wno-parentheses -Wno-unused -Wno-pointer-sign \
+			-Wno-sign-compare
+endif
+CFLAGS	= $(STD) $(OPT) $(WARNFLAGS) -I. -DMSDOS -DNT -DWIN32 $(DEFINES)
+LDFLAGS = -g
+LIBS	= -luser32 -lshell32 -lgdi32 -lcomdlg32 -lcomctl32 -ladvapi32 \
+	  -lwinmm -lole32 -loleaut32 -luuid
+
+# Objects go in their own directory: makjunix.mak and makjnt.mak use the same
+# plain "alloc.o" names in this directory, and a Unix build would happily link
+# Windows objects left behind by this one.
+OBJDIR	= obj-mingw
+
+SRC =	alloc.c buffer.c charset.c cmdcmds.c cmdline.c csearch.c digraph.c \
+	edit.c fepnt.c fileio.c getchar.c help.c kanji.c linefunc.c main.c \
+	mark.c memfile.c memline.c message.c misccmds.c normal.c ops.c \
+	param.c quickfix.c regexp.c regsub.c screen.c search.c syntax.c \
+	tag.c term.c termlib.c track.c undo.c utf8.c version.c w32crash.c \
+	window.c winjnt.c xargs.c
+OBJ =	$(addprefix $(OBJDIR)/,$(SRC:.c=.o))
+RES =	$(OBJDIR)/vim32.res.o
+
+INCL =	vim.h globals.h param.h keymap.h macros.h ascii.h msdos.h structs.h \
+	proto.h term.h regexp.h ops.h kanji.h
+
+all: jvim32w.exe
+
+both: jvim32w.exe jvim32.exe
+
+# GUI build: entry point is WinMain() in winjnt.c.
+jvim32w.exe: $(OBJ) $(RES)
+	$(CC) $(LDFLAGS) -mwindows -o $@ $(OBJ) $(RES) $(LIBS)
+
+# Console build: entry point is main() in main.c.
+jvim32.exe: $(OBJ) $(RES)
+	$(CC) $(LDFLAGS) -o $@ $(OBJ) $(RES) $(LIBS)
+
+$(RES): vim32.rc vim.ico | $(OBJDIR)
+	$(RC) $(DEFINES) -DNT -DWIN32 -I. vim32.rc -O coff -o $@
+
+$(OBJ): $(INCL)
+
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
+
+$(OBJDIR)/%.o: %.c | $(OBJDIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Keep the debug info in a separate file and ship a small exe. The .debug file
+# is what scripts/resolve-crash.sh needs, so keep it next to the exe.
+split: jvim32w.exe
+	$(CROSS)objcopy --only-keep-debug jvim32w.exe jvim32w.exe.debug
+	$(STRIP) --strip-debug --strip-unneeded jvim32w.exe
+	$(CROSS)objcopy --add-gnu-debuglink=jvim32w.exe.debug jvim32w.exe
+
+clean:
+	-rm -rf $(OBJDIR)
+	-rm -f jvim32.exe jvim32w.exe jvim32w.exe.debug

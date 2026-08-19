@@ -349,6 +349,8 @@ readfile(fname, sfname, from, newfile, skip_lnum, nlines)
 				filesize += 3;			/* count the number of characters */
 				size -= 3;
 				memmove((char *)ptr, (char *)ptr + 3, size);
+				if (newfile)
+					curbuf->b_p_bom = TRUE;	/* write it back on save */
 			}
 # endif
 #endif
@@ -438,7 +440,7 @@ readfile(fname, sfname, from, newfile, skip_lnum, nlines)
 						char_u	*tmp;
 						colnr_t	 n;
 
-						n = len * 2 + 1;
+						n = len * 3 + 1;	/* UTF-8 can be 3x the source */
 						if ((tmp = lalloc(n, TRUE)) == NULL)
 						{
 							error = TRUE;
@@ -534,7 +536,7 @@ readfile(fname, sfname, from, newfile, skip_lnum, nlines)
 				break;
 			}
 # endif
-			n = (ptr - line_start) * 2 + 1;
+			n = (ptr - line_start) * 3 + 1;	/* UTF-8 can be 3x the source */
 			if ((tmp = lalloc(n, TRUE)) == NULL)
 			{
 				error = TRUE;
@@ -1179,6 +1181,13 @@ nexttry:
 	}
 #endif
 #if defined(KANJI) && defined(UCODE)
+	if (toupper(*buf->b_p_jc) == JP_UTF8 && buf->b_p_bom
+									&& !append && !curbuf->b_p_bin)
+	{
+		if (write_buf(fd, "\357\273\277", (size_t)3) == FAIL)
+			end = 0;
+		nchars = 3;
+	}
 	if (toupper(*buf->b_p_jc) == JP_WIDE && !append && !curbuf->b_p_bin)	/* UNICODE */
 	{
 		char_u		w[2];
@@ -1909,7 +1918,7 @@ opt_delet(buf, readwrite, expand, entab, delete, replace, gaiji, ts)
 		while (buf[col])
 		{
 			if (replace && ISkanji(buf[col]) && buf[col + 1]
-										&& isjpspace(buf[col], buf[col + 1]))
+										&& isjpspace(buf + col))
 			{
 				buf[col] = buf[col+1] = ' ';
 				col += 2;
@@ -2027,7 +2036,7 @@ opt_delet(buf, readwrite, expand, entab, delete, replace, gaiji, ts)
 				continue;
 			}
 # ifdef KANJI
-			if (ISkanji(buf[col]) && buf[col + 1] && isjpspace(buf[col], buf[col + 1]))
+			if (ISkanji(buf[col]) && buf[col + 1] && isjpspace(buf + col))
 			{
 				vcol += 2;
 				col += 2;
@@ -2045,7 +2054,7 @@ opt_delet(buf, readwrite, expand, entab, delete, replace, gaiji, ts)
 # ifdef KANJI
 		if (ISkanji(buf[col]) && buf[col + 1])
 		{
-			if (isjpspace(buf[col], buf[col + 1]))
+			if (isjpspace(buf + col))
 				space = (space != (-1)) ? space : n;
 			else
 				space = (-1);

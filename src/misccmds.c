@@ -66,7 +66,7 @@ set_indent(size, delete)
 		while (size >= (int)curbuf->b_p_ts)
 		{
 #ifdef KANJI
-			inschar(TAB, NUL);
+			inschar1(TAB);
 #else
 			inschar(TAB);
 #endif
@@ -75,7 +75,7 @@ set_indent(size, delete)
 	while (size)
 	{
 #ifdef KANJI
-		inschar(' ', NUL);
+		inschar1(' ');
 #else
 		inschar(' ');
 #endif
@@ -342,7 +342,7 @@ plines_win(wp, p)
 					}
 					continue;
 				}
-				j = chartabsize(*s, i);
+				j = chartabsize(s, i);
 				col += j;
 				i += j;
 			}
@@ -352,7 +352,7 @@ plines_win(wp, p)
 	}
 #else
 	while (*s != NUL)
-		col += chartabsize(*s++, col);
+		col += chartabsize(s++, col);
 #endif
 
 	/*
@@ -403,13 +403,18 @@ plines_m_win(wp, first, last)
 }
 
 /*
- * insert or replace a single character at the cursor position
+ * Insert, or in REPLACE state replace, one character at the cursor.
+ *
+ * The character is given as its bytes, because in the internal UTF-8 it can be
+ * one to four of them; the old (c, k) pair could only carry two. In REPLACE
+ * state the whole of the old character goes, whatever its length, and with
+ * 'nojreplace' the columns it occupied are kept by padding with spaces.
  */
 	void
 #ifdef KANJI
-inschar(c, k)
-	int			c;
-	int			k;
+inschar(bytes, nbytes)
+	char_u		*bytes;
+	int			nbytes;
 #else
 inschar(c)
 	int			c;
@@ -423,6 +428,11 @@ inschar(c)
 	int				extra;
 	colnr_t			col = curwin->w_cursor.col;
 	linenr_t		lnum = curwin->w_cursor.lnum;
+#ifdef KANJI
+	int				c = bytes[0];
+	int				oldn = 0;	/* bytes of the character being replaced */
+	int				padn = 0;	/* spaces to keep the columns lined up */
+#endif
 
 	old = ml_get(lnum);
 	oldlen = STRLEN(old) + 1;
@@ -432,70 +442,65 @@ inschar(c)
 #endif
 
 	rir0 = (State == REPLACE && p_ri && col == 0);
+#ifdef KANJI
+	if (!rir0 && State == REPLACE && old[col] != NUL)
+	{
+		oldn = utf_lenat(old, (int)col);
+		if (!p_jrep)
+		{
+			int		ow = utf_width(old + col);
+			int		nw = utf_width(bytes);
+
+			if (ow > nw)
+				padn = ow - nw;
+		}
+		new = alloc((unsigned)(oldlen - oldn + nbytes + padn));
+		if (new == NULL)
+			return;
+		memmove((char *)new, (char *)old, (size_t)col);
+		p = new + col;
+		memmove((char *)p, (char *)bytes, (size_t)nbytes);
+		if (padn)
+			memset((char *)p + nbytes, ' ', (size_t)padn);
+		memmove((char *)p + nbytes + padn, (char *)old + col + oldn,
+									(size_t)(oldlen - col - oldn));
+	}
+	else
+	{
+		extra = nbytes;
+		new = alloc((unsigned)(oldlen + extra));
+		if (new == NULL)
+			return;
+		memmove((char *)new, (char *)old, (size_t)col);
+		p = new + col;
+		memmove((char *)p + extra, (char *)old + col, (size_t)(oldlen - col));
+		memmove((char *)p, (char *)bytes, (size_t)nbytes);
+		if (rir0)
+		{
+			/* reverse replace in column 0: the old first character moves right
+			 * and a space takes its place */
+			p[nbytes] = ' ';
+			extraspace = TRUE;
+		}
+	}
+#else
 	if (rir0 || State != REPLACE || *(old + col) == NUL)
 		extra = 1;
 	else
 		extra = 0;
-
-#ifdef KANJI
-	if (ISkanji(c) &&
-		(State != REPLACE || *(old + col) == NUL || (rir0 && !ISkanji(*(old + col)))))
-		extra = 2;
-	else if (State == REPLACE && ISkanji(c) && !ISkanji(gchar_cursor()))
-		extra = 1;
-#endif
 	new = alloc((unsigned)(oldlen + extra));
 	if (new == NULL)
 		return;
 	memmove((char *)new, (char *)old, (size_t)col);
 	p = new + col;
-#ifdef KANJI
-	new[oldlen + extra - 1] = NUL;
-	if (!p_jrep && State == REPLACE && !ISkanji(c) && ISkanji(gchar_cursor()))
-	{
-		memmove((char *)p, (char *)old + col, (size_t)(oldlen - col));
-		if (rir0)					/* reverse replace in column 0 */
-			*(p + 2) = ' ';
-		else
-			*(p + 1) = ' ';
-	}
-	else if (!p_jrep && State == REPLACE && ISkanji(c) && !ISkanji(gchar_cursor()))
-	{
-		if (gchar_cursor() == NUL)
-		{
-			memmove((char *)p + 2, (char *)old + col, (size_t)(oldlen - col));
-		}
-		else
-		{
-			memmove((char *)p, (char *)old + col, (size_t)(oldlen - col));
-			if (ISkanji(*(ml_get_cursor()+1)))
-			{
-				if (rir0)					/* reverse replace in column 0 */
-					*(p + 3) = ' ';
-				else
-					*(p + 2) = ' ';
-			}
-		}
-	}
-	else if (State == REPLACE && !ISkanji(c) && ISkanji(gchar_cursor()))
-		memmove((char *)p, (char *)old + col + 1, (size_t)(oldlen - col - 1));
-	else
-#endif
 	memmove((char *)p + extra, (char *)old + col, (size_t)(oldlen - col));
-	if (rir0)					/* reverse replace in column 0 */
+	if (rir0)
 	{
 		*(p + 1) = c;			/* replace the char that was in column 0 */
-#ifdef KANJI
-		if (ISkanji(c))
-			*(p + 2) = k;
-#endif
 		c = ' ';				/* insert a space */
 		extraspace = TRUE;
 	}
 	*p = c;
-#ifdef KANJI
-	if (ISkanji(c))
-		*(p + 1) = k;
 #endif
 	ml_replace(lnum, new, FALSE);
 
@@ -528,12 +533,13 @@ inschar(c)
 	}
 #ifdef KANJI
 	if (!p_ri)							/* normal insert: cursor right */
-		curwin->w_cursor.col += (ISkanji(c) ? 2 : 1);
+		curwin->w_cursor.col += nbytes + padn;
 	else if (State == REPLACE && !rir0)	/* reverse replace mode: cursor left */
 	{
-		--curwin->w_cursor.col;
-		if (ISkanji(gchar_cursor()))
-			--curwin->w_cursor.col;
+		char_u	*base = ml_get(lnum);
+
+		curwin->w_cursor.col = (colnr_t)(utf_prev(base,
+									base + curwin->w_cursor.col) - base);
 	}
 #else
 	if (!p_ri)							/* normal insert: cursor right */
@@ -546,6 +552,22 @@ inschar(c)
 		syn_inschar(new, col);
 #endif
 	CHANGED;
+}
+
+/*
+ * insert or replace a single plain byte
+ */
+	void
+inschar1(c)
+	int		c;
+{
+#ifdef KANJI
+	char_u	b = (char_u)c;
+
+	inschar(&b, 1);
+#else
+	inschar(c);
+#endif
 }
 
 /*
@@ -625,8 +647,7 @@ delchar(fixpos)
 #ifdef KANJI
 	{
 		--curwin->w_cursor.col;
-		if (ISkanjiCur() == 2)
-			--curwin->w_cursor.col;
+		kanji_align();
 	}
 #else
 		--curwin->w_cursor.col;
@@ -750,8 +771,8 @@ skipspace(pp)
 	{
 		if (*p == ' ' || *p == '\t')
 			continue;
-		if (ISkanji(*p) && jpcls(*p, *(p+1)) == 0)
-			++ p;
+		if (ISkanji(*p) && jpcls(p) == 0)
+			p += utf_len(*p) - 1;
 		else
 			break;
 	}
@@ -777,9 +798,9 @@ skiptospace(pp)
 #ifdef KANJI
 		if (ISkanji(*p))
 		{
-			if (jpcls(*p, *(p + 1)) == 0)
+			if (jpcls(p) == 0)
 				break;
-			++p;
+			p += utf_len(*p) - 1;
 		}
 #else
 		;

@@ -90,6 +90,8 @@ getcmdline(firstc, buff)
 #ifdef KANJI
 	unsigned int	 	c;
 			 int		k;
+	char_u				cbuf[UTF8_MAXLEN + 1];	/* the character just typed */
+			 int		clen = 1;				/* its length in bytes */
 #else
 	register char_u 	c;
 #endif
@@ -182,8 +184,18 @@ getcmdline(firstc, buff)
 			if (c == Ctrl('C'))
 				got_int = FALSE;
 #ifdef KANJI
-			else if (ISkanji(c))
-				k = vgetc();
+			cbuf[0] = c;
+			clen = 1;
+			if (c != Ctrl('C') && ISkanji(c))
+			{
+				int		want = utf_len(c);
+
+				/* take the whole character, not just two bytes */
+				while (clen < want)
+					cbuf[clen++] = vgetc();
+				k = cbuf[1];
+			}
+			cbuf[clen] = NUL;
 #endif
 #if defined(MSDOS) && defined(TERMCAP)		/* DOSGEN */
 			chk_ctlkey((int *)&c, &k);
@@ -268,7 +280,7 @@ getcmdline(firstc, buff)
 				if (c == DEL && cmdpos != cmdlen)
 #ifdef KANJI
 					if (ISkanji(buff[cmdpos]))
-						cmdpos += 2;
+						cmdpos += utf_lenat(buff, cmdpos);
 					else
 #endif
 					++cmdpos;
@@ -285,7 +297,8 @@ getcmdline(firstc, buff)
 						{
 							while (cmdpos && !isspace(buff[cmdpos - 1])
 									&& (ISkanjiPosition(buff, cmdpos) == 2))
-								cmdpos -= 2;
+								cmdpos = (int)(utf_prev(buff,
+											buff + cmdpos) - buff);
 						}
 						else
 #endif
@@ -294,7 +307,7 @@ getcmdline(firstc, buff)
 					}
 					else
 #ifdef KANJI
-						cmdpos -= ISkanjiPosition(buff, cmdpos) == 2 ? 2 : 1;
+						cmdpos = (int)(utf_prev(buff, buff + cmdpos) - buff);
 #else
 						--cmdpos;
 #endif
@@ -356,12 +369,12 @@ do_esc:
 #ifdef KANJI
 						if (ISkanji(buff[cmdpos]))
 						{
-							cmdspos += 2;
-							cmdpos ++;
+							cmdspos += charsize(buff + cmdpos);
+							cmdpos += utf_lenat(buff, cmdpos) - 1;
 						}
 						else
 #endif
-						cmdspos += charsize(buff[cmdpos]);
+						cmdspos += charsize(buff + cmdpos);
 						++cmdpos;
 				}
 				while (c == K_SRARROW && buff[cmdpos] != ' ');
@@ -375,14 +388,17 @@ do_esc:
 								break;
 						--cmdpos;
 #ifdef KANJI
-						if (ISkanji(buff[cmdpos - 1]))
+						if (cmdpos > 0
+								&& ISkanjiPosition(buff, cmdpos + 1) == 2)
 						{
-							cmdspos -= 2;
-							cmdpos --;
+							int		h = utf_headoff(buff, cmdpos);
+
+							cmdpos = h;
+							cmdspos -= charsize(buff + h);
 						}
 						else
 #endif
-						cmdspos -= charsize(buff[cmdpos]);
+						cmdspos -= charsize(buff + cmdpos);
 				}
 				while (c == K_SLARROW && buff[cmdpos - 1] != ' ');
 				continue;
@@ -514,7 +530,7 @@ do_esc:
 			  	c = vgetc();
 				if (c == ESC)
 					goto do_esc;
-				if (charsize(c) == 1)
+				if (transcharsize(c) == 1)
 					putcmdline(c, buff);
 				cc = vgetc();
 				if (cc == ESC)
@@ -530,21 +546,28 @@ do_esc:
 			continue;
 
 #ifdef KANJI
-		if (cmdlen < CMDBUFFSIZE - 3)
+		if (cmdlen + clen < CMDBUFFSIZE - 1)
 #else
 		if (cmdlen < CMDBUFFSIZE - 2)
 #endif
 		{
 #ifdef KANJI
-				if (ISkanji(c))
+				if (clen > 1)
 				{
-					cmdlen += 2;
+					int		j;
+
+					/*
+					 * Make room for the whole character and drop it in. The old
+					 * version shifted by two and read buff[-1] when inserting
+					 * at the start of the line.
+					 */
 					for (i = cmdlen; i > cmdpos; --i)
-							buff[i] = buff[i - 2];
-					buff[cmdpos] = c;
-					buff[cmdpos + 1] = k;
+						buff[i + clen - 1] = buff[i - 1];
+					for (j = 0; j < clen; j++)
+						buff[cmdpos + j] = cbuf[j];
+					cmdlen += clen;
 					msg_outtrans(buff + cmdpos, cmdlen - cmdpos);
-					cmdpos += 2;
+					cmdpos += clen;
 				}
 				else
 				{
@@ -556,11 +579,11 @@ do_esc:
 				++cmdpos;
 #ifdef KANJI
 				}
-				if (ISkanji(c))
-					i = 2;
+				if (clen > 1)
+					i = utf_width(cbuf);
 				else
 #endif
-				i = charsize(c);
+				i = transcharsize(c);
 				cmdspos += i;
 		}
 		msg_check();
@@ -690,12 +713,12 @@ redrawcmd()
 #ifdef KANJI
 		if (ISkanji(cmdbuff[i]))
 		{
-			cmdspos += 2;
-			i++;
+			cmdspos += charsize(cmdbuff + i);
+			i += utf_lenat(cmdbuff, i) - 1;
 		}
 		else
 #endif
-		cmdspos += charsize(cmdbuff[i]);
+		cmdspos += charsize(cmdbuff + i);
 }
 
 	static void
@@ -710,23 +733,25 @@ cursorcmd()
 	{
 		if (ISkanji(cmdbuff[i]))
 		{
+			int		w = charsize(cmdbuff + i);
+
 			if (col >= (Columns - 1))
 			{
-				col = 2;
+				col = w;
 				row++;
 			}
-			else if (col >= (Columns - 2))
+			else if (col + w > Columns)
 			{
 				col = 0;
 				row++;
 			}
 			else
-				col += 2;
-			i++;
+				col += w;
+			i += utf_lenat(cmdbuff, i) - 1;
 		}
 		else
 		{
-			col += charsize(cmdbuff[i]);
+			col += charsize(cmdbuff + i);
 			if (col >= Columns)
 			{
 				col -= Columns;
@@ -1133,7 +1158,7 @@ DoOneCmd(buff)
 				if ((argt & USECTRLV) && p[1] != NUL)	/* skip CTRL-V and next char */
 					++p;
 				else					/* remove CTRL-V and skip next char */
-					STRCPY(p, p + 1);
+					STRMOVE(p, p + 1);
 			}
 			else if ((*p == '"' && !(argt & NOTRLCOM)) || *p == '|' || *p == '\n')
 			{

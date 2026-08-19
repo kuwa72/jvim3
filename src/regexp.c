@@ -1360,11 +1360,11 @@ regmatch(prog)
 			if (ISkanji(reginput[0]))
 			{
 				int sclass;		/* sclass == JPC_KIGOU : Symbol */
-				if (!(sclass = jpcls(reginput[0], reginput[1])))
+				if (!(sclass = jpcls(reginput)))
 					return 0;
 				if (((reginput - regbegin) >= 1)
 								&& ISkanjiPointer(regbegin, &reginput[-1]) == 2
-								&& sclass == jpcls(reginput[-2], reginput[-1]))
+								&& sclass == jpcls(utf_prev(regbegin, reginput)))
 					return 0;
 				break;
 			}
@@ -1395,14 +1395,13 @@ regmatch(prog)
 #ifdef KANJI
 			if (reginput == regbol)
 				return 0;
-			if (regbol != NULL && (reginput >= (regbol + 2))
-						&& ISkanjiPointer(regbol, &reginput[-2]) == 1)
+			if (regbol != NULL && reginput > regbol
+						&& ISkanji(*utf_prev(regbol, reginput)))
 			{
 				int sclass;
-				if (!(sclass = jpcls(reginput[-2], reginput[-1])))
+				if (!(sclass = jpcls(utf_prev(regbol, reginput))))
 					return 0;
-				if (ISkanji(reginput[0])
-								&& sclass == jpcls(reginput[0], reginput[1]))
+				if (ISkanji(reginput[0]) && sclass == jpcls(reginput))
 					return 0;
 				break;
 			}
@@ -2029,7 +2028,7 @@ strjpchr(s, c, k)
 			{
 				if ((ISkanji(c) || ISkana(c)) && k == NUL)
 					return(s);
-				if (jp_strnicmp(s, work, (size_t)(ISkanji(work[0]) ? 2 : 1)) != 0)
+				if (jp_strnicmp(s, work, (size_t)utf_len(work[0])) != 0)
 					return(s);
 				s += 2;
 			}
@@ -2039,7 +2038,7 @@ strjpchr(s, c, k)
 					return(s);
 				if (ISkanji(c) && k == NUL)
 					return(s);
-				if (jp_strnicmp(s, work, (size_t)(ISkanji(work[0]) ? 2 : 1)) != 0)
+				if (jp_strnicmp(s, work, (size_t)utf_len(work[0])) != 0)
 					return(s);
 				s ++;
 			}
@@ -2093,7 +2092,7 @@ mstrjpchr(s, c, k)
 				{
 					if ((ISkanji(c) || ISkana(c)) && k == NUL)
 						return(s);
-					if (jp_strnicmp(s, work, (size_t)(ISkanji(work[0]) ? 2 : 1)) != 0)
+					if (jp_strnicmp(s, work, (size_t)utf_len(work[0])) != 0)
 						return(s);
 					s += 2;
 				}
@@ -2103,7 +2102,7 @@ mstrjpchr(s, c, k)
 						return(s);
 					if (ISkanji(c) && k == NUL)
 						return(s);
-					if (jp_strnicmp(s, work, (size_t)(ISkanji(work[0]) ? 2 : 1)) != 0)
+					if (jp_strnicmp(s, work, (size_t)utf_len(work[0])) != 0)
 						return(s);
 					s ++;
 				}
@@ -2121,7 +2120,7 @@ mstrjpchr(s, c, k)
 						sbuf[0] = (class & 0xff00) >> 8;
 						sbuf[1] = class & 0x00ff;
 						if (jp_strnicmp(sbuf, work,
-									(size_t)(ISkanji(work[0]) ? 2 : 1)) != 0)
+									(size_t)utf_len(work[0])) != 0)
 							return(s);
 					}
 					s += 4;
@@ -2137,7 +2136,7 @@ mstrjpchr(s, c, k)
 							return(s);
 						if (ISkanji(c) && k == NUL)
 							return(s);
-						if (jp_strnicmp(sbuf, work, (size_t)(ISkanji(work[0]) ? 2 : 1)) != 0)
+						if (jp_strnicmp(sbuf, work, (size_t)utf_len(work[0])) != 0)
 							return(s);
 					}
 					s += 2;
