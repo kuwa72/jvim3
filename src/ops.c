@@ -2006,66 +2006,67 @@ char_u			*ptr;
 static void
 get_clip()
 {
-	extern HWND			hVimWnd;
-	HANDLE				hClipData;
-	char			*	lpClipData;
+	char_u			*	lpClipData;
 	char_u			*	p;
 	char_u			*	t;
 	struct yankbuf	*	curr = y_current;
 	long				yanklines = 1;
 	long				i;
 	long				size;
+	size_t				clen;
 
 	y_current = &y_clip;
-	if (OpenClipboard(hVimWnd))
+	/* clip_get() hands back UTF-8, whichever clipboard format was on offer. */
+	if ((lpClipData = clip_get()) != NULL)
 	{
-		if ((hClipData = GetClipboardData(CF_TEXT)) != NULL)
+		clen = strlen((char *)lpClipData);
+		if (clen == 0)
 		{
-			if ((lpClipData = GlobalLock(hClipData)) != NULL)
-			{
-				free_yank_all();
-				p = lpClipData;
-				while ((p = strstr(p, "\r\n")) != NULL)
-				{
-					yanklines++;
-					p += 2;
-				}
-				y_clip.y_size = yanklines;
-				if (lpClipData[strlen(lpClipData) - 2] == '\r'
-						&& lpClipData[strlen(lpClipData) - 1] == '\n')
-					y_clip.y_type = MLINE;	/* set the yank buffer type */
-				else
-					y_clip.y_type = MCHAR;	/* set the yank buffer type */
-				y_clip.y_array = (char_u **)lalloc((long_u)(sizeof(char_u *) * yanklines), TRUE);
-				if (y_clip.y_array == NULL)
-				{
-					GlobalUnlock(hClipData);
-					CloseClipboard();
-					y_current = curr;
-					return;
-				}
-
-				p = lpClipData;
-				for (i = 0; i < yanklines; i++)
-				{
-					t = strstr(p, "\r\n");
-					if (t == NULL)
-						size = strlen(p);
-					else
-						size = t - p;
-					if ((y_clip.y_array[i] = alloc(size + 1)) == NULL)
-					{
-						free_yank(i);	/* free the lines that we allocated */
-						break;
-					}
-					memcpy(y_clip.y_array[i], p, size);
-					y_clip.y_array[i][size] = NUL;
-					p = t + 2;
-				}
-				GlobalUnlock(hClipData);
-			}
+			free(lpClipData);
+			y_current = curr;
+			return;
 		}
-		CloseClipboard();
+		free_yank_all();
+		p = lpClipData;
+		while ((p = (char_u *)strstr((char *)p, "\r\n")) != NULL)
+		{
+			yanklines++;
+			p += 2;
+		}
+		y_clip.y_size = yanklines;
+		if (clen >= 2 && lpClipData[clen - 2] == '\r'
+				&& lpClipData[clen - 1] == '\n')
+			y_clip.y_type = MLINE;	/* set the yank buffer type */
+		else
+			y_clip.y_type = MCHAR;	/* set the yank buffer type */
+		y_clip.y_array = (char_u **)lalloc((long_u)(sizeof(char_u *) * yanklines), TRUE);
+		if (y_clip.y_array == NULL)
+		{
+			free(lpClipData);
+			y_current = curr;
+			return;
+		}
+
+		p = lpClipData;
+		for (i = 0; i < yanklines; i++)
+		{
+			t = (char_u *)strstr((char *)p, "\r\n");
+			if (t == NULL)
+				size = strlen((char *)p);
+			else
+				size = t - p;
+			if ((y_clip.y_array[i] = alloc(size + 1)) == NULL)
+			{
+				free_yank(i);	/* free the lines that we allocated */
+				break;
+			}
+			memcpy(y_clip.y_array[i], p, size);
+			y_clip.y_array[i][size] = NUL;
+			if (t == NULL)
+				break;
+			p = t + 2;
+		}
+		free(lpClipData);
 	}
 	y_current = curr;
 }
@@ -2073,31 +2074,16 @@ get_clip()
 static void
 put_clip()
 {
-	extern HWND			hVimWnd;
-	HANDLE				hClipData;
-	char			*	lpClipData;
+	char_u			*	text;
 	long				i;
 
 	if ((i = yank_to_clipboard(NULL)) != 0)
 	{
-		hClipData = GlobalAlloc(GMEM_MOVEABLE, i);
-		if (hClipData == NULL)
+		if ((text = alloc((unsigned)i + 1)) == NULL)
 			return;
-		if ((lpClipData = GlobalLock(hClipData)) == NULL)
-		{
-			GlobalFree(hClipData);
-			return;
-		}
-		yank_to_clipboard(lpClipData);
-		GlobalUnlock(hClipData);
-		if (OpenClipboard(hVimWnd) == FALSE)
-		{
-			GlobalFree(hClipData);
-			return;
-		}
-		EmptyClipboard();
-		SetClipboardData(CF_TEXT, hClipData);
-		CloseClipboard();
+		(void)yank_to_clipboard(text);
+		(void)clip_put(text, (int)strlen((char *)text));
+		free(text);
 	}
 }
 #endif

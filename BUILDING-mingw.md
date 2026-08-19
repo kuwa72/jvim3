@@ -130,8 +130,18 @@ Conversion happens only at the edges:
 | Files | `kanjiconvsfrom()` / `kanjiconvsto()` in `kanji.c`. UTF-8 and UCS-2 are handled directly; EUC-JP, Shift-JIS and ISO-2022-JP pivot through Shift-JIS, which is what the existing conversion tables are built around. |
 | Terminal | `flushbuf()` in `term.c` converts to `jmask`'s display code. |
 | Win32 GUI | `PrintChar()` in `winjnt.c` builds UTF-16 from the screen's code point plane and draws with `ExtTextOutW`. |
-| Keyboard and IME | `edit.c` and `cmdline.c` read a whole character, however many bytes it is. |
+| Keyboard and IME | The GUI window is a Unicode one, so `WM_CHAR` carries UTF-16; `winjnt.c` joins surrogate pairs and pushes UTF-8. `edit.c` and `cmdline.c` read a whole character, however many bytes it is. |
+| Clipboard | `CF_UNICODETEXT` both ways (`clip_put()` / `clip_get()` in `winjnt.c`), falling back to `CF_TEXT` when that is all a program offers. |
+| Window title | `SetWindowTextW`, so a file name outside CP932 shows as itself. |
 | Pipes and file names | `jmask`'s system code, still CP932 on Windows. |
+
+The GUI window has to be Unicode for this to work: an ANSI window only ever
+receives `WM_CHAR` in the ANSI code page, so anything outside CP932 arrived as
+`?` — an emoji, being a surrogate pair, arrived as two of them. That means
+`RegisterClassW`, `CreateWindowW`, `DefWindowProcW` and the `W` forms of the
+message loop functions, because `GetMessageA` would translate the character back
+to the ANSI code page on its way out of the queue. In the GUI the key code is
+therefore UTF-8 whatever `jmask` says; that setting still describes the console.
 
 Two invariants make the change tractable:
 

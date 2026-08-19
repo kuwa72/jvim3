@@ -822,7 +822,17 @@ retry:
 			*(char_u *)buf = K_ZERO;		/* replace ^@ with special code */
 	*buf = NUL;								/* add trailing NUL */
 #ifdef KANJI
+	/*
+	 * The Win32 GUI is a Unicode window and hands us UTF-8 (see WM_CHAR in
+	 * winjnt.c), whatever 'jmask' says the key code is; that setting still
+	 * describes the console.
+	 */
+#if defined(NT)
+	tmplen = kanjiconvsfrom(top, len, tmp, IOSIZE, round,
+							GuiWin ? JP_UTF8 : JP_KEY, &kanji);
+#else
 	tmplen = kanjiconvsfrom(top, len, tmp, IOSIZE, round, JP_KEY, &kanji);
+#endif
 
 	if (tmplen > maxlen)
 	{

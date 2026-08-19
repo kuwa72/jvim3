@@ -67,3 +67,7 @@ void	InitCommand __ARGS((void));
 void	win_history_append __ARGS((BUF *));
 char *	win_history_line __ARGS((BUF *));
 #endif
+#ifdef NT
+int		clip_put		__ARGS((char_u *, int));
+char_u *clip_get		__ARGS((void));
+#endif

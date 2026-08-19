@@ -135,6 +135,14 @@ static int				nowCols = 80;
 static char				keybuf[128];
 static char_u		*	cbuf					= keybuf;
 static char				szAppName[16]			= "JVim";
+static const WCHAR	   *szAppNameW				= L"JVim";
+/*
+ * The window is a Unicode one (RegisterClassW below), so WM_CHAR carries UTF-16
+ * code units and the IME and the emoji picker can deliver anything. The
+ * character is staged here as UTF-8, which is what the buffer holds.
+ */
+static char_u			wc_bytes[UTF8_MAXLEN];
+static int				wc_len					= 1;
 static int				c_size					= sizeof(keybuf);
 static int				c_end					= 0;
 static int				c_next					= 0;
@@ -333,6 +341,7 @@ static BOOL		syntax_on();
 									&& utf_cpwidth(CELLCP(row, col)) == 2)
 /* Font choice: 1 for a character the Japanese font should draw. */
 # define CELLKANA(row, col)	(CELLCP(row, col) > 0 ? 1 : 0)
+static void	push_wchar __ARGS((void));
 static int	cell_head __ARGS((int, int));
 static int	cell_class __ARGS((int, int));
 static int	cell_width __ARGS((int, int));
@@ -1373,6 +1382,18 @@ ResetScreen(HWND hWnd)
 }
 
 /*
+ * Append the staged character to the key buffer.
+ */
+	static void
+push_wchar()
+{
+	int		i;
+
+	for (i = 0; i < wc_len; i++)
+		cbuf[c_end++] = wc_bytes[i];
+}
+
+/*
  * Which cell does the character covering 'col' start at?
  */
 	static int
@@ -2263,29 +2284,120 @@ draw_cmode(HWND hWnd, int cs_row, int cs_col, int ce_row, int ce_col)
 	InvalidateRect(hWnd, &rect, FALSE);
 }
 
-static VOID
-yank_cmode(HWND hWnd, BOOL clip)
+/*
+ * Put UTF-8 text on the clipboard as CF_UNICODETEXT, so that characters outside
+ * the ANSI code page survive. Returns TRUE on success.
+ */
+	int
+clip_put(text, len)
+	char_u	*text;
+	int		len;
 {
-	HANDLE			hClipData;
-	char		*	lpClipData;
-	int				i;
-	int				j;
-	char_u		*	p;
-	char_u		*	ptr;
-	int				num = 0;
-	int				line = 0;
-	BOOL			flg;
+	HANDLE	hClipData;
+	WCHAR  *lpClipData;
+	int		wlen;
+
+	if (text == NULL || len <= 0)
+		return FALSE;
+	wlen = MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)text, len, NULL, 0);
+	if (wlen <= 0)
+		return FALSE;
+	if ((hClipData = GlobalAlloc(GMEM_MOVEABLE,
+							(wlen + 1) * sizeof(WCHAR))) == NULL)
+		return FALSE;
+	if ((lpClipData = (WCHAR *)GlobalLock(hClipData)) == NULL)
+	{
+		GlobalFree(hClipData);
+		return FALSE;
+	}
+	MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)text, len, lpClipData, wlen);
+	lpClipData[wlen] = 0;
+	GlobalUnlock(hClipData);
+	if (OpenClipboard(hVimWnd) == FALSE)
+	{
+		GlobalFree(hClipData);
+		return FALSE;
+	}
+	EmptyClipboard();
+	SetClipboardData(CF_UNICODETEXT, hClipData);
+	CloseClipboard();
+	return TRUE;
+}
+
+/*
+ * Fetch the clipboard as UTF-8 in a fresh buffer the caller frees, or NULL.
+ * CF_UNICODETEXT is preferred; CF_TEXT is accepted from programs that only
+ * offer the ANSI form.
+ */
+	char_u *
+clip_get()
+{
+	HANDLE	hClipData;
+	void   *lpClipData;
+	char_u *text = NULL;
+	int		len;
+
+	if (OpenClipboard(hVimWnd) == FALSE)
+		return NULL;
+	if ((hClipData = GetClipboardData(CF_UNICODETEXT)) != NULL)
+	{
+		if ((lpClipData = GlobalLock(hClipData)) != NULL)
+		{
+			len = WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)lpClipData, -1,
+										NULL, 0, NULL, NULL);
+			if (len > 0 && (text = alloc((unsigned)len)) != NULL)
+				WideCharToMultiByte(CP_UTF8, 0, (LPCWSTR)lpClipData, -1,
+										(LPSTR)text, len, NULL, NULL);
+			GlobalUnlock(hClipData);
+		}
+	}
+	else if ((hClipData = GetClipboardData(CF_TEXT)) != NULL)
+	{
+		if ((lpClipData = GlobalLock(hClipData)) != NULL)
+		{
+			int		alen = (int)strlen((char *)lpClipData);
+
+			if ((text = alloc((unsigned)(alen * UTF8_MAXLEN + 1))) != NULL)
+			{
+				len = kanjiconvsfrom((char_u *)lpClipData, alen, text,
+							alen * UTF8_MAXLEN, NULL, JP_SJIS, NULL);
+				if (len < 0)
+					len = 0;
+				text[len] = NUL;
+			}
+			GlobalUnlock(hClipData);
+		}
+	}
+	CloseClipboard();
+	return text;
+}
+
+/*
+ * Collect the marked cells of the screen as UTF-8 into a fresh buffer, one
+ * newline per marked row. The character in a cell comes from the code point
+ * plane, not from the character plane, which only holds the first bytes.
+ * Returns NULL when nothing is marked; the caller frees the result.
+ */
+	static char_u *
+cmode_text(lenp)
+	int		*lenp;
+{
+	char_u	*top;
+	char_u	*ptr;
+	int		i, j;
+	int		num = 0;
+	int		line = 0;
+	BOOL	flg;
 
 	for (i = 0; i < Rows; i++)
 	{
 		flg = FALSE;
-		p = WinScreen[i];
 		for (j = 0; j < Columns; j++)
 		{
 #if defined(KANJI) && defined(SYNTAX)
-			if (p[Columns + j] == CMODE)
+			if (WinScreen[i][Columns + j] == CMODE)
 #else
-			if (p[Columns + j] & CMODE)
+			if (WinScreen[i][Columns + j] & CMODE)
 #endif
 			{
 				num++;
@@ -2296,76 +2408,62 @@ yank_cmode(HWND hWnd, BOOL clip)
 			line++;
 	}
 	if (num == 0)
+		return NULL;
+	/* At worst every cell is a character of UTF8_MAXLEN bytes. */
+	if ((top = alloc((unsigned)(num * UTF8_MAXLEN + line * 2 + 1))) == NULL)
+		return NULL;
+	ptr = top;
+	for (i = 0; i < Rows; i++)
+	{
+		flg = FALSE;
+		for (j = 0; j < Columns; j++)
+		{
+#if defined(KANJI) && defined(SYNTAX)
+			if (WinScreen[i][Columns + j] != CMODE)
+#else
+			if (!(WinScreen[i][Columns + j] & CMODE))
+#endif
+				continue;
+			flg = TRUE;
+			{
+				int		cp = CELLCP(i, j);
+
+				if (cp == -1)
+					continue;			/* right half of a wide character */
+				if (cp > 0)
+					ptr += utf_encode(cp, ptr);
+				else
+					*ptr++ = WinScreen[i][j];
+			}
+		}
+		if (flg)
+			*ptr++ = '\n';
+	}
+	if (ptr > top && ptr[-1] == '\n')
+		ptr--;							/* no newline after the last row */
+	*ptr = NUL;
+	*lenp = (int)(ptr - top);
+	return top;
+}
+
+static VOID
+yank_cmode(HWND hWnd, BOOL clip)
+{
+	char_u		*	text;
+	int				len = 0;
+	int				i;
+
+	if ((text = cmode_text(&len)) == NULL)
 		return;
 	if (clip)
-	{
-		hClipData = GlobalAlloc(GMEM_MOVEABLE, num + (line * 2));
-		if (hClipData == NULL)
-			return;
-		if ((lpClipData = GlobalLock(hClipData)) == NULL)
-		{
-			GlobalFree(hClipData);
-			return;
-		}
-		ptr = lpClipData;
-		for (i = 0; i < Rows; i++)
-		{
-			flg = FALSE;
-			p = WinScreen[i];
-			for (j = 0; j < Columns; j++)
-			{
-#if defined(KANJI) && defined(SYNTAX)
-				if (p[Columns + j] == CMODE)
-#else
-				if (p[Columns + j] & CMODE)
-#endif
-				{
-					*ptr++ = p[j];
-					flg = TRUE;
-				}
-			}
-			if (flg)
-			{
-				*ptr++ = '\r';
-				*ptr++ = '\n';
-			}
-		}
-		ptr[-2] = '\0';
-		GlobalUnlock(hClipData);
-		if (OpenClipboard(hWnd) == FALSE)
-		{
-			GlobalFree(hClipData);
-			return;
-		}
-		EmptyClipboard();
-		SetClipboardData(CF_TEXT, hClipData);
-		CloseClipboard();
-	}
+		(void)clip_put(text, len);
 	else
 	{
-		if (!keybuf_chk(num + line))
-			return;
-		for (i = 0; i < Rows; i++)
-		{
-			flg = FALSE;
-			p = WinScreen[i];
-			for (j = 0; j < Columns; j++)
-			{
-#if defined(KANJI) && defined(SYNTAX)
-				if (p[Columns + j] == CMODE)
-#else
-				if (p[Columns + j] & CMODE)
-#endif
-				{
-					cbuf[c_end++] = p[j];
-					flg = TRUE;
-				}
-			}
-			if (flg)
-				cbuf[c_end++] = '\n';
-		}
-		cbuf[--c_end] = '\0';
+		if (keybuf_chk(len + 1))
+			for (i = 0; i < len; i++)
+				cbuf[c_end++] = text[i];
 	}
+	free(text);
 }
 
 static void
@@ -2511,6 +2609,32 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	case WM_CHAR:
+		{
+			static WCHAR	hisur = 0;		/* pending high surrogate */
+			WCHAR			wc = (WCHAR)wParam;
+
+			if (wc >= 0xd800 && wc <= 0xdbff)
+			{
+				hisur = wc;					/* wait for the other half */
+				return(0);
+			}
+			if (hisur != 0 && wc >= 0xdc00 && wc <= 0xdfff)
+			{
+				/*
+				 * A character outside the BMP. It can never be a command key,
+				 * so hand it straight to the buffer.
+				 */
+				wc_len = utf_encode(0x10000 + ((hisur - 0xd800) << 10)
+											+ (wc - 0xdc00), wc_bytes);
+				hisur = 0;
+				if (!keybuf_chk(UTF8_MAXLEN + 1))
+					return(0);
+				push_wchar();
+				return(0);
+			}
+			hisur = 0;
+			wc_len = utf_encode(wc, wc_bytes);
+		}
 		if (cmode)
 		{
 			if (LOBYTE(wParam) == Ctrl('C'))
@@ -2539,7 +2663,7 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			s_cursor = TRUE;
 			ShowCursor(TRUE);
 		}
-		if (!keybuf_chk(2))
+		if (!keybuf_chk(UTF8_MAXLEN + 1))
 			return(0);
 		switch (LOBYTE(wParam)) {
 		case Ctrl('^'):
@@ -2564,9 +2688,17 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 							fep_force_on();
 					}
 					else
-					{
-						cbuf[c_end++] = kanji;
-						cbuf[c_end++] = LOBYTE(wParam);
+					{			/* a legacy FEP pair, in CP932 */
+						char_u	sj[2];
+						char_u	u8[UTF8_MAXLEN + 1];
+						int		n, j;
+
+						sj[0] = kanji;
+						sj[1] = LOBYTE(wParam);
+						n = kanjiconvsfrom(sj, 2, u8, (int)sizeof(u8),
+											NULL, JP_SJIS, NULL);
+						for (j = 0; j < n; j++)
+							cbuf[c_end++] = u8[j];
 					}
 					kanji = 0;
 				}
@@ -2580,12 +2712,12 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				else if (LOBYTE(wParam) == 0x81 && state_shift)
 					kanji = 0x81;
 				else
-					cbuf[c_end++] = LOBYTE(wParam);
+					push_wchar();
 			}
 			else
 #endif
 			if (repeat && (config_overflow < 3))
-				cbuf[c_end++] = LOBYTE(wParam);
+				push_wchar();
 			else if (repeat && (LOBYTE(wParam) == 'j'
 										|| LOBYTE(wParam) == 'k'
 										|| LOBYTE(wParam) == Ctrl('N')
@@ -2639,9 +2771,9 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				}
 				while (i--)
 				{
-					if (!keybuf_chk(1))
+					if (!keybuf_chk(UTF8_MAXLEN))
 						break;
-					cbuf[c_end++] = LOBYTE(wParam);
+					push_wchar();
 				}
 			}
 			else if (repeat && (!curwin->w_p_wrap || (p_ww & 4))
@@ -2651,14 +2783,14 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				if (c_next != 0 && vpeekc() != NUL)
 					;
 				else if (repeat > KEY_REP)
-					cbuf[c_end++] = LOBYTE(wParam);
-				cbuf[c_end++] = LOBYTE(wParam);
+					push_wchar();
+				push_wchar();
 			}
 			else if (repeat && isalpha(LOBYTE(wParam))
 					&& (c_end - c_next) && (cbuf[c_end - 1] == LOBYTE(wParam)))
 				/* key repeat cancel */;
 			else
-				cbuf[c_end++] = LOBYTE(wParam);
+				push_wchar();
 			break;
 		}
 		return(0);
@@ -3773,15 +3905,15 @@ SetColor:
 				long			size = 0;
 				extern int		restart_edit;	/* this is in edit.c */
 
-				if (((State & NORMAL) || State == INSERT) && OpenClipboard(hWnd))
+				if ((State & NORMAL) || State == INSERT)
 				{
-					if ((hClipData = GetClipboardData(CF_TEXT)) != NULL)
+					char_u	*text = clip_get();
+
+					if (text != NULL)
 					{
-						if ((lpClipData = GlobalLock(hClipData)) != NULL)
-							size = strlen(lpClipData);
-						GlobalUnlock(hClipData);
+						size = strlen((char *)text);
+						free(text);
 					}
-					CloseClipboard();
 				}
 				if ((size > 2048) && !VIsual.lnum)
 				{
@@ -3811,59 +3943,58 @@ SetColor:
 					}
 					break;	/* no use keyboard buffer */
 				}
-				else if (OpenClipboard(hWnd))
+				else
 				{
 					int				imode = 0;
+					char_u		*	text = clip_get();
 
 					if ((State & NORMAL) && !restart_edit)
 						imode = 2;
-					if ((hClipData = GetClipboardData(CF_TEXT)) != NULL)
+					if (text != NULL)
 					{
-						if ((lpClipData = GlobalLock(hClipData)) != NULL)
+						if (!keybuf_chk(strlen((char *)text) + 1 + imode))
 						{
-							if (!keybuf_chk(strlen(lpClipData) + 1 + imode))
-							{
-								GlobalUnlock(hClipData);
-								CloseClipboard();
-								break;
-							}
-							if (imode)
-							{
-								if (VIsual.lnum)
-								{
-									cbuf[c_end++] = 's';
-									bClear = FALSE;
-								}
-								else
-									cbuf[c_end++] = 'a';
-							}
-							for (p = lpClipData; *p; )
-							{
-#ifdef KANJI
-								if (ISkanji(*p))
-								{
-									cbuf[c_end++] = *p++;
-									cbuf[c_end++] = *p++;
-								}
-								else if (*p == 0xa0)	/* hannkaku kana space */
-								{
-									cbuf[c_end++] = ' ';
-									*p++;
-								}
-								else
-#endif
-								{
-									if (*p == '\r' && *(p+1) == '\n')
-										++p;
-									cbuf[c_end++] = *p++;
-								}
-							}
-							if (imode)
-								cbuf[c_end++] = ESC;
-							GlobalUnlock(hClipData);
+							free(text);
+							break;
 						}
+						if (imode)
+						{
+							if (VIsual.lnum)
+							{
+								cbuf[c_end++] = 's';
+								bClear = FALSE;
+							}
+							else
+								cbuf[c_end++] = 'a';
+						}
+						for (p = text; *p; )
+						{
+#ifdef KANJI
+							/* the clipboard is UTF-8 here, see clip_get() */
+							if (p[0] == 0xc2 && p[1] == 0xa0)
+							{			/* no-break space: paste a space */
+								cbuf[c_end++] = ' ';
+								p += 2;
+							}
+							else if (ISkanji(*p))
+							{
+								int		n = utf_lenat(p, 0);
+
+								while (n-- > 0)
+									cbuf[c_end++] = *p++;
+							}
+							else
+#endif
+							{
+								if (*p == '\r' && *(p+1) == '\n')
+									++p;
+								cbuf[c_end++] = *p++;
+							}
+						}
+						if (imode)
+							cbuf[c_end++] = ESC;
+						free(text);
 					}
-					CloseClipboard();
 				}
 			}
 			c_ind = c_end;
@@ -4019,24 +4150,13 @@ SetColor:
 get_clipdata:
 			if ((i = yank_to_clipboard(NULL)) != 0)
 			{
-				hClipData = GlobalAlloc(GMEM_MOVEABLE, i);
-				if (hClipData == NULL)
+				char_u	*text = alloc((unsigned)i + 1);
+
+				if (text == NULL)
 					break;
-				if ((lpClipData = GlobalLock(hClipData)) == NULL)
-				{
-					GlobalFree(hClipData);
-					break;
-				}
-				yank_to_clipboard(lpClipData);
-				GlobalUnlock(hClipData);
-				if (OpenClipboard(hWnd) == FALSE)
-				{
-					GlobalFree(hClipData);
-					break;
-				}
-				EmptyClipboard();
-				SetClipboardData(CF_TEXT, hClipData);
-				CloseClipboard();
+				i = yank_to_clipboard(text);
+				(void)clip_put(text, (int)strlen((char *)text));
+				free(text);
 			}
 			break;
 		case IDM_COMB:
@@ -4572,7 +4692,7 @@ share:
 				break;
 			}
 #endif
-			return(DefWindowProc(hWnd, uMsg, wParam, lParam));
+			return(DefWindowProcW(hWnd, uMsg, wParam, lParam));
 		}
 		if (cmode)
 			clear_cmode(hWnd);
@@ -5296,7 +5416,7 @@ share:
 #endif
 		break;
 	}
-	return(DefWindowProc(hWnd, uMsg, wParam, lParam));
+	return(DefWindowProcW(hWnd, uMsg, wParam, lParam));
 }
 
 /*
@@ -6011,21 +6131,21 @@ WaitForChar(msec)
 			else
 				fepsync = FALSE;
 #endif
-			if (PeekMessage(&msg, NULL, WM_KEYFIRST, WM_KEYLAST, PM_REMOVE))
+			if (PeekMessageW(&msg, NULL, WM_KEYFIRST, WM_KEYLAST, PM_REMOVE))
 			{
-				if (!TranslateAccelerator(hVimWnd, hAcc, &msg))
+				if (!TranslateAcceleratorW(hVimWnd, hAcc, &msg))
 				{
 					TranslateMessage(&msg);
-					DispatchMessage(&msg);
+					DispatchMessageW(&msg);
 				}
 				continue;
 			}
-			if (GetMessage(&msg, NULL, 0, 0))
+			if (GetMessageW(&msg, NULL, 0, 0))
 			{
-				if (!TranslateAccelerator(hVimWnd, hAcc, &msg))
+				if (!TranslateAcceleratorW(hVimWnd, hAcc, &msg))
 				{
 					TranslateMessage(&msg);
-					DispatchMessage(&msg);
+					DispatchMessageW(&msg);
 				}
 			}
 		}
@@ -6614,7 +6734,7 @@ mch_windinit(argc, argv, command)
 		HMENU		hGSetup;
 		HMENU		hFile;
 		HMENU		hConf;
-		WNDCLASS	wndclass;
+		WNDCLASSW	wndclass;
 		UINT		w;
 		HANDLE		hLibrary;
 
@@ -6661,8 +6781,12 @@ mch_windinit(argc, argv, command)
 		wndclass.hCursor		= NULL; /* LoadCursor(NULL, IDC_IBEAM); */
 		wndclass.hbrBackground	= NULL;	/* GetStockObject(WHITE_BRUSH); */
 		wndclass.lpszMenuName	= NULL;
-		wndclass.lpszClassName	= szAppName;
-		if (RegisterClass(&wndclass) == 0)
+		wndclass.lpszClassName	= szAppNameW;
+		/*
+		 * Register as Unicode: an ANSI window only ever gets WM_CHAR in the
+		 * ANSI code page, so anything outside CP932 arrived as '?'.
+		 */
+		if (RegisterClassW(&wndclass) == 0)
 			ExitProcess(99);
 		LoadConfig(TRUE);
 #ifdef USE_BDF
@@ -6695,10 +6819,10 @@ mch_windinit(argc, argv, command)
 		if (config_share || config_common)
 			ef_share_init(config_common);
 #endif
-		v_menu = LoadMenu(hInst, "VIMMENU");
+		v_menu = LoadMenuW(hInst, L"VIMMENU");
 		if (pSetLayeredWindowAttributes == NULL)
 			DeleteMenu(v_menu, IDM_FADEOUT, MF_BYCOMMAND);
-		hVimWnd = CreateWindow(szAppName, szAppName,
+		hVimWnd = CreateWindowW(szAppNameW, szAppNameW,
 				   WS_OVERLAPPEDWINDOW|(config_sbar ? WS_VSCROLL : 0),
 				   config_x, config_y,
 				   config_w, config_h, NULL, config_menu ? v_menu : NULL, hInst, NULL);
@@ -6709,7 +6833,7 @@ mch_windinit(argc, argv, command)
 		hWaitCurs	= LoadCursor(NULL, IDC_WAIT);
 		lpCurrCurs	= IDC_IBEAM;
 		SetCursor(hIbeamCurs);
-		hAcc = LoadAccelerators(hInst, "ACCKEYS");
+		hAcc = LoadAcceleratorsW(hInst, L"ACCKEYS");
 		SetClassLongPtr(hVimWnd, GCLP_HICON, (LONG_PTR)LoadIcon(hInst, "vim"));
 		hTColor= CreatePopupMenu();
 		AppendMenu(hTColor,MF_STRING,    IDM_FWHITE,   "&White");
@@ -7112,6 +7236,32 @@ fname_case(name)
 
 
 /*
+ * Set the window title from UTF-8, so a file name with characters outside the
+ * ANSI code page shows up as itself rather than as question marks.
+ */
+	static void
+SetWindowTextU8(hWnd, text)
+	HWND		hWnd;
+	char_u	*	text;
+{
+	WCHAR	*	w;
+	int			wlen;
+
+	if (text == NULL)
+		return;
+	wlen = MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)text, -1, NULL, 0);
+	if (wlen <= 0 || (w = (WCHAR *)alloc((unsigned)(wlen * sizeof(WCHAR))))
+																	== NULL)
+	{
+		SetWindowText(hWnd, (LPCSTR)text);	/* give the ANSI form a try */
+		return;
+	}
+	MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)text, -1, w, wlen);
+	SetWindowTextW(hWnd, w);
+	free(w);
+}
+
+/*
  * mch_settitle(): set titlebar of our window
  * Can the icon also be set?
  */
@@ -7125,9 +7275,9 @@ mch_settitle(title, icon)
 		if (GuiWin)
 		{
 			if (icon != NULL && strlen(title) > (TITLE_LEN + 6))
-				SetWindowText(hVimWnd, icon);
+				SetWindowTextU8(hVimWnd, icon);
 			else
-				SetWindowText(hVimWnd, DisplayPathName(title, (TITLE_LEN + 6) > sizeof(nIcon.szTip) ? sizeof(nIcon.szTip) : TITLE_LEN + 6));
+				SetWindowTextU8(hVimWnd, DisplayPathName(title, (TITLE_LEN + 6) > sizeof(nIcon.szTip) ? sizeof(nIcon.szTip) : TITLE_LEN + 6));
 		}
 		else if (IsTelnet)
 			;
@@ -7142,7 +7292,7 @@ mch_settitle(title, icon)
 	else if (icon != NULL)
 	{
 		if (GuiWin)
-			SetWindowText(hVimWnd, icon);
+			SetWindowTextU8(hVimWnd, icon);
 		else if (IsTelnet)
 			;
 		else
@@ -7328,12 +7478,12 @@ mch_windexit(r)
 		MSG				msg;
 
 		DestroyWindow(hVimWnd);
-		while (GetMessage(&msg, NULL, 0, 0))
+		while (GetMessageW(&msg, NULL, 0, 0))
 		{
-			if (!TranslateAccelerator(hVimWnd, hAcc, &msg))
+			if (!TranslateAcceleratorW(hVimWnd, hAcc, &msg))
 			{
 				TranslateMessage(&msg);
-				DispatchMessage(&msg);
+				DispatchMessageW(&msg);
 			}
 		}
 	}
@@ -8504,12 +8654,12 @@ breakcheck()
 	{
 		MSG				msg;
 
-		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) == TRUE)
+		while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE) == TRUE)
 		{
-			if (!TranslateAccelerator(hVimWnd, hAcc, &msg))
+			if (!TranslateAcceleratorW(hVimWnd, hAcc, &msg))
 			{
 				TranslateMessage(&msg);
-				DispatchMessage(&msg);
+				DispatchMessageW(&msg);
 			}
 		}
 	}
@@ -9209,7 +9359,7 @@ DisplayPathName(char *fname, unsigned int max)
 		{
 #ifdef KANJI
 			if (ISkanji(*p))
-				p++;
+				p += utf_lenat((char_u *)p, 0) - 1;
 			else
 #endif
 			if (*p == '\\' || *p == '/' || *p == ':')
@@ -9223,7 +9373,7 @@ DisplayPathName(char *fname, unsigned int max)
 		{
 #ifdef KANJI
 			if (ISkanji(*p))
-				p++;
+				p += utf_lenat((char_u *)p, 0) - 1;
 			else
 #endif
 			if (*p == '\\' || *p == '/' || *p == ':')
