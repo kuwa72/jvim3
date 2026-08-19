@@ -67,6 +67,7 @@ short	ospeed;               /* Baud rate (1-16, 1=300, 16=19200), as in stty */
 # define TERMCAPFILE "/etc/termcap"
 #endif
 
+	int
 tgetent(tbuf, term)
 	char	*tbuf;               /* Buffer to hold termcap entry, TBUFSZ bytes max */
 	char	*term;               /* Name of terminal */
@@ -214,6 +215,7 @@ nextent(tbuf, termcap, buflen)         /* Read 1 entry from TERMCAP file */
  * Returned values: 1 for success, 0 for failure.
  */
 
+	int
 tgetflag(id)
 	char *id;
 {
@@ -232,6 +234,7 @@ tgetflag(id)
  * Returned values: -1 for failure, else numerical value.
  */
 
+	int
 tgetnum(id)
 char *id;
 {
@@ -575,10 +578,11 @@ long _bauds[16]={
 	600,	1200,	1800,	2400,
 	4800,	9600,	19200,	19200 };
 
+	int
 tputs(cp, affcnt, outc)
 char *cp;                                                 /* string to print */
 int affcnt;                                      /* Number of lines affected */
-void (*outc) __ARGS((unsigned int));                              /* routine to output 1 character */
+int (*outc) __ARGS((int));                        /* routine to output 1 character */
 {
 #ifndef MSDOS		/* DOSGEN */
 	long	frac,                    /* 10^(#digits after decimal point) */

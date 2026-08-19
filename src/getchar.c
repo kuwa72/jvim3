@@ -1583,7 +1583,7 @@ makemap(fd)
 			return FAIL;
 		if (mp->m_noremap && fprintf(fd, "nore") < 0)
 			return FAIL;
-		if (fprintf(fd, (char *)p) < 0)
+		if (fprintf(fd, "%s", (char *)p) < 0)
 			return FAIL;
 
 		if (	putc(' ', fd) < 0 || putescstr(fd, mp->m_keys, FALSE) == FAIL ||

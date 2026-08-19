@@ -527,9 +527,14 @@ flushbuf()
  * outchar(c): put a character into the output buffer.
  *			   Flush it if it becomes full.
  */
-	void
+/*
+ * Return type and argument are int, so that this can be handed to tputs()
+ * without a cast: termcap declares its third argument as int (*)(int), and
+ * calling through a mismatched function pointer is undefined.
+ */
+	int
 outchar(c)
-	unsigned	c;
+	int			c;
 {
 #ifdef UNIX
 	if (c == '\n')		/* turn LF into CR-LF (CRMOD does not seem to do this) */
@@ -547,6 +552,7 @@ outchar(c)
 
 	if (bpos >= BSIZE)
 		flushbuf();
+	return 0;
 }
 
 #ifdef KANJI

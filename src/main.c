@@ -97,12 +97,12 @@ usage(n)
 #ifndef notdef
 	if (n <= 2)
 #endif
-	fprintf(stderr, (char *)errors[n]);
+	fprintf(stderr, "%s", (char *)errors[n]);
 	fprintf(stderr, "usage:");
 	for (i = 0; ; ++i)
 	{
 		fprintf(stderr, " vim [options] ");
-		fprintf(stderr, (char *)use[i]);
+		fprintf(stderr, "%s", (char *)use[i]);
 		if (i == (sizeof(use) / sizeof(char_u *)) - 1)
 			break;
 		fprintf(stderr, "   or:");

@@ -3,6 +3,13 @@
 #
 
 # Note: You MUST uncomment three hardware dependend lines!
+#
+# ../scripts/build-unix.sh works these out by asking the compiler and passes them
+# in on the command line, which is usually easier than editing this file.
+#
+# Whichever way you build: the sources use K&R function definitions, which C23
+# removed, so a compiler defaulting to it (gcc 15 and later) needs -std=gnu89 in
+# the CC line. -fcommon is needed too, from gcc 10 on.
 
 # There are three types of defines:
 #
@@ -202,12 +209,11 @@ DEFS = -DDIGRAPHS -DTERMCAP -DSOME_BUILTIN_TCAPS -DNO_FREE_NULL -DVIM_ISSPACE \
 #CC=cc -O -I$(X11INCDIR)
 #LIBS = -ltermlib -L$(X11LIBDIR) -lX11
 
-# FreeBSD and NetBSD with Xfree (TESTED for FreeBSD)
-# gcc with optimizer
+# FreeBSD/NetBSD/OpenBSD with clang (NOT TESTED on hardware for this version)
 #
 #MACHINE = -DBSD_UNIX -DUSE_LOCALE -DUSE_X11
-#CC=gcc -O -Wall -traditional -Dconst= -I$(X11INCDIR)
-#LIBS = -ltermlib -L$(X11LIBDIR) -lX11
+#CC=clang -O2 -std=gnu89 -fcommon -I$(X11INCDIR)
+#LIBS = -lncurses -L$(X11LIBDIR) -lX11
 
 # like generic, but with termcap, for Linux, NeXT and others (NOT TESTED YET)
 # standard cc with optimizer
@@ -216,10 +222,10 @@ DEFS = -DDIGRAPHS -DTERMCAP -DSOME_BUILTIN_TCAPS -DNO_FREE_NULL -DVIM_ISSPACE \
 #CC=cc -O
 #LIBS = -ltermcap
 
-# Linux 2.0.x/2.2.x (TESTED Debian GNU/Linux 2.0/2.1)
-#MACHINE = -DBSD_UNIX
-#CC=gcc -O
-#LIBS = -lncurses
+# Linux (TESTED Ubuntu 24.04, gcc 13)
+#MACHINE = -DBSD_UNIX -DUSE_LOCALE
+#CC=gcc -O2 -std=gnu89 -fcommon
+#LIBS = -lncurses -ltinfo
 
 # Cygwin (TESTED 1.1-NetRelease)
 #   Notes: Please check ../doc.j/cygwin.txt

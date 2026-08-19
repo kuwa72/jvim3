@@ -33,7 +33,7 @@ msg(s)
 {
 	if (!screen_valid())			/* terminal not initialized */
 	{
-		fprintf(stderr, (char *)s);
+		fprintf(stderr, "%s", (char *)s);
 		fflush(stderr);
 		return TRUE;
 	}
@@ -389,7 +389,7 @@ msg_outstr(s)
 	 */
 	if (!msg_check_screen())
 	{
-		fprintf(stderr, (char *)s);
+		fprintf(stderr, "%s", (char *)s);
 		return;
 	}
 

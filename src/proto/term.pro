@@ -3,7 +3,7 @@ void set_term __PARMS((unsigned char *term));
 char *tgoto __PARMS((char *cm, int x, int y));
 void termcapinit __PARMS((unsigned char *term));
 void flushbuf __PARMS((void));
-void outchar __PARMS((unsigned int c));
+int outchar __PARMS((int c));
 #ifdef KANJI
 void outchar2 __PARMS((unsigned int c1, unsigned int c2));
 #endif
