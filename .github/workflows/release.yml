@@ -1,0 +1,80 @@
+name: release
+
+# Tagging is what cuts a release: push a tag like v3.0-j2.1b-utf8.1 and the
+# Windows build lands on the release page. Everything else here runs on the
+# tag too, so a broken build never becomes a release.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  unix:
+    name: Linux build and encoding tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the terminal library
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libncurses-dev
+      - name: Build and run the 42 encoding tests
+        run: ./scripts/build-unix.sh test
+
+  windows:
+    name: Windows build (mingw-w64, i686)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install mingw-w64
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends mingw-w64
+      - name: Build the GUI and console executables
+        run: ./scripts/build-mingw.sh both
+      - name: Package dist/i686
+        run: |
+          name=jvim3-${GITHUB_REF_NAME:-snapshot}-win32
+          cp -r dist/i686 "$name"
+          mkdir -p out
+          zip -r "out/$name.zip" "$name"
+          ls -l out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win32
+          path: out/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish the release
+    needs: [unix, windows]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: win32
+          path: out
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" out/*.zip \
+            --title "JVim 3 $GITHUB_REF_NAME" \
+            --notes "$(cat <<'EOF'
+          JVim 3.0-j2.1b with UTF-8 support.
+
+          `jvim3-*-win32.zip` holds the 32 bit Windows build: `jvim32w.exe`
+          (GUI), `jvim32.exe` (console), the help file and a sample `_jvimrc`.
+          Point `%VIM%` at that directory. It runs on 64 bit Windows under
+          WoW64; see BUILDING-mingw.md for why 32 bit is the one to use.
+
+          Build it yourself with `scripts/build-mingw.sh both` for Windows or
+          `scripts/build-unix.sh test` on Linux, the BSDs and macOS.
+          EOF
+          )"
