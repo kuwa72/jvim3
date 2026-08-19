@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Encoding round trip tests for JVim.
 #
@@ -11,7 +11,7 @@
 # flip to PASS as that work lands.
 #
 # Needs a Unix build (src/makjunix.mak); the Windows build cannot be driven from
-# here. "script" (util-linux) is used to give jvim a pty.
+# here. jvim is given a terminal by scripts/ptyrun.c, which is compiled below.
 
 set -uo pipefail
 
@@ -23,11 +23,23 @@ if [ ! -x "$jvim" ]; then
 	echo "build one with: cd src && cp makjunix.mak makefile && make" >&2
 	exit 2
 fi
-command -v script >/dev/null 2>&1 || { echo "'script' not found" >&2; exit 2; }
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 printf ':w! %s/out\r:q!\r' "$tmp" > "$tmp/cmds"
+
+# jvim needs a terminal. script(1) was used for that, but it is a different
+# program on every system and NetBSD's quits before the command has run when
+# its own standard input is a file, so scripts/ptyrun.c does it instead.
+${CC:-cc} -o "$tmp/ptyrun" "$root/scripts/ptyrun.c" 2>"$tmp/cc.err" || {
+	echo "cannot build $root/scripts/ptyrun.c, which gives jvim a pty:" >&2
+	cat "$tmp/cc.err" >&2
+	exit 2
+}
+pty() { "$tmp/ptyrun" /bin/sh -c "$1"; }
+
+# xxd is vim's own, so it is not on a machine that has no vim yet; od is POSIX.
+hex() { od -An -tx1 -v "$1" 2>/dev/null | tr -d ' \n'; }
 
 pass=0; fail=0; xfail=0; xpass=0
 
@@ -36,8 +48,7 @@ roundtrip() {
 	local name=$1 expect=$2 opts=$3 data=$4
 	printf "$data" > "$tmp/in"
 	rm -f "$tmp/out"
-	script -qec "TERM=xterm $jvim -T xterm $opts -s $tmp/cmds $tmp/in" \
-		/dev/null >/dev/null 2>&1
+	pty "TERM=xterm $jvim -T xterm $opts -s $tmp/cmds $tmp/in" >/dev/null 2>&1
 	local got
 	if cmp -s "$tmp/in" "$tmp/out"; then got=ok; else got=bad; fi
 
@@ -45,8 +56,8 @@ roundtrip() {
 		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
 	elif [ "$expect" = ok ]; then
 		printf '  FAIL        %s\n' "$name"
-		printf '                in  %s\n' "$(xxd -p "$tmp/in" | tr -d '\n')"
-		printf '                out %s\n' "$(xxd -p "$tmp/out" 2>/dev/null | tr -d '\n')"
+		printf '                in  %s\n' "$(hex "$tmp/in")"
+		printf '                out %s\n' "$(hex "$tmp/out")"
 		fail=$((fail+1))
 	elif [ "$got" = bad ]; then
 		printf '  KNOWN-FAIL  %s\n' "$name"; xfail=$((xfail+1))
@@ -94,8 +105,8 @@ edit() {
 	printf "$want" > "$tmp/want"
 	rm -f "$tmp/out"
 	printf "$keys:w! %s/out\r:q!\r" "$tmp" > "$tmp/ecmds"
-	script -qec "TERM=xterm $jvim -T xterm -K TTT -k t -s $tmp/ecmds $tmp/in" \
-		/dev/null >/dev/null 2>&1
+	pty "TERM=xterm $jvim -T xterm -K TTT -k t -s $tmp/ecmds $tmp/in" \
+		>/dev/null 2>&1
 	local got
 	if cmp -s "$tmp/want" "$tmp/out"; then got=ok; else got=bad; fi
 
@@ -103,8 +114,8 @@ edit() {
 		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
 	elif [ "$expect" = ok ]; then
 		printf '  FAIL        %s\n' "$name"
-		printf '                want %s\n' "$(xxd -p "$tmp/want" | tr -d '\n')"
-		printf '                got  %s\n' "$(xxd -p "$tmp/out" 2>/dev/null | tr -d '\n')"
+		printf '                want %s\n' "$(hex "$tmp/want")"
+		printf '                got  %s\n' "$(hex "$tmp/out")"
 		fail=$((fail+1))
 	elif [ "$got" = bad ]; then
 		printf '  KNOWN-FAIL  %s\n' "$name"; xfail=$((xfail+1))
@@ -163,7 +174,7 @@ typed() {
 	printf "$want" > "$tmp/want"
 	rm -f "$tmp/out"
 	printf "$keys:w! %s/out\r:q!\r" "$tmp" > "$tmp/keys"
-	script -qec "TERM=xterm $jvim -T xterm -K TTTT -k t $tmp/in" /dev/null \
+	pty "TERM=xterm $jvim -T xterm -K TTTT -k t $tmp/in" \
 		< "$tmp/keys" >/dev/null 2>&1
 	local got
 	if cmp -s "$tmp/want" "$tmp/out"; then got=ok; else got=bad; fi
@@ -172,8 +183,8 @@ typed() {
 		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
 	elif [ "$expect" = ok ]; then
 		printf '  FAIL        %s\n' "$name"
-		printf '                want %s\n' "$(xxd -p "$tmp/want" | tr -d '\n')"
-		printf '                got  %s\n' "$(xxd -p "$tmp/out" 2>/dev/null | tr -d '\n')"
+		printf '                want %s\n' "$(hex "$tmp/want")"
+		printf '                got  %s\n' "$(hex "$tmp/out")"
 		fail=$((fail+1))
 	elif [ "$got" = bad ]; then
 		printf '  KNOWN-FAIL  %s\n' "$name"; xfail=$((xfail+1))

@@ -119,7 +119,19 @@ static int	Read __ARGS((char_u *, long));
 static int	WaitForChar __ARGS((int));
 static int	RealWaitForChar __ARGS((int));
 static void fill_inbuf __ARGS((void));
-#ifdef USL
+/*
+ * The three argument signal handler is a 4.3BSD-ism. NetBSD no longer declares
+ * struct sigcontext in <signal.h>, so the prototype and the definition end up
+ * naming two different types there and the build stops. Nothing in sig_winch()
+ * looks at its arguments, so the modern BSDs and macOS take the plain one
+ * argument handler instead.
+ */
+#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__FreeBSD__) \
+		|| defined(__DragonFly__) || defined(__APPLE__)
+# define SIG_WINCH_ONE_ARG
+#endif
+
+#if defined(USL) || defined(SIG_WINCH_ONE_ARG)
 static void sig_winch __ARGS((int));
 #else
 # if defined(SIGWINCH) && !defined(linux) && !defined(__alpha) && !defined(mips) && !defined(_SEQUENT_) && !defined(SCO) && !defined(SOLARIS) && !defined(ISC) && !defined(__CYGWIN__)
@@ -278,7 +290,7 @@ sig_winch(sig, code)
 	int		sig;
 	int		code;
 # else
-#  if defined(USL)
+#  if defined(USL) || defined(SIG_WINCH_ONE_ARG)
 sig_winch(sig)
 	int		sig;
 #  else
