@@ -176,10 +176,27 @@ run from `:!` writes back, and those still speak CP932. The manifest leaves out
 the dialogs) and `supportedOS` (it would change what `GetVersionEx()` reports,
 which parts of `winjnt.c` still branch on).
 
-One migration note: with the process code page set to UTF-8, a `vim32.ini` or
-registry entry written by an older build in CP932 is read as UTF-8. That only
-matters for non-ASCII values, in practice a Japanese font face name; setting it
-again from JVim's own dialog stores it as UTF-8 and it round trips from then on.
+### The GUI's own strings
+
+The manifest settles what the `...A` APIs mean, but the GUI does not lean on it
+for its own text: dialogs, menus, fonts and the registry all speak UTF-16
+natively, so `winjnt.c` converts UTF-8 to and from wide explicitly
+(`SetDlgItemTextU8()`, `GetDlgItemTextU8()`, `AppendMenuU8()`,
+`CreateFontIndirectU8()`, `ChooseFontU8()`, `RegGetStringU8()` /
+`RegSetStringU8()`), and JVim's dialogs are created with `DialogBoxParamW`.
+Otherwise a font name or a history entry depended on the code page twice over,
+which is what left them unreadable.
+
+Two related fixes while in there: the font chooser passes `CF_FIXEDPITCHONLY`,
+since JVim draws on a character grid and a proportional font cannot work, and
+`CF_ANSIONLY` is gone, because it hid every font whose charset is not the ANSI
+one — most of the Japanese ones.
+
+One migration note: the `LOGFONT` goes into the registry as a binary blob, so a
+face name written by an older build is in CP932. `face_normalise()` converts it
+to UTF-8 on the way in, once. A `vim32.ini` written by an older build is a
+different matter: Windows reads a BOM-less ini through the process code page, so
+its non-ASCII values are misread; re-saving the settings from JVim fixes it.
 
 ### jmask has a fourth character
 

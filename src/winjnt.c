@@ -342,6 +342,17 @@ static BOOL		syntax_on();
 /* Font choice: 1 for a character the Japanese font should draw. */
 # define CELLKANA(row, col)	(CELLCP(row, col) > 0 ? 1 : 0)
 static void	push_wchar __ARGS((void));
+static WCHAR *	utf8_to_wide __ARGS((char_u *));
+static char_u *	wide_to_utf8 __ARGS((WCHAR *));
+static void	SetDlgItemTextU8 __ARGS((HWND, int, char_u *));
+static int	GetDlgItemTextU8 __ARGS((HWND, int, char_u *, int));
+static BOOL	AppendMenuU8 __ARGS((HMENU, UINT, UINT_PTR, char_u *));
+static BOOL	ModifyMenuU8 __ARGS((HMENU, UINT, UINT, UINT_PTR, char_u *));
+static void	face_normalise __ARGS((LOGFONT *));
+static HFONT	CreateFontIndirectU8 __ARGS((LOGFONT *));
+static BOOL	ChooseFontU8 __ARGS((HWND, LOGFONT *));
+static BOOL	RegGetStringU8 __ARGS((HKEY, char *, char_u *, int));
+static LONG	RegSetStringU8 __ARGS((HKEY, char *, char_u *));
 static int	cell_head __ARGS((int, int));
 static int	cell_class __ARGS((int, int));
 static int	cell_width __ARGS((int, int));
@@ -586,8 +597,7 @@ LoadConfig(BOOL init)
 	openkey = TRUE;
 	size = sizeof(config_printer);
 	type = REG_SZ;
-	if (RegQueryValueEx(hKey, "printer", NULL, &type, (BYTE *)&config_printer, &size)
-															!= ERROR_SUCCESS)
+	if (RegGetStringU8(hKey, "printer", (char_u *)config_printer, sizeof(config_printer)) == FALSE)
 		goto error;
 	size = sizeof(config_unicode);
 	type = REG_DWORD;
@@ -745,12 +755,14 @@ LoadConfig(BOOL init)
 	if (RegQueryValueEx(hKey, "font", NULL, &type, (BYTE *)&config_font, &size)
 															!= ERROR_SUCCESS)
 		goto error;
+	face_normalise(&config_font);
 #ifdef KANJI
 	size = sizeof(config_jfont);
 	type = REG_BINARY;
 	if (RegQueryValueEx(hKey, "jfont", NULL, &type, (BYTE *)&config_jfont, &size)
 															!= ERROR_SUCCESS)
 		goto error;
+	face_normalise(&config_jfont);
 #endif
 	size = sizeof(v_lspace);
 	type = REG_DWORD;
@@ -784,8 +796,7 @@ LoadConfig(BOOL init)
 		goto error;
 	size = sizeof(config_bitmapfile);
 	type = REG_SZ;
-	if (RegQueryValueEx(hKey, "bitmapfile", NULL, &type, (BYTE *)config_bitmapfile, &size)
-															!= ERROR_SUCCESS)
+	if (RegGetStringU8(hKey, "bitmapfile", (char_u *)config_bitmapfile, sizeof(config_bitmapfile)) == FALSE)
 		goto error;
 	if (!isbitmap(config_bitmapfile, NULL))
 	{
@@ -799,8 +810,7 @@ LoadConfig(BOOL init)
 		goto error;
 	size = sizeof(config_wavefile);
 	type = REG_SZ;
-	if (RegQueryValueEx(hKey, "wavefile", NULL, &type, (BYTE *)&config_wavefile, &size)
-															!= ERROR_SUCCESS)
+	if (RegGetStringU8(hKey, "wavefile", (char_u *)config_wavefile, sizeof(config_wavefile)) == FALSE)
 		goto error;
 	if (!iswave(config_wavefile))
 	{
@@ -815,13 +825,11 @@ LoadConfig(BOOL init)
 		goto error;
 	size = sizeof(config_bdffile);
 	type = REG_SZ;
-	if (RegQueryValueEx(hKey, "bdffile", NULL, &type, (BYTE *)&config_bdffile, &size)
-															!= ERROR_SUCCESS)
+	if (RegGetStringU8(hKey, "bdffile", (char_u *)config_bdffile, sizeof(config_bdffile)) == FALSE)
 		goto error;
 	size = sizeof(config_jbdffile);
 	type = REG_SZ;
-	if (RegQueryValueEx(hKey, "bdffilej", NULL, &type, (BYTE *)&config_jbdffile, &size)
-															!= ERROR_SUCCESS)
+	if (RegGetStringU8(hKey, "bdffilej", (char_u *)config_jbdffile, sizeof(config_jbdffile)) == FALSE)
 		goto error;
 	size = sizeof(config_fgbdf);
 	type = REG_DWORD;
@@ -841,13 +849,11 @@ LoadConfig(BOOL init)
 		goto error;
 	size = sizeof(config_load);
 	type = REG_SZ;
-	if (RegQueryValueEx(hKey, "load", NULL, &type, (BYTE *)&config_load, &size)
-															!= ERROR_SUCCESS)
+	if (RegGetStringU8(hKey, "load", (char_u *)config_load, sizeof(config_load)) == FALSE)
 		goto error;
 	size = sizeof(config_unload);
 	type = REG_SZ;
-	if (RegQueryValueEx(hKey, "unload", NULL, &type, (BYTE *)&config_unload, &size)
-															!= ERROR_SUCCESS)
+	if (RegGetStringU8(hKey, "unload", (char_u *)config_unload, sizeof(config_unload)) == FALSE)
 		goto error;
 	size = sizeof(config_save);
 	type = REG_DWORD;
@@ -987,7 +993,7 @@ error:
 			RegQueryValueEx(hKey, "bitcenter", NULL, &type, (BYTE *)&config_bitcenter, &size);
 			size = sizeof(config_bitmapfile);
 			type = REG_SZ;
-			RegQueryValueEx(hKey, "bitmapfile", NULL, &type, (BYTE *)config_bitmapfile, &size);
+			RegGetStringU8(hKey, "bitmapfile", (char_u *)config_bitmapfile, sizeof(config_bitmapfile));
 			if (!isbitmap(config_bitmapfile, NULL))
 			{
 				config_bitmap = FALSE;
@@ -1015,10 +1021,10 @@ error:
 			RegQueryValueEx(hKey, "bdf", NULL, &type, (BYTE *)&config_bdf, &size);
 			size = sizeof(config_bdffile);
 			type = REG_SZ;
-			RegQueryValueEx(hKey, "bdffile", NULL, &type, (BYTE *)&config_bdffile, &size);
+			RegGetStringU8(hKey, "bdffile", (char_u *)config_bdffile, sizeof(config_bdffile));
 			size = sizeof(config_jbdffile);
 			type = REG_SZ;
-			RegQueryValueEx(hKey, "bdffilej", NULL, &type, (BYTE *)&config_jbdffile, &size);
+			RegGetStringU8(hKey, "bdffilej", (char_u *)config_jbdffile, sizeof(config_jbdffile));
 			RegCloseKey(hKey);
 		}
 	}
@@ -1080,7 +1086,7 @@ SaveConfig()
 	}
 #endif
 	size = strlen(config_printer) + 1;
-	if (RegSetValueEx(hKey, "printer", 0, REG_SZ, (BYTE *)&config_printer, size)
+	if (RegSetStringU8(hKey, "printer", (char_u *)config_printer)
 															!= ERROR_SUCCESS)
 		goto error;
 	size = sizeof(config_unicode);
@@ -1251,7 +1257,7 @@ SaveConfig()
 															!= ERROR_SUCCESS)
 		goto error;
 	size = strlen(config_bitmapfile) + 1;
-	if (RegSetValueEx(hKey, "bitmapfile", 0, REG_SZ, (BYTE *)config_bitmapfile, size)
+	if (RegSetStringU8(hKey, "bitmapfile", (char_u *)config_bitmapfile)
 															!= ERROR_SUCCESS)
 		goto error;
 	size = sizeof(config_wave);
@@ -1259,7 +1265,7 @@ SaveConfig()
 															!= ERROR_SUCCESS)
 		goto error;
 	size = strlen(config_wavefile) + 1;
-	if (RegSetValueEx(hKey, "wavefile", 0, REG_SZ, (BYTE *)&config_wavefile, size)
+	if (RegSetStringU8(hKey, "wavefile", (char_u *)config_wavefile)
 															!= ERROR_SUCCESS)
 		goto error;
 #ifdef USE_BDF
@@ -1268,11 +1274,11 @@ SaveConfig()
 															!= ERROR_SUCCESS)
 		goto error;
 	size = strlen(config_bdffile) + 1;
-	if (RegSetValueEx(hKey, "bdffile", 0, REG_SZ, (BYTE *)&config_bdffile, size)
+	if (RegSetStringU8(hKey, "bdffile", (char_u *)config_bdffile)
 															!= ERROR_SUCCESS)
 		goto error;
 	size = strlen(config_jbdffile) + 1;
-	if (RegSetValueEx(hKey, "bdffilej", 0, REG_SZ, (BYTE *)&config_jbdffile, size)
+	if (RegSetStringU8(hKey, "bdffilej", (char_u *)config_jbdffile)
 															!= ERROR_SUCCESS)
 		goto error;
 	size = sizeof(config_fgbdf);
@@ -1289,11 +1295,11 @@ SaveConfig()
 															!= ERROR_SUCCESS)
 		goto error;
 	size = strlen(config_load) + 1;
-	if (RegSetValueEx(hKey, "load", 0, REG_SZ, (BYTE *)&config_load, size)
+	if (RegSetStringU8(hKey, "load", (char_u *)config_load)
 															!= ERROR_SUCCESS)
 		goto error;
 	size = strlen(config_unload) + 1;
-	if (RegSetValueEx(hKey, "unload", 0, REG_SZ, (BYTE *)&config_unload, size)
+	if (RegSetStringU8(hKey, "unload", (char_u *)config_unload)
 															!= ERROR_SUCCESS)
 		goto error;
 	size = sizeof(config_save);
@@ -1324,7 +1330,7 @@ ResetScreen(HWND hWnd)
 	if (NULL != v_font)
 		DeleteObject(v_font);
 
-	v_font = CreateFontIndirect(&config_font);
+	v_font = CreateFontIndirectU8(&config_font);
 
 	hDC = GetDC(hWnd);
 	SelectObject(hDC, v_font);
@@ -1343,7 +1349,7 @@ ResetScreen(HWND hWnd)
 #ifdef KANJI
 	{
 		DeleteObject(v_font);
-		v_font = CreateFontIndirect(&config_jfont);
+		v_font = CreateFontIndirectU8(&config_jfont);
 
 		hDC = GetDC(hWnd);
 		SelectObject(hDC, v_font);
@@ -1361,7 +1367,7 @@ ResetScreen(HWND hWnd)
 		v_ychar = tm.tmHeight + tm.tmExternalLeading > v_ychar ? tm.tmHeight + tm.tmExternalLeading : v_ychar;
 
 		DeleteObject(v_font);
-		v_font = CreateFontIndirect(&config_font);
+		v_font = CreateFontIndirectU8(&config_font);
 	}
 #endif
 #ifdef USE_BDF
@@ -1539,7 +1545,7 @@ SetFontType(char_u *c, char_u mode, HDC hDC, HFONT *phOldFont)
 		logfont.lfWeight		= FW_NORMAL;
 		break;
 	}
-	v_font = CreateFontIndirect(&logfont);
+	v_font = CreateFontIndirectU8(&logfont);
 	*phOldFont = SelectObject(hDC, v_font);
 }
 
@@ -1753,9 +1759,9 @@ PrintChar(HDC hdc, RECT *rt, HFONT *phOldFont, char_u *p, int size, char_u mode,
 		if (NULL != v_font)
 			DeleteObject(v_font);
 		if (p != NULL && CELLKANA(row, col))
-			v_font = CreateFontIndirect(&config_jfont);
+			v_font = CreateFontIndirectU8(&config_jfont);
 		else
-			v_font = CreateFontIndirect(&config_font);
+			v_font = CreateFontIndirectU8(&config_font);
 		*phOldFont = SelectObject(hdc, v_font);
 	}
 #endif
@@ -3220,7 +3226,7 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				{
 					if ((p = HistoryGetMenu(j - IDM_HISTM)) != NULL)
 					{
-						AppendMenu(hHMenu, MF_STRING, j,  p);
+						AppendMenuU8(hHMenu, MF_STRING, j, (char_u *)p);
 					}
 				}
 			}
@@ -3616,7 +3622,7 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_FONT:
 #ifdef KANJI
-			DialogBoxParam(hInst, "JFONT", hWnd, FontDialogProc, (LPARAM)NULL);
+			DialogBoxParamW(hInst, L"JFONT", hWnd, FontDialogProc, (LPARAM)NULL);
 #else
 			{
 				CHOOSEFONT			cfFont;
@@ -3629,8 +3635,7 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				cfFont.rgbColors	= *v_fgcolor;
 				cfFont.lpLogFont	= &logfont;
 				cfFont.Flags		= CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT
-										| CF_ANSIONLY | CF_NOVERTFONTS
-										/* | CF_FIXEDPITCHONLY | CF_EFFECTS */ ;
+										| CF_NOVERTFONTS | CF_FIXEDPITCHONLY ;
 				cfFont.lCustData	= 0;
 				cfFont.lpfnHook		= NULL;
 				cfFont.lpTemplateName= NULL;
@@ -3643,9 +3648,9 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_LSPACE:
 			if (pSetLayeredWindowAttributes != NULL)
-				DialogBoxParam(hInst, "LINESPACEEX", hWnd, LineSpaceDialogEx, (LPARAM)NULL);
+				DialogBoxParamW(hInst, L"LINESPACEEX", hWnd, LineSpaceDialogEx, (LPARAM)NULL);
 			else
-				DialogBoxParam(hInst, "LINESPACE", hWnd, LineSpaceDialog, (LPARAM)NULL);
+				DialogBoxParamW(hInst, L"LINESPACE", hWnd, LineSpaceDialog, (LPARAM)NULL);
 			ResetScreen(hWnd);
 			break;
 #ifdef USE_BDF
@@ -4308,11 +4313,11 @@ get_clipdata:
 			}
 			break;
 		case IDM_PRINTSET:
-			if (DialogBoxParam(hInst, "PRINTER", hWnd, PrinterDialog, (LPARAM)NULL) != 0)
+			if (DialogBoxParamW(hInst, L"PRINTER", hWnd, PrinterDialog, (LPARAM)NULL) != 0)
 				return(FALSE);
 			break;
 		case IDM_BITMAP:
-			DialogBoxParam(hInst, "BITMAPSEL", hWnd, BitmapDialog, (LPARAM)NULL);
+			DialogBoxParamW(hInst, L"BITMAPSEL", hWnd, BitmapDialog, (LPARAM)NULL);
 			if (!config_ini && config_bitmap)
 			{
 				v_tbcolor = &config_tbbitmap;
@@ -4458,7 +4463,7 @@ get_clipdata:
 			}
 			break;
 		case IDM_WAVE:
-			DialogBoxParam(hInst, "WAVE", hWnd, WaveDialog, (LPARAM)NULL);
+			DialogBoxParamW(hInst, L"WAVE", hWnd, WaveDialog, (LPARAM)NULL);
 			break;
 		case IDM_WAVEONOFF:
 			config_wave = !config_wave;
@@ -4528,7 +4533,7 @@ share:
 #endif
 		case IDM_COMS:
 			if (v_extend && GuiConfig)
-				DialogBoxParam(hInst, "COMMAND", hWnd, CommandDialog, (LPARAM)NULL);
+				DialogBoxParamW(hInst, L"COMMAND", hWnd, CommandDialog, (LPARAM)NULL);
 			break;
 		case IDM_CONFS:
 			SaveConfig();
@@ -7257,6 +7262,292 @@ utf8_to_wide(text)
 	return w;
 }
 
+/*
+ * The GUI keeps its strings in UTF-8. Everything below goes through UTF-16 so
+ * that none of it depends on what the process ANSI code page happens to be:
+ * dialogs, menus, fonts and the registry all speak Unicode natively anyway.
+ */
+	static char_u *
+wide_to_utf8(w)
+	WCHAR	*	w;
+{
+	char_u	*	text;
+	int			len;
+
+	if (w == NULL)
+		return NULL;
+	len = WideCharToMultiByte(CP_UTF8, 0, w, -1, NULL, 0, NULL, NULL);
+	if (len <= 0 || (text = alloc((unsigned)len)) == NULL)
+		return NULL;
+	WideCharToMultiByte(CP_UTF8, 0, w, -1, (LPSTR)text, len, NULL, NULL);
+	return text;
+}
+
+/*
+ * Normalise a stored font face name to UTF-8. The LOGFONT goes into the registry
+ * as a binary blob, so a config written by an older build holds the name in the
+ * code page; convert it once, on the way in, and everything after this can
+ * assume UTF-8.
+ */
+	static void
+face_normalise(lf)
+	LOGFONT	*	lf;
+{
+	WCHAR		w[LF_FACESIZE * 2];
+	char_u	*	text;
+
+	if (lf->lfFaceName[0] == NUL)
+		return;
+	if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+							lf->lfFaceName, -1, NULL, 0) > 0)
+		return;							/* already valid UTF-8 */
+	if (MultiByteToWideChar(p_cpage, 0, lf->lfFaceName, -1, w,
+							(int)(sizeof(w) / sizeof(w[0]))) <= 0)
+		return;
+	if ((text = wide_to_utf8(w)) != NULL)
+	{
+		lstrcpynA(lf->lfFaceName, (LPCSTR)text, LF_FACESIZE);
+		free(text);
+	}
+}
+
+	static void
+SetDlgItemTextU8(hWnd, id, text)
+	HWND		hWnd;
+	int			id;
+	char_u	*	text;
+{
+	WCHAR	*	w;
+
+	if ((w = utf8_to_wide(text)) == NULL)
+	{
+		SetDlgItemText(hWnd, id, text == NULL ? "" : (LPCSTR)text);
+		return;
+	}
+	SetDlgItemTextW(hWnd, id, w);
+	free(w);
+}
+
+	static int
+GetDlgItemTextU8(hWnd, id, buf, len)
+	HWND		hWnd;
+	int			id;
+	char_u	*	buf;
+	int			len;
+{
+	WCHAR		w[MAXPATHL];
+	char_u	*	text;
+	int			n = 0;
+
+	if (len <= 0)
+		return 0;
+	buf[0] = NUL;
+	if (GetDlgItemTextW(hWnd, id, w, (int)(sizeof(w) / sizeof(w[0]))) <= 0)
+		return 0;
+	if ((text = wide_to_utf8(w)) == NULL)
+		return 0;
+	lstrcpynA((LPSTR)buf, (LPCSTR)text, len);
+	n = (int)strlen((char *)buf);
+	free(text);
+	return n;
+}
+
+	static BOOL
+AppendMenuU8(hMenu, flags, id, text)
+	HMENU		hMenu;
+	UINT		flags;
+	UINT_PTR	id;
+	char_u	*	text;
+{
+	WCHAR	*	w;
+	BOOL		r;
+
+	if ((w = utf8_to_wide(text)) == NULL)
+		return AppendMenu(hMenu, flags, id, (LPCSTR)text);
+	r = AppendMenuW(hMenu, flags, id, w);
+	free(w);
+	return r;
+}
+
+	static BOOL
+ModifyMenuU8(hMenu, pos, flags, id, text)
+	HMENU		hMenu;
+	UINT		pos;
+	UINT		flags;
+	UINT_PTR	id;
+	char_u	*	text;
+{
+	WCHAR	*	w;
+	BOOL		r;
+
+	if ((w = utf8_to_wide(text)) == NULL)
+		return ModifyMenu(hMenu, pos, flags, id, (LPCSTR)text);
+	r = ModifyMenuW(hMenu, pos, flags, id, w);
+	free(w);
+	return r;
+}
+
+/*
+ * config_font/config_jfont keep a LOGFONTA whose lfFaceName is UTF-8, so that
+ * the stored form does not change. GDI gets the wide struct.
+ */
+	static HFONT
+CreateFontIndirectU8(lf)
+	LOGFONT	*	lf;
+{
+	LOGFONTW	w;
+	WCHAR	*	face;
+
+	memset(&w, 0, sizeof(w));
+	w.lfHeight			= lf->lfHeight;
+	w.lfWidth			= lf->lfWidth;
+	w.lfEscapement		= lf->lfEscapement;
+	w.lfOrientation		= lf->lfOrientation;
+	w.lfWeight			= lf->lfWeight;
+	w.lfItalic			= lf->lfItalic;
+	w.lfUnderline		= lf->lfUnderline;
+	w.lfStrikeOut		= lf->lfStrikeOut;
+	w.lfCharSet			= lf->lfCharSet;
+	w.lfOutPrecision	= lf->lfOutPrecision;
+	w.lfClipPrecision	= lf->lfClipPrecision;
+	w.lfQuality			= lf->lfQuality;
+	w.lfPitchAndFamily	= lf->lfPitchAndFamily;
+	if ((face = utf8_to_wide((char_u *)lf->lfFaceName)) != NULL)
+	{
+		lstrcpynW(w.lfFaceName, face, LF_FACESIZE);
+		free(face);
+	}
+	return CreateFontIndirectW(&w);
+}
+
+/*
+ * Show the font chooser and, if the user picks one, put the result back into the
+ * LOGFONTA with its face name in UTF-8. Going through ChooseFontW means the name
+ * comes back as itself whatever the ANSI code page is.
+ */
+	static BOOL
+ChooseFontU8(hWnd, lf)
+	HWND		hWnd;
+	LOGFONT	*	lf;
+{
+	CHOOSEFONTW	cf;
+	LOGFONTW	w;
+	WCHAR	*	face;
+	char_u	*	text;
+
+	memset(&w, 0, sizeof(w));
+	w.lfHeight			= lf->lfHeight;
+	w.lfWidth			= lf->lfWidth;
+	w.lfEscapement		= lf->lfEscapement;
+	w.lfOrientation		= lf->lfOrientation;
+	w.lfWeight			= lf->lfWeight;
+	w.lfItalic			= lf->lfItalic;
+	w.lfUnderline		= lf->lfUnderline;
+	w.lfStrikeOut		= lf->lfStrikeOut;
+	w.lfCharSet			= lf->lfCharSet;
+	w.lfOutPrecision	= lf->lfOutPrecision;
+	w.lfClipPrecision	= lf->lfClipPrecision;
+	w.lfQuality			= lf->lfQuality;
+	w.lfPitchAndFamily	= lf->lfPitchAndFamily;
+	if ((face = utf8_to_wide((char_u *)lf->lfFaceName)) != NULL)
+	{
+		lstrcpynW(w.lfFaceName, face, LF_FACESIZE);
+		free(face);
+	}
+
+	memset(&cf, 0, sizeof(cf));
+	cf.lStructSize	= sizeof(cf);
+	cf.hwndOwner	= hWnd;
+	cf.hDC			= NULL;
+	cf.rgbColors	= *v_fgcolor;
+	cf.lpLogFont	= &w;
+	/*
+	 * CF_FIXEDPITCHONLY: JVim draws on a character grid, so a proportional font
+	 * cannot work and should not be offered. CF_ANSIONLY is deliberately absent:
+	 * it hid every font whose charset is not the ANSI one, i.e. most Japanese
+	 * ones.
+	 */
+	cf.Flags		= CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT
+							| CF_NOVERTFONTS | CF_FIXEDPITCHONLY;
+	cf.hInstance	= hInst;
+	if (!ChooseFontW(&cf))
+		return FALSE;
+
+	lf->lfHeight		= w.lfHeight;
+	lf->lfWidth			= w.lfWidth;
+	lf->lfEscapement	= w.lfEscapement;
+	lf->lfOrientation	= w.lfOrientation;
+	lf->lfWeight		= w.lfWeight;
+	lf->lfItalic		= w.lfItalic;
+	lf->lfUnderline		= w.lfUnderline;
+	lf->lfStrikeOut		= w.lfStrikeOut;
+	lf->lfCharSet		= w.lfCharSet;
+	lf->lfOutPrecision	= w.lfOutPrecision;
+	lf->lfClipPrecision	= w.lfClipPrecision;
+	lf->lfQuality		= w.lfQuality;
+	lf->lfPitchAndFamily = w.lfPitchAndFamily;
+	memset(lf->lfFaceName, 0, sizeof(lf->lfFaceName));
+	if ((text = wide_to_utf8(w.lfFaceName)) != NULL)
+	{
+		lstrcpynA(lf->lfFaceName, (LPCSTR)text, LF_FACESIZE);
+		free(text);
+	}
+	return TRUE;
+}
+
+/*
+ * Read a REG_SZ value as UTF-8, or write one from UTF-8. The registry itself is
+ * Unicode, so this is the only form that cannot lose anything.
+ */
+	static BOOL
+RegGetStringU8(hKey, name, buf, len)
+	HKEY		hKey;
+	char	*	name;
+	char_u	*	buf;
+	int			len;
+{
+	WCHAR		w[MAXPATHL];
+	WCHAR	*	wname;
+	char_u	*	text;
+	DWORD		size = sizeof(w);
+	DWORD		type = REG_SZ;
+	LONG		rc;
+
+	if ((wname = utf8_to_wide((char_u *)name)) == NULL)
+		return FALSE;
+	rc = RegQueryValueExW(hKey, wname, NULL, &type, (BYTE *)w, &size);
+	free(wname);
+	if (rc != ERROR_SUCCESS)
+		return FALSE;
+	w[sizeof(w) / sizeof(w[0]) - 1] = 0;
+	if ((text = wide_to_utf8(w)) == NULL)
+		return FALSE;
+	lstrcpynA((LPSTR)buf, (LPCSTR)text, len);
+	free(text);
+	return TRUE;
+}
+
+	static LONG
+RegSetStringU8(hKey, name, text)
+	HKEY		hKey;
+	char	*	name;
+	char_u	*	text;
+{
+	WCHAR	*	wname;
+	WCHAR	*	w;
+	LONG		rc;
+
+	if ((w = utf8_to_wide(text)) == NULL)
+		return ERROR_INVALID_DATA;
+	wname = utf8_to_wide((char_u *)name);
+	rc = RegSetValueExW(hKey, wname, 0, REG_SZ, (BYTE *)w,
+						(DWORD)((lstrlenW(w) + 1) * sizeof(WCHAR)));
+	free(w);
+	if (wname != NULL)
+		free(wname);
+	return rc;
+}
+
 	static void
 SetWindowTextU8(hWnd, text)
 	HWND		hWnd;
@@ -8857,7 +9148,7 @@ PrinterDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch (uMsg) {
 	case WM_INITDIALOG:
 		if (strlen(config_printer))
-			SendDlgItemMessage(hWnd, 1000, WM_SETTEXT, 0, (LPARAM)config_printer);
+			SetDlgItemTextU8(hWnd, 1000, (char_u *)config_printer);
 		return(TRUE);
 	case WM_DESTROY:
 		break;
@@ -8865,7 +9156,7 @@ PrinterDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		wmId = LOWORD(wParam);
 		switch (wmId) {
 		case IDOK:
-			GetDlgItemText(hWnd, 1000, config_printer, sizeof(config_printer));
+			GetDlgItemTextU8(hWnd, 1000, (char_u *)config_printer, sizeof(config_printer));
 			EndDialog(hWnd, 0);
 			return(TRUE);
 		case IDCANCEL:
@@ -8874,7 +9165,7 @@ PrinterDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case 1001:
 			memset(&ofn, 0, sizeof(ofn));
 			NameBuff[0] = '\0';
-			GetDlgItemText(hWnd, 1000, IObuff, IOSIZE);
+			GetDlgItemTextU8(hWnd, 1000, (char_u *)IObuff, IOSIZE);
 			*gettail(IObuff) = NUL;
 			ofn.lStructSize		= sizeof(ofn);
 			ofn.hwndOwner		= hWnd;
@@ -8899,7 +9190,7 @@ PrinterDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				strcat(IObuff, NameBuff);
 				strcat(IObuff, "\"");
 				SendDlgItemMessage(hWnd, 1000, EM_SETSEL, 0, (LPARAM)-2);
-				SendDlgItemMessage(hWnd, 1000, WM_SETTEXT, 0, (LPARAM)IObuff);
+				SetDlgItemTextU8(hWnd, 1000, (char_u *)IObuff);
 			}
 			break;
 		}
@@ -8980,7 +9271,7 @@ BitmapDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch (uMsg) {
 	case WM_INITDIALOG:
 		if (strlen(config_bitmapfile))
-			SendDlgItemMessage(hWnd, 1000, WM_SETTEXT, 0, (LPARAM)config_bitmapfile);
+			SetDlgItemTextU8(hWnd, 1000, (char_u *)config_bitmapfile);
 		bUse = config_bitmap;
 		if (bUse)
 			CheckDlgButton(hWnd, 1003, MF_CHECKED);
@@ -9003,7 +9294,7 @@ BitmapDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			udWnd = NULL;
 			wsprintf(NameBuff, "%d", config_bitsize);
-			SendDlgItemMessage(hWnd, 1002, WM_SETTEXT, 0, (LPARAM)NameBuff);
+			SetDlgItemTextU8(hWnd, 1002, (char_u *)NameBuff);
 		}
 		return(TRUE);
 	case WM_DESTROY:
@@ -9020,7 +9311,7 @@ BitmapDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		wmId = LOWORD(wParam);
 		switch (wmId) {
 		case IDOK:
-			GetDlgItemText(hWnd, 1000, config_bitmapfile, sizeof(config_bitmapfile));
+			GetDlgItemTextU8(hWnd, 1000, (char_u *)config_bitmapfile, sizeof(config_bitmapfile));
 			config_bitmap = bUse;
 			if (isbitmap(config_bitmapfile, NULL))
 			{
@@ -9047,7 +9338,7 @@ BitmapDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case 1001:
 			memset(&ofn, 0, sizeof(ofn));
 			NameBuff[0] = '\0';
-			GetDlgItemText(hWnd, 1000, IObuff, IOSIZE);
+			GetDlgItemTextU8(hWnd, 1000, (char_u *)IObuff, IOSIZE);
 			*gettail(IObuff) = NUL;
 			ofn.lStructSize		= sizeof(ofn);
 			ofn.hwndOwner		= hWnd;
@@ -9076,12 +9367,12 @@ BitmapDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			if (GetOpenFileName(&ofn))
 			{
 				SendDlgItemMessage(hWnd, 1000, EM_SETSEL, 0, (LPARAM)-2);
-				SendDlgItemMessage(hWnd, 1000, WM_SETTEXT, 0, (LPARAM)NameBuff);
+				SetDlgItemTextU8(hWnd, 1000, (char_u *)NameBuff);
 				if (strcmp(config_bitmapfile, NameBuff) != 0)
 				{
 					config_bitsize = 100;
 					wsprintf(NameBuff, "%d", config_bitsize);
-					SendDlgItemMessage(hWnd, 1002, WM_SETTEXT, 0, (LPARAM)NameBuff);
+					SetDlgItemTextU8(hWnd, 1002, (char_u *)NameBuff);
 				}
 			}
 			break;
@@ -9158,7 +9449,7 @@ WaveDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	switch (uMsg) {
 	case WM_INITDIALOG:
 		if (strlen(config_wavefile))
-			SendDlgItemMessage(hWnd, 1000, WM_SETTEXT, 0, (LPARAM)config_wavefile);
+			SetDlgItemTextU8(hWnd, 1000, (char_u *)config_wavefile);
 		bUse = config_wave;
 		if (bUse)
 			CheckDlgButton(hWnd, 1003, MF_CHECKED);
@@ -9171,7 +9462,7 @@ WaveDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		wmId = LOWORD(wParam);
 		switch (wmId) {
 		case IDOK:
-			GetDlgItemText(hWnd, 1000, config_wavefile, sizeof(config_wavefile));
+			GetDlgItemTextU8(hWnd, 1000, (char_u *)config_wavefile, sizeof(config_wavefile));
 			config_wave = bUse;
 			if (iswave(config_wavefile))
 				EndDialog(hWnd, 0);
@@ -9188,7 +9479,7 @@ WaveDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case 1001:
 			memset(&ofn, 0, sizeof(ofn));
 			NameBuff[0] = '\0';
-			GetDlgItemText(hWnd, 1000, IObuff, IOSIZE);
+			GetDlgItemTextU8(hWnd, 1000, (char_u *)IObuff, IOSIZE);
 			*gettail(IObuff) = NUL;
 			ofn.lStructSize		= sizeof(ofn);
 			ofn.hwndOwner		= hWnd;
@@ -9222,7 +9513,7 @@ WaveDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			if (GetOpenFileName(&ofn))
 			{
 				SendDlgItemMessage(hWnd, 1000, EM_SETSEL, 0, (LPARAM)-2);
-				SendDlgItemMessage(hWnd, 1000, WM_SETTEXT, 0, (LPARAM)NameBuff);
+				SetDlgItemTextU8(hWnd, 1000, (char_u *)NameBuff);
 			}
 			break;
 		case 1003:
@@ -9255,8 +9546,8 @@ CommandDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_INITDIALOG:
 		SendDlgItemMessage(hWnd, 1001, EM_SETLIMITTEXT, 0, (LPARAM)sizeof(config_load));
 		SendDlgItemMessage(hWnd, 1002, EM_SETLIMITTEXT, 0, (LPARAM)sizeof(config_unload));
-		SendDlgItemMessage(hWnd, 1001, WM_SETTEXT, 0, (LPARAM)"");
-		SendDlgItemMessage(hWnd, 1002, WM_SETTEXT, 0, (LPARAM)"");
+		SetDlgItemTextU8(hWnd, 1001, (char_u *)"");
+		SetDlgItemTextU8(hWnd, 1002, (char_u *)"");
 		if (GuiConfig == 0)
 		{
 			SendDlgItemMessage(hWnd, 1001, EM_SETREADONLY, TRUE, 0);
@@ -9264,8 +9555,8 @@ CommandDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		}
 		else
 		{
-			SendDlgItemMessage(hWnd, 1001, WM_SETTEXT, 0, (LPARAM)config_load);
-			SendDlgItemMessage(hWnd, 1002, WM_SETTEXT, 0, (LPARAM)config_unload);
+			SetDlgItemTextU8(hWnd, 1001, (char_u *)config_load);
+			SetDlgItemTextU8(hWnd, 1002, (char_u *)config_unload);
 		}
 		return(TRUE);
 	case WM_DESTROY:
@@ -9274,8 +9565,8 @@ CommandDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		wmId = LOWORD(wParam);
 		switch (wmId) {
 		case IDOK:
-			GetDlgItemText(hWnd, 1001, config_load, sizeof(config_load));
-			GetDlgItemText(hWnd, 1002, config_unload, sizeof(config_unload));
+			GetDlgItemTextU8(hWnd, 1001, (char_u *)config_load, sizeof(config_load));
+			GetDlgItemTextU8(hWnd, 1002, (char_u *)config_unload, sizeof(config_unload));
 			EndDialog(hWnd, 0);
 			return(TRUE);
 		case IDCANCEL:
@@ -9456,10 +9747,7 @@ HistoryGetNo(int no, char *fname, int *line)
 	if (RegOpenKeyEx(HKEY_CURRENT_USER, name, 0,
 									KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS)
 	{
-		size = MAXPATHL;
-		type = REG_SZ;
-		if (RegQueryValueEx(hKey, "name", NULL, &type,
-									(BYTE *)fname, &size) == ERROR_SUCCESS)
+		if (RegGetStringU8(hKey, "name", (char_u *)fname, MAXPATHL))
 		{
 			size = sizeof(*line);
 			type = REG_DWORD;
@@ -9604,10 +9892,7 @@ HistoryDuplicate(char *fname)
 		if (RegOpenKeyEx(HKEY_CURRENT_USER, name, 0,
 										KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS)
 		{
-			size = sizeof(name);
-			type = REG_SZ;
-			if (RegQueryValueEx(hKey, "name", NULL, &type,
-										(BYTE *)name, &size) == ERROR_SUCCESS)
+			if (RegGetStringU8(hKey, "name", (char_u *)name, sizeof(name)))
 			{
 				if (fnamecmp(fname, name) == 0)
 				{
@@ -9654,8 +9939,8 @@ HistoryAppend(char *name, int line)
 	GetTimeFormat(LOCALE_USER_DEFAULT, 0, NULL, NULL, &date[strlen(date)], sizeof(date) - strlen(date));
 	size = strlen(date) + 1;
 	RegSetValueEx(hKey, NULL, 0, REG_SZ, date, size);
-	size = strlen(name) + 1;
-	RegSetValueEx(hKey, "name", 0, REG_SZ, (BYTE *)name, size);
+	/* The name is UTF-8; the registry is Unicode, so keep it lossless. */
+	RegSetStringU8(hKey, "name", (char_u *)name);
 	size = sizeof(line);
 	RegSetValueEx(hKey, "line", 0, REG_DWORD, (BYTE *)&line, size);
 	RegCloseKey(hKey);
@@ -9682,10 +9967,7 @@ HistoryGetLine(char *fname)
 		if (RegOpenKeyEx(HKEY_CURRENT_USER, name, 0,
 										KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS)
 		{
-			size = sizeof(name);
-			type = REG_SZ;
-			if (RegQueryValueEx(hKey, "name", NULL, &type,
-										(BYTE *)name, &size) == ERROR_SUCCESS)
+			if (RegGetStringU8(hKey, "name", (char_u *)name, sizeof(name)))
 			{
 				if (fnamecmp(fname, name) == 0)
 				{
@@ -9790,11 +10072,11 @@ LineSpaceDialogEx(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			udLWnd = NULL;
 			udTWnd = NULL;
 			wsprintf(NameBuff, "%d", v_cspace);
-			SendDlgItemMessage(hWnd, 1001, WM_SETTEXT, 0, (LPARAM)NameBuff);
+			SetDlgItemTextU8(hWnd, 1001, (char_u *)NameBuff);
 			wsprintf(NameBuff, "%d", v_lspace);
-			SendDlgItemMessage(hWnd, 1002, WM_SETTEXT, 0, (LPARAM)NameBuff);
+			SetDlgItemTextU8(hWnd, 1002, (char_u *)NameBuff);
 			wsprintf(NameBuff, "%d", v_trans);
-			SendDlgItemMessage(hWnd, 1003, WM_SETTEXT, 0, (LPARAM)NameBuff);
+			SetDlgItemTextU8(hWnd, 1003, (char_u *)NameBuff);
 		}
 		return(TRUE);
 	case WM_DESTROY:
@@ -9887,9 +10169,9 @@ LineSpaceDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			udCWnd = NULL;
 			udLWnd = NULL;
 			wsprintf(NameBuff, "%d", v_cspace);
-			SendDlgItemMessage(hWnd, 1001, WM_SETTEXT, 0, (LPARAM)NameBuff);
+			SetDlgItemTextU8(hWnd, 1001, (char_u *)NameBuff);
 			wsprintf(NameBuff, "%d", v_lspace);
-			SendDlgItemMessage(hWnd, 1002, WM_SETTEXT, 0, (LPARAM)NameBuff);
+			SetDlgItemTextU8(hWnd, 1002, (char_u *)NameBuff);
 		}
 		return(TRUE);
 	case WM_DESTROY:
@@ -10240,7 +10522,6 @@ static BOOL CALLBACK
 FontDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int					wmId;
-	CHOOSEFONT			cfFont;
 	static LOGFONT		logfont;
 	static LOGFONT		jlogfont;
 	LOGFONT				work;
@@ -10249,8 +10530,8 @@ FontDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_INITDIALOG:
 		memcpy(&logfont, &config_font, sizeof(logfont));
 		memcpy(&jlogfont, &config_jfont, sizeof(jlogfont));
-		SendDlgItemMessage(hWnd, 2000, WM_SETTEXT, 0, (LPARAM)config_font.lfFaceName);
-		SendDlgItemMessage(hWnd, 4000, WM_SETTEXT, 0, (LPARAM)config_jfont.lfFaceName);
+		SetDlgItemTextU8(hWnd, 2000, (char_u *)config_font.lfFaceName);
+		SetDlgItemTextU8(hWnd, 4000, (char_u *)config_jfont.lfFaceName);
 		return(TRUE);
 	case WM_DESTROY:
 		break;
@@ -10267,31 +10548,18 @@ FontDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			return(TRUE);
 		case 1001:
 		case 3001:
-			memset(&cfFont, 0, sizeof(cfFont));
 			if (wmId == 1001)
 				memcpy(&work, &logfont, sizeof(work));
 			else
 				memcpy(&work, &jlogfont, sizeof(work));
-			cfFont.lStructSize	= sizeof(cfFont);
-			cfFont.hwndOwner	= hWnd;
-			cfFont.hDC			= NULL;
-			cfFont.rgbColors	= *v_fgcolor;
-			cfFont.lpLogFont	= &work;
-			cfFont.Flags		= CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT
-									| CF_ANSIONLY | CF_NOVERTFONTS
-									/* | CF_FIXEDPITCHONLY | CF_EFFECTS */ ;
-			cfFont.lCustData	= 0;
-			cfFont.lpfnHook		= NULL;
-			cfFont.lpTemplateName= NULL;
-			cfFont.hInstance	= hInst;
-			if (ChooseFont(&cfFont))
+			if (ChooseFontU8(hWnd, &work))
 			{
 				if (wmId == 1001)
 					memcpy(&logfont, &work, sizeof(work));
 				else
 					memcpy(&jlogfont, &work, sizeof(work));
-				SendDlgItemMessage(hWnd, 2000, WM_SETTEXT, 0, (LPARAM)logfont.lfFaceName);
-				SendDlgItemMessage(hWnd, 4000, WM_SETTEXT, 0, (LPARAM)jlogfont.lfFaceName);
+				SetDlgItemTextU8(hWnd, 2000, (char_u *)logfont.lfFaceName);
+				SetDlgItemTextU8(hWnd, 4000, (char_u *)jlogfont.lfFaceName);
 			}
 			break;
 		}

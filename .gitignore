@@ -16,3 +16,4 @@ core
 
 # stray files from test runs
 *.out
+/[!a-zA-Z0-9_.-]*.txt
