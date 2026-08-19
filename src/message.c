@@ -273,15 +273,21 @@ msg_outtrans(str, len)
 	while (--len >= 0)
 	{
 #ifdef KANJI
-		char_u		buf[3];
+		char_u		buf[UTF8_MAXLEN + 1];
 		if (ISkanji(*str) && str[1])
 		{
-			buf[0] = *str++;
-			buf[1] = *str++;
-			buf[2] = NUL;
+			int		n = utf_lenat(str, 0);
+			int		k;
+
+			if (n > len + 1)
+				n = len + 1;		/* stay inside the length we were given */
+			for (k = 0; k < n; k++)
+				buf[k] = str[k];
+			buf[n] = NUL;
 			msg_outstr(buf);
-			retval += 2;
-			len--;
+			retval += utf_width(buf);
+			str += n;
+			len -= n - 1;
 			continue;
 		}
 #endif
@@ -326,12 +332,16 @@ msg_prt_line(s)
 #ifdef KANJI
 			if (ISkanji(c) && s[si])
 			{
-				char_u		buf[3];
-				buf[0] = c;
-				buf[1] = s[si++];
-				buf[2] = NUL;
+				char_u		buf[UTF8_MAXLEN + 1];
+				int			n = utf_lenat(s, si - 1);
+				int			k;
+
+				for (k = 0; k < n; k++)
+					buf[k] = s[si - 1 + k];
+				buf[n] = NUL;
+				si += n - 1;
 				msg_outstr(buf);
-				col += 2;
+				col += utf_width(buf);
 				continue;
 			}
 			else
@@ -394,7 +404,8 @@ msg_outstr(s)
 		 */
 #ifdef KANJI
 		if ((msg_row >= Rows - 1 && (*s == '\n' || msg_col >= Columns - 1))
-			|| ((msg_row >= Rows - 1 && (msg_col == Columns - 2 && ISkanji(*s)))))
+			|| (msg_row >= Rows - 1 && ISkanji(*s)
+					&& msg_col + utf_width(s) > (int)Columns))
 #else
 		if (msg_row >= Rows - 1 && (*s == '\n' || msg_col >= Columns - 1))
 #endif
@@ -438,15 +449,25 @@ msg_outstr(s)
 #ifdef KANJI
 			if (ISkanji(*s) && s[1])
 			{
-				if (msg_col == (Columns - 1))
-				{
-					screen_msg(" ", msg_row, msg_col++);
+				int		n = utf_lenat(s, 0);
+				int		w = utf_width(s);
+
+				if (w == 2 && msg_col == (Columns - 1))
+				{	/* a double width character is not split over the edge */
+					screen_msg((char_u *)" ", msg_row, msg_col++);
 					msg_col = 0;
 					msg_row++;
 				}
-				screen_msg(s++, msg_row, msg_col++);
+				screen_msg(s, msg_row, msg_col);
+				msg_col += w;
+				s += n;
+				if (msg_col >= Columns)
+				{
+					msg_col = 0;
+					++msg_row;
+				}
+				continue;
 			}
-			else
 #endif
 			screen_outchar(*s, msg_row, msg_col);
 			if (++msg_col >= Columns)

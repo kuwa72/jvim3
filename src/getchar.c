@@ -1521,7 +1521,7 @@ check_abbr(c, ptr, col, mincol)
 				for (k = 0; k < len; k++)
 				{
 					if (ISkanji(ptr[k]))
-						k++;
+						k += utf_lenat(ptr, k) - 1;
 					cnt++;
 				}
 				len = cnt;

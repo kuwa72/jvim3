@@ -213,6 +213,21 @@ edit "cw over kanji"          ok "cwZ\033" "$NIHON$GO abc\n" "Z abc\n"
 edit "visual v l l d"         ok "vlld" "$NIHON$GO\n"      "\n"
 edit "e then x"               ok "ex"   "$NIHON$GO abc\n"  "$NIHON abc\n"
 
+AA='\xe3\x81\x82'								# あ
+II='\xe3\x81\x84'								# い
+UU='\xe3\x81\x86'								# う
+NN='\xe3\x82\x93'								# ん
+
+echo
+echo "regexp character classes over multi-byte characters:"
+# [あ] must not match い: they share their first two bytes (e3 81), which is what
+# the old two-byte comparison keyed on.
+edit "[a] matches only a"      ok ":s/[$AA]//g\r"       "$AA$II$UU\n"      "$II$UU\n"
+edit "[au] matches both"       ok ":s/[$AA$UU]//g\r"    "$AA$II$UU\n"      "$II\n"
+edit "[a-n] range by code pt"  ok ":s/[$AA-$NN]//g\r"   "$AA$II$UU""abc\n" "abc\n"
+edit "[a-c] leaves kana"       ok ":s/[a-c]//g\r"       "$AA""abc$II\n"    "$AA$II\n"
+edit "search a not i"          ok "/$AA\rx"             "$II$AA$UU\n"      "$II$UU\n"
+
 echo
 printf 'pass %d  fail %d  known-fail %d  newly-passing %d\n' \
 		"$pass" "$fail" "$xfail" "$xpass"

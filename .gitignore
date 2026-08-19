@@ -13,3 +13,6 @@ src/grep/grep
 src/mkcmdtab
 src/jptab
 core
+
+# stray files from test runs
+*.out

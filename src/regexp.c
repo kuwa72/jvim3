@@ -182,7 +182,7 @@ static int ismult __ARGS((int));
 #ifdef KANJI
 static void regjp __ARGS((int, char_u));
 static char * strjpchr __ARGS((char_u *, char_u, char_u));
-static char * mstrjpchr __ARGS((char_u *, char_u, char_u));
+static char * mstrjpchr __ARGS((char_u *, char_u *));
 #endif
 #ifndef notdef
 static char_u	* regstrext __ARGS((char_u *));
@@ -684,67 +684,51 @@ regatom(flagp)
 				regc(S_CHAR);
 				regc(*regparse++);
 			}
+			/*
+			 * Members are stored as S_CHAR followed by one character, or
+			 * R_CHAR followed by the two ends of a range. A character is one to
+			 * four UTF-8 bytes, so it is copied by its length rather than as
+			 * "one byte or two", and a range compares as code points, which
+			 * also means the two ends no longer have to be the same width.
+			 */
 			while (*regparse != '\0' && *regparse != ']')
 			{
+				int		clen;
+
 				if (*regparse == '\\' && regparse[1])
 				{
 					regparse++;
 					regc(S_CHAR);
-					if (ISkanji(*regparse))
-					{
-						regc(*regparse++);
-						regc(*regparse++);
-					}
-					else
+					for (clen = utf_lenat(regparse, 0); clen > 0; clen--)
 						regc(*regparse++);
 				}
-				else if ((ISkanji(*regparse)
-						&& regparse[2] == '-'
-						&& regparse[2 + 1] != ']'
-						&& regparse[2 + 1] != '\0')
-							|| (!ISkanji(*regparse) && regparse[1] == '-'
-									&& regparse[2] != ']' && regparse[2] != '\0'))
+				else if (regparse[utf_lenat(regparse, 0)] == '-'
+						&& regparse[utf_lenat(regparse, 0) + 1] != ']'
+						&& regparse[utf_lenat(regparse, 0) + 1] != '\0')
 				{
-					int_u		cclass;
-					int_u		cclassend;
+					int			cclass;
+					int			cclassend;
 
 					regc(R_CHAR);
-					if (ISkanji(*regparse))
-					{
-						if (!ISkanji(*(regparse + 2 + 1)))
-							EMSG_RETURN(e_invrange);
-						cclass = (int)regparse[0] << 8 | regparse[1];
+					cclass = utf_decode(regparse, NULL);
+					if (cclass == UTF8_ERROR)
+						cclass = *regparse;
+					for (clen = utf_lenat(regparse, 0); clen > 0; clen--)
 						regc(*regparse++);
+					regparse++;					/* the '-' */
+					cclassend = utf_decode(regparse, NULL);
+					if (cclassend == UTF8_ERROR)
+						cclassend = *regparse;
+					for (clen = utf_lenat(regparse, 0); clen > 0; clen--)
 						regc(*regparse++);
-						regparse++;
-						cclassend = (int)regparse[0] << 8 | regparse[1];
-						regc(*regparse++);
-						regc(*regparse++);
-					}
-					else
-					{
-						if (ISkanji(*(regparse + 2)))
-							EMSG_RETURN(e_invrange);
-						cclass = UCHARAT(regparse);
-						regc(*regparse);
-						regparse += 2;
-						cclassend = UCHARAT(regparse);
-						regc(*regparse);
-						regparse++;
-					}
 					if (cclass > cclassend + 1)
 						EMSG_RETURN(e_invrange);
-				}
-				else if (ISkanji(*regparse))
-				{
-					regc(S_CHAR);
-					regc(*regparse++);
-					regc(*regparse++);
 				}
 				else
 				{
 					regc(S_CHAR);
-					regc(*regparse++);
+					for (clen = utf_lenat(regparse, 0); clen > 0; clen--)
+						regc(*regparse++);
 				}
 			}
 #else
@@ -1463,10 +1447,10 @@ regmatch(prog)
 		  case ANYOF:
 #ifdef KANJI
 			if (*reginput == '\0' ||
-				mstrjpchr(OPERAND(scan), *reginput, *(reginput + 1)) == NULL)
+				mstrjpchr(OPERAND(scan), reginput) == NULL)
 				return 0;
 			if (ISkanji(*reginput))
-				reginput += 2;
+				reginput += utf_lenat(reginput, 0);
 			else
 #else
 			if (*reginput == '\0' || cstrchr(OPERAND(scan), *reginput) == NULL)
@@ -1477,10 +1461,10 @@ regmatch(prog)
 		  case ANYBUT:
 #ifdef KANJI
 			if (*reginput == '\0' ||
-				mstrjpchr(OPERAND(scan), *reginput, *(reginput + 1)) != NULL)
+				mstrjpchr(OPERAND(scan), reginput) != NULL)
 				return 0;
 			if (ISkanji(*reginput))
-				reginput += 2;
+				reginput += utf_lenat(reginput, 0);
 			else
 #else
 			if (*reginput == '\0' || cstrchr(OPERAND(scan), *reginput) != NULL)
@@ -1704,11 +1688,13 @@ regrepeat(p)
 	  case ANYOF:
 #ifdef KANJI
 		while (*scan != '\0' &&
-						mstrjpchr(opnd, *scan, *(scan + 1)) != NULL)
+						mstrjpchr(opnd, scan) != NULL)
 			if (ISkanji(*scan))
 			{
-				count += 2;
-				scan += 2;
+				int		n = utf_lenat(scan, 0);
+
+				count += n;
+				scan += n;
 			}
 			else
 			{
@@ -1726,11 +1712,13 @@ regrepeat(p)
 	  case ANYBUT:
 #ifdef KANJI
 		while (*scan != '\0' &&
-						mstrjpchr(opnd, *scan, *(scan + 1)) == NULL)
+						mstrjpchr(opnd, scan) == NULL)
 			if (ISkanji(*scan))
 			{
-				count += 2;
-				scan += 2;
+				int		n = utf_lenat(scan, 0);
+
+				count += n;
+				scan += n;
 			}
 			else
 			{
@@ -2030,7 +2018,7 @@ strjpchr(s, c, k)
 					return(s);
 				if (jp_strnicmp(s, work, (size_t)utf_len(work[0])) != 0)
 					return(s);
-				s += 2;
+				s += utf_lenat(s, 0);
 			}
 			else
 			{
@@ -2052,7 +2040,7 @@ strjpchr(s, c, k)
 			{
 				if (*s == c && (*(s + 1) == k || k == NUL))
 					return s;
-				s += 2;
+				s += utf_lenat(s, 0);
 			}
 			else
 			{
@@ -2067,137 +2055,72 @@ strjpchr(s, c, k)
 	return NULL;
 }
 
+/*
+ * Does the character at 'ptr' belong to the character class 'opnd'?
+ * Returns a pointer inside 'opnd' when it does, NULL when it does not.
+ *
+ * The class is a series of S_CHAR followed by one character, or R_CHAR followed
+ * by the two ends of a range; the characters are UTF-8. The comparison is on
+ * code points. It used to compare the first two bytes, which made [\xe3\x81\x82]
+ * (a) match \xe3\x81\x84 (i) too, since both start e3 81, and step two bytes at
+ * a time over a three byte character.
+ */
 static	char *
-mstrjpchr(s, c, k)
+mstrjpchr(s, ptr)
 	char_u			*s;
-	char_u			c, k;
+	char_u			*ptr;
 {
-	int_u		target;
-	int_u		class;
-	int_u		cclass;
-	int_u		cclassend;
+	int		cp;
+	int		fold = 0;
 
+	cp = utf_decode(ptr, NULL);
+	if (cp == UTF8_ERROR)
+		cp = *ptr;
 	if (reg_jic)
+		fold = jp_foldcp(cp);
+	while (*s)
 	{
-		char_u		work[2];
-		char_u		sbuf[2];
+		int		tag = *s++;
+		int		lo;
+		int		hi;
 
-		work[0] = c;
-		work[1] = k;
-		while (*s)
+		lo = utf_decode(s, NULL);
+		if (lo == UTF8_ERROR)
+			lo = *s;
+		s += utf_lenat(s, 0);
+		if (tag == S_CHAR)
+			hi = lo;
+		else
 		{
-			if (*s++ == S_CHAR)
-			{
-				if (ISkanji(*s))
-				{
-					if ((ISkanji(c) || ISkana(c)) && k == NUL)
-						return(s);
-					if (jp_strnicmp(s, work, (size_t)utf_len(work[0])) != 0)
-						return(s);
-					s += 2;
-				}
-				else
-				{
-					if (c == *s && k == NUL)
-						return(s);
-					if (ISkanji(c) && k == NUL)
-						return(s);
-					if (jp_strnicmp(s, work, (size_t)utf_len(work[0])) != 0)
-						return(s);
-					s ++;
-				}
-			}
-			else
-			{
-				if (ISkanji(*s))
-				{
-					if ((ISkanji(c) || ISkana(c)) && k == NUL)
-						return(s);
-					cclass	  = (int_u)s[0] << 8 | s[1];
-					cclassend = (int_u)s[2] << 8 | s[3];
-					for (class = cclass; class <= cclassend; class++)
-					{
-						sbuf[0] = (class & 0xff00) >> 8;
-						sbuf[1] = class & 0x00ff;
-						if (jp_strnicmp(sbuf, work,
-									(size_t)utf_len(work[0])) != 0)
-							return(s);
-					}
-					s += 4;
-				}
-				else
-				{
-					cclass	  = s[0];
-					cclassend = s[1];
-					for (class = cclass; class <= cclassend; class++)
-					{
-						sbuf[0] = class;
-						if (c == sbuf[0] && k == NUL)
-							return(s);
-						if (ISkanji(c) && k == NUL)
-							return(s);
-						if (jp_strnicmp(sbuf, work, (size_t)utf_len(work[0])) != 0)
-							return(s);
-					}
-					s += 2;
-				}
-			}
+			hi = utf_decode(s, NULL);
+			if (hi == UTF8_ERROR)
+				hi = *s;
+			s += utf_lenat(s, 0);
 		}
-	}
-	else
-	{
-		while (*s)
+		if (cp >= lo && cp <= hi)
+			return (char *)s;
+		if (reg_ic && cp < 0x80 && lo < 0x80 && hi < 0x80)
 		{
-			if (*s++ == S_CHAR)
-			{
-				if (ISkanji(*s))
-				{
-					if (*s == c && (*(s + 1) == k || k == NUL))
-						return s;
-					s += 2;
-				}
-				else
-				{
-					if (*s == c)
-						return s;
-					if (reg_ic && (isalpha(*s) && (TO_UPPER(*s) == TO_UPPER(c))))
-						return s;
-					s ++;
-				}
-			}
-			else
-			{
-				if (ISkanji(*s))
-				{
-					cclass	  = (int_u)s[0] << 8 | s[1];
-					cclassend = (int_u)s[2] << 8 | s[3];
+			int		c2;
 
-					if (k != NUL)
-					{
-						target = (int_u)c << 8 | k;
-						for (class = cclass; class <= cclassend; class++)
-						{
-							if (class == target)
-								return s;
-						}
-					}
-					s += 4;
-				}
-				else
-				{
-					cclass	  = s[0];
-					cclassend = s[1];
-
-					for (class = cclass; class <= cclassend; class++)
-					{
-						if (class == c)
-							return s;
-						if (reg_ic && (isalpha(class) && (TO_UPPER(class) == TO_UPPER(c))))
-							return s;
-					}
-					s += 2;
-				}
+			for (c2 = lo; c2 <= hi; c2++)
+				if (isalpha(c2) && TO_UPPER(c2) == TO_UPPER(cp))
+					return (char *)s;
+		}
+		if (reg_jic)
+		{
+			/*
+			 * Fold both sides. Folding the ends of a range is not sound in
+			 * general, but it is within a block, which is what a range like
+			 * hiragana a-n is, and it keeps this O(1).
+			 */
+			if (lo == hi)
+			{
+				if (jp_foldcp(lo) == fold)
+					return (char *)s;
 			}
+			else if (fold >= jp_foldcp(lo) && fold <= jp_foldcp(hi))
+				return (char *)s;
 		}
 	}
 	return NULL;

@@ -31,6 +31,7 @@ char   *fileconvsfrom	__ARGS((char_u *));
 char   *fileconvsto		__ARGS((char_u *));
 void	binaryconvsfrom	__ARGS((linenr_t, char, int *, char_u *, int, char_u *));
 char_u *binaryconvsto	__ARGS((char, char_u *, int *, int));
+int		jp_foldcp		__ARGS((int));
 int		jp_strnicmp		__ARGS((char_u *, char_u *, size_t));
 #ifdef UCODE
 int		wide2multi		__ARGS((char_u *, int, int, int));

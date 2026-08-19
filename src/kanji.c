@@ -3452,6 +3452,24 @@ jp_foldstep(pp)
 }
 
 /*
+ * Fold a single code point the same way jp_foldstep() folds a character: case,
+ * kana width, hiragana to katakana. Used by the regexp engine, which compares
+ * code points rather than byte sequences.
+ */
+	int
+jp_foldcp(cp)
+	int		cp;
+{
+	char_u	buf[UTF8_MAXLEN + 1];
+	char_u	*p = buf;
+	int		len;
+
+	len = utf_encode(cp, buf);
+	buf[len] = NUL;
+	return jp_foldstep(&p);
+}
+
+/*
  * How many bytes at the start of 's1' match the first 'len' bytes of 's2',
  * ignoring case, kana width and hiragana/katakana? 0 when they do not match.
  * Tab and space are considered equal, as they were before.

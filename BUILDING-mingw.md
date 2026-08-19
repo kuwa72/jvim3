@@ -232,6 +232,9 @@ feel unstable.
 | `getcmdline()` | Inserting a multi-byte character at the start of the command line read and wrote `buff[-1]`. |
 | `sjis2ucs()` (`s2u.c`) | Indexes its table on the two Shift-JIS bytes with no range check, so an invalid pair reads far out of bounds. Callers validate now. |
 | 7 places | `strcpy(p, p + 1)` and friends: the ranges overlap, which is undefined. Replaced with the new `STRMOVE()`. |
+| `msg_outtrans()` / `msg_outstr()` | Message and command line output emitted exactly two bytes per multi-byte character, so a three or four byte one had its tail bytes printed separately as `[XX]`. That is what made a file name with an emoji or halfwidth kana unreadable on the `:` line and in completion. |
+| `mstrjpchr()` | A regexp character class compared only the first two bytes of its members, so `[あ]` also matched `い` (both start e3 81), and consumed two bytes of a three byte character. Classes and ranges compare code points now, and a range no longer needs both ends to be the same width. |
+| `check_abbr()` | Counted a multi-byte character as two bytes when working out how much to erase for an abbreviation. |
 | `kanjiconvsfrom()` | Terminal input arrives in chunks of at most `MAXMAPLEN` (50) bytes, so a character can be split across two of them. The UTF-8 path decoded before checking for that, so every byte of a split character became `?` — pasting a line with a character across the boundary produced text like `気難し???指示役`. It checks the length first now and carries the split bytes over in `tail`, which is what that argument is for. |
 | `winjnt.c` | `_beginthread()` was called without a declaration. |
 
@@ -244,10 +247,11 @@ findings.
 `scripts/test-encoding.sh` drives a Unix build through a pty and compares bytes.
 It covers four things: round tripping files in EUC-JP, Shift-JIS and UTF-8;
 editing over multi-byte characters (`x`, `dw`, `cw`, `r`, `J`, yank and put,
-visual mode, undo, insert); the screen column arithmetic, via `N|`; and input
-read in chunks, by typing at the terminal rather than through `-s`, since a
-script file is read straight by `vgetorpeek()` and never crosses an `inchar()`
-boundary.
+visual mode, undo, insert); the screen column arithmetic, via `N|`; input read in
+chunks, by typing at the terminal rather than through `-s`, since a script file is
+read straight by `vgetorpeek()` and never crosses an `inchar()` boundary; and
+regexp character classes, where two characters sharing their first bytes have to
+stay apart.
 
 ```sh
 cd src && cp makjunix.mak makefile   # uncomment your MACHINE/CC/LIBS lines
@@ -255,7 +259,7 @@ make jvim3
 cd .. && ./scripts/test-encoding.sh
 ```
 
-All 37 cases pass. Run it against an AddressSanitizer build to check for memory
+All 42 cases pass. Run it against an AddressSanitizer build to check for memory
 errors at the same time:
 
 ```sh
