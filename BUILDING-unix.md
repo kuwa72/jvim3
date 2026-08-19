@@ -19,6 +19,26 @@ CC=clang OPT="-O0 -g" EXTRA_CFLAGS=-I/usr/local/include \
 It is POSIX `sh` and avoids `make -C`, so it works with the BSDs' `/bin/sh` and
 `bmake` as well as with bash and GNU make.
 
+The test suite needs bash and a C compiler: it builds `scripts/ptyrun.c` to give
+jvim a terminal. It used to call `script(1)` for that, which is a different
+program on Linux, NetBSD and the other BSDs, and NetBSD's quits before the
+command has run when its own standard input is a file.
+
+## Checking the BSDs from a Linux box
+
+```sh
+./scripts/test-bsd-docker.sh              # FreeBSD: build and run the tests
+./scripts/test-bsd-docker.sh netbsd
+./scripts/test-bsd-docker.sh all
+```
+
+Docker cannot run a BSD container — a BSD binary needs a BSD kernel — so the
+container is only somewhere to keep QEMU, and the BSD inside it is a real
+virtual machine booted from the project's own image. It needs `/dev/kvm`, about
+12 GB of disk and, on the first run of each system, the network. That first run
+installs the guest far enough to be reachable over ssh and keeps the disk, so
+later runs are up in under a minute.
+
 ## Two flags the build now needs
 
 - **`-std=gnu89`** (or `gnu17`). The sources use K&R function definitions
@@ -46,6 +66,7 @@ It is POSIX `sh` and avoids `make -C`, so it works with the BSDs' `/bin/sh` and
 | `term.c`, `termlib.c` | `outchar()` was `void(unsigned)` but was handed to `tputs()`, which declares its third argument `int (*)(int)`. Calling through a mismatched function pointer is undefined; it happened to work. `outchar()` is `int(int)` now and JVim's own `tputs()` agrees. |
 | `termlib.c` | Six functions relied on the implicit `int` return type, which C23 also removed. |
 | 7 places | `strcpy(p, p + 1)` and friends: the ranges overlap, which is undefined. `STRMOVE()` now. |
+| `unix.c` | `sig_winch()` was declared and defined as the 4.3BSD three argument signal handler, `(int, int, struct sigcontext *)`. NetBSD no longer declares `struct sigcontext` in `<signal.h>`, so the prototype and the definition named two different types and the build stopped. Nothing in the handler looks at its arguments, so the modern BSDs and macOS take the plain `(int)` form. |
 
 ## What has been verified, and what has not
 
@@ -64,16 +85,36 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
   which keep their value on LP64. (The Windows build is a different story, see
   BUILDING-mingw.md.)
 
-**Not** verified, because there is no BSD or macOS to hand:
+Verified on FreeBSD 14.3-RELEASE-p16, clang 19.1.7, amd64, in the QEMU guest
+`scripts/test-bsd-docker.sh` builds:
 
-- Actually running on FreeBSD, NetBSD, OpenBSD or macOS
-- clang, which is what the BSDs use. Only gcc was available here.
+- All 42 tests
+- `-DTERMCAP` against base ncurses, found as `-ltinfo`
+- `jmask` following `LANG`: `ja_JP.UTF-8` gives `TTTT`, `ja_JP.eucJP` gives
+  `EEEE`, `C` gives `EEET`
 - The `BSD4_4` branch in `unix.c` — `<termios.h>` with `TCGETA` mapped to
-  `TIOCGETA` — which is FreeBSD-specific and cannot be compiled against Linux
-  headers. It syntax-checks with those two constants supplied by hand, and it is
-  untouched by this work.
+  `TIOCGETA` — which could not be compiled against Linux headers before.
+  `EXTRA_CFLAGS=-DBSD4_4 ./scripts/build-unix.sh` builds and passes all 42
+  tests. Without it FreeBSD takes the `<sgtty.h>` branch, which also works.
 
-If you can run it on a BSD, `./scripts/build-unix.sh test` is the whole check:
+Verified on NetBSD 10.1, gcc 10.5.0, amd64, the same way:
+
+- All 42 tests
+- `-DTERMCAP` against base curses, found as `-lcurses`
+- The link warns that `getwd()` and `mktemp()` are used unsafely. Both are old
+  interfaces JVim still uses; neither is new here.
+
+**Not** verified:
+
+- OpenBSD, DragonFly and macOS. The `sig_winch()` and `BSD4_4` conditions above
+  name them, on the assumption that what NetBSD and FreeBSD need they need too,
+  but nobody has run it there.
+- Real hardware, a real terminal and a real IME. Everything above is a serial
+  console and a pty.
+- X11 title saving on a BSD: neither guest has the X headers, so both build with
+  `USE_X11` off.
+
+On a BSD you have to hand, `./scripts/build-unix.sh test` is the whole check:
 it prints what it detected, builds, and runs the suite. Worth an eye afterwards:
 the terminal line of the output (which curses library it found), whether `LANG`
 gives you the `jmask` you expect (`:set jm?`), and cursor movement over
