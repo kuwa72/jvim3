@@ -7,6 +7,13 @@
 
 vim       ICON      "vim.ico"
 
+/*
+ * Application manifest: it asks for UTF-8 as the process ANSI code page, so the
+ * ...A file APIs accept UTF-8 file names. See jvim.manifest.
+ * 1 = CREATEPROCESS_MANIFEST_RESOURCE_ID, 24 = RT_MANIFEST.
+ */
+1 24 "jvim.manifest"
+
 LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
 #pragma code_page(932)
 

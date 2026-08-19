@@ -2193,7 +2193,7 @@ kanjiconvsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
 
 		while (i < ptrlen)
 		{
-			int		cp, len;
+			int		cp, len, need;
 			char_u	buf[UTF8_MAXLEN];
 
 			if (ptr[i] < 0x80)
@@ -2203,6 +2203,22 @@ kanjiconvsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
 				*d++ = ptr[i++];
 				continue;
 			}
+			/*
+			 * Check for a character split across the end of this chunk BEFORE
+			 * decoding it: the missing bytes would make utf_decode() call it
+			 * malformed and every byte would turn into '?'. That is what
+			 * mangled pasted text, which arrives in chunks.
+			 */
+			need = utf_len(ptr[i]);
+			if (need > 1 && i + need > ptrlen && tail != NULL)
+			{
+				int		k;
+
+				for (k = 0; i + k < ptrlen && k < UTF8_MAXLEN; k++)
+					tail[k] = ptr[i + k];
+				tail[k] = NUL;
+				break;
+			}
 			cp = utf_decode(&ptr[i], &len);
 			if (cp == UTF8_ERROR)
 			{
@@ -2211,18 +2227,6 @@ kanjiconvsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
 				*d++ = '?';
 				i += len;
 				continue;
-			}
-			if (i + len > ptrlen)
-			{			/* truncated at the end of the chunk: hand it back */
-				if (tail)
-				{
-					int		k;
-
-					for (k = 0; i + k < ptrlen && k < UTF8_MAXLEN; k++)
-						tail[k] = ptr[i + k];
-					tail[k] = NUL;
-				}
-				break;
 			}
 			len = utf_encode(cp, buf);
 			if ((int)(d - dst) + len > dstlen)
@@ -2941,7 +2945,7 @@ fileconvsfrom(org)
 	p_jkc = FALSE;
 	fname = &fnamebuf[++cnt & 1][0];
 	fname[kanjiconvsfrom(org, strlen(org),
-					fname, MAXPATHL, NULL, (char)toupper(JP_SYS), NULL)] = NUL;
+					fname, MAXPATHL, NULL, FILECODE, NULL)] = NUL;
 #ifdef MSDOS
 	t = p = (char_u *)fname;
 	if (p[0] == '/' && p[1] == '/' && isalpha(p[2]) && p[3] == '/')
@@ -3028,7 +3032,7 @@ fileconvsto(org)
 	*t = '\0';
 	org = fname;
 #endif
-	p = kanjiconvsto(org, (char_u)toupper(JP_SYS), TRUE);
+	p = kanjiconvsto(org, FILECODE, TRUE);
 	strcpy(fname, p);
 	free(p);
 	return(fname);

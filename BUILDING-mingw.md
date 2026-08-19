@@ -133,7 +133,8 @@ Conversion happens only at the edges:
 | Keyboard and IME | The GUI window is a Unicode one, so `WM_CHAR` carries UTF-16; `winjnt.c` joins surrogate pairs and pushes UTF-8. `edit.c` and `cmdline.c` read a whole character, however many bytes it is. |
 | Clipboard | `CF_UNICODETEXT` both ways (`clip_put()` / `clip_get()` in `winjnt.c`), falling back to `CF_TEXT` when that is all a program offers. |
 | Window title | `SetWindowTextW`, so a file name outside CP932 shows as itself. |
-| Pipes and file names | `jmask`'s system code, still CP932 on Windows. |
+| Pipes | `jmask`'s system code, still CP932 on Windows: that is what a command run from `:!` writes. |
+| File names | UTF-8 on Windows, see below. |
 
 The GUI window has to be Unicode for this to work: an ANSI window only ever
 receives `WM_CHAR` in the ANSI code page, so anything outside CP932 arrived as
@@ -160,6 +161,26 @@ plane of code points (`ScreenCP` in `screen.c`), because a character can be one
 to four bytes but only ever one or two cells. `SCRCP_CONT` marks the right half
 of a double width character.
 
+### File names outside CP932
+
+`src/jvim.manifest` asks for UTF-8 as the process ANSI code page
+(`activeCodePage`, Windows 10 1903 and later). Every `...A` API then takes
+UTF-8, so `open()`, `stat()`, `FindFirstFileA()` and the rest accept a file name
+with characters CP932 has no room for — an emoji, say. File names reach them
+through `fileconvsto()` / `fileconvsfrom()`, which use `FILECODE` (UTF-8 on
+Windows) rather than the system code.
+
+The system code stays CP932, because it is also the encoding of what a command
+run from `:!` writes back, and those still speak CP932. The manifest leaves out
+`dpiAware` (JVim draws on a fixed character grid), comctl32 v6 (it would theme
+the dialogs) and `supportedOS` (it would change what `GetVersionEx()` reports,
+which parts of `winjnt.c` still branch on).
+
+One migration note: with the process code page set to UTF-8, a `vim32.ini` or
+registry entry written by an older build in CP932 is read as UTF-8. That only
+matters for non-ASCII values, in practice a Japanese font face name; setting it
+again from JVim's own dialog stores it as UTF-8 and it round trips from then on.
+
 ### jmask has a fourth character
 
 `jmask` is now "key display system **file**". The fourth character is the code a
@@ -180,6 +201,11 @@ IME, while a new file should be UTF-8. The default is `SSST` on Windows and
   first avoids that. (UCS-2 *writing* is direct and lossless.)
 - A combining mark takes zero columns and is therefore invisible; the bytes are
   kept and saved.
+- `jkanaconv` now defaults to off whichever system code is in use. It rewrites
+  halfwidth kana to fullwidth when a file is read, which was a reasonable thing
+  to do when a halfwidth kana was one Shift-JIS byte; silently changing the
+  user's text is not what a lossless editor should do. `:set jkc` brings it
+  back.
 
 ### Encoding detection
 
@@ -206,6 +232,7 @@ feel unstable.
 | `getcmdline()` | Inserting a multi-byte character at the start of the command line read and wrote `buff[-1]`. |
 | `sjis2ucs()` (`s2u.c`) | Indexes its table on the two Shift-JIS bytes with no range check, so an invalid pair reads far out of bounds. Callers validate now. |
 | 7 places | `strcpy(p, p + 1)` and friends: the ranges overlap, which is undefined. Replaced with the new `STRMOVE()`. |
+| `kanjiconvsfrom()` | Terminal input arrives in chunks of at most `MAXMAPLEN` (50) bytes, so a character can be split across two of them. The UTF-8 path decoded before checking for that, so every byte of a split character became `?` — pasting a line with a character across the boundary produced text like `気難し???指示役`. It checks the length first now and carries the split bytes over in `tail`, which is what that argument is for. |
 | `winjnt.c` | `_beginthread()` was called without a declaration. |
 
 The whole test suite and a set of stress runs over real 113-145 KB files in
@@ -215,9 +242,12 @@ findings.
 ## Encoding tests
 
 `scripts/test-encoding.sh` drives a Unix build through a pty and compares bytes.
-It covers three things: round tripping files in EUC-JP, Shift-JIS and UTF-8;
+It covers four things: round tripping files in EUC-JP, Shift-JIS and UTF-8;
 editing over multi-byte characters (`x`, `dw`, `cw`, `r`, `J`, yank and put,
-visual mode, undo, insert); and the screen column arithmetic, via `N|`.
+visual mode, undo, insert); the screen column arithmetic, via `N|`; and input
+read in chunks, by typing at the terminal rather than through `-s`, since a
+script file is read straight by `vgetorpeek()` and never crosses an `inchar()`
+boundary.
 
 ```sh
 cd src && cp makjunix.mak makefile   # uncomment your MACHINE/CC/LIBS lines
@@ -225,7 +255,7 @@ make jvim3
 cd .. && ./scripts/test-encoding.sh
 ```
 
-All 34 cases pass. Run it against an AddressSanitizer build to check for memory
+All 37 cases pass. Run it against an AddressSanitizer build to check for memory
 errors at the same time:
 
 ```sh

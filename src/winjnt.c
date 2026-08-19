@@ -7239,25 +7239,54 @@ fname_case(name)
  * Set the window title from UTF-8, so a file name with characters outside the
  * ANSI code page shows up as itself rather than as question marks.
  */
-	static void
-SetWindowTextU8(hWnd, text)
-	HWND		hWnd;
+	static WCHAR *
+utf8_to_wide(text)
 	char_u	*	text;
 {
 	WCHAR	*	w;
 	int			wlen;
 
 	if (text == NULL)
-		return;
+		return NULL;
 	wlen = MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)text, -1, NULL, 0);
-	if (wlen <= 0 || (w = (WCHAR *)alloc((unsigned)(wlen * sizeof(WCHAR))))
-																	== NULL)
+	if (wlen <= 0)
+		return NULL;
+	if ((w = (WCHAR *)alloc((unsigned)(wlen * sizeof(WCHAR)))) == NULL)
+		return NULL;
+	MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)text, -1, w, wlen);
+	return w;
+}
+
+	static void
+SetWindowTextU8(hWnd, text)
+	HWND		hWnd;
+	char_u	*	text;
+{
+	WCHAR	*	w;
+
+	if ((w = utf8_to_wide(text)) == NULL)
 	{
-		SetWindowText(hWnd, (LPCSTR)text);	/* give the ANSI form a try */
+		if (text != NULL)
+			SetWindowText(hWnd, (LPCSTR)text);	/* try the ANSI form */
 		return;
 	}
-	MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)text, -1, w, wlen);
 	SetWindowTextW(hWnd, w);
+	free(w);
+}
+
+	static void
+SetConsoleTitleU8(text)
+	char_u	*	text;
+{
+	WCHAR	*	w;
+
+	if ((w = utf8_to_wide(text)) == NULL)
+	{
+		if (text != NULL)
+			SetConsoleTitle((LPCSTR)text);
+		return;
+	}
+	SetConsoleTitleW(w);
 	free(w);
 }
 
@@ -7284,9 +7313,9 @@ mch_settitle(title, icon)
 		else
 		{
 			if (icon != NULL && strlen(title) > sizeof(nIcon.szTip))
-				SetConsoleTitle(icon);
+				SetConsoleTitleU8(icon);
 			else
-				SetConsoleTitle(title);
+				SetConsoleTitleU8(title);
 		}
 	}
 	else if (icon != NULL)
@@ -7296,7 +7325,7 @@ mch_settitle(title, icon)
 		else if (IsTelnet)
 			;
 		else
-			SetConsoleTitle(icon);
+			SetConsoleTitleU8(icon);
 	}
 }
 

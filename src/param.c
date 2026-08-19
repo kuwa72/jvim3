@@ -451,8 +451,8 @@ set_init()
 		}
 		p_jp = p_jp_init;
 	}
-	if (JP_SYS == JP_SJIS)
-		p_jkc = FALSE;
+	if (JP_SYS == JP_SJIS || JP_SYS == JP_UTF8)
+		p_jkc = FALSE;		/* do not fold halfwidth kana on its own */
 #endif
 	if ((p = vimgetenv((char_u *)"SHELL")) != NULL
 #ifdef MSDOS

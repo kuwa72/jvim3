@@ -1059,15 +1059,12 @@ resettitle()
 	char_u	*	i = NULL;
 
 # ifdef NT
-	if (GuiWin)
-	{
-		/*
-		 * The GUI sets the title as Unicode, so hand it the internal UTF-8
-		 * rather than folding it into the display code first.
-		 */
-		mch_settitle(lasttitle, lasticon);
-		return;
-	}
+	/*
+	 * mch_settitle() sets the title through the wide APIs, so hand it the
+	 * internal UTF-8 rather than folding it into the display code first.
+	 */
+	mch_settitle(lasttitle, lasticon);
+	return;
 # endif
 
 	if (lasttitle != NULL)

@@ -149,6 +149,56 @@ edit "5| picks 3rd char"      ok "5|x"  "$NIHON$GO\n"      "$NIHON\n"
 edit "2| snaps to 1st char"   ok "2|x"  "$NIHON$GO\n"      "$HON$GO\n"
 edit "7| stays on last char"  ok "7|x"  "$NIHON$GO\n"      "$NIHON\n"
 
+# typed <name> <expect: ok|knownfail> <keys as raw bytes> <expected bytes>
+#
+# The keys go to jvim's terminal instead of through -s, because a script file is
+# read straight by vgetorpeek() while terminal input goes through inchar(), which
+# reads at most MAXMAPLEN (50) bytes at a time. A character landing across one of
+# those boundaries is what mangled pasted text: kanjiconvsfrom() has to carry the
+# split bytes over in its "tail", or every byte of that character becomes '?'.
+typed() {
+	local name=$1 expect=$2 keys=$3 want=$4
+
+	: > "$tmp/in"
+	printf "$want" > "$tmp/want"
+	rm -f "$tmp/out"
+	printf "$keys:w! %s/out\r:q!\r" "$tmp" > "$tmp/keys"
+	script -qec "TERM=xterm $jvim -T xterm -K TTTT -k t $tmp/in" /dev/null \
+		< "$tmp/keys" >/dev/null 2>&1
+	local got
+	if cmp -s "$tmp/want" "$tmp/out"; then got=ok; else got=bad; fi
+
+	if [ "$expect" = ok ] && [ "$got" = ok ]; then
+		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
+	elif [ "$expect" = ok ]; then
+		printf '  FAIL        %s\n' "$name"
+		printf '                want %s\n' "$(xxd -p "$tmp/want" | tr -d '\n')"
+		printf '                got  %s\n' "$(xxd -p "$tmp/out" 2>/dev/null | tr -d '\n')"
+		fail=$((fail+1))
+	elif [ "$got" = bad ]; then
+		printf '  KNOWN-FAIL  %s\n' "$name"; xfail=$((xfail+1))
+	else
+		printf '  NOW PASSES  %s  <- update the expectation\n' "$name"
+		xpass=$((xpass+1))
+	fi
+}
+
+# 66 bytes, with a character sitting exactly across the 50 byte boundary.
+BOUNDARY='## \xf0\x9f\x8f\xaeAI\xe3\x81\xaf\xe5\x91\xb3\xe6\x96\xb9\xe3\x81\x8b\xe3\x80\x81\xe3\x81\x9d\xe3\x82\x8c\xe3\x81\xa8\xe3\x82\x82\xe3\x80\x8c\xe6\xb0\x97\xe9\x9b\xa3\xe3\x81\x97\xe3\x81\x84\xe6\x8c\x87\xe7\xa4\xba\xe5\xbd\xb9\xe3\x80\x8d\xe3\x81\x8b'
+# 120 x "あいうえお", built so printf sees the escapes rather than the bytes.
+LONG=""
+n=0
+while [ $n -lt 120 ]; do
+	LONG="$LONG\\xe3\\x81\\x82\\xe3\\x81\\x84\\xe3\\x81\\x86\\xe3\\x81\\x88\\xe3\\x81\\x8a"
+	n=$((n + 1))
+done
+
+echo
+echo "input read in chunks (a character across a 50 byte boundary):"
+typed "char across boundary"   ok "i$BOUNDARY\033"        "$BOUNDARY\n"
+typed "600 byte kana run"      ok "i$LONG\033"            "$LONG\n"
+typed "run with emoji"         ok "i$EM$LONG$EM\033"      "$EM$LONG$EM\n"
+
 echo
 echo "yank, put, replace, search, join:"
 edit "yl then p"              ok "ylp"  "$NIHON$GO\n"      "$NI$NI$HON$GO\n"
