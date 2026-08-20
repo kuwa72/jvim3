@@ -24,6 +24,16 @@ jvim a terminal. It used to call `script(1)` for that, which is a different
 program on Linux, NetBSD and the other BSDs, and NetBSD's quits before the
 command has run when its own standard input is a file.
 
+## What CI covers
+
+Every push and pull request builds and runs the whole suite on **Linux** and
+**macOS**, and cross builds the Windows executables with mingw-w64. A tag
+matching `v*` does the same and then publishes the Windows build to the release
+page, so a broken build cannot become a release. See
+[.github/workflows/build.yml](.github/workflows/build.yml).
+
+FreeBSD and NetBSD are not in CI; they are checked from a Linux box as below.
+
 ## Checking the BSDs from a Linux box
 
 ```sh
@@ -55,7 +65,8 @@ later runs are up in under a minute.
 | `-DUSE_LOCALE` | `setlocale()` exists. This is what makes `LANG` pick the kanji codes: `ja_JP.UTF-8` gives `jmask=TTTT`, `ja_JP.eucJP` gives `EEEE`. Without it the default is `EEET` — EUC display, UTF-8 for new files. |
 | `-DTERMCAP` + a library | The first of `-ltinfo -lncursesw -lncurses -lcurses -ltermlib -ltermcap` that provides `tgetent()`, if `<termcap.h>` or `<curses.h>`+`<term.h>` is also present. Otherwise it falls back to `-DALL_BUILTIN_TCAPS`, JVim's own compiled-in terminal entries, and links nothing. |
 | `-DUSE_X11` | `<X11/Xlib.h>` and `-lX11` are both usable; only used for saving and restoring the xterm title. |
-| machine | `-DBSD_UNIX` for Linux, the BSDs and macOS; `-DSYSV_UNIX` variants for SunOS and AIX. |
+| `-DHAVE_MKSTEMP` | `mkstemp()` links. The temp files for `:!` and for wildcard expansion are made with it; without it they fall back to `mktemp()`, which only picks a name. |
+| machine | `-DBSD_UNIX` for Linux, the BSDs and macOS, plus `-DBSD4_4` on the BSDs and macOS so that `unix.c` takes its `<termios.h>` path rather than `<sgtty.h>`; `-DSYSV_UNIX` variants for SunOS and AIX. |
 
 ## Portability fixes this needed
 
@@ -66,6 +77,8 @@ later runs are up in under a minute.
 | `term.c`, `termlib.c` | `outchar()` was `void(unsigned)` but was handed to `tputs()`, which declares its third argument `int (*)(int)`. Calling through a mismatched function pointer is undefined; it happened to work. `outchar()` is `int(int)` now and JVim's own `tputs()` agrees. |
 | `termlib.c` | Six functions relied on the implicit `int` return type, which C23 also removed. |
 | 7 places | `strcpy(p, p + 1)` and friends: the ranges overlap, which is undefined. `STRMOVE()` now. |
+| `unix.h`, `unix.c` | Declarations for libcs that predate C89 — `bcopy()`, `bzero()`, `ioctl()`, `fork()`, `execvp()`, and `memmove()`/`memset()` mapped onto the b* functions — were skipped through a chain of `!defined()` per block, and macOS was in none of them. On macOS these are errors, not warnings, because its own `bcopy()` and `execvp()` have different prototypes; the build stopped in `alloc.c`. `MODERN_LIBC` in `unix.h` names those systems once. |
+| `cmdcmds.c`, `unix.c`, `misccmds.c` | `mktemp()` for the `:!` filter and wildcard expansion only picks a name, leaving a gap for somebody to drop a symlink into; the linkers on the BSDs warn about every use. `vim_mktemp()` uses `mkstemp()` where the build finds it. `getwd()` in three places was handed no length at all and wrote up to `PATH_MAX` into the caller's buffer; `getcwd()` now. |
 | `unix.c` | `sig_winch()` was declared and defined as the 4.3BSD three argument signal handler, `(int, int, struct sigcontext *)`. NetBSD no longer declares `struct sigcontext` in `<signal.h>`, so the prototype and the definition named two different types and the build stopped. Nothing in the handler looks at its arguments, so the modern BSDs and macOS take the plain `(int)` form. |
 
 ## What has been verified, and what has not
@@ -92,27 +105,32 @@ Verified on FreeBSD 14.3-RELEASE-p16, clang 19.1.7, amd64, in the QEMU guest
 - `-DTERMCAP` against base ncurses, found as `-ltinfo`
 - `jmask` following `LANG`: `ja_JP.UTF-8` gives `TTTT`, `ja_JP.eucJP` gives
   `EEEE`, `C` gives `EEET`
-- The `BSD4_4` branch in `unix.c` — `<termios.h>` with `TCGETA` mapped to
-  `TIOCGETA` — which could not be compiled against Linux headers before.
-  `EXTRA_CFLAGS=-DBSD4_4 ./scripts/build-unix.sh` builds and passes all 42
-  tests. Without it FreeBSD takes the `<sgtty.h>` branch, which also works.
+- Both tty paths: `-DBSD4_4` (`<termios.h>`, what the script picks now) and the
+  `<sgtty.h>` branch it used to take. Each passes all 42 tests. The `BSD4_4`
+  branch had never been compiled before — it cannot be, against Linux headers.
 
 Verified on NetBSD 10.1, gcc 10.5.0, amd64, the same way:
 
 - All 42 tests
 - `-DTERMCAP` against base curses, found as `-lcurses`
-- The link warns that `getwd()` and `mktemp()` are used unsafely. Both are old
-  interfaces JVim still uses; neither is new here.
+- Three warnings for the whole build, all `-Wint-to-pointer-cast` in
+  `buffer.c`, which are the `%ld` ones described above.
+
+Verified on macOS (Darwin 25.5, Apple clang, arm64) in CI:
+
+- All 42 tests
+- `-DTERMCAP` against the system ncurses
+- `-DBSD4_4`, i.e. `<termios.h>`; nothing here relies on `<sgtty.h>` any more
 
 **Not** verified:
 
-- OpenBSD, DragonFly and macOS. The `sig_winch()` and `BSD4_4` conditions above
-  name them, on the assumption that what NetBSD and FreeBSD need they need too,
-  but nobody has run it there.
+- OpenBSD and DragonFly. `MODERN_LIBC`, `sig_winch()` and the `BSD4_4` default
+  name them, on the assumption that what FreeBSD, NetBSD and macOS need they
+  need too, but nobody has run it there.
 - Real hardware, a real terminal and a real IME. Everything above is a serial
-  console and a pty.
-- X11 title saving on a BSD: neither guest has the X headers, so both build with
-  `USE_X11` off.
+  console, a pty or a CI runner.
+- X11 title saving anywhere but Linux: no BSD guest and no CI runner has the X
+  headers, so they all build with `USE_X11` off.
 
 On a BSD you have to hand, `./scripts/build-unix.sh test` is the whole check:
 it prints what it detected, builds, and runs the suite. Worth an eye afterwards:
