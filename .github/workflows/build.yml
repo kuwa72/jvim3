@@ -48,6 +48,45 @@ jobs:
       - name: Build and run the 42 encoding tests
         run: ./scripts/build-unix.sh test
 
+  # The BSDs run in a VM on the Linux runner, the same idea as
+  # scripts/test-bsd-docker.sh but with somebody else's prebuilt guest, which
+  # boots in a couple of minutes instead of being installed from scratch.
+  freebsd:
+    name: FreeBSD build and encoding tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: pkg install -y bash
+          run: ./scripts/build-unix.sh test
+
+  netbsd:
+    name: NetBSD build and encoding tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          prepare: /usr/sbin/pkg_add bash
+          run: PATH=$PATH:/usr/pkg/bin ./scripts/build-unix.sh test
+
+  openbsd:
+    name: OpenBSD build and encoding tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: vmactions/openbsd-vm@v1
+        with:
+          usesh: true
+          prepare: pkg_add -I bash
+          run: ./scripts/build-unix.sh test
+
   windows:
     name: Windows build (mingw-w64, i686)
     runs-on: ubuntu-latest
