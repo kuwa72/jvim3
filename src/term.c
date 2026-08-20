@@ -117,6 +117,10 @@ parse_builtin_tcap(Tcarr *tc, char_u *s)
 #ifdef TERMCAP
 # ifndef linux		/* included in <termlib.h> */
 #  ifndef AMIGA		/* included in proto/termlib.pro */
+/* Without a declaration the return value of tgoto() is taken for an int, and
+ * on a 64 bit machine that loses half of the pointer. Linux gets these from
+ * <termcap.h> above. */
+char			*tgoto __ARGS((char *, int, int));
 int				tgetent __ARGS((char *, char *));
 int				tgetnum __ARGS((char *));
 char			*tgetstr __ARGS((char *, char **));
