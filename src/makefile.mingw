@@ -51,6 +51,20 @@ LIBS	= -luser32 -lshell32 -lgdi32 -lcomdlg32 -lcomctl32 -ladvapi32 \
 # Windows objects left behind by this one.
 OBJDIR	= obj-mingw
 
+# One object directory serves both architectures, and the object files carry no
+# hint of which one they are: switching ARCH without a clean left 32 bit objects
+# in front of a 64 bit linker, which stops with "file format not recognized".
+# The reverse case is quieter and worse -- the objects can be up to date while
+# the exe was linked from the other architecture, so make has nothing to do and
+# leaves the wrong binary sitting there.
+#
+# So the stamp names what the objects were built for, and every object and the
+# resource depend on it. Changing toolchain, or turning WARN on or off, replaces
+# the stamp and rebuilds and relinks everything; building the same way twice
+# touches nothing.
+ARCHTAG := $(shell $(CC) -dumpmachine)
+STAMP	= $(OBJDIR)/.built-for-$(ARCHTAG)$(if $(WARN),-warn,)
+
 SRC =	alloc.c buffer.c charset.c cmdcmds.c cmdline.c csearch.c digraph.c \
 	edit.c fepnt.c fileio.c getchar.c help.c kanji.c linefunc.c main.c \
 	mark.c memfile.c memline.c message.c misccmds.c normal.c ops.c \
@@ -77,13 +91,17 @@ jvim32.exe: $(OBJ) $(RES)
 
 # jvim.manifest is pulled in by vim32.rc, so a change to it has to rebuild the
 # resource too -- otherwise the exe keeps the manifest it was first built with.
-$(RES): vim32.rc vim.ico jvim.manifest | $(OBJDIR)
+$(RES): vim32.rc vim.ico jvim.manifest $(STAMP) | $(OBJDIR)
 	$(RC) $(DEFINES) -DNT -DWIN32 -I. vim32.rc -O coff -o $@
 
-$(OBJ): $(INCL)
+$(OBJ): $(INCL) $(STAMP)
 
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
+
+$(STAMP): | $(OBJDIR)
+	rm -f $(OBJDIR)/.built-for-*
+	touch $@
 
 $(OBJDIR)/%.o: %.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@

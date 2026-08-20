@@ -41,6 +41,15 @@ whichever architecture it is building. This is what CI runs for a release.
 Other targets: `clean`, `warn` (compile with warnings shown), `split` (move the
 debug info into `jvim32w.exe.debug` and strip the exe).
 
+Switching `ARCH`, or turning `warn` on or off, needs no `clean` in between: the
+object directory and the exe names are shared between the two architectures, so
+`obj-mingw` holds a stamp naming what its contents were built for, and a change
+of toolchain or of warning flags rebuilds and relinks everything. Building the
+same way twice still compiles nothing. Without that stamp, a 64 bit build over
+32 bit objects stopped at `file format not recognized`, and going back the other
+way was worse: the objects were up to date, so make left the exe from the other
+architecture where it was.
+
 ### 32 bit or 64 bit
 
 **32 bit is what is released**, and it runs fine on Windows 11 x64 under WoW64.
