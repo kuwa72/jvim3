@@ -125,6 +125,18 @@ emsg2(char_u *s, char_u *a1)
 }
 
 /*
+ * emsg() with one number in it, for a "%ld". Callers used to cast the number to
+ * char_u * and call emsg2(), which passes a pointer where sprintf() reads a
+ * long: the same width only where long is as wide as a pointer.
+ */
+	int
+emsgn(char_u *s, long n)
+{
+	sprintf((char *)IObuff, (char *)s, n);
+	return emsg(IObuff);
+}
+
+/*
  * wait for the user to hit a key (normally a return)
  * if 'redraw' is TRUE, clear and redraw the screen
  * if 'redraw' is FALSE, just redraw the screen

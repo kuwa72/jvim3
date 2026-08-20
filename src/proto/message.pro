@@ -2,6 +2,7 @@
 int msg __PARMS((unsigned char *s));
 int emsg __PARMS((unsigned char *s));
 int emsg2 __PARMS((unsigned char *s, unsigned char *a1));
+int emsgn __PARMS((unsigned char *s, long n));
 void wait_return __PARMS((int redraw));
 void msg_start __PARMS((void));
 void msg_pos __PARMS((int row, int col));

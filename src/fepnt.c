@@ -39,7 +39,7 @@
 #include "fepctrl.h"
 
 static HGLOBAL		imeheap = NULL;
-static long			imeParam;
+static LONG_PTR		imeParam;
 static IMESTRUCT	*ime	= NULL;
 static HWND			console;
 static DWORD		fep_initial_state;
@@ -153,7 +153,7 @@ fep_init(void)
 		ime_initial_state = FALSE;
 		(*pWINNLSEnableIME)(NULL, TRUE);
 	}
-	imeParam = (long)imeheap;
+	imeParam = (LONG_PTR)imeheap;
 	ime->fnc = IME_GETOPEN;
 	GlobalUnlock(imeheap);
 	fep_initial_state = (*pSendIMEMessageEx)(console, imeParam);

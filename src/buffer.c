@@ -281,7 +281,7 @@ do_buffer(int action, int start, int dir, int count, int forceit)
 	if (buf == NULL)		/* could not find it */
 	{
 		if (start == 1)
-			EMSG2("Cannot go to buffer %ld", (char_u *)count);
+			emsgn((char_u *)"Cannot go to buffer %ld", (long)count);
 		else if (dir == FORWARD)
 			EMSG("Cannot go beyond last buffer");
 		else
@@ -295,13 +295,13 @@ do_buffer(int action, int start, int dir, int count, int forceit)
 	{
 		if (buf->b_nwindows > 1 || (buf != curbuf && buf->b_nwindows != 0))
 		{
-			EMSG2("Other window editing buffer %ld", (char_u *)buf->b_fnum);
+			emsgn((char_u *)"Other window editing buffer %ld", (long)buf->b_fnum);
 			return FAIL;
 		}
 		if (!forceit && buf->b_changed)
 		{
-			EMSG2("No write since last change for buffer %ld (use ! to override)",
-						(char_u *)buf->b_fnum);
+			emsgn((char_u *)"No write since last change for buffer %ld (use ! to override)",
+						(long)buf->b_fnum);
 			return FAIL;
 		}
 		/*

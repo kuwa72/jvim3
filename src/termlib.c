@@ -156,10 +156,8 @@ getent(char *tbuf, char *term, FILE *termcap, int buflen)
 }
 
 	static int
-nextent(tbuf, termcap, buflen)         /* Read 1 entry from TERMCAP file */
-	char    *tbuf;
-	FILE    *termcap;
-	int		buflen;
+/* Read one entry from the TERMCAP file */
+nextent(char *tbuf, FILE *termcap, int buflen)
 {
 	char *lbuf = tbuf;           /* lbuf=line buffer */
 	                             /* read lines straight into buffer */
@@ -623,8 +621,8 @@ tputs(char *cp,				/* string to print */
  */
 
 	static int
-_match(s1, s2)                 /* returns length of text common to s1 and s2 */
-char *s1, *s2;
+/* returns length of text common to s1 and s2 */
+_match(char *s1, char *s2)
 {
 	int i = 0;
 
@@ -635,8 +633,8 @@ char *s1, *s2;
 }
 
 	static char *
-_find(s, set)   /* finds next c in s that's a member of set, returns pointer */
-char *s, *set;
+/* finds next c in s that's a member of set, returns pointer */
+_find(char *s, char *set)
 {
 	for(; *s; s++) {
 		char    *ptr = set;
@@ -652,9 +650,8 @@ char *s, *set;
 }
 
 	static char *
-_addfmt(buf, fmt, val)             /* add val to buf according to format fmt */
-char *buf, *fmt;
-int val;
+/* add val to buf according to format fmt */
+_addfmt(char *buf, char *fmt, int val)
 {
 	sprintf(buf, fmt, val);
 	while (*buf)

@@ -17,6 +17,8 @@
 
 #include <io.h>
 #include <direct.h>
+#include <stdint.h>
+
 #include "vim.h"
 #include "globals.h"
 #include "param.h"
@@ -182,7 +184,7 @@ static LOGFONT			config_font;
 #ifdef KANJI
 static LOGFONT			config_jfont;
 static BOOL				v_difffont		= FALSE;
-static BOOL CALLBACK	FontDialogProc(HWND, UINT, WPARAM, LPARAM);
+static INT_PTR CALLBACK	FontDialogProc(HWND, UINT, WPARAM, LPARAM);
 #endif
 static DWORD			config_fgcolor	= RGB(  0,   0,   0);
 static DWORD			config_bgcolor	= RGB(255, 255, 255);
@@ -261,19 +263,19 @@ static HCURSOR			hArrowCurs	= NULL;
 static HCURSOR			hWaitCurs	= NULL;
 static LPSTR			lpCurrCurs	= NULL;
 static NOTIFYICONDATA	nIcon;
-static BOOL CALLBACK	PrinterDialog(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK	BitmapDialog(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK	WaveDialog(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK	CommandDialog(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK	LoadDialog(HWND, UINT, WPARAM, LPARAM);
+static INT_PTR CALLBACK	PrinterDialog(HWND, UINT, WPARAM, LPARAM);
+static INT_PTR CALLBACK	BitmapDialog(HWND, UINT, WPARAM, LPARAM);
+static INT_PTR CALLBACK	WaveDialog(HWND, UINT, WPARAM, LPARAM);
+static INT_PTR CALLBACK	CommandDialog(HWND, UINT, WPARAM, LPARAM);
+static INT_PTR CALLBACK	LoadDialog(HWND, UINT, WPARAM, LPARAM);
 static void				LoadCommand();
 static void				UnloadCommand();
 static char *			DisplayPathName(char *, unsigned int);
 static char 		*	HistoryGetMenu(int);
 static char			*	HistoryGetCommand(int);
 static void				HistoryRename(int, int);
-static BOOL CALLBACK	LineSpaceDialog(HWND, UINT, WPARAM, LPARAM);
-static BOOL CALLBACK	LineSpaceDialogEx(HWND, UINT, WPARAM, LPARAM);
+static INT_PTR CALLBACK	LineSpaceDialog(HWND, UINT, WPARAM, LPARAM);
+static INT_PTR CALLBACK	LineSpaceDialogEx(HWND, UINT, WPARAM, LPARAM);
 static void				ScrollBar();
 static int				isbitmap(char *, HWND);
 static int				iswave(char *);
@@ -3208,7 +3210,7 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				{
 					hHMenu = CreatePopupMenu();
 					AppendMenu(hHMenu, MF_STRING, IDM_HSAVE, "&Save History");
-					AppendMenu(hMenu,  MF_POPUP,  (UINT)hHMenu, "&History");
+					AppendMenu(hMenu,  MF_POPUP,  (UINT_PTR)hHMenu, "&History");
 				}
 				else
 					hHMenu = GetSubMenu(hMenu, 5);
@@ -3349,9 +3351,9 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				CheckMenuItem(hMenu, IDM_SBAR, MF_BYCOMMAND | MF_UNCHECKED);
 #if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
 			if (config_share || config_common)
-				CheckMenuItem(hMenu, (UINT)hCFile, MF_BYCOMMAND | MF_CHECKED);
+				CheckMenuItem(hMenu, (UINT_PTR)hCFile, MF_BYCOMMAND | MF_CHECKED);
 			else
-				CheckMenuItem(hMenu, (UINT)hCFile, MF_BYCOMMAND | MF_UNCHECKED);
+				CheckMenuItem(hMenu, (UINT_PTR)hCFile, MF_BYCOMMAND | MF_UNCHECKED);
 			if (config_share)
 				CheckMenuItem(hMenu, IDM_SHARE, MF_BYCOMMAND | MF_CHECKED);
 			else
@@ -3373,13 +3375,13 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			else
 				CheckMenuItem(hMenu, IDM_GREPWIN, MF_BYCOMMAND | MF_UNCHECKED);
 #ifdef USE_HISTORY
-			CheckMenuItem(hMenu, (UINT)hHist, MF_BYCOMMAND | MF_UNCHECKED);
+			CheckMenuItem(hMenu, (UINT_PTR)hHist, MF_BYCOMMAND | MF_UNCHECKED);
 			CheckMenuItem(hMenu, IDM_HISTORY, MF_BYCOMMAND | MF_UNCHECKED);
 			CheckMenuItem(hMenu, IDM_HAUTO,   MF_BYCOMMAND | MF_UNCHECKED);
 			if (!config_ini)
 			{
 				if (config_history || config_hauto)
-					CheckMenuItem(hMenu, (UINT)hHist, MF_BYCOMMAND | MF_CHECKED);
+					CheckMenuItem(hMenu, (UINT_PTR)hHist, MF_BYCOMMAND | MF_CHECKED);
 				if (config_history)
 					CheckMenuItem(hMenu, IDM_HISTORY, MF_BYCOMMAND | MF_CHECKED);
 				if (config_hauto)
@@ -3483,11 +3485,11 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				AppendMenu(hColor, MF_STRING, IDM_SOCOLOR,  "&SO");
 				AppendMenu(hColor, MF_STRING, IDM_TICOLOR,  "T&I");
 				AppendMenu(hColor, MF_STRING, IDM_DELCOLOR, "&DEL");
-				InsertMenu(hSetup, IDM_BITMAP, MF_POPUP, (UINT)hColor,"&Extend Color");
+				InsertMenu(hSetup, IDM_BITMAP, MF_POPUP, (UINT_PTR)hColor,"&Extend Color");
 				InsertMenu(hSetup, IDM_SAVE, MF_UNCHECKED, IDM_COMB, "Combi&nation");
 				InsertMenu(hSetup, IDM_SAVE, MF_UNCHECKED, IDM_COMS, "C&ombination Command");
 				hSetup = GetSubMenu(v_menu, 3);
-				InsertMenu(hSetup, IDM_BITMAP, MF_POPUP, (UINT)hColor,"&Extend Color");
+				InsertMenu(hSetup, IDM_BITMAP, MF_POPUP, (UINT_PTR)hColor,"&Extend Color");
 				InsertMenu(hSetup, IDM_SAVE, MF_UNCHECKED, IDM_COMB, "Combi&nation");
 				InsertMenu(hSetup, IDM_SAVE, MF_UNCHECKED, IDM_COMS, "C&ombination Command");
 			}
@@ -4131,7 +4133,7 @@ SetColor:
 					break;
 				strncpy(IObuff, ml_get(curbuf->b_startop.lnum) + curbuf->b_startop.col, (int)i);
 				IObuff[i] = NUL;
-				rc = (int)ShellExecute(NULL, NULL, IObuff, NULL, ".", SW_SHOW);
+				rc = (INT_PTR)ShellExecute(NULL, NULL, IObuff, NULL, ".", SW_SHOW);
 				if (!(rc == ERROR_FILE_NOT_FOUND || rc == ERROR_PATH_NOT_FOUND
 						|| rc == SE_ERR_NOASSOC || rc == SE_ERR_ASSOCINCOMPLETE))
 					break;
@@ -5132,14 +5134,14 @@ share:
 				return(0);
 			strncpy(IObuff, p, i);
 			IObuff[i] = NUL;
-			rc = (int)ShellExecute(NULL, NULL, IObuff, NULL, ".", SW_SHOW);
+			rc = (INT_PTR)ShellExecute(NULL, NULL, IObuff, NULL, ".", SW_SHOW);
 			if (!(rc == ERROR_FILE_NOT_FOUND || rc == ERROR_PATH_NOT_FOUND
 					|| rc == SE_ERR_NOASSOC || rc == SE_ERR_ASSOCINCOMPLETE))
 				return(0);
 			if (FullName(IObuff, NameBuff, MAXPATHL) == OK
 									&& strcmp(IObuff, NameBuff) != 0)
 			{
-				rc = (int)ShellExecute(NULL, NULL, NameBuff, NULL, ".", SW_SHOW);
+				rc = (INT_PTR)ShellExecute(NULL, NULL, NameBuff, NULL, ".", SW_SHOW);
 				if (!(rc == ERROR_FILE_NOT_FOUND || rc == ERROR_PATH_NOT_FOUND
 						|| rc == SE_ERR_NOASSOC || rc == SE_ERR_ASSOCINCOMPLETE))
 					return(0);
@@ -6829,8 +6831,8 @@ mch_windinit(int argc, char **argv, char *command)
 		AppendMenu(hSetup, MF_STRING,    IDM_BDF,      "B&DF FONT");
 #endif
 		AppendMenu(hSetup, MF_STRING,    IDM_LSPACE,   "&Line Space");
-		AppendMenu(hSetup, MF_POPUP,     (UINT)hTColor,"&Text Color");
-		AppendMenu(hSetup, MF_POPUP,     (UINT)hBColor,"Back &Color");
+		AppendMenu(hSetup, MF_POPUP,     (UINT_PTR)hTColor,"&Text Color");
+		AppendMenu(hSetup, MF_POPUP,     (UINT_PTR)hBColor,"Back &Color");
 		AppendMenu(hSetup, MF_STRING,    IDM_BITMAP,   "&Bitmap File");
 		AppendMenu(hSetup, MF_STRING,    IDM_WAVE,     "&Wave File");
 		AppendMenu(hSetup, MF_UNCHECKED, IDM_SAVE,     "&Save Window Position");
@@ -6849,7 +6851,7 @@ mch_windinit(int argc, char **argv, char *command)
 			hCFile = CreatePopupMenu();
 			AppendMenu(hCFile, MF_UNCHECKED, IDM_SHARE,    "&Share Files");
 			AppendMenu(hCFile, MF_UNCHECKED, IDM_COMMON,   "&MS Compatible");
-			AppendMenu(hGSetup,MF_POPUP,     (UINT)hCFile, "Share &Files");
+			AppendMenu(hGSetup,MF_POPUP,     (UINT_PTR)hCFile, "Share &Files");
 		}
 #endif
 		if (pSetLayeredWindowAttributes)
@@ -6860,7 +6862,7 @@ mch_windinit(int argc, char **argv, char *command)
 			hHist = CreatePopupMenu();
 			AppendMenu(hHist,  MF_UNCHECKED, IDM_HISTORY,  "&History");
 			AppendMenu(hHist,  MF_UNCHECKED, IDM_HAUTO,    "&Auto History");
-			AppendMenu(hGSetup,MF_POPUP,     (UINT)hHist,  "&History");
+			AppendMenu(hGSetup,MF_POPUP,     (UINT_PTR)hHist,  "&History");
 		}
 #endif
 		AppendMenu(hGSetup,MF_STRING,    IDM_PRINTSET, "&Print Command");
@@ -6897,7 +6899,7 @@ mch_windinit(int argc, char **argv, char *command)
 		AppendMenu(hWin,  MF_STRING, SC_MINIMIZE, "Min Window(&N)");
 		AppendMenu(hWin,  MF_STRING, SC_MAXIMIZE, "Max Window(&X)");
 		AppendMenu(hWin,  MF_STRING, SC_CLOSE,    "Close Window(&C)");
-		AppendMenu(hMenu, MF_POPUP,  (UINT)hWin,  "&Window");
+		AppendMenu(hMenu, MF_POPUP,  (UINT_PTR)hWin,  "&Window");
 #else
 		{
 			char		buf[128];
@@ -6915,11 +6917,11 @@ mch_windinit(int argc, char **argv, char *command)
 		}
 #endif
 		AppendMenu(hMenu,  MF_SEPARATOR, 0, NULL);
-		AppendMenu(hMenu,  MF_POPUP,     (UINT)hGSetup,"G&lobal Setup");
-		AppendMenu(hMenu,  MF_POPUP,     (UINT)hSetup, "Set&up");
-		AppendMenu(hMenu,  MF_POPUP,     (UINT)hConf,  "Confi&g");
-		AppendMenu(hMenu,  MF_POPUP,     (UINT)hFile,  "&File");
-		AppendMenu(hMenu,  MF_POPUP,     (UINT)hEdit,  "&Edit");
+		AppendMenu(hMenu,  MF_POPUP,     (UINT_PTR)hGSetup,"G&lobal Setup");
+		AppendMenu(hMenu,  MF_POPUP,     (UINT_PTR)hSetup, "Set&up");
+		AppendMenu(hMenu,  MF_POPUP,     (UINT_PTR)hConf,  "Confi&g");
+		AppendMenu(hMenu,  MF_POPUP,     (UINT_PTR)hFile,  "&File");
+		AppendMenu(hMenu,  MF_POPUP,     (UINT_PTR)hEdit,  "&Edit");
 		SetMenuItemBitmaps(hMenu, IDM_BITMAP, MF_BYCOMMAND, NULL, NULL);
 		SetMenuItemBitmaps(hMenu, IDM_WAVE, MF_BYCOMMAND, NULL, NULL);
 		SetMenuItemBitmaps(hMenu, IDM_SAVE, MF_BYCOMMAND, NULL, NULL);
@@ -6932,7 +6934,7 @@ mch_windinit(int argc, char **argv, char *command)
 		SetMenuItemBitmaps(hMenu, IDM_NT106, MF_BYCOMMAND, NULL, NULL);
 #endif
 #if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-		SetMenuItemBitmaps(hMenu, (UINT)hCFile, MF_BYCOMMAND, NULL, NULL);
+		SetMenuItemBitmaps(hMenu, (UINT_PTR)hCFile, MF_BYCOMMAND, NULL, NULL);
 		SetMenuItemBitmaps(hMenu, IDM_SHARE, MF_BYCOMMAND, NULL, NULL);
 		SetMenuItemBitmaps(hMenu, IDM_COMMON,MF_BYCOMMAND, NULL, NULL);
 #endif
@@ -6940,7 +6942,7 @@ mch_windinit(int argc, char **argv, char *command)
 			SetMenuItemBitmaps(hMenu, IDM_FADEOUT, MF_BYCOMMAND, NULL, NULL);
 		SetMenuItemBitmaps(hMenu, IDM_GREPWIN, MF_BYCOMMAND, NULL, NULL);
 #ifdef USE_HISTORY
-		SetMenuItemBitmaps(hMenu, (UINT)hHist, MF_BYCOMMAND, NULL, NULL);
+		SetMenuItemBitmaps(hMenu, (UINT_PTR)hHist, MF_BYCOMMAND, NULL, NULL);
 		SetMenuItemBitmaps(hMenu, IDM_HISTORY, MF_BYCOMMAND, NULL, NULL);
 		SetMenuItemBitmaps(hMenu, IDM_HAUTO,   MF_BYCOMMAND, NULL, NULL);
 #endif
@@ -7650,8 +7652,7 @@ setperm(char_u *name, long perm)
 /*
  * check if "name" is a directory
  */
-int             isdir(name)
-	char_u         *name;
+int             isdir(char_u *name)
 {
 	int f;
 
@@ -7771,7 +7772,7 @@ handler_routine(DWORD dwCtrlType)
 	DWORD		IdThread;
 	HANDLE		hang_thread;
 # else
-	ULONG		hang_thread;
+	uintptr_t	hang_thread;		/* what _beginthread() returns */
 # endif
 	static int firsttime = TRUE;
 
@@ -7804,7 +7805,7 @@ handler_routine(DWORD dwCtrlType)
 # else    /* MICROSOFT */
 		hang_thread = _beginthread(v_hangup, 0x2000, NULL);
 						/* process exception by multi-thread C Library manner */
-		if (hang_thread != (ULONG)-1) {
+		if (hang_thread != (uintptr_t)-1) {
 			WaitForSingleObject((HANDLE)hang_thread, 10000);
 										/* wait for finish thread */
 		}
@@ -8198,7 +8199,7 @@ call_shell(char_u *cmd, int filter, int cooked)
 				SHFILEINFO	shinfo;
 				DWORD		dwRtn;
 
-				if ((int)FindExecutable(exe, ".", exebuf) <= 32)
+				if ((INT_PTR)FindExecutable(exe, ".", exebuf) <= 32)
 					;
 				else
 				{
@@ -8213,7 +8214,7 @@ call_shell(char_u *cmd, int filter, int cooked)
 			}
 			if (bShell)
 			{
-				x = (int)ShellExecute(NULL, NULL, exe, arg, ".", SW_SHOW);
+				x = (INT_PTR)ShellExecute(NULL, NULL, exe, arg, ".", SW_SHOW);
 				if (x > 32)
 					x = 0;
 			}
@@ -8614,8 +8615,7 @@ FreeWild(int num, char_u **file)
  * This one does.
  */
 #undef chdir
-int             vim_chdir(path)
-	char_u         *path;
+int             vim_chdir(char_u *path)
 {
 	if (path[0] == NUL)         /* just checking... */
 		return FAIL;
@@ -9034,7 +9034,7 @@ iswave(char *fname)
 /*------------------------------------------------------------------------------
  *	login dialog
  *----------------------------------------------------------------------------*/
-static BOOL CALLBACK
+static INT_PTR CALLBACK
 PrinterDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int					wmId;
@@ -9153,7 +9153,7 @@ BitmapHookProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 /*------------------------------------------------------------------------------
  *	login dialog
  *----------------------------------------------------------------------------*/
-static BOOL CALLBACK
+static INT_PTR CALLBACK
 BitmapDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int					wmId;
@@ -9334,7 +9334,7 @@ WaveHookProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 /*------------------------------------------------------------------------------
  *	login dialog
  *----------------------------------------------------------------------------*/
-static BOOL CALLBACK
+static INT_PTR CALLBACK
 WaveDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int					wmId;
@@ -9432,7 +9432,7 @@ WaveDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 /*------------------------------------------------------------------------------
  *	login dialog
  *----------------------------------------------------------------------------*/
-static BOOL CALLBACK
+static INT_PTR CALLBACK
 CommandDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int					wmId;
@@ -9529,7 +9529,7 @@ InitCommand(void)
 /*------------------------------------------------------------------------------
  *	login dialog
  *----------------------------------------------------------------------------*/
-static BOOL CALLBACK
+static INT_PTR CALLBACK
 LoadDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg) {
@@ -9930,7 +9930,7 @@ win_history_line(BUF *buf)
 /*------------------------------------------------------------------------------
  *	login dialog
  *----------------------------------------------------------------------------*/
-static BOOL CALLBACK
+static INT_PTR CALLBACK
 LineSpaceDialogEx(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int					wmId;
@@ -10035,7 +10035,7 @@ LineSpaceDialogEx(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 /*------------------------------------------------------------------------------
  *	login dialog
  *----------------------------------------------------------------------------*/
-static BOOL CALLBACK
+static INT_PTR CALLBACK
 LineSpaceDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int					wmId;
@@ -10413,7 +10413,7 @@ isbitmap(LPTSTR szFileName, HWND hwnd)
 /*------------------------------------------------------------------------------
  *
  *----------------------------------------------------------------------------*/
-static BOOL CALLBACK
+static INT_PTR CALLBACK
 FontDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int					wmId;

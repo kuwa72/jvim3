@@ -1580,7 +1580,7 @@ donextfile:		if (i < 0 || i >= arg_count)
 					else if (i < 0)
 						EMSG("Cannot go before first file");
 					else
-						EMSG2("No more than %ld files to edit", (char_u *)(long)arg_count);
+						emsgn((char_u *)"No more than %ld files to edit", (long)arg_count);
 					break;
 				}
 				if (*cmd == 's')		/* split window first */
@@ -2946,7 +2946,8 @@ check_more(int message)
 	{
 		if (message)
 		{
-			emsg2((char_u *)"%ld more files to edit", (char_u *)(long)(arg_count - curwin->w_arg_idx - 1));
+			emsgn((char_u *)"%ld more files to edit",
+									(long)(arg_count - curwin->w_arg_idx - 1));
 			quitmore = 2;			/* next try to quit is allowed */
 		}
 		return FAIL;

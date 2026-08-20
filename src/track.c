@@ -10,6 +10,8 @@
  * track.c: functions for draw tracks.
  */
 
+#include <stdint.h>
+
 #include "vim.h"
 #include "globals.h"
 #include "proto.h"
@@ -167,10 +169,10 @@ track_vcol(char_u *line, int cvcol, int mode)
 		return vcol == cvcol ? line: ctop;
 	case TV_FPAD:
 		if (!*line)
-			return (char *)(long)(cvcol - vcol);
-		return (char *)(long)((vcol == cvcol ? 0 : cvcol - pcol));
+			return (char *)(intptr_t)(cvcol - vcol);
+		return (char *)(intptr_t)((vcol == cvcol ? 0 : cvcol - pcol));
 	case TV_BPAD:
-		return (char *)(long)((vcol - cvcol));
+		return (char *)(intptr_t)((vcol - cvcol));
 	default: /* error */
 		return NULL;
 	}
@@ -355,8 +357,8 @@ track_ins(int dir)
 	prevp = track_vcol(line, vstart, TV_PREV);
 
 	ndel = nextp - prevp;
-	fpad = (long) track_vcol(line, vstart, TV_FPAD);
-	bpad = (long) track_vcol(line, vend,   TV_BPAD);
+	fpad = (long)(intptr_t) track_vcol(line, vstart, TV_FPAD);
+	bpad = (long)(intptr_t) track_vcol(line, vend,   TV_BPAD);
 
 	if (ralign && (curwin->w_cursor.col = prevp - line) <= 0)
 		curwin->w_cursor.col = 0;

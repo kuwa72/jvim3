@@ -30,18 +30,28 @@ debug info into `jvim32w.exe.debug` and strip the exe).
 
 ### 32 bit or 64 bit
 
-**Use 32 bit.** It runs fine on Windows 11 x64 under WoW64. `ARCH=x86_64` does
-compile, but the sources round-trip pointers through `int` in about 37 places,
-which 64 bit truncates silently:
+**32 bit is what is released**, and it runs fine on Windows 11 x64 under WoW64.
+
+`ARCH=x86_64` used to compile with 37 places where a pointer went through an
+`int` or a `long` and lost half of itself, plus 9 hard errors. Those are gone:
+menu handles and `ShellExecute()` results are `UINT_PTR`/`INT_PTR`, the dialog
+procedures return `INT_PTR` as a 64 bit `DLGPROC` must, `_beginthread()`'s
+result is a `uintptr_t`, and the numbers that used to be dressed up as `char *`
+for a `"%ld"` go through `emsgn()` or an `intptr_t` now.
 
 ```
-$ ARCH=i686   ./scripts/build-mingw.sh warn 2>&1 | grep -c warning:   # 49
-$ ARCH=x86_64 ./scripts/build-mingw.sh warn 2>&1 | grep -c warning:   # 95
+$ ARCH=i686   ./scripts/build-mingw.sh warn 2>&1 | grep -c warning:   # 37
+$ ARCH=x86_64 ./scripts/build-mingw.sh warn 2>&1 | grep -c warning:   # 37
+$ ARCH=x86_64 ./scripts/build-mingw.sh warn 2>&1 \
+        | grep -cE 'pointer-to-int-cast|int-to-pointer-cast'          # 0
 ```
 
-The extra 46 are 23 `-Wpointer-to-int-cast`, 14 `-Wint-to-pointer-cast` and 9
-more `-Wincompatible-pointer-types`. Fixing those is a separate job; `warn`
-lists them.
+Both are built in CI. What is left in either is 22 `%d` against a `long` or a
+`DWORD` -- the same width on Windows -- and a dozen cosmetic ones.
+
+**The 64 bit build has never been run.** It compiles and nothing truncates a
+pointer any more, which is not the same thing as working; there is no Windows
+runtime test here at all. The release stays 32 bit until somebody runs it.
 
 ## What is and is not in this build
 

@@ -943,7 +943,7 @@ ml_get_buf(BUF *buf, linenr_t lnum, int will_change)
 
 	if (lnum < 1 || lnum > buf->b_ml.ml_line_count)		/* invalid line number */
 	{
-		emsg2((char_u *)"ml_get: invalid lnum: %ld", (char_u *)lnum);
+		emsgn((char_u *)"ml_get: invalid lnum: %ld", (long)lnum);
 errorret:
 		STRCPY(IObuff, "???");
 		return IObuff;
@@ -967,7 +967,7 @@ errorret:
 		 */
 		if ((hp = ml_find_line(buf, lnum, ML_FIND)) == NULL)
 		{
-			emsg2((char_u *)"ml_get: cannot find line %ld", (char_u *)lnum);
+			emsgn((char_u *)"ml_get: cannot find line %ld", (long)lnum);
 			goto errorret;
 		}
 
@@ -1893,7 +1893,7 @@ ml_flush_line(BUF *buf)
 
 		hp = ml_find_line(buf, lnum, ML_FIND);
 		if (hp == NULL)
-			EMSG2("Cannot fine line %ld", (char_u *)lnum);
+			emsgn((char_u *)"Cannot fine line %ld", (long)lnum);
 		else
 		{
 			dp = (DATA_BL *)(hp->bh_data);
@@ -2165,10 +2165,11 @@ ml_find_line(BUF *buf, linenr_t lnum, int action)
 		if (idx >= (int)pp->pb_count)		/* past the end: something wrong! */
 		{
 			if (lnum > buf->b_ml.ml_line_count)
-				emsg2((char_u *)"line number out of range: %ld past the end", (char_u *)(lnum - buf->b_ml.ml_line_count));
+				emsgn((char_u *)"line number out of range: %ld past the end",
+									(long)(lnum - buf->b_ml.ml_line_count));
 
 			else
-				emsg2((char_u *)"line count wrong in block %ld", (char_u *)(bnum));
+				emsgn((char_u *)"line count wrong in block %ld", (long)(bnum));
 			goto error_block;
 		}
 		if (action == ML_DELETE)

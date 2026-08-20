@@ -13,6 +13,8 @@
  * bounds checks to doset().
  */
 
+#include <stdint.h>
+
 #include "vim.h"
 #include "globals.h"
 #include "proto.h"
@@ -1593,7 +1595,7 @@ get_varp(struct param *p)
 	if (!(p->flags & P_IND))
 		return p->var;
 
-	switch ((long)(p->var))
+	switch ((intptr_t)(p->var))
 	{
 		case PV_LIST:	return (char_u *)&(curwin->w_p_list);
 		case PV_NU:		return (char_u *)&(curwin->w_p_nu);
