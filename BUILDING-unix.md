@@ -26,13 +26,16 @@ command has run when its own standard input is a file.
 
 ## What CI covers
 
-Every push and pull request builds and runs the whole suite on **Linux** and
-**macOS**, and cross builds the Windows executables with mingw-w64. A tag
-matching `v*` does the same and then publishes the Windows build to the release
-page, so a broken build cannot become a release. See
-[.github/workflows/build.yml](.github/workflows/build.yml).
+Every push and pull request builds and runs the whole suite on **Linux**,
+**macOS**, **FreeBSD**, **NetBSD** and **OpenBSD**, and cross builds the Windows
+executables with mingw-w64. A tag matching `v*` does the same and then publishes
+the Windows build to the release page, so a broken build cannot become a
+release. See [.github/workflows/build.yml](.github/workflows/build.yml).
 
-FreeBSD and NetBSD are not in CI; they are checked from a Linux box as below.
+The BSDs run in a VM on the Linux runner, from a prebuilt guest that boots in a
+couple of minutes. `scripts/test-bsd-docker.sh` below does the same thing on
+your own machine, from the systems' own images, and lets you get a shell in the
+guest to look around.
 
 ## Checking the BSDs from a Linux box
 
@@ -122,11 +125,14 @@ Verified on macOS (Darwin 25.5, Apple clang, arm64) in CI:
 - `-DTERMCAP` against the system ncurses
 - `-DBSD4_4`, i.e. `<termios.h>`; nothing here relies on `<sgtty.h>` any more
 
+Verified in CI, on whatever release the VM images carry — FreeBSD 15.1,
+NetBSD 11.0 and OpenBSD 7.9 at the time of writing. All 42 tests on each.
+OpenBSD had never been built at all before that; `-lncursesw` is what it finds.
+
 **Not** verified:
 
-- OpenBSD and DragonFly. `MODERN_LIBC`, `sig_winch()` and the `BSD4_4` default
-  name them, on the assumption that what FreeBSD, NetBSD and macOS need they
-  need too, but nobody has run it there.
+- DragonFly. `MODERN_LIBC`, `sig_winch()` and the `BSD4_4` default name it,
+  on the assumption that what its relatives need it needs too.
 - Real hardware, a real terminal and a real IME. Everything above is a serial
   console, a pty or a CI runner.
 - X11 title saving anywhere but Linux: no BSD guest and no CI runner has the X
