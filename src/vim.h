@@ -181,7 +181,7 @@ typedef unsigned long	long_u;
 /*
  * __PARMS was left out here, so on every compiler that is neither Aztec, SAS,
  * DICE, Turbo C nor Borland it fell through to the "()" fallback below -- which
- * means every prototype in proto/*.pro was reduced to an empty parameter list
+ * means every prototype in the proto directory was reduced to an empty list
  * and none of them have been checked against their definitions for 30 years.
  */
 # ifndef __PARMS

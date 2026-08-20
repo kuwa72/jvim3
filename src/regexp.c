@@ -2092,7 +2092,7 @@ static char_u	*
 regstrext(char_u *exp)
 {
 	char_u			*	p;
-	char_u			*	w;
+	char_u			*	w = NULL;		/* set on the first pass, used on the second */
 	static	char_u	*	exptop	= NULL;
 	int					size;
 	int					loop;

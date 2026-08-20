@@ -82,7 +82,7 @@ extern char_u 	   *reg_prev_sub;
 	 * This is impossible, so we declare a pointer to a function returning a
 	 * pointer to a function returning void. This should work for all compilers.
 	 */
-typedef void (*(*fptr) __ARGS((char_u *, int)))();
+typedef void (*(*fptr) __ARGS((char_u *, int)))(void);
 static fptr strnfcpy __ARGS((fptr, char_u *, char_u *, int));
 
 static fptr do_Copy __ARGS((char_u *, int));

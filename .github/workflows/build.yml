@@ -37,6 +37,20 @@ jobs:
             libncurses-dev
       - name: Build and run the 42 encoding tests
         run: ./scripts/build-unix.sh test
+      # The classes of warning that actually break things: an implicit
+      # declaration truncates a returned pointer on 64 bit, a mismatched
+      # pointer type means somebody is reading the wrong thing, and a missing
+      # prototype means nothing is checked. All of those have bitten this
+      # codebase. The 236 char/char_u signedness warnings are another matter
+      # and stay warnings; see BUILDING-unix.md.
+      - name: The warnings that have to stay away
+        run: |
+          ./scripts/build-unix.sh clean
+          EXTRA_CFLAGS="-Wall -Wno-pointer-sign \
+            -Werror=implicit-function-declaration -Werror=implicit-int \
+            -Werror=incompatible-pointer-types -Werror=int-conversion \
+            -Werror=strict-prototypes -Werror=old-style-definition \
+            -Werror=return-type -Werror=uninitialized" ./scripts/build-unix.sh
 
   macos:
     name: macOS build and encoding tests

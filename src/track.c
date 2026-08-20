@@ -18,7 +18,7 @@
 #include "kanji.h"
 #endif
 
-extern char_u *get_inserted();
+extern char_u *get_inserted __ARGS((void));
 
 /*
  *	directions where a line exists.

@@ -295,7 +295,7 @@ sig_winch(int sig, int code, struct sigcontext *scp)
 {
 #if defined(SIGWINCH)
 		/* this is not required on all systems, but it doesn't hurt anybody */
-	signal(SIGWINCH, (void (*)())sig_winch);
+	signal(SIGWINCH, (void (*)(int))sig_winch);
 #endif
 	do_resize = TRUE;
 }
@@ -330,7 +330,7 @@ mch_windinit(void)
 
 	(void)mch_get_winsize();
 #if defined(SIGWINCH)
-	signal(SIGWINCH, (void (*)())sig_winch);
+	signal(SIGWINCH, (void (*)(int))sig_winch);
 #endif
 }
 

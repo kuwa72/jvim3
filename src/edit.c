@@ -19,7 +19,7 @@
 #include "kanji.h"
 #endif
 
-extern char_u *get_inserted();
+extern char_u *get_inserted __ARGS((void));
 #ifdef NT
 	   void start_arrow __ARGS((void));
 #else
@@ -1443,7 +1443,6 @@ insertchar(unsigned c)
 	int		textwidth;
 #ifdef KANJI
 	unsigned	c = bytes[0];
-	unsigned	k = nbytes > 1 ? bytes[1] : NUL;
 #endif
 
 	stop_arrow();

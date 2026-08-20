@@ -68,6 +68,22 @@ defined for Aztec, SAS, DICE, Turbo C and Borland — everything else fell throu
 to a `()` fallback in `vim.h`, so the declarations were empty parameter lists
 and were never checked against a definition. They are now.
 
+## Warnings
+
+`-Wall` leaves 251 warnings, of which 236 are `-Wpointer-sign`: JVim keeps its
+text in `char_u` (`unsigned char`) and hands it to the C library and to its own
+`char *` interfaces all over the place. Those are type noise, not bugs, and
+changing 236 sites by hand would be a big diff over code the 42 tests only
+partly reach, so they stay.
+
+The classes that do break things are errors in CI instead: an implicit
+declaration (which truncates a returned pointer on a 64 bit machine -- that is
+exactly how `tgoto()` broke every test on OpenBSD), a mismatched pointer type,
+an implicit `int`, a missing prototype, a missing return, a use of an
+uninitialised variable. The remaining 15 warnings are five ambiguous `else`
+branches inside `#ifdef KANJI`, three `-Wint-to-pointer-cast` in `buffer.c`
+described above, and a handful of unused variables and ignored return values.
+
 ## What the script detects
 
 | | |
