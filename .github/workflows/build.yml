@@ -133,36 +133,23 @@ jobs:
             gcc-mingw-w64-x86-64-win32 binutils-mingw-w64-x86-64
           i686-w64-mingw32-gcc --version | head -1
       # 64 bit compiles clean of pointer truncation now, and this keeps it that
-      # way. It goes before the packaging because "clean" takes dist/ with it.
+      # way.
       - name: Compile 64 bit, and refuse a truncated pointer
         run: |
           ARCH=x86_64 ./scripts/build-mingw.sh warn 2>&1 | tee /tmp/w64.log | tail -2
           ! grep -qE 'pointer-to-int-cast|int-to-pointer-cast|error:' /tmp/w64.log
-          ARCH=x86_64 ./scripts/build-mingw.sh clean
+      # The same command anybody can run at home.
       - name: Build and package both architectures
         run: |
-          mkdir -p out
-          for arch in i686 x86_64; do
-            case $arch in
-            i686)	bits=32 ;;
-            x86_64)	bits=64 ;;
-            esac
-            ARCH=$arch ./scripts/build-mingw.sh both
-            name=jvim3-${GITHUB_REF_NAME:-snapshot}-win$bits
-            mkdir "$name"
-            cp -p "dist/$arch/jvim3.hlp" "dist/$arch/_jvimrc.sample" "$name/"
-            # makefile.mingw calls its targets jvim32*.exe whatever the
-            # architecture is; the name in the zip says which one it is.
-            cp -p "dist/$arch/jvim32w.exe" "$name/jvim${bits}w.exe"
-            cp -p "dist/$arch/jvim32.exe" "$name/jvim$bits.exe"
-            zip -qr "out/$name.zip" "$name"
-            ARCH=$arch ./scripts/build-mingw.sh clean
-          done
-          ls -l out
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            VERSION=$GITHUB_REF_NAME ./scripts/build-mingw.sh release
+          else
+            ./scripts/build-mingw.sh release
+          fi
       - uses: actions/upload-artifact@v5
         with:
           name: windows
-          path: out/*.zip
+          path: release/*.zip
           if-no-files-found: error
 
   release:
@@ -175,12 +162,12 @@ jobs:
       - uses: actions/download-artifact@v5
         with:
           name: windows
-          path: out
+          path: release
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" out/*.zip \
+          gh release create "$GITHUB_REF_NAME" release/*.zip \
             --title "JVim 3 $GITHUB_REF_NAME" \
             --notes "$(cat <<'EOF'
           JVim 3.0-j2.1b with UTF-8 support.

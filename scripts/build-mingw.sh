@@ -6,6 +6,7 @@
 #
 #   scripts/build-mingw.sh                 GUI exe, 32 bit (recommended)
 #   scripts/build-mingw.sh both            GUI + console exe
+#   scripts/build-mingw.sh release         both architectures, zipped, in release/
 #   scripts/build-mingw.sh clean
 #   scripts/build-mingw.sh warn            build with warnings shown
 #   ARCH=x86_64 scripts/build-mingw.sh     64 bit (see BUILDING-mingw.md)
@@ -44,6 +45,43 @@ run_make() {
 		make -C "$src" -f makefile.mingw CROSS="$CROSS" "$@"
 }
 
+# release: both architectures, packaged, ready to upload. Everything lands in
+# release/ because "clean" takes dist/ with it between the two builds.
+if [ "$TARGET" = release ]; then
+	version=${VERSION:-$(git -C "$root" describe --tags --always 2>/dev/null || echo snapshot)}
+	rel=$root/release
+	rm -rf "$rel"
+	mkdir -p "$rel"
+	for arch in i686 x86_64; do
+		case $arch in
+		i686)	bits=32 ;;
+		x86_64)	bits=64 ;;
+		esac
+		ARCH=$arch "$0" clean >/dev/null
+		ARCH=$arch "$0" both > "$rel/build-win$bits.log" 2>&1 || {
+			echo "the $arch build failed; see $rel/build-win$bits.log" >&2
+			exit 1
+		}
+		name=jvim3-$version-win$bits
+		mkdir -p "$rel/$name"
+		cp -p "$root/dist/$arch/jvim3.hlp" "$root/dist/$arch/_jvimrc.sample" "$rel/$name/"
+		# makefile.mingw calls its targets jvim32*.exe whatever the architecture
+		# is; the name in the package says which one it actually is.
+		cp -p "$root/dist/$arch/jvim32w.exe" "$rel/$name/jvim${bits}w.exe"
+		cp -p "$root/dist/$arch/jvim32.exe" "$rel/$name/jvim$bits.exe"
+		if command -v zip >/dev/null 2>&1; then
+			(cd "$rel" && zip -qr "$name.zip" "$name")
+		else		# no zip(1) here, but python3 can do it
+			(cd "$rel" && python3 -m zipfile -c "$name.zip" "$name")
+		fi
+		ARCH=$arch "$0" clean >/dev/null
+	done
+	echo
+	echo "release packages in $rel:"
+	ls -l "$rel"/*.zip
+	exit 0
+fi
+
 case $TARGET in
 clean)
 	run_make clean
@@ -60,7 +98,7 @@ all | both | split | jvim32.exe | jvim32w.exe)
 	MAKETARGET=$TARGET
 	;;
 *)
-	echo "usage: $0 [all|both|warn|split|clean]" >&2
+	echo "usage: $0 [all|both|warn|split|release|clean]" >&2
 	exit 2
 	;;
 esac

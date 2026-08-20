@@ -25,6 +25,18 @@ pacman -S mingw-w64-i686-gcc make
 Output goes to `dist/i686/`, together with `jvim3.hlp` and a sample `_jvimrc`.
 Copy that directory to the Windows side and point `%VIM%` at it.
 
+For something to hand over, `release` builds both architectures and zips them:
+
+```sh
+./scripts/build-mingw.sh release        # release/jvim3-<version>-win{32,64}.zip
+VERSION=v3.0-j2.1b-utf8.2 ./scripts/build-mingw.sh release
+```
+
+The version comes from `git describe` unless `VERSION` says otherwise. The
+executables are named for the architecture inside the package -- `jvim64w.exe`
+in the 64 bit one -- because the makefile calls its targets `jvim32*.exe`
+whichever architecture it is building. This is what CI runs for a release.
+
 Other targets: `clean`, `warn` (compile with warnings shown), `split` (move the
 debug info into `jvim32w.exe.debug` and strip the exe).
 
