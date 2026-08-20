@@ -70,10 +70,13 @@ fcommon=
 try_cc "-fcommon" 'int main(){return 0;}' && fcommon=-fcommon
 say "tentative globals" "${fcommon:-not needed}"
 
+# BSD4_4 picks the <termios.h> path in unix.c. Without it the BSDs and macOS
+# take the <sgtty.h> one, which is compatibility cruft that macOS in particular
+# is no longer a safe bet for.
 case $(uname -s) in
 Linux|GNU*)			machine="-DBSD_UNIX" ;;
-FreeBSD|NetBSD|OpenBSD|DragonFly)	machine="-DBSD_UNIX" ;;
-Darwin)				machine="-DBSD_UNIX" ;;
+FreeBSD|NetBSD|OpenBSD|DragonFly)	machine="-DBSD_UNIX -DBSD4_4" ;;
+Darwin)				machine="-DBSD_UNIX -DBSD4_4" ;;
 SunOS)				machine="-DSYSV_UNIX -DSOLARIS -DTERMINFO" ;;
 AIX)				machine="-DSYSV_UNIX -DAIX" ;;
 *)					machine="-DBSD_UNIX" ;;

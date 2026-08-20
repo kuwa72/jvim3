@@ -32,10 +32,13 @@
 
 #ifndef USE_SYSTEM		/* use fork/exec to start the shell */
 # include <sys/wait.h>
-# if !defined(SCO) && !defined(SOLARIS) && !defined(hpux) && !defined(__NetBSD__) && !defined(__FreeBSD__) && !defined(_SEQUENT_) && !defined(UNISYS) && !defined(__sgi) && !defined(AIX) && !defined(__bsdi__)	/* SCO returns pid_t */
+/* MODERN_LIBC (unix.h) covers the systems that declare these themselves. macOS
+ * has execvp() as (const char *, char *const *), so declaring it again here is
+ * an error there. */
+# if !defined(MODERN_LIBC) && !defined(SCO) && !defined(SOLARIS) && !defined(hpux) && !defined(_SEQUENT_) && !defined(UNISYS) && !defined(__sgi) && !defined(AIX)	/* SCO returns pid_t */
 extern int fork();
 # endif
-# if !defined(__GNU__) && !defined(linux) && !defined(SOLARIS) && !defined(USL) && !defined(sun) && !(defined(hpux) && defined(__STDC__)) && !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(__FreeBSD__) && !defined(USL) && !defined(UNISYS) && !defined(sony) && !defined(__sgi) && !defined(AIX) && !defined(__CYGWIN__) && !defined(__bsdi__)
+# if !defined(MODERN_LIBC) && !defined(SOLARIS) && !defined(USL) && !defined(sun) && !(defined(hpux) && defined(__STDC__)) && !defined(UNISYS) && !defined(sony) && !defined(__sgi) && !defined(AIX)
 extern int execvp __ARGS((const char *, const char **));
 # endif
 #endif
