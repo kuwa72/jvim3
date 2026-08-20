@@ -6,9 +6,15 @@
   reached through fileconvsto(), and with 'jmask' asking for UTF-8 as the system
   code the name now goes to them unchanged.
 
+  dpiAware/dpiAwareness say the process places its own pixels. Without them
+  Windows draws the whole window at 96 DPI and then stretches the result to the
+  display scale, which resamples finished glyphs. Text comes out soft and
+  uneven, in the menu bar as much as in the text, and even a BDF font, which GDI
+  never antialiases, arrives blurred. Being DPI aware costs nothing here: the
+  character grid does not need to reflow, only the font has to be asked for in
+  real pixels, which winjnt.c does (see dpi_scale_to()).
+
   Deliberately absent:
-    - dpiAware: JVim draws on a fixed character grid and does not scale, so it
-      is better off with Windows' DPI virtualisation.
     - comctl32 v6: that would swap the dialogs for themed ones.
     - supportedOS: it would change what GetVersionEx() reports, which parts of
       winjnt.c still branch on.
@@ -22,6 +28,14 @@
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>
       <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
+      <!--
+        Per monitor from Windows 10 1703, per monitor on 8.1, system DPI before
+        that. Windows reads the first level in the list it understands, so the
+        older dpiAware element is only there for the systems that have never
+        heard of dpiAwareness.
+      -->
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2, PerMonitor, System</dpiAwareness>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
     </windowsSettings>
   </application>
 </assembly>

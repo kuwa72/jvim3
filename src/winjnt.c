@@ -180,6 +180,12 @@ static DWORD			config_common	= FALSE;
 static HMENU			hCFile;
 #endif
 static DWORD			config_menu		= TRUE;
+/*
+ * The DPI that config_font, config_jfont, config_w and config_h are pixel sizes
+ * for. 96 is also what settings written before JVim became DPI aware mean,
+ * since Windows virtualised the DPI to 96 for the process that stored them.
+ */
+static int				config_dpi		= 96;
 static LOGFONT			config_font;
 #ifdef KANJI
 static LOGFONT			config_jfont;
@@ -295,6 +301,20 @@ static	tAllowSetForegroundWindow	pAllowSetForegroundWindow	= NULL;
 typedef	BOOL			(WINAPI *tLockSetForegroundWindow)(UINT);
 static	tLockSetForegroundWindow	pLockSetForegroundWindow	= NULL;
 
+typedef UINT			(WINAPI *tGetDpiForWindow)(HWND);
+static	tGetDpiForWindow			pGetDpiForWindow			= NULL;
+
+typedef UINT			(WINAPI *tGetDpiForSystem)(void);
+static	tGetDpiForSystem			pGetDpiForSystem			= NULL;
+
+/* Windows 8.1; the mingw and SDK headers only declare it above WINVER 0x0605. */
+#ifndef WM_DPICHANGED
+# define WM_DPICHANGED	0x02E0
+#endif
+
+static int	dpi_of __ARGS((HWND));
+static void	dpi_scale_to __ARGS((int));
+
 typedef struct filelist
 {
 	char_u        **file;
@@ -379,6 +399,68 @@ syntax_on(void)
 	return(FALSE);
 }
 #endif
+
+/*
+ * The DPI of the monitor 'hWnd' is on, or of the system when there is no window
+ * yet. GetDpiForWindow() and GetDpiForSystem() arrived in Windows 10 1607 and
+ * are looked up at run time; before them every monitor was at the one DPI a
+ * screen DC reports, and before Windows 8.1 that could not change while the
+ * process ran either.
+ */
+static int
+dpi_of(HWND hWnd)
+{
+	UINT		dpi = 0;
+	HDC			hDC;
+
+	if (hWnd != NULL && pGetDpiForWindow != NULL)
+		dpi = pGetDpiForWindow(hWnd);
+	else if (pGetDpiForSystem != NULL)
+		dpi = pGetDpiForSystem();
+	if (dpi == 0 && (hDC = GetDC(hWnd)) != NULL)
+	{
+		dpi = GetDeviceCaps(hDC, LOGPIXELSY);
+		ReleaseDC(hWnd, hDC);
+	}
+	return(dpi == 0 ? 96 : (int)dpi);
+}
+
+/*
+ * Restate the font and window sizes, which are all in pixels, for 'dpi'.
+ *
+ * The character grid comes out of this unchanged: the font and the window that
+ * has to hold Rows by Columns of it grow by the same factor, so this is a
+ * resize of the window and not a reflow of the text. What it buys is a font
+ * asked for in the pixels the display really has, which is the whole point of
+ * being DPI aware -- ask for 14 pixels on a 144 DPI screen and the text is
+ * two thirds the size it used to be.
+ *
+ * v_lspace and v_cspace are left alone. They are hand-set nudges of a pixel or
+ * two from a dialog that offers 0 to 10, and scaling them would make the dialog
+ * disagree with what the user typed into it.
+ */
+static void
+dpi_scale_to(int dpi)
+{
+	if (dpi <= 0)
+		return;
+	if (BenchTime || dpi == config_dpi || config_dpi <= 0)
+	{
+		config_dpi = dpi;			/* nothing to scale, but record where we are */
+		return;
+	}
+	config_font.lfHeight	= MulDiv(config_font.lfHeight, dpi, config_dpi);
+	config_font.lfWidth		= MulDiv(config_font.lfWidth, dpi, config_dpi);
+#ifdef KANJI
+	config_jfont.lfHeight	= MulDiv(config_jfont.lfHeight, dpi, config_dpi);
+	config_jfont.lfWidth	= MulDiv(config_jfont.lfWidth, dpi, config_dpi);
+#endif
+	if (config_w != (DWORD)CW_USEDEFAULT)
+		config_w = (DWORD)MulDiv((int)config_w, dpi, config_dpi);
+	if (config_h != (DWORD)CW_USEDEFAULT)
+		config_h = (DWORD)MulDiv((int)config_h, dpi, config_dpi);
+	config_dpi = dpi;
+}
 
 /*
  *
@@ -577,6 +659,12 @@ LoadConfig(BOOL init)
 		/* config_jfont.lfCharSet	= OEM_CHARSET; */
 		config_jfont.lfCharSet		= SHIFTJIS_CHARSET;
 #endif
+		/*
+		 * "fontsize" in an ini file is a point size, and it was just turned
+		 * into pixels through the DPI of a real DC, so it needs no further
+		 * scaling -- unlike the registry, which stores pixels.
+		 */
+		config_dpi = dpi_of(hWnd);
 		v_lspace = GetPrivateProfileInt(szSecName, "linespace", 0, szIniFile);
 		if (v_lspace > 10)
 			v_lspace = 10;
@@ -892,6 +980,21 @@ LoadConfig(BOOL init)
 		config_x = CW_USEDEFAULT;
 		config_y = CW_USEDEFAULT;
 	}
+	/*
+	 * Last, and read leniently: "dpi" is not in a key that a JVim from before
+	 * the DPI aware manifest wrote, and a missing value there means 96, not a
+	 * key to throw away and start again from the defaults.
+	 */
+	{
+		DWORD		dpi = 96;
+
+		size = sizeof(dpi);
+		type = REG_DWORD;
+		if (RegQueryValueEx(hKey, "dpi", NULL, &type, (BYTE *)&dpi, &size)
+											!= ERROR_SUCCESS || dpi == 0)
+			dpi = 96;
+		config_dpi = (int)dpi;
+	}
 	RegCloseKey(hKey);
 	return;
 error:
@@ -933,6 +1036,7 @@ error:
 	config_nt106	= TRUE;
 #endif
 	config_menu		= TRUE;
+	config_dpi		= 96;		/* the sizes below are the 96 DPI ones */
 	config_font.lfHeight		= 14;
 	config_font.lfWidth			= 0;
 	config_font.lfEscapement	= 0;
@@ -1192,6 +1296,15 @@ SaveConfig(void)
 	if (RegSetValueEx(hKey, "rows", 0, REG_DWORD, (BYTE *)&Rows, size)
 															!= ERROR_SUCCESS)
 		goto error;
+	{
+		/* What "width", "height" and "font" below are pixel sizes for. */
+		DWORD		dpi = (DWORD)config_dpi;
+
+		size = sizeof(dpi);
+		if (RegSetValueEx(hKey, "dpi", 0, REG_DWORD, (BYTE *)&dpi, size)
+															!= ERROR_SUCCESS)
+			goto error;
+	}
 	size = sizeof(config_fgcolor);
 	if (RegSetValueEx(hKey, "color-fg", 0, REG_DWORD, (BYTE *)&config_fgcolor, size)
 															!= ERROR_SUCCESS)
@@ -2582,6 +2695,22 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		}
 #endif
 		return(1);
+	case WM_DPICHANGED:
+		/*
+		 * Dragged to a monitor at another scale. lParam suggests a rectangle,
+		 * but its size is the old window scaled by the DPI ratio, which is only
+		 * the right size by accident; take the position from it and let
+		 * mch_set_winsize() work the size out of the resized font, so the same
+		 * text stays on screen.
+		 */
+		dpi_scale_to(HIWORD(wParam));
+		ResetScreen(hWnd);
+		SetWindowPos(hWnd, NULL, ((RECT *)lParam)->left, ((RECT *)lParam)->top,
+					0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+		nowCols = Columns;
+		nowRows = Rows;
+		mch_set_winsize();
+		return(0);
 	case WM_PAINT:
 		return(PaintWindow(hWnd));
 	case WM_SIZE:
@@ -4617,6 +4746,7 @@ share:
 					UnloadCommand();
 				GuiConfig = wParam - IDM_CONF0;
 				LoadConfig(FALSE);
+				dpi_scale_to(dpi_of(hWnd));
 				oldmix = 0;
 #ifdef USE_BDF
 				if (config_bdf)
@@ -6742,6 +6872,10 @@ mch_windinit(int argc, char **argv, char *command)
 					= (tAllowSetForegroundWindow)GetProcAddress(hLibrary, "AllowSetForegroundWindow");
 			pLockSetForegroundWindow
 					= (tLockSetForegroundWindow)GetProcAddress(hLibrary, "LockSetForegroundWindow");
+			pGetDpiForWindow
+					= (tGetDpiForWindow)GetProcAddress(hLibrary, "GetDpiForWindow");
+			pGetDpiForSystem
+					= (tGetDpiForSystem)GetProcAddress(hLibrary, "GetDpiForSystem");
 		}
 		SetErrorMode(w);
 
@@ -6770,6 +6904,13 @@ mch_windinit(int argc, char **argv, char *command)
 		if (RegisterClassW(&wndclass) == 0)
 			ExitProcess(99);
 		LoadConfig(TRUE);
+		/*
+		 * The stored sizes are for whatever DPI they were stored at. Restate
+		 * them for this machine before the window is built out of them; the
+		 * monitor the window lands on gets a second look below, once there is
+		 * a window to ask about.
+		 */
+		dpi_scale_to(dpi_of(NULL));
 #ifdef USE_BDF
 		if (config_bdf)
 			GetBDFfont(hInst, 0, config_bdffile, config_jbdffile, &v_bxchar, &v_bychar, &config_bdf);
@@ -7012,6 +7153,18 @@ mch_windinit(int argc, char **argv, char *command)
 				HeapFree(GetProcessHeap(), 0, cds.lpData);
 				do_msg	= FALSE;
 			}
+		}
+		/*
+		 * With per monitor awareness the window can have been created on a
+		 * monitor that is not at the system DPI, and WM_DPICHANGED does not
+		 * arrive for that -- only for a later move. Correct the font now,
+		 * while the window is still hidden; the mch_set_winsize() further
+		 * down puts the window back around Rows by Columns of it.
+		 */
+		if (dpi_of(hVimWnd) != config_dpi)
+		{
+			dpi_scale_to(dpi_of(hVimWnd));
+			ResetScreen(hVimWnd);
 		}
 		ShowWindow(hVimWnd, SW_SHOWDEFAULT);
 		UpdateWindow(hVimWnd);

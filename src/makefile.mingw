@@ -76,7 +76,9 @@ jvim32w.exe: $(OBJ) $(RES)
 jvim32.exe: $(OBJ) $(RES)
 	$(CC) $(LDFLAGS) -o $@ $(OBJ) $(RES) $(LIBS)
 
-$(RES): vim32.rc vim.ico | $(OBJDIR)
+# jvim.manifest is pulled in by vim32.rc, so a change to it has to rebuild the
+# resource too -- otherwise the exe keeps the manifest it was first built with.
+$(RES): vim32.rc vim.ico jvim.manifest | $(OBJDIR)
 	$(RC) $(DEFINES) -DNT -DWIN32 -I. vim32.rc -O coff -o $@
 
 $(OBJ): $(INCL)

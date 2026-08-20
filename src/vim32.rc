@@ -178,11 +178,29 @@ VIMMENU MENU
 	MENUITEM	"&Help",				IDM_HELP
 }
 
+/*
+ * The dialog font used to be Terminal, a raster font with a strike at a few
+ * fixed pixel sizes and nothing in between. Now that the process is DPI aware
+ * (see jvim.manifest) the dialogs are asked for at the display scale, and at
+ * 125% there is no 1.25x Terminal to hand: GDI stretches the nearest bitmap and
+ * the text comes out ragged.
+ *
+ * MS Gothic is scalable, so every scale gets real glyphs. It also keeps the
+ * dialogs safe to leave alone: it is fixed pitch like Terminal, so a caption of
+ * n characters is n * tmAveCharWidth wide and a box of 4n dialog units is the
+ * same, whatever size the font ends up at. Several of these layouts are cut
+ * that fine -- LTEXT "ASCII" in 20 units is exactly five characters -- and a
+ * proportional font would be a relayout of all fourteen of them.
+ *
+ * 12 point holds the width the layouts were drawn at (an 8 pixel cell at 96
+ * DPI), so what changes is the height: MS Gothic is square where Terminal 8x12
+ * was tall, which makes the dialogs about a third taller.
+ */
 LOGIN DIALOG DISCARDABLE  0, 0, 123, 68
 STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_3DLOOK | DS_CENTER | WS_POPUP | 
     WS_VISIBLE | WS_CAPTION
 CAPTION "LOGIN"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     EDITTEXT        1000,47,3,68,13,ES_AUTOHSCROLL
     EDITTEXT        1001,47,19,68,13,ES_PASSWORD | ES_AUTOHSCROLL
@@ -199,7 +217,7 @@ PRINTER DIALOG DISCARDABLE  0, 0, 187, 57
 STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_3DLOOK | DS_CENTER | WS_POPUP | 
     WS_VISIBLE | WS_CAPTION
 CAPTION "Printout Command Setup"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     EDITTEXT        1000,14,21,126,12,ES_AUTOHSCROLL
     PUSHBUTTON      "&Reference",1001,144,21,40,12
@@ -212,7 +230,7 @@ BITMAPSEL DIALOG DISCARDABLE  0, 0, 187, 57
 STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_3DLOOK | DS_CENTER | WS_POPUP | 
     WS_VISIBLE | WS_CAPTION
 CAPTION "Bitmap File Select"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     EDITTEXT        1000,14,19,126,12,ES_AUTOHSCROLL
     PUSHBUTTON      "&Reference",1001,144,19,40,12
@@ -231,7 +249,7 @@ WAVE DIALOG DISCARDABLE  0, 0, 187, 57
 STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_3DLOOK | DS_CENTER | WS_POPUP | 
     WS_VISIBLE | WS_CAPTION
 CAPTION "Wave File Select"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     EDITTEXT        1000,14,21,126,12,ES_AUTOHSCROLL
     PUSHBUTTON      "&Reference",1001,144,21,40,12
@@ -247,7 +265,7 @@ JFONT DIALOG DISCARDABLE  0, 0, 203, 63
 STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_3DLOOK | DS_CENTER | WS_POPUP | 
     WS_VISIBLE | WS_CAPTION
 CAPTION "FONT Setup"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     LTEXT           "ASCII",IDC_STATIC,14,6,20,9
     DEFPUSHBUTTON   "OK",IDOK,23,41,65,14
@@ -265,7 +283,7 @@ BDF DIALOGEX 0, 0, 187, 83
 STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_3DLOOK | DS_CENTER | WS_POPUP | 
     WS_VISIBLE | WS_CAPTION
 CAPTION "BDF FONT Setup"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     LTEXT           "ASCII",IDC_STATIC,14,7,20,9
     EDITTEXT        2000,55,5,81,12,ES_AUTOHSCROLL | ES_READONLY | NOT 
@@ -316,7 +334,7 @@ COMMAND DIALOG DISCARDABLE  0, 0, 187, 93
 STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_3DLOOK | DS_CENTER | WS_POPUP | 
     WS_VISIBLE | WS_CAPTION
 CAPTION "COMMAND"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     EDITTEXT        1001,15,16,155,14,ES_AUTOHSCROLL
     EDITTEXT        1002,14,47,155,14,ES_AUTOHSCROLL
@@ -329,7 +347,7 @@ END
 WAVEFILEOPENDIALOG DIALOG DISCARDABLE  36, 24, 264, 134
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION
 CAPTION "Wave File Selection"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     LTEXT           "File &Name:",stc3,6,6,76,9
     EDITTEXT        edt1,6,16,90,12,ES_AUTOHSCROLL | ES_OEMCONVERT
@@ -359,7 +377,7 @@ END
 BITMAPOPENDIALOG DIALOG DISCARDABLE  36, 24, 264, 134
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION
 CAPTION "Bitmap File Selection"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     LTEXT           "File &Name:",stc3,6,6,76,9
     EDITTEXT        edt1,6,16,90,12,ES_AUTOHSCROLL | ES_OEMCONVERT
@@ -391,7 +409,7 @@ WAVEDLGEXP DIALOG DISCARDABLE  0, 0, 295, 58
 STYLE DS_3DLOOK | DS_CONTROL | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | 
     WS_CAPTION
 CAPTION "Wave File Selection"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     LTEXT           "",stc32,4,2,287,37
     PUSHBUTTON      "&Test",1013,3,42,65,14,WS_GROUP
@@ -401,7 +419,7 @@ BITMAPDLGEXP DIALOG DISCARDABLE  0, 0, 280, 90
 STYLE DS_3DLOOK | DS_CONTROL | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | 
     WS_CAPTION
 CAPTION "Bitmap File Selection"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     LTEXT           "",stc32,4,2,272,38
     CONTROL         "",1010,"Static",SS_BLACKFRAME,4,44,70,44
@@ -411,7 +429,7 @@ BDFDLGEXP DIALOG DISCARDABLE  0, 0, 280, 70
 STYLE DS_3DLOOK | DS_CONTROL | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | 
     WS_CAPTION
 CAPTION "BDF Font Selection"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     LTEXT           "",stc32,0,0,280,40
     LTEXT           "",1010,5,47,270,20,NOT WS_GROUP
@@ -421,7 +439,7 @@ LINESPACE DIALOG DISCARDABLE  0, 0, 152, 42
 STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_3DLOOK | DS_CENTER | WS_POPUP | 
     WS_VISIBLE | WS_CAPTION
 CAPTION "Char/Line Space Select"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     LTEXT           "Char",IDC_STATIC,7,7,22,11
     EDITTEXT        1001,29,4,40,14,ES_NUMBER
@@ -435,7 +453,7 @@ LINESPACEEX DIALOG DISCARDABLE  0, 0, 225, 42
 STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_3DLOOK | DS_CENTER | WS_POPUP | 
     WS_VISIBLE | WS_CAPTION
 CAPTION "Char/Line Space Select"
-FONT 10, "Terminal"
+FONT 12, "MS Gothic"
 BEGIN
     LTEXT           "Char",IDC_STATIC,7,7,22,11
     EDITTEXT        1001,29,4,40,14,ES_NUMBER

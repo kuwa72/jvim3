@@ -196,9 +196,48 @@ Windows) rather than the system code.
 
 The system code stays CP932, because it is also the encoding of what a command
 run from `:!` writes back, and those still speak CP932. The manifest leaves out
-`dpiAware` (JVim draws on a fixed character grid), comctl32 v6 (it would theme
-the dialogs) and `supportedOS` (it would change what `GetVersionEx()` reports,
-which parts of `winjnt.c` still branch on).
+comctl32 v6 (it would theme the dialogs) and `supportedOS` (it would change what
+`GetVersionEx()` reports, which parts of `winjnt.c` still branch on).
+
+### Display scaling
+
+The manifest declares the process DPI aware (`dpiAwareness` = PerMonitorV2, with
+the older `dpiAware` = `true/pm` for systems that predate it). A process that
+does not is drawn at 96 DPI and stretched to the display scale, which resamples
+glyphs that were already rendered: at 125% or 150% the text goes soft and
+uneven, and so does the menu bar, and even a BDF font — which GDI never
+antialiases — comes out blurred.
+
+Being aware means the font has to be asked for in the pixels the display really
+has, and the pixel sizes in the registry (`font`, `jfont`, `width`, `height`)
+only mean the same thing on screen at the DPI they were stored at. So the key
+also holds `dpi`, and `dpi_scale_to()` in `winjnt.c` restates those sizes for
+the DPI in front of it — at startup, when the window turns out to be on a
+monitor at another scale, and on `WM_DPICHANGED` when it is dragged to one. The
+character grid comes out of that unchanged: the font and the window that holds
+`Rows` by `Columns` of it are scaled together, so it is a resize, not a reflow.
+Settings from a JVim before this have no `dpi` value, and 96 is the right
+reading of them — that is what Windows was virtualising the DPI to.
+
+Two things stay in raw pixels on purpose. `linespace`/`charspace` are nudges of
+a pixel or two typed into a dialog that offers 0 to 10, and scaling them would
+make the dialog disagree with itself. A BDF font cannot scale at all, being a
+bitmap; at a high DPI it is crisp and small, and an outline font is the way to
+get it larger.
+
+The dialog font in `vim32.rc` had to go the same way. It was Terminal, a raster
+font with a strike at a few fixed sizes, so at 125% GDI stretched the nearest
+bitmap and the dialog text came out ragged even though everything around it was
+now sharp. It is `MS Gothic` at 12 point instead. Fixed pitch was the thing to
+keep: a caption of n characters is n × `tmAveCharWidth` wide and a box of 4n
+dialog units is exactly the same, at any size, and several of these layouts are
+cut that fine — `LTEXT "ASCII"` in 20 units is five characters and not a pixel
+more — so a proportional font would mean relaying out all fourteen dialogs. 12
+point holds the 8 pixel cell the layouts were drawn against; MS Gothic is square
+where Terminal 8x12 was tall, so the dialogs come out about a third taller.
+
+To go back to the stretched-but-larger rendering, the exe's Properties >
+Compatibility > Change high DPI settings can override the manifest per user.
 
 ### The GUI's own strings
 
