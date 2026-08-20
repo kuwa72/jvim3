@@ -89,6 +89,16 @@ else
 	say "setlocale" "no"
 fi
 
+# mkstemp(), for the temp files ":!" and wildcard expansion make. Without it
+# they fall back to mktemp(), which only picks a name.
+if try_link "" '#include <stdlib.h>
+int main(){ char t[] = "/tmp/jvimXXXXXX"; return mkstemp(t) < 0; }'; then
+	machine="$machine -DHAVE_MKSTEMP"
+	say "mkstemp" "yes"
+else
+	say "mkstemp" "no, falling back to mktemp"
+fi
+
 # A terminfo/termcap library, for the real terminal database rather than the
 # handful of entries compiled in.
 termlib=

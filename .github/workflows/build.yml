@@ -1,16 +1,25 @@
-name: release
+name: build
 
-# Tagging is what cuts a release: push a tag like v3.0-j2.1b-utf8.1 and the
-# Windows build lands on the release page. Everything else here runs on the
-# tag too, so a broken build never becomes a release.
+# Every push and pull request builds and runs the 42 encoding tests, so a break
+# shows up when it is made rather than at release time. A tag matching v* does
+# the same and then publishes the Windows build to the release page, which means
+# a broken build can never become a release.
 on:
   push:
+    branches:
+      - '**'
     tags:
       - 'v*'
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: write
+
+# One run per ref is enough; a tag run is never thrown away.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   unix:
@@ -26,6 +35,16 @@ jobs:
           sudo apt-get -o DPkg::Lock::Timeout=300 update
           sudo apt-get -o DPkg::Lock::Timeout=300 install -y --no-install-recommends \
             libncurses-dev
+      - name: Build and run the 42 encoding tests
+        run: ./scripts/build-unix.sh test
+
+  macos:
+    name: macOS build and encoding tests
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      # Nothing to install: clang, curses and bash 3.2 all come with the system.
       - name: Build and run the 42 encoding tests
         run: ./scripts/build-unix.sh test
 
@@ -64,7 +83,7 @@ jobs:
 
   release:
     name: Publish the release
-    needs: [unix, windows]
+    needs: [unix, macos, windows]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:

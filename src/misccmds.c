@@ -20,6 +20,10 @@
 
 static void check_status __ARGS((BUF *));
 
+#if !defined(HAVE_MKSTEMP) && !defined(LATTICE) && !defined(NT)
+extern char *mktemp __ARGS((char *));	/* for vim_mktemp() at the end */
+#endif
+
 static char_u *(si_tab[]) = {(char_u *)"if", (char_u *)"else", (char_u *)"while", (char_u *)"for", (char_u *)"do"};
 
 /*
@@ -1184,6 +1188,38 @@ ispathsep(c)
 	return (c == ':' || c == PATHSEP || c == '/');
 # else
 	return (c == ':' || c == PATHSEP);
+# endif
+#endif
+}
+
+/*
+ * Make the temp file whose name template is in 'name', which has to end in six
+ * X's. Return OK or FAIL.
+ *
+ * mkstemp() creates the file itself, owned by us and 0600, so there is no gap
+ * between choosing a name and opening it for somebody to drop a symlink into.
+ * mktemp() only picks a name, which is why the linkers on the BSDs warn about
+ * every use of it. Systems that have no mkstemp() keep what they had.
+ */
+	int
+vim_mktemp(name)
+	char_u *name;
+{
+#ifdef HAVE_MKSTEMP
+	int		fd;
+
+	fd = mkstemp((char *)name);
+	if (fd < 0)
+		return FAIL;
+	/* The file is what was wanted; the callers open it again by name. */
+	close(fd);
+	return OK;
+#else
+# if defined(LATTICE) || defined(NT)
+	/* No mktemp() in these libraries, and tmpnam() makes up its own name. */
+	return (*tmpnam((char *)name) == NUL ? FAIL : OK);
+# else
+	return (*mktemp((char *)name) == NUL ? FAIL : OK);
 # endif
 #endif
 }

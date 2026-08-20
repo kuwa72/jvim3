@@ -18,12 +18,6 @@
 #include "kanji.h"
 #endif
 
-#if defined(LATTICE) || defined(NT)
-# define mktemp(a)	tmpnam(a)
-#endif
-
-extern char		*mktemp __ARGS((char *));
-
 /*
  * align text:
  * type = -1  left aligned
@@ -439,7 +433,7 @@ dofilter(line1, line2, buff, do_in, do_out)
 	STRCPY(otmp, TMPNAME2);
 #endif
 
-	if ((do_in && *mktemp((char *)itmp) == NUL) || (do_out && *mktemp((char *)otmp) == NUL))
+	if ((do_in && vim_mktemp(itmp) == FAIL) || (do_out && vim_mktemp(otmp) == FAIL))
 	{
 		emsg(e_notmp);
 		return;

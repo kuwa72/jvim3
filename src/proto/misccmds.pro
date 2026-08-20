@@ -35,3 +35,4 @@ void home_replace __PARMS((unsigned char *src, unsigned char *dst, int dstlen));
 int fullpathcmp __PARMS((unsigned char *s1, unsigned char *s2));
 unsigned char *gettail __PARMS((unsigned char *fname));
 int ispathsep __PARMS((int c));
+int vim_mktemp __PARMS((unsigned char *name));

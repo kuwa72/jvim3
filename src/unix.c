@@ -671,18 +671,19 @@ vim_dirname(buf, len)
 	char_u *buf;
 	int len;
 {
-#if defined(SYSV_UNIX) || defined(USL) || defined(hpux) || defined(linux)
 	/* Was "extern int errno" plus sys_errlist[]: errno is thread local now and
-	 * sys_errlist[] is gone from current libcs. */
+	 * sys_errlist[] is gone from current libcs.
+	 *
+	 * The BSDs used to take the getwd() branch here. getwd() is handed no
+	 * length and writes up to PATH_MAX whatever the caller's buffer holds, so
+	 * the linkers on the BSDs warn about it; getcwd() is POSIX and is on every
+	 * system this builds on. */
 	if (getcwd((char *)buf, len) == NULL)
 	{
 	    STRCPY(buf, strerror(errno));
 	    return FAIL;
 	}
     return OK;
-#else
-	return (getwd((char *)buf) != NULL ? OK : FAIL);
-#endif
 }
 
 /*
@@ -1345,7 +1346,6 @@ remove(buf)
  * list_notfound is ignored
  */
 
-extern char *mktemp __ARGS((char *));
 #ifndef SEEK_SET
 # define SEEK_SET 0
 #endif
@@ -1400,7 +1400,7 @@ ExpandWildCards(num_pat, pat, num_file, file, files_only, list_notfound)
  * get a name for the temp file
  */
 	STRCPY(tmpname, TMPNAME2);
-	if (*mktemp((char *)tmpname) == NUL)
+	if (vim_mktemp(tmpname) == FAIL)
 	{
 		emsg(e_notmp);
 	    return FAIL;
