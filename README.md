@@ -54,11 +54,10 @@ the exe are found as they are.
 `jvim32w.exe` is the GUI. `jvim32.exe` is the same editor from a console window;
 give it `-nw` to stay in the console instead of opening a window.
 
-Each package also has `jvim3.hlp` (the Japanese help file) and
-`_jvimrc.sample`. Rename `jvim3.hlp` to `vim.hlp`, or put
-`set helpfile=$VIM\jvim3.hlp` in your `_vimrc`, or `:help` will not find it —
-[USAGE.md](USAGE.md#first-run-on-windows) has the rest of the ten minutes of
-setup worth doing.
+Each package also has `vim.hlp`, JVim's Japanese help file, which `:help` finds
+where it is, and `_jvimrc.sample` to read before writing your own.
+[USAGE.md](USAGE.md#first-run-on-windows) has the ten minutes of setup worth
+doing.
 
 ### Linux, macOS, FreeBSD, NetBSD, OpenBSD, DragonFly
 

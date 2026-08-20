@@ -74,16 +74,18 @@ Environment:
 Unpack the zip anywhere. `%VIM%` does not need setting: the editor takes the
 exe's own directory. Then:
 
-**1. Make `:help` work.** The package ships the help file as `jvim3.hlp`, and the
-editor looks for `$VIM\vim.hlp`. Either rename the file to `vim.hlp`, or put
-this in your `_vimrc`:
+**1. Check `:help`, and switch it if you want English.** The help file in the
+package is `vim.hlp`, which is what the editor looks for (`$VIM\vim.hlp`), so
+`:help` works as unpacked. It is JVim's Japanese help; for the English one, copy
+[doc/vim.hlp](doc/vim.hlp) from this repository over it, or keep both and point
+`helpfile` at whichever you want:
 
 ```vim
-set helpfile=$VIM\jvim3.hlp
+set helpfile=$VIM\vim-en.hlp
 ```
 
-`jvim3.hlp` from the package is JVim's Japanese help. For the English one, copy
-[doc/vim.hlp](doc/vim.hlp) out of this repository instead.
+Packages up to `v3.0-j2.1b-utf8.4` shipped the file as `jvim3.hlp`, which
+nothing looks for. Rename it, or set `helpfile` at it.
 
 **2. Put an rc file somewhere it is read.** In order, at startup:
 
@@ -93,9 +95,10 @@ set helpfile=$VIM\jvim3.hlp
 
 `%VIM%\vimrc` next to the exe is the simplest, and makes the unpacked directory
 self-contained. `_jvimrc.sample` in the package is Tsuchida's own from 2002 and
-is worth reading, but do not use it as it stands: it sets `decode`, an option
-this build removed, and `keywordprg=vshelp.exe`, a program you do not have.
-[Below](#a-_vimrc-to-start-from) is a current one.
+is worth reading — the two settings that no longer apply, `decode` and
+`keywordprg=vshelp.exe`, are commented out in it, and its `tags` lines point at
+a Visual C++ 6 that is not on your machine. [Below](#a-_vimrc-to-start-from) is
+a shorter current one.
 
 **3. Set the font.** `Global > Font` in the menu. Only fixed pitch fonts are
 offered, because the editor draws on a character grid — a proportional font
@@ -164,7 +167,6 @@ set jinsertmode=a       " insert mode starts in ASCII
 " set jmask=TTTT        " only if the locale is not telling the truth
 
 " ---- Windows GUI
-set helpfile=$VIM\jvim3.hlp
 set syntax
 set syntype=cfp
 set crmark              " show line ends
@@ -385,11 +387,11 @@ automatically.
 | | |
 | --- | --- |
 | **Japanese comes out as garbage** | `:set jm?` and `:set jc?`. `jc` is what this file is; `jm`'s second letter is what the terminal is being sent. On Unix, `LANG` should set both — `LANG=ja_JP.UTF-8`. |
-| **`:help` says the file was not found** | The help file is `jvim3.hlp` in the package and the editor wants `$VIM\vim.hlp`. Rename it, or `set helpfile=$VIM\jvim3.hlp`. |
+| **`:help` says the file was not found** | The editor wants `$VIM\vim.hlp` on Windows, or `/usr/local/lib/jvim3.hlp` on Unix. Packages up to `v3.0-j2.1b-utf8.4` shipped it as `jvim3.hlp`: rename it, or `set helpfile=$VIM\jvim3.hlp`. |
 | **A new file is saved in the wrong encoding** | The fourth letter of `jmask`. `:set jm=SSST` writes new files as UTF-8 while keeping CP932 pipes. |
 | **Text is soft or uneven on a scaled display** | It should not be; report it. As a workaround, Properties > Compatibility > Change high DPI settings on the exe. |
 | **The font dialog does not offer the font I want** | Only fixed pitch fonts are listed, by design. A proportional font cannot be drawn on a character grid. |
-| **Startup reports an unknown option** | An rc file from an older JVim. `decode` is the usual one; see [above](#what-was-removed). |
+| **Startup reports an unknown option** | An rc file from an older JVim — `decode` is the usual one; see [above](#what-was-removed). The `_jvimrc.sample` shipped from `v3.0-j2.1b-utf8.5` on no longer does this. |
 | **Japanese input drops or delays characters** | Console mode on Windows. Use `jvim32w.exe`. |
 | **Cursor keys insert letters, or the screen is wrong** | Unix: `$TERM`. The build links a curses/termcap library if it finds one and otherwise uses its own compiled-in entries, which cover fewer terminals; `./scripts/build-unix.sh` prints which. |
 | **It crashed** | Windows writes a report to `%LOCALAPPDATA%\jvim3\`. `scripts/resolve-crash.sh <report.log>` turns the addresses in it into function names and line numbers, given the matching `.debug` file. Please attach it to an issue. |

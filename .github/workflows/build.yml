@@ -173,8 +173,13 @@ jobs:
           JVim 3.0-j2.1b with UTF-8 support.
 
           Two Windows builds, each with a GUI and a console executable, the
-          help file and a sample `_jvimrc`. Unpack one and point `%VIM%` at
-          the directory.
+          help file and a sample `_jvimrc`. Unpack one and run it: nothing
+          needs setting, and `:help` finds `vim.hlp` beside the exe.
+
+          What it is and how to drive it: [README](https://github.com/kuwa72/jvim3#readme)
+          ([日本語](https://github.com/kuwa72/jvim3/blob/master/README.ja.md)),
+          [USAGE](https://github.com/kuwa72/jvim3/blob/master/USAGE.md)
+          ([日本語](https://github.com/kuwa72/jvim3/blob/master/USAGE.ja.md)).
 
           | | |
           | --- | --- |

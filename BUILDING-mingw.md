@@ -23,7 +23,7 @@ pacman -S mingw-w64-i686-gcc make
 ./scripts/build-mingw.sh both
 ```
 
-Output goes to `dist/i686/`, together with `jvim3.hlp` and a sample `_jvimrc`.
+Output goes to `dist/i686/`, together with `vim.hlp` and a sample `_jvimrc`.
 Copy that directory to the Windows side and point `%VIM%` at it.
 
 For something to hand over, `release` builds both architectures and zips them:

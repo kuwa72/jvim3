@@ -53,11 +53,9 @@ Shift-JIS ではなく UTF-8 を保持する**ようになりました。CP932 �
 `jvim32w.exe` が GUI 版、`jvim32.exe` がコンソールから起動する版です。後者に
 `-nw` を付けるとウィンドウを開かずコンソールで動きます。
 
-パッケージには `jvim3.hlp` (日本語ヘルプ) と `_jvimrc.sample` も入っています。
-`jvim3.hlp` は `vim.hlp` にリネームするか、`_vimrc` に
-`set helpfile=$VIM\jvim3.hlp` と書いてください。そうしないと `:help` が見つけら
-れません。残りの初期設定は [USAGE.ja.md](USAGE.ja.md#windows-での最初の設定) に
-あります。
+パッケージには `vim.hlp` (JVim の日本語ヘルプ。そのままの名前で `:help` が見つけ
+ます) と、自分の設定を書く前に読むための `_jvimrc.sample` も入っています。初期
+設定は [USAGE.ja.md](USAGE.ja.md#windows-での最初の設定) にあります。
 
 ### Linux、macOS、FreeBSD、NetBSD、OpenBSD、DragonFly
 

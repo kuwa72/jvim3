@@ -64,7 +64,7 @@ if [ "$TARGET" = release ]; then
 		}
 		name=jvim3-$version-win$bits
 		mkdir -p "$rel/$name"
-		cp -p "$root/dist/$arch/jvim3.hlp" "$root/dist/$arch/_jvimrc.sample" "$rel/$name/"
+		cp -p "$root/dist/$arch/vim.hlp" "$root/dist/$arch/_jvimrc.sample" "$rel/$name/"
 		# makefile.mingw calls its targets jvim32*.exe whatever the architecture
 		# is; the name in the package says which one it actually is.
 		cp -p "$root/dist/$arch/jvim32w.exe" "$rel/$name/jvim${bits}w.exe"
@@ -107,7 +107,10 @@ mkdir -p "$dist"
 for exe in jvim32w.exe jvim32.exe; do
 	[ -f "$src/$exe" ] && cp -p "$src/$exe" "$dist/"
 done
-cp -p "$root/doc.j/vim.hlp" "$dist/jvim3.hlp"
+# vim.hlp, not jvim3.hlp: the default 'helpfile' on Windows is "$VIM\vim.hlp",
+# and $VIM with nothing set is the directory the exe is in, so ":help" works in
+# an unpacked package without a _vimrc.
+cp -p "$root/doc.j/vim.hlp" "$dist/vim.hlp"
 cp -p "$root/doc.j/_jvimrc" "$dist/_jvimrc.sample"
 
 echo
@@ -117,8 +120,9 @@ cat <<'EOF'
 
 Next:
   1. copy dist/<arch>/ to the Windows side
-  2. set VIM to that directory so jvim3.hlp and _vimrc are found
-  3. run jvim32w.exe (GUI) or jvim32.exe (console)
+  2. run jvim32w.exe (GUI) or jvim32.exe (console); ":help" finds vim.hlp
+     beside it, and a _vimrc there is read as well. Set VIM only if you keep
+     them somewhere else.
 
 On an abnormal exit a report is written to %LOCALAPPDATA%\jvim3\ .
 Resolve it with:  scripts/resolve-crash.sh <report.log>

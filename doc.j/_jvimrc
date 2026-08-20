@@ -4,7 +4,8 @@ set     autoindent
 set   nobackup
 set     backupdir=>$TMP
 set     cmdheight=1
-set     decode=a
+"" decode went with USE_MATOME; setting it now reports an unknown option
+"set    decode=a
 set     directory=>$TMP
 set   noerrorbells
 set   noexpandtab
@@ -14,7 +15,8 @@ set     fepkey=\\
 set     fepkeys=/?
 set   nojkanaconv
 set     jinsertmode=a
-set     keywordprg=vshelp.exe
+"" vshelp.exe is not shipped with anything; name a program you have
+"set    keywordprg=vshelp.exe
 set   nomodeline
 set     modelines=8
 set   notextauto

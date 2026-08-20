@@ -76,9 +76,9 @@ pacman -S mingw-w64-i686-gcc make
 ./scripts/build-mingw.sh both
 ```
 
-出力は `dist/i686/` に、`jvim3.hlp` と `_jvimrc` のサンプルと一緒に置かれます。この
+出力は `dist/i686/` に、`vim.hlp` と `_jvimrc` のサンプルと一緒に置かれます。この
 ディレクトリを Windows 側にコピーしてください (`%VIM%` は未設定なら実行ファイルの
-ディレクトリになります)。
+ディレクトリになるので、`:help` は隣の `vim.hlp` を見つけます)。
 
 配布用には `release` が両アーキテクチャをビルドして zip にまとめます。
 
