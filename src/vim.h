@@ -150,7 +150,9 @@ typedef unsigned long	long_u;
 #  undef M_XENIX
 #  include <sys/ndir.h>		/* for MAXNAMLEN */
 # else
-#  if defined(SOLARIS) || defined(AIX) || defined(ARCHIE)  || __FreeBSD__ >= 3 || __CYGWIN__ || defined(__bsdi__)
+/* <sys/dir.h> is a compatibility header the other systems still ship and
+ * DragonFly does not; <dirent.h> is where this belongs. */
+#  if defined(SOLARIS) || defined(AIX) || defined(ARCHIE)  || __FreeBSD__ >= 3 || __CYGWIN__ || defined(__bsdi__) || defined(__DragonFly__)
 #   include <dirent.h>		/* for MAXNAMLEN */
 #  else
 #   include <sys/dir.h>		/* for MAXNAMLEN */
