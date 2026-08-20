@@ -10,6 +10,8 @@
  * message.c: functions for displaying messages on the command line
  */
 
+#include <stdarg.h>
+
 #include "vim.h"
 #include "globals.h"
 #define MESSAGE			/* don't include prototype for smsg() */
@@ -51,11 +53,23 @@ msg(char_u *s)
 }
 
 #ifndef PROTO		/* automatic prototype generation does not understand this */
-/* VARARGS */
+/*
+ * proto.h has always declared this as smsg(char_u *, ...), but the definition
+ * took eleven fixed arguments and callers passed as many as they felt like --
+ * the pre-ANSI way of doing this. It survived because __PARMS() expanded to ()
+ * and so nobody saw the declaration. They do now, and on a machine where the
+ * variadic calling convention differs from the ordinary one -- arm64 macOS
+ * passes variadic arguments on the stack, not in registers -- the callee read
+ * registers the caller never filled, and printing "%s" of that crashed.
+ */
 	void
-smsg(char_u *s, long a1, long a2, long a3, long a4, long a5, long a6, long a7, long a8, long a9, long a10)
+smsg(char_u *s, ...)
 {
-	sprintf((char *)IObuff, (char *)s, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
+	va_list		ap;
+
+	va_start(ap, s);
+	vsprintf((char *)IObuff, (char *)s, ap);
+	va_end(ap);
 	msg(IObuff);
 }
 #endif
