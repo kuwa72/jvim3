@@ -28,9 +28,7 @@ static int		helpsize;
 static int		helppos;
 
 static char_u *
-kopen(fnamep, type)
-char_u	*	fnamep;
-char	*	type;
+kopen(char_u *fnamep, char *type)
 {
 	int			w_jkc = p_jkc;
 	int			len;
@@ -86,33 +84,27 @@ char	*	type;
 }
 
 static void
-kclose(mp)
-char_u	*	mp;
+kclose(char_u *mp)
 {
 	free(mp);
 	helpsize = helppos = 0;
 }
 
 long int
-ktell(mp)
-char_u	*	mp;
+ktell(char_u *mp)
 {
 	return(helppos);
 }
 
 int
-kseek(mp, offset, wherefrom)
-char_u	*	mp;
-long int	offset;
-int			wherefrom;
+kseek(char_u *mp, long int offset, int wherefrom)
 {
 	helppos = offset;
 	return(0);
 }
 
 int
-kgetc(mp)
-char_u	*	mp;
+kgetc(char_u *mp)
 {
 	int		c;
 
@@ -130,7 +122,7 @@ char_u	*	mp;
 #define MAXSCREENS 52			/* one screen for a-z and A-Z */
 
 	void
-help()
+help(void)
 {
 	int		c;
 	int		eof;
@@ -291,7 +283,7 @@ help()
  * return the number of screens displayed, or -1 if end of file reached
  */
 	int
-redrawhelp()
+redrawhelp(void)
 {
 	int nextc;
 	int col = 0;

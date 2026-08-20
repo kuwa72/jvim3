@@ -25,8 +25,7 @@
 static void usage __PARMS((int));
 
 	static void
-usage(n)
-	int n;
+usage(int n)
 {
 	register int i;
 	static char_u *(use[]) = {(char_u *)"[file ..]\n",
@@ -141,9 +140,7 @@ usage(n)
 #endif
 
 	int
-main(argc, argv)
-	int				argc;
-	char		  **argv;
+main(int argc, char **argv)
 {
 	char_u		   *initstr;		/* init string from the environment */
 	char_u		   *term = NULL;	/* specified terminal name */
@@ -794,8 +791,7 @@ main(argc, argv)
 }
 
 	void
-getout(r)
-	int 			r;
+getout(int r)
 {
 	windgoto((int)Rows - 1, 0);
 	outchar('\r');

@@ -26,8 +26,7 @@ static struct filemark namedfm[NMARKS];		/* new marks with file nr */
  * Returns OK on success, FAIL if no room for mark or bad name given.
  */
 	int
-setmark(c)
-	int			c;
+setmark(int c)
 {
 	int 		i;
 
@@ -52,7 +51,7 @@ setmark(c)
  *				 and insert it into the jump list
  */
 	void
-setpcmark()
+setpcmark(void)
 {
 	int i;
 #ifdef ROTATE
@@ -123,7 +122,7 @@ setpcmark()
  *				   If pcmark was deleted (with "dG") the previous mark is restored.
  */
 	void
-checkpcmark()
+checkpcmark(void)
 {
 	if (curwin->w_prev_pcmark.lnum != 0 &&
 			(curwin->w_pcmark.lnum == curwin->w_cursor.lnum ||
@@ -138,8 +137,7 @@ checkpcmark()
  * move "count" positions in the jump list (count may be negative)
  */
 	FPOS *
-movemark(count)
-	int count;
+movemark(int count)
 {
 	FPOS		*pos;
 
@@ -182,9 +180,7 @@ movemark(count)
  *        -1 if mark is in other file (only if changefile is TRUE)
  */
 	FPOS *
-getmark(c, changefile)
-	int			c;
-	int			changefile;
+getmark(int c, int changefile)
 {
 	FPOS	*posp;
 	static	FPOS	pos_copy;
@@ -232,8 +228,7 @@ getmark(c, changefile)
  * Used mainly when trashing the entire buffer during ":e" type commands
  */
 	void
-clrallmarks(buf)
-	BUF		*buf;
+clrallmarks(BUF *buf)
 {
 	static int 			i = -1;
 
@@ -251,8 +246,7 @@ clrallmarks(buf)
  * get name of file from a filemark
  */
 	char_u *
-fm_getname(fmark)
-	struct filemark *fmark;
+fm_getname(struct filemark *fmark)
 {
 	char_u		*name;
 
@@ -272,7 +266,7 @@ fm_getname(fmark)
  * print the marks (use the occasion to update the line numbers)
  */
 	void
-domarks()
+domarks(void)
 {
 	int			i;
 	char_u		*name;
@@ -312,7 +306,7 @@ domarks()
  * print the jumplist
  */
 	void
-dojumps()
+dojumps(void)
 {
 	int			i;
 	char_u		*name;
@@ -346,10 +340,7 @@ dojumps()
  * If 'inc' is MAXLNUM the mark is made invalid.
  */
 	void
-mark_adjust(line1, line2, inc)
-	linenr_t	line1;
-	linenr_t	line2;
-	long		inc;
+mark_adjust(linenr_t line1, linenr_t line2, long inc)
 {
 	int			i;
 	int			fnum = curbuf->b_fnum;

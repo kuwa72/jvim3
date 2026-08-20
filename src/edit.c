@@ -41,8 +41,7 @@ static int		new_insert_skip;
 							/* number of chars in front of the current insert */
 
 	void
-edit(count)
-	long count;
+edit(long count)
 {
 	int			 c;
 	int			 cc;
@@ -1312,12 +1311,9 @@ normalchar:
  */
 	int
 #ifdef KANJI
-get_literal(nextc, kp)
-	int *nextc;
-	int *kp;
+get_literal(int *nextc, int *kp)
 #else
-get_literal(nextc)
-	int *nextc;
+get_literal(int *nextc)
 #endif
 {
 	int			 cc;
@@ -1438,12 +1434,9 @@ get_literal(nextc)
 
 	void
 #ifdef KANJI
-insertchar(bytes, nbytes)
-	char_u	   *bytes;
-	int			nbytes;
+insertchar(char_u *bytes, int nbytes)
 #else
-insertchar(c)
-	unsigned	c;
+insertchar(unsigned c)
 #endif
 {
 	int		haveto_redraw = FALSE;
@@ -1677,7 +1670,7 @@ insertchar(c)
 	static
 #endif
 	void
-start_arrow()
+start_arrow(void)
 {
 	if (!arrow_used)		/* something has been inserted */
 	{
@@ -1692,7 +1685,7 @@ start_arrow()
  * If an arrow key has been used, start a new insertion.
  */
 	static void
-stop_arrow()
+stop_arrow(void)
 {
 	if (arrow_used)
 	{
@@ -1708,7 +1701,7 @@ stop_arrow()
  * do a few things to stop inserting
  */
 	static void
-stop_insert()
+stop_insert(void)
 {
 	stop_redo_ins();
 
@@ -1740,8 +1733,7 @@ stop_insert()
  * if flag == TRUE move to first non-white
  */
 	void
-beginline(flag)
-	int			flag;
+beginline(int flag)
 {
 	curwin->w_cursor.col = 0;
 	if (flag)
@@ -1762,7 +1754,7 @@ beginline(flag)
  */
 
 	int
-oneright()
+oneright(void)
 {
 	char_u *ptr;
 
@@ -1787,7 +1779,7 @@ oneright()
 }
 
 	int
-oneleft()
+oneleft(void)
 {
 	if (curwin->w_cursor.col == 0)
 		return FAIL;
@@ -1806,8 +1798,7 @@ oneleft()
 }
 
 	int
-oneup(n)
-	long n;
+oneup(long n)
 {
 	if (n != 0 && curwin->w_cursor.lnum == 1)
 		return FAIL;
@@ -1825,8 +1816,7 @@ oneup(n)
 }
 
 	int
-onedown(n)
-	long n;
+onedown(long n)
 {
 	if (n != 0 && curwin->w_cursor.lnum == curbuf->b_ml.ml_line_count)
 		return FAIL;
@@ -1848,9 +1838,7 @@ onedown(n)
  * return FAIL for failure, OK otherwise
  */
 	int
-onepage(dir, count)
-	int		dir;
-	long	count;
+onepage(int dir, long count)
 {
 	linenr_t		lp;
 	long			n;
@@ -1916,10 +1904,7 @@ onepage(dir, count)
 }
 
 	void
-stuff_inserted(c, count, no_esc)
-	int		c;
-	long	count;
-	int		no_esc;
+stuff_inserted(int c, long count, int no_esc)
 {
 	char_u		*esc_ptr = NULL;
 	char_u		*ptr;
@@ -1946,7 +1931,7 @@ stuff_inserted(c, count, no_esc)
 }
 
 	char_u *
-get_last_insert()
+get_last_insert(void)
 {
 	if (last_insert == NULL)
 		return NULL;
@@ -1960,8 +1945,7 @@ get_last_insert()
  * the replacement string is inserted in typestr, followed by "c".
  */
 	static int
-echeck_abbr(c)
-	int c;
+echeck_abbr(int c)
 {
 	if (p_paste || no_abbr)			/* no abbreviations or in paste mode */
 		return FALSE;

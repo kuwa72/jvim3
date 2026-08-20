@@ -53,15 +53,11 @@ say() { printf '  %-22s %s\n' "$1" "$2"; }
 
 echo "configuring for $(uname -s) $(uname -r), $CC"
 
-# The sources use K&R function definitions throughout, which C23 removed; gcc 15
-# and later default to it. Pin the dialect to something that still accepts them.
+# The compiler's own default. This used to be pinned to -std=gnu89 because the
+# sources were full of K&R function definitions, which C23 removed and gcc 15
+# defaults to rejecting; they are all prototypes now. Put -std=gnu89 back
+# through EXTRA_CFLAGS if some compiler needs it.
 std=
-for s in gnu89 gnu17 c89; do
-	if try_cc "-std=$s" 'int main(){return 0;}'; then
-		std="-std=$s"
-		break
-	fi
-done
 say "dialect" "${std:-(compiler default)}"
 
 # -fcommon: the sources declare the same global in several files, which became

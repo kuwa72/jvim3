@@ -191,8 +191,7 @@ char_u	digraphdefault[][3] = 		/* standard ISO digraphs */
  * handle digraphs after typing a character
  */
 	int
-dodigraph(c)
-	int		c;
+dodigraph(int c)
 {
 	static int	backspaced;		/* character before BS */
 	static int	lastchar;		/* last typed character */
@@ -218,10 +217,7 @@ dodigraph(c)
  * if no match, return char2
  */
 	int
-getdigraph(char1, char2, meta)
-	int	char1;
-	int	char2;
-	int	meta;
+getdigraph(int char1, int char2, int meta)
 {
 	int		i;
 	int		retval;
@@ -260,8 +256,7 @@ getdigraph(char1, char2, meta)
  * format: {c1}{c2} char {c1}{c2} char ...
  */
 	void
-putdigraph(str)
-	char_u *str;
+putdigraph(char_u *str)
 {
 	int		char1, char2, n;
 	char_u	(*newtab)[3];
@@ -310,7 +305,7 @@ putdigraph(str)
 }
 
 	void
-listdigraphs()
+listdigraphs(void)
 {
 	int		i;
 
@@ -334,8 +329,7 @@ listdigraphs()
 }
 
 	static void
-printdigraph(p)
-	char_u *p;
+printdigraph(char_u *p)
 {
 	char_u		buf[9];
 	static int	len;

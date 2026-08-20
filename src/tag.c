@@ -33,10 +33,7 @@ static char_u *topmsg = (char_u *)"at top of tag stack";
  * type == 0 (:tag): jump to old tag
  */
 	void
-dotag(tag, type, count)
-	char_u	*tag;
-	int		type;
-	int		count;
+dotag(char_u *tag, int type, int count)
 {
 	int 			i;
 	struct taggy	*tagstack = curwin->w_tagstack;
@@ -149,7 +146,7 @@ end_dotag:
  * Print the tag stack
  */
 	void
-dotags()
+dotags(void)
 {
 	int				i;
 	char_u			*name;
@@ -187,8 +184,7 @@ dotags()
  *   return 0 for failure, 1 for success
  */
 	static int
-findtag(tag)
-	char_u		   *tag;
+findtag(char_u *tag)
 {
 	FILE	   *tp;
 	char_u		lbuf[LSIZE];
@@ -507,8 +503,7 @@ erret:
 
 #ifdef USE_TAGEX
 	static int
-findtagex(tag)
-	char_u		   *tag;
+findtagex(char_u *tag)
 {
 	FILE	   *tp;
 	char_u		lbuf[LSIZE];
@@ -1022,10 +1017,7 @@ clear:
 
 #ifdef WEBB_COMPLETE
 	int
-ExpandTags(prog, num_file, file)
-	regexp *prog;
-	int *num_file;
-	char_u ***file;
+ExpandTags(regexp *prog, int *num_file, char_u ***file)
 {
 	char_u	**matches, **new_matches;
 	char_u	tag_file[CMDBUFFSIZE + 1];

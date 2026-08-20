@@ -93,8 +93,7 @@ static synindex			synhash[HASH_SIZE];
 #endif
 
 	void
-syn_clr(buf)
-BUF			*	buf; 			/* buffer we are a window into */
+syn_clr(BUF *buf)
 {
 	syntax			*	twp;
 	syntax			*	tnp;
@@ -152,13 +151,7 @@ BUF			*	buf; 			/* buffer we are a window into */
 }
 
 static int
-syn_regexec(min, ic, jic, prog, ptr, at_bol)
-int				min;
-int				ic;
-int				jic;
-regexp		*	prog;
-char_u		*	ptr;
-int 			at_bol;
+syn_regexec(int min, int ic, int jic, regexp *prog, char_u *ptr, int at_bol)
 {
 	char_u			*	startp;
 	char_u			*	endp;
@@ -203,10 +196,7 @@ int 			at_bol;
 }
 
 static regexp *
-syn_regcomp(ic, jic, string)
-int				ic;
-int				jic;
-char_u		*	string;
+syn_regcomp(int ic, int jic, char_u *string)
 {
 	regexp		*	prog;
 	int				magic;
@@ -221,8 +211,7 @@ char_u		*	string;
 }
 
 static int
-syn_isregstr(str)
-char_u		*	str;
+syn_isregstr(char_u *str)
 {
 	while (*str)
 	{
@@ -251,8 +240,7 @@ char_u		*	str;
 }
 
 static int
-syn_cls(ptr)
-char_u		*	ptr;
+syn_cls(char_u *ptr)
 {
 	int				c = *ptr;
 
@@ -274,8 +262,7 @@ char_u		*	ptr;
 
 #if SYNTAX_CACHE
 static void
-syn_makeidx(ptr)
-char_u		*	ptr;
+syn_makeidx(char_u *ptr)
 {
 	int				sclass;
 	int				oclass	= -1;
@@ -322,12 +309,7 @@ char_u		*	ptr;
 #endif
 
 static char_u	*
-syn_strstr(s1, s2, ic, word, hash)
-char_u		*	s1;
-char_u		*	s2;
-int				ic;
-int				word;
-int				hash;
+syn_strstr(char_u *s1, char_u *s2, int ic, int word, int hash)
 {
 	int				pos;
 
@@ -395,8 +377,7 @@ int				hash;
 }
 
 static char_u *
-syn_strsave(p)
-char_u		*	p;
+syn_strsave(char_u *p)
 {
 	char_u	*	w;
 
@@ -429,12 +410,7 @@ char_u		*	p;
 }
 
 static void
-syn_addtag(buf, string_l, string_r, regp_l, regp_r)
-BUF			*	buf; 			/* buffer we are a window into */
-char_u		*	string_l;
-char_u		*	string_r;
-regexp		*	regp_l;
-regexp		*	regp_r;
+syn_addtag(BUF *buf, char_u *string_l, char_u *string_r, regexp *regp_l, regexp *regp_r)
 {
 	syntag			*	gwp;
 	syntag			*	gnp;
@@ -473,9 +449,7 @@ regexp		*	regp_r;
 }
 
 static int
-syn_color(buf, name)
-BUF			*	buf; 			/* buffer we are a window into */
-char_u		*	name;
+syn_color(BUF *buf, char_u *name)
 {
 	char_u			*	p;
 	int					no;
@@ -528,8 +502,7 @@ char_u		*	name;
 }
 
 int
-syn_user_color(id)
-char_u			id;
+syn_user_color(char_u id)
 {
 	int					no;
 
@@ -542,11 +515,7 @@ char_u			id;
 }
 
 static int
-syn_get_color(buf, name, p, lname)
-BUF			*	buf;
-char_u		*	name;
-char_u		**	p;
-char_u		**	lname;
+syn_get_color(BUF *buf, char_u *name, char_u **p, char_u **lname)
 {
 	int					color = 0;
 	synlink			*	lwp;
@@ -624,9 +593,7 @@ char_u		**	lname;
 }
 
 static int
-syn_link(buf, name)
-BUF			*	buf; 			/* buffer we are a window into */
-char_u		*	name;
+syn_link(BUF *buf, char_u *name)
 {
 	char_u			*	clr;
 	char_u			*	type;
@@ -718,14 +685,12 @@ char_u		*	name;
 }
 
 static void
-syn_loadtag(buf, fname)
-BUF			*	buf; 			/* buffer we are a window into */
-char_u		*	fname;
+syn_loadtag(BUF *buf, char_u *fname)
 {
 	FILE			*	tp;
 	char_u				lbuf[LSIZE];
-	char				wbuf[2];
-	char			*	wk;
+	char_u				wbuf[2];
+	char_u			*	wk;
 	int					c;
 	int					color;
 	char_u			*	p;
@@ -836,46 +801,46 @@ char_u		*	fname;
 			continue;
 		switch (p[3]) {
 		case 'c':	/* class	*/
-			color = syn_get_color(buf, "tagsClass",		wk, &lname);
+			color = syn_get_color(buf, "tagsClass",		&wk, &lname);
 			break;
 		case 'd':	/* define	*/
-			color = syn_get_color(buf, "tagsDefine",	wk, &lname);
+			color = syn_get_color(buf, "tagsDefine",	&wk, &lname);
 			break;
 		case 'e':	/*enum value*/
-			color = syn_get_color(buf, "tagsValue",		wk, &lname);
+			color = syn_get_color(buf, "tagsValue",		&wk, &lname);
 			break;
 		case 'f':	/* function	*/
-			color = syn_get_color(buf, "tagsFunction",	wk, &lname);
+			color = syn_get_color(buf, "tagsFunction",	&wk, &lname);
 			break;
 		case 'g':	/* enum		*/
-			color = syn_get_color(buf, "tagsEnum",		wk, &lname);
+			color = syn_get_color(buf, "tagsEnum",		&wk, &lname);
 			break;
 		case 'm':	/* member	*/
-			color = syn_get_color(buf, "tagsMember",	wk, &lname);
+			color = syn_get_color(buf, "tagsMember",	&wk, &lname);
 			break;
 		case 'n':	/* namespaces	*/
-			color = syn_get_color(buf, "tagsNames",		wk, &lname);
+			color = syn_get_color(buf, "tagsNames",		&wk, &lname);
 			break;
 		case 'p':	/* prototypes	*/
-			color = syn_get_color(buf, "tagsProto",		wk, &lname);
+			color = syn_get_color(buf, "tagsProto",		&wk, &lname);
 			break;
 		case 's':	/* struct	*/
-			color = syn_get_color(buf, "tagsStruct",	wk, &lname);
+			color = syn_get_color(buf, "tagsStruct",	&wk, &lname);
 			break;
 		case 't':	/* typedef	*/
-			color = syn_get_color(buf, "tagsTypedef",	wk, &lname);
+			color = syn_get_color(buf, "tagsTypedef",	&wk, &lname);
 			break;
 		case 'u':	/* union	*/
-			color = syn_get_color(buf, "tagsUnion",		wk, &lname);
+			color = syn_get_color(buf, "tagsUnion",		&wk, &lname);
 			break;
 		case 'v':	/* variable	*/
-			color = syn_get_color(buf, "tagsVariable",	wk, &lname);
+			color = syn_get_color(buf, "tagsVariable",	&wk, &lname);
 			break;
 		case 'x':	/* external	*/
-			color = syn_get_color(buf, "tagsExternal",	wk, &lname);
+			color = syn_get_color(buf, "tagsExternal",	&wk, &lname);
 			break;
 		default:
-			color = syn_get_color(buf, "tagsUnknown",	wk, &lname);
+			color = syn_get_color(buf, "tagsUnknown",	&wk, &lname);
 			break;
 		}
 		p = lbuf;
@@ -930,9 +895,7 @@ char_u		*	fname;
 }
 
 static void
-syn_load(buf, fname)
-BUF			*	buf; 			/* buffer we are a window into */
-char_u		*	fname;
+syn_load(BUF *buf, char_u *fname)
 {
 	char_u			*	np;
 	int					i;
@@ -960,9 +923,7 @@ char_u		*	fname;
 }
 
 static int
-syn_crchar(buf, name)
-BUF			*	buf;
-char_u		*	name;
+syn_crchar(BUF *buf, char_u *name)
 {
 	char_u			*	type;
 	char_u			*	lname;
@@ -1010,9 +971,7 @@ char_u		*	name;
 }
 
 	int
-syn_add(buf, reg)
-BUF			*	buf;
-char_u		*	reg;
+syn_add(BUF *buf, char_u *reg)
 {
 	syntax			*	w;
 	syntax			*	r;
@@ -1278,11 +1237,7 @@ char_u		*	reg;
 }
 
 static syntax *
-ps_search(synp, top, ptr, find)
-syntax		*	synp;
-char_u		*	top;
-char_u		*	ptr;
-int				find;
+ps_search(syntax *synp, char_u *top, char_u *ptr, int find)
 {
 	int					rc;
 
@@ -1363,11 +1318,7 @@ int				find;
 }
 
 static syntax *
-pe_search(synp, top, ptr, at_bol)
-syntax		*	synp;
-char_u		*	top;
-char_u		*	ptr;
-int				at_bol;
+pe_search(syntax *synp, char_u *top, char_u *ptr, int at_bol)
 {
 	if (synp->type == TYPE_PAIR)
 	{
@@ -1382,12 +1333,7 @@ int				at_bol;
 }
 
 static int
-syn_tagchk(synp, buf, lnum, top, ptr)
-syntax		*	synp;
-BUF			*	buf; 			/* buffer we are a window into */
-linenr_t		lnum;
-char_u		**	top;
-char_u		**	ptr;
+syn_tagchk(syntax *synp, BUF *buf, linenr_t lnum, char_u **top, char_u **ptr)
 {
 	int				rc;
 	linenr_t		pos  = *ptr - *top;
@@ -1454,12 +1400,7 @@ breakbreak:
 }
 
 static syntax *
-fwd_search(buf, lnum, top, ptr, ftop)
-BUF			*	buf; 			/* buffer we are a window into */
-linenr_t		lnum;
-char_u		**	top;
-char_u		**	ptr;
-linenr_t	*	ftop;
+fwd_search(BUF *buf, linenr_t lnum, char_u **top, char_u **ptr, linenr_t *ftop)
 {
 	syntax			*	synp;
 	syntax			*	topsynp = NULL;
@@ -1517,11 +1458,7 @@ linenr_t	*	ftop;
 }
 
 static syntax *
-bak_search(buf, top, ptr, ftop)
-BUF			*	buf; 			/* buffer we are a window into */
-char_u		*	top;
-char_u		*	ptr;
-linenr_t	*	ftop;
+bak_search(BUF *buf, char_u *top, char_u *ptr, linenr_t *ftop)
 {
 	syntax			*	synp;
 	syntax			*	topsynp	= NULL;
@@ -1549,9 +1486,7 @@ linenr_t	*	ftop;
 }
 
 static void
-syn_endcalc(buf, last)
-BUF			*	buf; 			/* buffer we are a window into */
-int				last;
+syn_endcalc(BUF *buf, int last)
 {
 	if (ISkanjiPointer(buf->b_syn_match, buf->b_syn_matchend - 1) == 2)
 		buf->b_syn_matchend -= 1;
@@ -1600,9 +1535,7 @@ int				last;
 }
 
 void
-syn_inschar(top, col)
-char_u		*	top;
-colnr_t			col;
+syn_inschar(char_u *top, colnr_t col)
 {
 	syntag			*	tagp;
 	int					rc;
@@ -1674,9 +1607,7 @@ colnr_t			col;
 }
 
 void
-syn_delchar(top, col)
-char_u		*	top;
-colnr_t			col;
+syn_delchar(char_u *top, colnr_t col)
 {
 	syntag			*	tagp;
 	int					rc;
@@ -1725,8 +1656,7 @@ colnr_t			col;
 }
 
 	int
-is_crsyntax(wp)
-WIN			*	wp;
+is_crsyntax(WIN *wp)
 {
 	syntax			*	w;
 
@@ -1743,11 +1673,7 @@ WIN			*	wp;
 }
 
 	int
-is_syntax(wp, lnum, top, ptr)
-WIN			*	wp;
-linenr_t		lnum;
-char_u		**	top;
-char_u		**	ptr;
+is_syntax(WIN *wp, linenr_t lnum, char_u **top, char_u **ptr)
 {
 	BUF				*	buf		= wp->w_buffer;
 	syntax			*	synp	= (syntax *)buf->b_syn_curp;

@@ -30,7 +30,7 @@ static char_u *(si_tab[]) = {(char_u *)"if", (char_u *)"else", (char_u *)"while"
  * count the size of the indent in the current line
  */
 	int
-get_indent()
+get_indent(void)
 {
 	register char_u *ptr;
 	register int count = 0;
@@ -52,9 +52,7 @@ get_indent()
  * leaves the cursor on the first non-blank in the line
  */
 	void
-set_indent(size, delete)
-	register int size;
-	int delete;
+set_indent(register int size, int delete)
 {
 	int				oldstate = State;
 	register int	c;
@@ -97,10 +95,7 @@ set_indent(size, delete)
  */
 
 	int
-Opencmd(dir, redraw, delspaces)
-	int 		dir;
-	int			redraw;
-	int			delspaces;
+Opencmd(int dir, int redraw, int delspaces)
 {
 	char_u   *ptr, *p_extra;
 	FPOS	old_cursor; 			/* old cursor position */
@@ -298,16 +293,13 @@ theend:
  * plines(p) - return the number of physical screen lines taken by line 'p'
  */
 	int
-plines(p)
-	linenr_t	p;
+plines(linenr_t p)
 {
 	return plines_win(curwin, p);
 }
 
 	int
-plines_win(wp, p)
-	WIN			*wp;
-	linenr_t	p;
+plines_win(WIN *wp, linenr_t p)
 {
 	register long		col = 0;
 	register char_u		*s;
@@ -388,16 +380,13 @@ plines_win(wp, p)
  * Count the physical lines (rows) for the lines "first" to "last" inclusive.
  */
 	int
-plines_m(first, last)
-	linenr_t		first, last;
+plines_m(linenr_t first, linenr_t last)
 {
 	return plines_m_win(curwin, first, last);
 }
 
 	int
-plines_m_win(wp, first, last)
-	WIN				*wp;
-	linenr_t		first, last;
+plines_m_win(WIN *wp, linenr_t first, linenr_t last)
 {
 	int count = 0;
 
@@ -416,12 +405,9 @@ plines_m_win(wp, first, last)
  */
 	void
 #ifdef KANJI
-inschar(bytes, nbytes)
-	char_u		*bytes;
-	int			nbytes;
+inschar(char_u *bytes, int nbytes)
 #else
-inschar(c)
-	int			c;
+inschar(int c)
 #endif
 {
 	register char_u  *p;
@@ -562,8 +548,7 @@ inschar(c)
  * insert or replace a single plain byte
  */
 	void
-inschar1(c)
-	int		c;
+inschar1(int c)
 {
 #ifdef KANJI
 	char_u	b = (char_u)c;
@@ -578,8 +563,7 @@ inschar1(c)
  * insert a string at the cursor position
  */
 	void
-insstr(s)
-	register char_u  *s;
+insstr(register char_u *s)
 {
 	register char_u		*old, *new;
 	register int		newlen = STRLEN(s);
@@ -606,8 +590,7 @@ insstr(s)
  * return FAIL for failure, OK otherwise
  */
 	int
-delchar(fixpos)
-	int			fixpos; 	/* if TRUE fix the cursor position when done */
+delchar(int fixpos)
 {
 	char_u		*old, *new;
 	int			oldlen;
@@ -662,10 +645,7 @@ delchar(fixpos)
 }
 
 	void
-dellines(nlines, dowindow, undo)
-	long 			nlines;			/* number of lines to delete */
-	int 			dowindow;		/* if true, update the window */
-	int				undo;			/* if true, prepare for undo */
+dellines(long nlines, int dowindow, int undo)
 {
 	int 			num_plines = 0;
 
@@ -719,14 +699,13 @@ dellines(nlines, dowindow, undo)
 }
 
 	int
-gchar(pos)
-	FPOS *pos;
+gchar(FPOS *pos)
 {
 	return (int)(*(ml_get_pos(pos)));
 }
 
 	int
-gchar_cursor()
+gchar_cursor(void)
 {
 	return (int)(*(ml_get_cursor()));
 }
@@ -736,8 +715,7 @@ gchar_cursor()
  * It is directly written into the block.
  */
 	void
-pchar_cursor(c)
-	int c;
+pchar_cursor(int c)
 {
 	*(ml_get_buf(curbuf, curwin->w_cursor.lnum, TRUE) + curwin->w_cursor.col) = c;
 }
@@ -746,7 +724,7 @@ pchar_cursor(c)
  * return TRUE if the cursor is before or on the first non-blank in the line
  */
 	int
-inindent()
+inindent(void)
 {
 	register char_u *ptr;
 	register int col;
@@ -765,8 +743,7 @@ inindent()
  * note: you must give a pointer to a char_u pointer!
  */
 	void
-skipspace(pp)
-	char_u **pp;
+skipspace(char_u **pp)
 {
     register char_u *p;
 
@@ -793,8 +770,7 @@ skipspace(pp)
  * note: you must give a pointer to a char_u pointer!
  */
 	void
-skiptospace(pp)
-	char_u **pp;
+skiptospace(char_u **pp)
 {
 	register char_u *p;
 
@@ -818,8 +794,7 @@ skiptospace(pp)
  * note: you must give a pointer to a char_u pointer!
  */
 	void
-skiptodigit(pp)
-	char_u **pp;
+skiptodigit(char_u **pp)
 {
 	register char_u *p;
 
@@ -835,8 +810,7 @@ skiptodigit(pp)
  */
 
 	long
-getdigits(pp)
-	char_u **pp;
+getdigits(char_u **pp)
 {
     register char_u *p;
 	long retval;
@@ -850,8 +824,7 @@ getdigits(pp)
 }
 
 	char_u *
-plural(n)
-	long n;
+plural(long n)
 {
 	static char_u buf[2] = "s";
 
@@ -864,7 +837,7 @@ plural(n)
  * set_Changed is called when something in the current buffer is changed
  */
 	void
-set_Changed()
+set_Changed(void)
 {
 	if (!curbuf->b_changed)
 	{
@@ -878,8 +851,7 @@ set_Changed()
  * unset_Changed is called when the changed flag must be reset for buffer 'buf'
  */
 	void
-unset_Changed(buf)
-	BUF		*buf;
+unset_Changed(BUF *buf)
 {
 	if (buf->b_changed)
 	{
@@ -893,8 +865,7 @@ unset_Changed(buf)
  *				 need to be updated
  */
 	static void
-check_status(buf)
-	BUF		*buf;
+check_status(BUF *buf)
 {
 	WIN		*wp;
 	int		i;
@@ -917,7 +888,7 @@ check_status(buf)
  * will be TRUE.
  */
 	void
-change_warning()
+change_warning(void)
 {
 	if (curbuf->b_did_warn == FALSE && curbuf->b_changed == 0 && curbuf->b_p_ro)
 	{
@@ -935,8 +906,7 @@ change_warning()
  * return the 'y' or 'n'
  */
 	int
-ask_yesno(str)
-	char_u *str;
+ask_yesno(char_u *str)
 {
 	int r = ' ';
 
@@ -955,8 +925,7 @@ ask_yesno(str)
 }
 
 	void
-msgmore(n)
-	long n;
+msgmore(long n)
 {
 	long pn;
 
@@ -977,7 +946,7 @@ msgmore(n)
  * give a warning for an error
  */
 	void
-beep()
+beep(void)
 {
 #ifndef notdef
 	if (!Exec_reg)
@@ -1007,10 +976,7 @@ beep()
  * If anything fails no expansion is done and dst equals src.
  */
 	void
-expand_env(src, dst, dstlen)
-	char_u	*src;			/* input string e.g. "$HOME/vim.hlp" */
-	char_u	*dst;			/* where to put the result */
-	int		dstlen;			/* maximum length of the result */
+expand_env(char_u *src, char_u *dst, int dstlen)
 {
 	char_u	*tail;
 	int		c;
@@ -1062,10 +1028,7 @@ expand_env(src, dst, dstlen)
  * If anything fails dst equals src.
  */
 	void
-home_replace(src, dst, dstlen)
-	char_u	*src;			/* input file name */
-	char_u	*dst;			/* where to put the result */
-	int		dstlen;			/* maximum length of the result */
+home_replace(char_u *src, char_u *dst, int dstlen)
 {
 	char_u	*home;
 	size_t	len;
@@ -1118,8 +1081,7 @@ home_replace(src, dst, dstlen)
  * For the first name environment variables are expanded
  */
 	int
-fullpathcmp(s1, s2)
-	char_u *s1, *s2;
+fullpathcmp(char_u *s1, char_u *s2)
 {
 #ifdef UNIX
 	struct stat st1, st2;
@@ -1157,8 +1119,7 @@ fullpathcmp(s1, s2)
  * get the tail of a path: the file name.
  */
 	char_u *
-gettail(fname)
-	char_u *fname;
+gettail(char_u *fname)
 {
 	register char_u *p1, *p2;
 
@@ -1178,8 +1139,7 @@ gettail(fname)
  * return TRUE if 'c' is a path separator.
  */
 	int
-ispathsep(c)
-	int c;
+ispathsep(int c)
 {
 #ifdef UNIX
 	return (c == PATHSEP);		/* UNIX has ':' inside file names */
@@ -1202,8 +1162,7 @@ ispathsep(c)
  * every use of it. Systems that have no mkstemp() keep what they had.
  */
 	int
-vim_mktemp(name)
-	char_u *name;
+vim_mktemp(char_u *name)
 {
 #ifdef HAVE_MKSTEMP
 	int		fd;

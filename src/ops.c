@@ -60,10 +60,7 @@ static colnr_t	textcol;
  * doshift - handle a shift operation
  */
 	void
-doshift(op, curs_top, amount)
-	int 			op;
-	int				curs_top;
-	int				amount;
+doshift(int op, int curs_top, int amount)
 {
 	register long	i;
 	int				first_char;
@@ -108,10 +105,7 @@ doshift(op, curs_top, amount)
  * leaves cursor on first blank in the line
  */
 	void
-shift_line(left, round, amount)
-	int left;
-	int	round;
-	int	amount;
+shift_line(int left, int round, int amount)
 {
 	register int count;
 	register int i, j;
@@ -154,9 +148,7 @@ shift_line(left, round, amount)
  * Note: There is no check for 0 (default register), caller should do this
  */
  	int
-is_yank_buffer(c, write)
-	int		c;
-	int		write;		/* if TRUE check for writable buffers */
+is_yank_buffer(int c, int write)
 {
 	if (isalnum(c) || (!write && strchr(".%:", c) != NULL) || c == '"')
 		return TRUE;
@@ -174,8 +166,7 @@ is_yank_buffer(c, write)
  * If yankbuffer is 0 and reading, use previous buffer
  */
 	static void
-get_yank_buffer(writing)
-	int		writing;
+get_yank_buffer(int writing)
 {
 	register int i;
 
@@ -217,8 +208,7 @@ get_yank_buffer(writing)
  * return FAIL for failure, OK otherwise
  */
 	int
-dorecord(c)
-	int c;
+dorecord(int c)
 {
 	char_u		*p;
 	static int	bufname;
@@ -257,9 +247,7 @@ dorecord(c)
  * return FAIL for failure, OK otherwise
  */
 	static int
-stuff_yank(bufname, p)
-	int bufname;
-	char_u *p;
+stuff_yank(int bufname, char_u *p)
 {
 	char_u *lp;
 	char_u **pp;
@@ -305,8 +293,7 @@ stuff_yank(bufname, p)
  * return FAIL for failure, OK otherwise
  */
 	int
-doexecbuf(c)
-	int c;
+doexecbuf(int c)
 {
 	static int lastc = NUL;
 	long i;
@@ -361,8 +348,7 @@ doexecbuf(c)
  * return FAIL for failure, OK otherwise
  */
 	int
-insertbuf(c)
-	int c;
+insertbuf(int c)
 {
 	long i;
 
@@ -422,7 +408,7 @@ insertbuf(c)
  * dodelete - handle a delete operation
  */
 	void
-dodelete()
+dodelete(void)
 {
 	register int	n;
 	linenr_t		lnum;
@@ -616,7 +602,7 @@ dodelete()
  * dotilde - handle the (non-standard vi) tilde operator
  */
 	void
-dotilde()
+dotilde(void)
 {
 	FPOS pos;
 
@@ -676,8 +662,7 @@ dotilde()
  * else swap case of character at 'pos'
  */
 	void
-swapchar(pos)
-	FPOS	*pos;
+swapchar(FPOS *pos)
 {
 	int		c;
 
@@ -723,7 +708,7 @@ swapchar(pos)
  * dochange - handle a change operation
  */
 	void
-dochange()
+dochange(void)
 {
 	register colnr_t 		   l;
 
@@ -742,7 +727,7 @@ dochange()
  * set all the yank buffers to empty (called from main())
  */
 	void
-init_yank()
+init_yank(void)
 {
 		register int i;
 
@@ -758,8 +743,7 @@ init_yank()
  * Called for normal freeing and in case of error.
  */
 	static void
-free_yank(n)
-	long n;
+free_yank(long n)
 {
 	if (y_current->y_array != NULL)
 	{
@@ -779,7 +763,7 @@ free_yank(n)
 }
 
 	static void
-free_yank_all()
+free_yank_all(void)
 {
 		free_yank(y_current->y_size);
 }
@@ -793,8 +777,7 @@ free_yank_all()
  * return FAIL for failure, OK otherwise
  */
 	int
-doyank(deleting)
-	int deleting;
+doyank(int deleting)
 {
 	long 				i;				/* index in y_array[] */
 	struct yankbuf		*curr;			/* copy of y_current */
@@ -975,10 +958,7 @@ success:
  * put contents of register into the text
  */
 	void
-doput(dir, count, fix_indent)
-	int		dir;				/* BACKWARD for 'P', FORWARD for 'p' */
-	long	count;
-	int		fix_indent;			/* make indent look nice */
+doput(int dir, long count, int fix_indent)
 {
 	char_u		*ptr;
 	char_u		*new, *old;
@@ -1368,7 +1348,7 @@ error:
  * display the contents of the yank buffers
  */
 	void
-dodis()
+dodis(void)
 {
 	register int			i, n;
 	register long			j;
@@ -1477,9 +1457,7 @@ dodis()
  * truncate at end of screen line
  */
 	void
-dis_msg(p, skip_esc)
-	char_u		*p;
-	int			skip_esc;			/* if TRUE, ignore trailing ESC */
+dis_msg(char_u *p, int skip_esc)
 {
 	int		n;
 
@@ -1505,10 +1483,7 @@ dis_msg(p, skip_esc)
  * join 'count' lines (minimal 2), including u_save()
  */
 	void
-dodojoin(count, insert_space, redraw)
-	long	count;
-	int		insert_space;
-	int		redraw;
+dodojoin(long count, int insert_space, int redraw)
 {
 	if (!u_save((linenr_t)(curwin->w_cursor.lnum - 1), (linenr_t)(curwin->w_cursor.lnum + count)))
 		return;
@@ -1530,9 +1505,7 @@ dodojoin(count, insert_space, redraw)
  * return FAIL for failure, OK ohterwise
  */
 	int
-dojoin(insert_space, redraw)
-	int			insert_space;
-	int			redraw;
+dojoin(int insert_space, int redraw)
 {
 	char_u		*curr;
 	char_u		*next;
@@ -1651,7 +1624,7 @@ dojoin(insert_space, redraw)
  * implementation of the format operator 'Q'
  */
 	void
-doformat()
+doformat(void)
 {
 		/* prepare undo and join the lines */
 	dodojoin((long)nlines, TRUE, FALSE);
@@ -1674,10 +1647,7 @@ doformat()
 }
 
 	void
-startinsert(initstr, startln, count)
-	int			initstr;
-	int 		startln;		/* if set, insert at start of line */
-	long 		count;
+startinsert(int initstr, int startln, long count)
 {
 	Insstart = curwin->w_cursor;
 	if (startln)
@@ -1733,9 +1703,7 @@ startinsert(initstr, startln, count)
  *   that are to be yanked.
  */
 	static void
-block_prep(lnum, delete)
-	linenr_t	lnum;
-	int			delete;
+block_prep(linenr_t lnum, int delete)
 {
 	int			vcol;
 	int			incr = 0;
@@ -1849,9 +1817,7 @@ block_prep(lnum, delete)
  * return FAIL for failure, OK otherwise
  */
 	int
-doaddsub(command, Prenum1)
-	int			command;
-	linenr_t	Prenum1;
+doaddsub(int command, linenr_t Prenum1)
 {
 	register int 	col;
 	char_u			buf[NUMBUFLEN];
@@ -1972,8 +1938,7 @@ doaddsub(command, Prenum1)
  *	other argument is copy yank buffer.
  */
 int
-yank_to_clipboard(ptr)
-char_u			*ptr;
+yank_to_clipboard(char_u *ptr)
 {
 	int			i;
 	int			size	= 0;
@@ -2004,7 +1969,7 @@ char_u			*ptr;
 }
 
 static void
-get_clip()
+get_clip(void)
 {
 	char_u			*	lpClipData;
 	char_u			*	p;
@@ -2072,7 +2037,7 @@ get_clip()
 }
 
 static void
-put_clip()
+put_clip(void)
 {
 	char_u			*	text;
 	long				i;

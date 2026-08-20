@@ -28,8 +28,7 @@ static int lines_left = -1;			/* lines left for listing */
  * return TRUE if wait_return not called
  */
 	int
-msg(s)
-	char_u		   *s;
+msg(char_u *s)
 {
 	if (!screen_valid())			/* terminal not initialized */
 	{
@@ -54,9 +53,7 @@ msg(s)
 #ifndef PROTO		/* automatic prototype generation does not understand this */
 /* VARARGS */
 	void
-smsg(s, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10)
-	char_u		*s;
-	long		a1, a2, a3, a4, a5, a6, a7, a8, a9, a10;
+smsg(char_u *s, long a1, long a2, long a3, long a4, long a5, long a6, long a7, long a8, long a9, long a10)
 {
 	sprintf((char *)IObuff, (char *)s, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
 	msg(IObuff);
@@ -71,8 +68,7 @@ smsg(s, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10)
  * return TRUE if wait_return not called
  */
 	int
-emsg(s)
-	char_u		   *s;
+emsg(char_u *s)
 {
 	if (p_eb)
 		beep();					/* also includes flush_buffers() */
@@ -108,8 +104,7 @@ emsg(s)
 }
 
 	int
-emsg2(s, a1)
-	char_u *s, *a1;
+emsg2(char_u *s, char_u *a1)
 {
 	sprintf((char *)IObuff, (char *)s, (char *)a1);
 	return emsg(IObuff);
@@ -122,8 +117,7 @@ emsg2(s, a1)
  * if 'redraw' is -1, don't redraw at all
  */
 	void
-wait_return(redraw)
-	int		redraw;
+wait_return(int redraw)
 {
 	int				c;
 	int				oldState;
@@ -211,7 +205,7 @@ wait_return(redraw)
  * Prepare for outputting characters in the command line.
  */
 	void
-msg_start()
+msg_start(void)
 {
 	did_msg = TRUE;					/* for doglob() */
 	keep_msg = NULL;				/* don't display old message now */
@@ -225,8 +219,7 @@ msg_start()
  * Use negative value if row or col does not have to be changed.
  */
 	void
-msg_pos(row, col)
-	int		row, col;
+msg_pos(int row, int col)
 {
 	if (row >= 0)
 		msg_row = row;
@@ -236,8 +229,7 @@ msg_pos(row, col)
 }
 
 	void
-msg_outchar(c)
-	int		c;
+msg_outchar(int c)
 {
 	char_u		buf[2];
 
@@ -247,8 +239,7 @@ msg_outchar(c)
 }
 
 	void
-msg_outnum(n)
-	long		n;
+msg_outnum(long n)
 {
 	char_u		buf[20];
 
@@ -262,9 +253,7 @@ msg_outnum(n)
  * return the number of characters it takes on the screen
  */
 	int
-msg_outtrans(str, len)
-	register char_u *str;
-	register int   len;
+msg_outtrans(register char_u *str, register int len)
 {
 	int retval = 0;
 
@@ -302,8 +291,7 @@ msg_outtrans(str, len)
  * print line for :p command
  */
 	void
-msg_prt_line(s)
-	char_u		   *s;
+msg_prt_line(char_u *s)
 {
 	register int	si = 0;
 	register int	c;
@@ -379,8 +367,7 @@ msg_prt_line(s)
  * Update msg_row and msg_col for the next message.
  */
 	void
-msg_outstr(s)
-	char_u		*s;
+msg_outstr(char_u *s)
 {
 	int		c;
 
@@ -485,7 +472,7 @@ msg_outstr(s)
  * Also check msg_row and msg_col, if they are too big it may cause a crash.
  */
 	static int
-msg_check_screen()
+msg_check_screen(void)
 {
 	if (!screen_valid())
 		return FALSE;
@@ -503,7 +490,7 @@ msg_check_screen()
  * for msg_check().
  */
 	void
-msg_ceol()
+msg_ceol(void)
 {
 	if (!msg_check_screen())
 		return;
@@ -517,7 +504,7 @@ msg_ceol()
  * return TRUE if wait_return not called.
  */
 	int
-msg_end()
+msg_end(void)
 {
 	lines_left = -1;
 	/*
@@ -541,7 +528,7 @@ msg_end()
  * run into the shown command or ruler, we have to redraw the window later.
  */
 	int
-msg_check()
+msg_check(void)
 {
 	lines_left = -1;
 	if (msg_scrolled || (msg_row == Rows - 1 && msg_col >= sc_col))

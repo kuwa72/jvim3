@@ -48,9 +48,7 @@ static BUF		*	encode_buf;
 #endif
 
 	void
-filemess(name, s)
-	char_u		*name;
-	char_u		*s;
+filemess(char_u *name, char_u *s)
 {
 #if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
 	if (DoMatome)
@@ -86,13 +84,7 @@ filemess(name, s)
  * return FAIL for failure, OK otherwise
  */
 	int
-readfile(fname, sfname, from, newfile, skip_lnum, nlines)
-	char_u		   *fname;
-	char_u		   *sfname;
-	linenr_t		from;
-	int				newfile;
-	linenr_t		skip_lnum;
-	linenr_t		nlines;
+readfile(char_u *fname, char_u *sfname, linenr_t from, int newfile, linenr_t skip_lnum, linenr_t nlines)
 {
 #ifdef UNIX
 	int 				fd = -1;
@@ -676,14 +668,7 @@ readfile(fname, sfname, from, newfile, skip_lnum, nlines)
  * return FAIL for failure, OK otherwise
  */
 	int
-buf_write(buf, fname, sfname, start, end, append, forceit, reset_changed)
-	BUF				*buf;
-	char_u			*fname;
-	char_u			*sfname;
-	linenr_t		start, end;
-	int				append;
-	int				forceit;
-	int				reset_changed;
+buf_write(BUF *buf, char_u *fname, char_u *sfname, linenr_t start, linenr_t end, int append, int forceit, int reset_changed)
 {
 	int 				fd;
 	char_u			   *backup = NULL;
@@ -1582,10 +1567,7 @@ nofail:
  * return FAIL for failure, OK otherwise
  */
 	static int
-write_buf(fd, buf, len)
-	int		fd;
-	char_u	*buf;
-	int		len;
+write_buf(int fd, char_u *buf, int len)
 {
 	int		wlen;
 
@@ -1638,7 +1620,7 @@ write_buf(fd, buf, len)
 static void 	chk_mline __ARGS((linenr_t));
 
 	static void
-do_mlines()
+do_mlines(void)
 {
 	linenr_t		lnum;
 	int 			nmlines;
@@ -1668,8 +1650,7 @@ do_mlines()
  * chk_mline() - check a single line for a mode string
  */
 	static void
-chk_mline(lnum)
-	linenr_t lnum;
+chk_mline(linenr_t lnum)
 {
 	register char_u	*s;
 	register char_u	*e;
@@ -1727,16 +1708,13 @@ chk_mline(lnum)
  */
 
 	char_u *
-modname(fname, ext)
-	char_u *fname, *ext;
+modname(char_u *fname, char_u *ext)
 {
 	return buf_modname(curbuf, fname, ext);
 }
 
 	char_u *
-buf_modname(buf, fname, ext)
-	BUF		*buf;
-	char_u *fname, *ext;
+buf_modname(BUF *buf, char_u *fname, char_u *ext)
 {
 	char_u			*retval;
 	register char_u   *s;
@@ -1859,11 +1837,7 @@ buf_modname(buf, fname, ext)
  * of any long lines.
  */
 	int
-vim_fgets(buf, size, fp, lnum)
-	char_u *buf;
-	int size;
-	FILE *fp;
-	int *lnum;
+vim_fgets(char_u *buf, int size, FILE *fp, int *lnum)
 {
 	char *eof;
 
@@ -1888,15 +1862,7 @@ vim_fgets(buf, size, fp, lnum)
 
 #ifdef USE_OPT
 	static char_u *
-opt_delet(buf, readwrite, expand, entab, delete, replace, gaiji, ts)
-	char_u *buf;
-	int		readwrite;
-	int		expand;
-	int		entab;
-	int		delete;
-	int		replace;
-	int		gaiji;
-	int		ts;
+opt_delet(char_u *buf, int readwrite, int expand, int entab, int delete, int replace, int gaiji, int ts)
 {
 	char_u		*	cp	= buf;
 	int				add	= 0;

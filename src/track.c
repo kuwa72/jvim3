@@ -75,8 +75,7 @@ static int		track_code	__ARGS((int, int, int));
 static void		track_ins	__ARGS((int));
 
 	static void
-tracktab_sw(tname)
-	char *tname;
+tracktab_sw(char *tname)
 {
 	struct tracktab *tp;
 
@@ -98,8 +97,7 @@ tracktab_sw(tname)
 }
 
 	char *
-tracktab_next(tset)
-	char *tset;
+tracktab_next(char *tset)
 {
 	struct tracktab *tp;
 
@@ -117,8 +115,7 @@ tracktab_next(tset)
 }
 
 	char *
-tracktab_prev(tset)
-	char *tset;
+tracktab_prev(char *tset)
 {
 	struct tracktab *tp;
 
@@ -139,9 +136,7 @@ tracktab_prev(tset)
 #define TV_BPAD		-2
 
 	static char *
-track_vcol(line, cvcol, mode)
-	char_u *line;
-	int cvcol, mode;
+track_vcol(char_u *line, int cvcol, int mode)
 {
 	int  vcol, pcol;
 	char_u *ctop = line;
@@ -182,9 +177,7 @@ track_vcol(line, cvcol, mode)
 }
 
 	static int
-track_has_arc(ptr, tc, dir)
-	char *ptr, *tc[];
-	int  dir;
+track_has_arc(char *ptr, char *tc[], int dir)
 {
 	int i;
 
@@ -195,8 +188,7 @@ track_has_arc(ptr, tc, dir)
 }
 
 	static int
-track_code(move, vstart, vend)
-	int move, vstart, vend;
+track_code(int move, int vstart, int vend)
 {
 	int		len;
 	long	i;
@@ -265,8 +257,7 @@ track_code(move, vstart, vend)
 }
 
 	static void 
-track_ins(dir)
-	int			dir;
+track_ins(int dir)
 {
 	FPOS		cpos;
 	char_u	*	line;
@@ -431,31 +422,31 @@ track_ins(dir)
 }
 
 	void
-track_right()
+track_right(void)
 {
 	track_ins(TK_R);
 }
 
 	void
-track_left()
+track_left(void)
 {
 	track_ins(TK_L);
 }
 
 	void
-track_up()
+track_up(void)
 {
 	track_ins(TK_U);
 }
 
 	void
-track_down()
+track_down(void)
 {
 	track_ins(TK_D);
 }
 
 	void
-showtrack()
+showtrack(void)
 {
 	if (!Track)
 		return;

@@ -363,7 +363,7 @@ static int	cell_width __ARGS((int, int));
  *
  */
 static BOOL
-syntax_on()
+syntax_on(void)
 {
 	WIN		*	wp;
 
@@ -1049,7 +1049,7 @@ error:
 }
 
 static VOID
-SaveConfig()
+SaveConfig(void)
 {
 	HKEY		hKey;
 	DWORD		size;
@@ -1391,7 +1391,7 @@ ResetScreen(HWND hWnd)
  * Append the staged character to the key buffer.
  */
 	static void
-push_wchar()
+push_wchar(void)
 {
 	int		i;
 
@@ -1403,9 +1403,7 @@ push_wchar()
  * Which cell does the character covering 'col' start at?
  */
 	static int
-cell_head(row, col)
-	int		row;
-	int		col;
+cell_head(int row, int col)
 {
 	if (col > 0 && CELLCONT(row, col))
 		return col - 1;
@@ -1417,9 +1415,7 @@ cell_head(row, col)
  * byte rather than a multi-byte character.
  */
 	static int
-cell_class(row, col)
-	int		row;
-	int		col;
+cell_class(int row, int col)
 {
 	int		cp = CELLCP(row, cell_head(row, col));
 
@@ -1430,9 +1426,7 @@ cell_class(row, col)
  * Cells covered by the character starting at 'col'.
  */
 	static int
-cell_width(row, col)
-	int		row;
-	int		col;
+cell_width(int row, int col)
 {
 	return CELLWIDE(row, col) ? 2 : 1;
 }
@@ -2084,8 +2078,7 @@ no_draw:
 }
 
 static BOOL
-keybuf_chk(area)
-int			area;
+keybuf_chk(int area)
 {
 	char		*	p;
 
@@ -2295,9 +2288,7 @@ draw_cmode(HWND hWnd, int cs_row, int cs_col, int ce_row, int ce_col)
  * the ANSI code page survive. Returns TRUE on success.
  */
 	int
-clip_put(text, len)
-	char_u	*text;
-	int		len;
+clip_put(char_u *text, int len)
 {
 	HANDLE	hClipData;
 	WCHAR  *lpClipData;
@@ -2336,7 +2327,7 @@ clip_put(text, len)
  * offer the ANSI form.
  */
 	char_u *
-clip_get()
+clip_get(void)
 {
 	HANDLE	hClipData;
 	void   *lpClipData;
@@ -2385,8 +2376,7 @@ clip_get()
  * Returns NULL when nothing is marked; the caller frees the result.
  */
 	static char_u *
-cmode_text(lenp)
-	int		*lenp;
+cmode_text(int *lenp)
 {
 	char_u	*top;
 	char_u	*ptr;
@@ -4241,9 +4231,9 @@ get_clipdata:
 				char_u					code = *curbuf->b_p_jc;
 #endif
 				DWORD					hThreadID;
-				extern WINAPI			PrinterThread(PVOID filename);
+				extern DWORD WINAPI		PrinterThread(PVOID filename);
 
-				fn = curbuf->b_sfilename != NULL ? gettail(curbuf->b_sfilename) : "Untitled";
+				fn = curbuf->b_sfilename != NULL ? gettail(curbuf->b_sfilename) : (char_u *)"Untitled";
 				for (i = 0; i < 1000; i++)
 				{
 					filename[0] = '\0';
@@ -5428,7 +5418,7 @@ share:
  *
  */
 void
-wincmd_paste()
+wincmd_paste(void)
 {
 	if (GuiWin)
 		SendMessage(hVimWnd, WM_COMMAND, IDM_PASTE, 0);
@@ -5439,7 +5429,7 @@ wincmd_paste()
  *
  */
 void
-wincmd_cut()
+wincmd_cut(void)
 {
 	if (GuiWin)
 		SendMessage(hVimWnd, WM_COMMAND, IDM_YANK, 0);
@@ -5449,7 +5439,7 @@ wincmd_cut()
  *
  */
 void
-wincmd_delete()
+wincmd_delete(void)
 {
 	if (GuiWin)
 		SendMessage(hVimWnd, WM_COMMAND, IDM_DELETE, 0);
@@ -5459,7 +5449,7 @@ wincmd_delete()
  *
  */
 void
-wincmd_active()
+wincmd_active(void)
 {
 	if (GuiWin)
 	{
@@ -5472,7 +5462,7 @@ wincmd_active()
  *
  */
 void
-wincmd_redraw()
+wincmd_redraw(void)
 {
 	if (GuiWin)
 		bSyncPaint = TRUE;
@@ -5482,9 +5472,7 @@ wincmd_redraw()
  *
  */
 int
-wincmd_grep(linep, filep)
-char	*	linep;
-char	*	filep;
+wincmd_grep(char *linep, char *filep)
 {
 	char					name[MAXPATHL];
 	char					command[1024];
@@ -5516,7 +5504,7 @@ char	*	filep;
  *
  */
 int
-wincmd_togle()
+wincmd_togle(void)
 {
 	HWND			hWnd;
 	char			buf[128];
@@ -5542,7 +5530,7 @@ wincmd_togle()
  *
  */
 int
-wincmd_rotate()
+wincmd_rotate(void)
 {
 	HWND			hWnd;
 	char			buf[128];
@@ -5568,7 +5556,7 @@ wincmd_rotate()
  *
  */
 	void
-vim_delay()
+vim_delay(void)
 {
 	delay(500);
 }
@@ -5577,15 +5565,14 @@ vim_delay()
  * this version of remove is not scared by a readonly (backup) file
  */
 	int
-vim_remove(name)
-	char_u         *name;
+vim_remove(char_u *name)
 {
 	setperm(name, S_IREAD|S_IWRITE);    /* default permissions */
 	return unlink(name);
 }
 
 	static void
-ScrollBar()
+ScrollBar(void)
 {
 	SCROLLINFO		si;
 	static UINT		sbar = (-1);
@@ -5665,9 +5652,7 @@ ScrollBar()
  * mch_write(): write the output buffer to the screen
  */
 	void
-mch_write(s, len)
-	char_u         *s;
-	int             len;
+mch_write(char_u *s, int len)
 {
 	char_u         *p;
 	WORD			row,
@@ -6089,8 +6074,7 @@ mch_write(s, len)
  */
 
 	static int
-WaitForChar(msec)
-	int             msec;
+WaitForChar(int msec)
 {
 	if (GuiWin)
 	{
@@ -6201,7 +6185,7 @@ retry:
 static int pending = 0;
 
 	static int
-tgetch()
+tgetch(void)
 {
 	int             valid = 0;
 	DWORD           count;
@@ -6250,7 +6234,7 @@ tgetch()
 
 
 	static int
-kbhit()
+kbhit(void)
 {
 	if (GuiWin)
 		return(c_next < c_end);
@@ -6297,7 +6281,7 @@ kbhit()
 }
 
 	static int
-getch()
+getch(void)
 {
 	int				c;
 
@@ -6317,10 +6301,7 @@ getch()
  * If time == -1 wait forever for characters.
  */
 	int
-GetChars(buf, maxlen, time)
-	char_u         *buf;
-	int             maxlen;
-	int             time;
+GetChars(char_u *buf, int maxlen, int time)
 {
 	int             len = 0;
 	int             c;
@@ -6591,7 +6572,7 @@ GetChars(buf, maxlen, time)
  * We have no job control, fake it by starting a new shell.
  */
 	void
-mch_suspend()
+mch_suspend(void)
 {
 	outstr("new shell started\n");
 	call_shell(NULL, 0, TRUE);
@@ -6606,11 +6587,7 @@ char            OrigTitle[256];
  *
  */
 int APIENTRY
-WinMain(hInstance, hPrevInstance, lpCmdLine, nCmdShow)
-HINSTANCE hInstance;
-HINSTANCE hPrevInstance;
-LPSTR lpCmdLine;
-int nCmdShow;
+WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	char			**	argv;
 	int					argc	= 1;
@@ -6704,10 +6681,7 @@ end:
  *
  */
 	void
-mch_windinit(argc, argv, command)
-	int				argc;
-	char		  **argv;
-	char		   *command;
+mch_windinit(int argc, char **argv, char *command)
 {
 	CONSOLE_SCREEN_BUFFER_INFO	csbi;
 
@@ -7192,9 +7166,7 @@ mch_windinit(argc, argv, command)
 }
 
 	void
-check_win(argc, argv)
-	int             argc;
-	char          **argv;
+check_win(int argc, char **argv)
 {
 	if (!isatty(0) || !isatty(1))
 	{
@@ -7216,8 +7188,7 @@ check_win(argc, argv)
  *                 msdos filesystem is far to primitive for that. do nothing.
  */
 	void
-fname_case(name)
-	char_u         *name;
+fname_case(char_u *name)
 {
 #ifndef notdef
 	WIN32_FIND_DATA fb;
@@ -7225,7 +7196,7 @@ fname_case(name)
 	char_u		*	tname;
 	char_u			buf[MAXPATHL];
 
-	if (GetFullPathName(name, sizeof(buf), buf, &tname) == 0)
+	if (GetFullPathName(name, sizeof(buf), buf, (LPSTR *)&tname) == 0)
 		return;
 	if ((hFind = FindFirstFile(buf, &fb)) != INVALID_HANDLE_VALUE)
 	{
@@ -7245,8 +7216,7 @@ fname_case(name)
  * ANSI code page shows up as itself rather than as question marks.
  */
 	static WCHAR *
-utf8_to_wide(text)
-	char_u	*	text;
+utf8_to_wide(char_u *text)
 {
 	WCHAR	*	w;
 	int			wlen;
@@ -7268,8 +7238,7 @@ utf8_to_wide(text)
  * dialogs, menus, fonts and the registry all speak Unicode natively anyway.
  */
 	static char_u *
-wide_to_utf8(w)
-	WCHAR	*	w;
+wide_to_utf8(WCHAR *w)
 {
 	char_u	*	text;
 	int			len;
@@ -7290,8 +7259,7 @@ wide_to_utf8(w)
  * assume UTF-8.
  */
 	static void
-face_normalise(lf)
-	LOGFONT	*	lf;
+face_normalise(LOGFONT *lf)
 {
 	WCHAR		w[LF_FACESIZE * 2];
 	char_u	*	text;
@@ -7312,10 +7280,7 @@ face_normalise(lf)
 }
 
 	static void
-SetDlgItemTextU8(hWnd, id, text)
-	HWND		hWnd;
-	int			id;
-	char_u	*	text;
+SetDlgItemTextU8(HWND hWnd, int id, char_u *text)
 {
 	WCHAR	*	w;
 
@@ -7329,11 +7294,7 @@ SetDlgItemTextU8(hWnd, id, text)
 }
 
 	static int
-GetDlgItemTextU8(hWnd, id, buf, len)
-	HWND		hWnd;
-	int			id;
-	char_u	*	buf;
-	int			len;
+GetDlgItemTextU8(HWND hWnd, int id, char_u *buf, int len)
 {
 	WCHAR		w[MAXPATHL];
 	char_u	*	text;
@@ -7353,11 +7314,7 @@ GetDlgItemTextU8(hWnd, id, buf, len)
 }
 
 	static BOOL
-AppendMenuU8(hMenu, flags, id, text)
-	HMENU		hMenu;
-	UINT		flags;
-	UINT_PTR	id;
-	char_u	*	text;
+AppendMenuU8(HMENU hMenu, UINT flags, UINT_PTR id, char_u *text)
 {
 	WCHAR	*	w;
 	BOOL		r;
@@ -7370,12 +7327,7 @@ AppendMenuU8(hMenu, flags, id, text)
 }
 
 	static BOOL
-ModifyMenuU8(hMenu, pos, flags, id, text)
-	HMENU		hMenu;
-	UINT		pos;
-	UINT		flags;
-	UINT_PTR	id;
-	char_u	*	text;
+ModifyMenuU8(HMENU hMenu, UINT pos, UINT flags, UINT_PTR id, char_u *text)
 {
 	WCHAR	*	w;
 	BOOL		r;
@@ -7392,8 +7344,7 @@ ModifyMenuU8(hMenu, pos, flags, id, text)
  * the stored form does not change. GDI gets the wide struct.
  */
 	static HFONT
-CreateFontIndirectU8(lf)
-	LOGFONT	*	lf;
+CreateFontIndirectU8(LOGFONT *lf)
 {
 	LOGFONTW	w;
 	WCHAR	*	face;
@@ -7426,9 +7377,7 @@ CreateFontIndirectU8(lf)
  * comes back as itself whatever the ANSI code page is.
  */
 	static BOOL
-ChooseFontU8(hWnd, lf)
-	HWND		hWnd;
-	LOGFONT	*	lf;
+ChooseFontU8(HWND hWnd, LOGFONT *lf)
 {
 	CHOOSEFONTW	cf;
 	LOGFONTW	w;
@@ -7500,11 +7449,7 @@ ChooseFontU8(hWnd, lf)
  * Unicode, so this is the only form that cannot lose anything.
  */
 	static BOOL
-RegGetStringU8(hKey, name, buf, len)
-	HKEY		hKey;
-	char	*	name;
-	char_u	*	buf;
-	int			len;
+RegGetStringU8(HKEY hKey, char *name, char_u *buf, int len)
 {
 	WCHAR		w[MAXPATHL];
 	WCHAR	*	wname;
@@ -7528,10 +7473,7 @@ RegGetStringU8(hKey, name, buf, len)
 }
 
 	static LONG
-RegSetStringU8(hKey, name, text)
-	HKEY		hKey;
-	char	*	name;
-	char_u	*	text;
+RegSetStringU8(HKEY hKey, char *name, char_u *text)
 {
 	WCHAR	*	wname;
 	WCHAR	*	w;
@@ -7549,9 +7491,7 @@ RegSetStringU8(hKey, name, text)
 }
 
 	static void
-SetWindowTextU8(hWnd, text)
-	HWND		hWnd;
-	char_u	*	text;
+SetWindowTextU8(HWND hWnd, char_u *text)
 {
 	WCHAR	*	w;
 
@@ -7566,8 +7506,7 @@ SetWindowTextU8(hWnd, text)
 }
 
 	static void
-SetConsoleTitleU8(text)
-	char_u	*	text;
+SetConsoleTitleU8(char_u *text)
 {
 	WCHAR	*	w;
 
@@ -7586,9 +7525,7 @@ SetConsoleTitleU8(text)
  * Can the icon also be set?
  */
 	void
-mch_settitle(title, icon)
-	char_u         *title;
-	char_u         *icon;
+mch_settitle(char_u *title, char_u *icon)
 {
 	if (title != NULL && !p_icon)
 	{
@@ -7628,8 +7565,7 @@ mch_settitle(title, icon)
  *    3  Restore title and icon (which we don't have)
  */
 	void
-mch_restore_title(which)
-	int which;
+mch_restore_title(int which)
 {
 	mch_settitle((which & 1) ? OrigTitle : NULL, NULL);
 }
@@ -7639,9 +7575,7 @@ mch_restore_title(which)
  * Return non-zero for success.
  */
 	int
-vim_dirname(buf, len)
-	char_u         *buf;
-	int             len;
+vim_dirname(char_u *buf, int len)
 {
 #ifdef __BORLANDC__
 	return (getcwd(buf, len) != NULL ? OK : FAIL);
@@ -7654,10 +7588,7 @@ vim_dirname(buf, len)
  * get absolute filename into buffer 'buf' of length 'len' bytes
  */
 	int
-FullName(fname, buf, len)
-	char_u         *fname,
-				   *buf;
-	int             len;
+FullName(char_u *fname, char_u *buf, int len)
 {
 	if (fname == NULL)          /* always fail */
 		return FAIL;
@@ -7673,8 +7604,7 @@ FullName(fname, buf, len)
  * return TRUE is fname is an absolute path name
  */
 	int
-isFullName(fname)
-	char_u        *fname;
+isFullName(char_u *fname)
 {
 #ifdef notdef
 	return (STRCHR(fname, ':') != NULL);
@@ -7693,8 +7623,7 @@ isFullName(fname)
  * else FA_attributes defined in dos.h
  */
 	long
-getperm(name)
-	char_u         *name;
+getperm(char_u *name)
 {
 	struct stat statb;
 	long        r;
@@ -7713,9 +7642,7 @@ getperm(name)
  * set file permission for 'name' to 'perm'
  */
 	int
-setperm(name, perm)
-	char_u         *name;
-	long            perm;
+setperm(char_u *name, long perm)
 {
 	return chmod(name, perm);
 }
@@ -7740,8 +7667,7 @@ int             isdir(name)
  * Careful: mch_windexit() may be called before mch_windinit()!
  */
 	void
-mch_windexit(r)
-	int             r;
+mch_windexit(int r)
 {
 	if (GuiWin && NameBuff != NULL)
 	{
@@ -7895,8 +7821,7 @@ handler_routine(DWORD dwCtrlType)
  */
 
 	void
-mch_settmode(raw)
-	int             raw;
+mch_settmode(int raw)
 {
 	DWORD           cmodein;
 	DWORD           cmodeout;
@@ -7954,7 +7879,7 @@ mch_settmode(raw)
 }
 
 	int
-mch_get_winsize()
+mch_get_winsize(void)
 {
 	if (GuiWin)
 	{
@@ -8135,7 +8060,7 @@ resizeConBufAndWindow(HANDLE hConsole, long xSize, long ySize)
 }
 
 	void
-mch_set_winsize()
+mch_set_winsize(void)
 {
 	if (GuiWin)
 	{
@@ -8164,10 +8089,7 @@ mch_set_winsize()
 }
 
 	int
-call_shell(cmd, filter, cooked)
-	char_u         *cmd;
-	int             filter;     /* if != 0: called by dofilter() */
-	int             cooked;
+call_shell(char_u *cmd, int filter, int cooked)
 {
 	int             x = 0;
 	char            newcmd[MAXPATHL];
@@ -8393,10 +8315,7 @@ call_shell(cmd, filter, cooked)
 #define FL_CHUNK 32
 
 	static void
-addfile(fl, f, isdir)
-	FileList       *fl;
-	char           *f;
-	int             isdir;
+addfile(FileList *fl, char *f, int isdir)
 {
 	char           *p;
 
@@ -8431,9 +8350,7 @@ addfile(fl, f, isdir)
 
 #ifdef __BORLANDC__
 	static int
-pstrcmp(a, b)
-	char_u        **a,
-				  **b;
+pstrcmp(char_u **a, char_u **b)
 {
 	return (strcmp(*a, *b));
 }
@@ -8453,8 +8370,7 @@ pstrcmp(const void *s1, const void *s2)
 #endif
 
 	int
-has_wildcard(s)
-	char_u         *s;
+has_wildcard(char_u *s)
 {
 	int			pos = 1;
 
@@ -8487,8 +8403,7 @@ has_wildcard(s)
 }
 
 static int
-has_wildcards(s)
-	char_u         *s;
+has_wildcards(char_u *s)
 {
 	int			pos = 1;
 	if (s)
@@ -8508,9 +8423,7 @@ has_wildcards(s)
 }
 
 	static void
-strlowcpy(d, s)
-	char           *d,
-				   *s;
+strlowcpy(char *d, char *s)
 {
 	while (*s)
 		*d++ = tolower(*s++);
@@ -8518,12 +8431,7 @@ strlowcpy(d, s)
 }
 
 	static int
-expandpath(fl, path, fonly, donly, notf)
-	FileList       *fl;
-	char           *path;
-	int             fonly,
-					donly,
-					notf;
+expandpath(FileList *fl, char *path, int fonly, int donly, int notf)
 {
 	char            buf[MAX_PATH];
 	char           *p,
@@ -8609,13 +8517,7 @@ expandpath(fl, path, fonly, donly, notf)
  */
 
 	int
-ExpandWildCards(num_pat, pat, num_file, file, files_only, list_notfound)
-	int             num_pat;
-	char_u        **pat;
-	int            *num_file;
-	char_u       ***file;
-	int             files_only,
-					list_notfound;
+ExpandWildCards(int num_pat, char_u **pat, int *num_file, char_u ***file, int files_only, int list_notfound)
 {
 	int             i,
 					r = 0;
@@ -8698,9 +8600,7 @@ ExpandWildCards(num_pat, pat, num_file, file, files_only, list_notfound)
 }
 
 	void
-FreeWild(num, file)
-	int             num;
-	char_u        **file;
+FreeWild(int num, char_u **file)
 {
 	if (file == NULL || num <= 0)
 		return;
@@ -8734,7 +8634,7 @@ int             vim_chdir(path)
 }
 
 	static void
-clrscr()
+clrscr(void)
 {
 	DWORD           count;
 
@@ -8747,7 +8647,7 @@ clrscr()
 }
 
 	static void
-clreol()
+clreol(void)
 {
 	DWORD           count;
 	FillConsoleOutputCharacter(hConOut, ' ',
@@ -8824,7 +8724,7 @@ delline(int count)
 
 
 	static void
-scroll()
+scroll(void)
 {
 	SMALL_RECT      source;
 	COORD           dest;
@@ -8846,9 +8746,7 @@ scroll()
 }
 
 	static void
-gotoxy(x, y)
-	register int    x,
-					y;
+gotoxy(register int x, register int y)
 {
 	ntcoord.X = x - 1;
 	ntcoord.Y = y - 1;
@@ -8856,7 +8754,7 @@ gotoxy(x, y)
 }
 
 	static void
-normvideo()
+normvideo(void)
 {
 	WORD            attr = DefaultAttribute;
 
@@ -8879,7 +8777,7 @@ putch(char c)
 }
 
 	static void
-delay(x)
+delay(int x)
 {
 	if (GuiWin)
 	{
@@ -8906,8 +8804,10 @@ delay(x)
 
 #ifdef __BORLANDC__
 	void
+#else
+	int
 #endif
-sleep(x)
+sleep(int x)
 {
 #ifdef notdef
 	Sleep(x * 1000);
@@ -8920,7 +8820,7 @@ sleep(x)
 }
 
 	static void
-vbell()
+vbell(void)
 {
 	COORD           origin = {0, 0};
 	WORD            flash = ~DefaultAttribute & 0xff;
@@ -8968,7 +8868,7 @@ set_window(void)
  * check for an "interrupt signal": CTRL-break or CTRL-C
  */
 	void
-breakcheck()
+breakcheck(void)
 {
 	if (GuiWin)
 	{
@@ -8995,8 +8895,7 @@ breakcheck()
 }
 
 	long
-mch_avail_mem(spec)
-	int spec;
+mch_avail_mem(int spec)
 {
 	return 0x7fffffff;        /* virual memory eh */
 }
@@ -9005,7 +8904,7 @@ mch_avail_mem(spec)
  * return non-zero if a character is available
  */
 	int
-mch_char_avail()
+mch_char_avail(void)
 {
 	return WaitForChar(0);
 }
@@ -9014,8 +8913,7 @@ mch_char_avail()
  * set screen mode, always fails.
  */
 	int
-mch_screenmode(arg)
-	char_u     *arg;
+mch_screenmode(char_u *arg)
 {
 	EMSG("Screen mode setting not supported");
 	return FAIL;
@@ -9023,7 +8921,7 @@ mch_screenmode(arg)
 
 #ifndef notdef
 	static int
-isctlkey()
+isctlkey(void)
 {
 	switch (ir.Event.KeyEvent.wVirtualKeyCode) {
 	case VK_DELETE:
@@ -9052,9 +8950,7 @@ isctlkey()
 #endif
 
 	void
-chk_ctlkey(c, k)
-	int		*c;
-	int		*k;
+chk_ctlkey(int *c, int *k)
 {
 	int		w;
 
@@ -9113,8 +9009,7 @@ chk_ctlkey(c, k)
 }
 
 static int
-iswave(fname)
-char		*	fname;
+iswave(char *fname)
 {
 	int				fd;
 	char			magic[15];
@@ -9199,7 +9094,7 @@ PrinterDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	return(FALSE);
 }
 
-WINAPI
+DWORD WINAPI
 PrinterThread(PVOID filename)
 {
 	STARTUPINFO				si;
@@ -9362,7 +9257,7 @@ BitmapDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			{
 				ofn.Flags			= OFN_HIDEREADONLY | OFN_EXPLORER | OFN_NOCHANGEDIR | OFN_PATHMUSTEXIST | OFN_ENABLEHOOK | OFN_ENABLETEMPLATE;
 				ofn.lpTemplateName	= "BITMAPDLGEXP";
-				ofn.lpfnHook		= BitmapHookProc;
+				ofn.lpfnHook		= (LPOFNHOOKPROC)BitmapHookProc;
 			}
 			if (GetOpenFileName(&ofn))
 			{
@@ -9509,7 +9404,7 @@ WaveDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				ofn.Flags			= OFN_HIDEREADONLY | OFN_EXPLORER | OFN_NOCHANGEDIR | OFN_PATHMUSTEXIST | OFN_ENABLEHOOK | OFN_ENABLETEMPLATE;
 				ofn.lpTemplateName	= "WAVEDLGEXP";
 			}
-			ofn.lpfnHook		= WaveHookProc;
+			ofn.lpfnHook		= (LPOFNHOOKPROC)WaveHookProc;
 			if (GetOpenFileName(&ofn))
 			{
 				SendDlgItemMessage(hWnd, 1000, EM_SETSEL, 0, (LPARAM)-2);
@@ -9582,7 +9477,7 @@ CommandDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
  *	login dialog
  *----------------------------------------------------------------------------*/
 static void
-UnloadCommand()
+UnloadCommand(void)
 {
 	++no_wait_return;
 	if (GuiConfig != 0)
@@ -9594,7 +9489,7 @@ UnloadCommand()
  *	login dialog
  *----------------------------------------------------------------------------*/
 static void
-LoadCommand()
+LoadCommand(void)
 {
 	char			*	p;
 	char				load[CMDBUFFSIZE];
@@ -9625,7 +9520,7 @@ LoadCommand()
  *	login dialog
  *----------------------------------------------------------------------------*/
 void
-InitCommand()
+InitCommand(void)
 {
 	if (config_comb && GuiConfig)
 		LoadCommand();
@@ -9714,7 +9609,7 @@ DisplayPathName(char *fname, unsigned int max)
  *
  *----------------------------------------------------------------------------*/
 static int
-HistoryCount()
+HistoryCount(void)
 {
 	HKEY				hKey;
 	char				name[CMDBUFFSIZE];
@@ -10218,7 +10113,7 @@ LineSpaceDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 }
 
 static void
-SetLayerd()
+SetLayerd(void)
 {
 	static int			vtrans		= 0;
 

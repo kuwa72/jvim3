@@ -118,10 +118,7 @@ static void mf_do_open __ARGS((MEMFILE *, char_u *, int));
  * return value: identifier for this memory block file.
  */
 	MEMFILE *
-mf_open(fname, new, fail_nofile)
-	char_u	*fname;
-	int		new;
-	int		fail_nofile;
+mf_open(char_u *fname, int new, int fail_nofile)
 {
 	MEMFILE			*mfp;
 	int				i;
@@ -205,9 +202,7 @@ mf_open(fname, new, fail_nofile)
  * return value: FAIL if file could not be opened, OK otherwise
  */
 	int
-mf_open_file(mfp, fname)
-	MEMFILE		*mfp;
-	char_u		*fname;
+mf_open_file(MEMFILE *mfp, char_u *fname)
 {
 	mf_do_open(mfp, fname, TRUE);				/* try to open the file */
 
@@ -222,9 +217,7 @@ mf_open_file(mfp, fname)
  * close a memory file and delete the associated file if 'delete' is TRUE
  */
 	void
-mf_close(mfp, delete)
-	MEMFILE	*mfp;
-	int		delete;
+mf_close(MEMFILE *mfp, int delete)
 {
 	BHDR		*hp, *nextp;
 	NR_TRANS	*tp, *tpnext;
@@ -268,10 +261,7 @@ mf_close(mfp, delete)
  *   negative: TRUE if negative block number desired (data block)
  */
 	BHDR *
-mf_new(mfp, negative, page_count)
-	MEMFILE		*mfp;
-	int			negative;
-	int			page_count;
+mf_new(MEMFILE *mfp, int negative, int page_count)
 {
 	BHDR	*hp;			/* new BHDR */
 	BHDR	*freep;			/* first block in free list */
@@ -354,10 +344,7 @@ mf_new(mfp, negative, page_count)
  * Note: The caller should first check a negative nr with mf_trans_del()
  */
 	BHDR *
-mf_get(mfp, nr, page_count)
-	MEMFILE		*mfp;
-	blocknr_t	nr;
-	int			page_count;
+mf_get(MEMFILE *mfp, blocknr_t nr, int page_count)
 {
 	BHDR	*hp;
 												/* doesn't exist */
@@ -415,11 +402,7 @@ mf_get(mfp, nr, page_count)
  *  no return value, function cannot fail
  */
 	void
-mf_put(mfp, hp, dirty, infile)
-	MEMFILE	*mfp;
-	BHDR	*hp;
-	int		dirty;
-	int		infile;
+mf_put(MEMFILE *mfp, BHDR *hp, int dirty, int infile)
 {
 	int		flags;
 
@@ -440,9 +423,7 @@ mf_put(mfp, hp, dirty, infile)
  * block *hp is no longer in used, may put it in the free list of memfile *mfp
  */
 	void
-mf_free(mfp, hp)
-	MEMFILE	*mfp;
-	BHDR	*hp;
+mf_free(MEMFILE *mfp, BHDR *hp)
 {
 	free(hp->bh_data);			/* free the memory */
 	mf_rem_hash(mfp, hp);		/* get *hp out of the hash list */
@@ -466,10 +447,7 @@ mf_free(mfp, hp)
  * Return FAIL for failure, OK otherwise
  */
 	int
-mf_sync(mfp, all, check_char)
-	MEMFILE	*mfp;
-	int		all;
-	int		check_char;
+mf_sync(MEMFILE *mfp, int all, int check_char)
 {
 	int		status;
 	BHDR	*hp;
@@ -560,9 +538,7 @@ mf_sync(mfp, all, check_char)
  * insert block *hp in front of hashlist of memfile *mfp
  */
 	static void
-mf_ins_hash(mfp, hp)
-	MEMFILE	*mfp;
-	BHDR	*hp;
+mf_ins_hash(MEMFILE *mfp, BHDR *hp)
 {
 	BHDR	*hhp;
 	int		hash;
@@ -580,9 +556,7 @@ mf_ins_hash(mfp, hp)
  * remove block *hp from hashlist of memfile list *mfp
  */
 	static void
-mf_rem_hash(mfp, hp)
-	MEMFILE	*mfp;
-	BHDR	*hp;
+mf_rem_hash(MEMFILE *mfp, BHDR *hp)
 {
 	if (hp->bh_hash_prev == NULL)
 		mfp->mf_hash[MEMHASH(hp->bh_bnum)] = hp->bh_hash_next;
@@ -597,9 +571,7 @@ mf_rem_hash(mfp, hp)
  * look in hash lists of memfile *mfp for block header with number 'nr'
  */
 	static BHDR *
-mf_find_hash(mfp, nr)
-	MEMFILE		*mfp;
-	blocknr_t	nr;
+mf_find_hash(MEMFILE *mfp, blocknr_t nr)
 {
 	BHDR		*hp;
 
@@ -613,9 +585,7 @@ mf_find_hash(mfp, nr)
  * insert block *hp in front of used list of memfile *mfp
  */
 	static void
-mf_ins_used(mfp, hp)
-	MEMFILE	*mfp;
-	BHDR	*hp;
+mf_ins_used(MEMFILE *mfp, BHDR *hp)
 {
 	hp->bh_next = mfp->mf_used_first;
 	mfp->mf_used_first = hp;
@@ -632,9 +602,7 @@ mf_ins_used(mfp, hp)
  * remove block *hp from used list of memfile *mfp
  */
 	static void
-mf_rem_used(mfp, hp)
-	MEMFILE	*mfp;
-	BHDR	*hp;
+mf_rem_used(MEMFILE *mfp, BHDR *hp)
 {
 	if (hp->bh_next == NULL)		/* last block in used list */
 		mfp->mf_used_last = hp->bh_prev;
@@ -656,9 +624,7 @@ mf_rem_used(mfp, hp)
  * it can be re-used. Make sure the page_count is right.
  */
 	static BHDR *
-mf_release(mfp, page_count)
-	MEMFILE		*mfp;
-	int			page_count;
+mf_release(MEMFILE *mfp, int page_count)
 {
 	BHDR		*hp;
 
@@ -715,7 +681,7 @@ mf_release(mfp, page_count)
  * return TRUE if any memory was released
  */
 	int
-mf_release_all()
+mf_release_all(void)
 {
 	BUF			*buf;
 	MEMFILE		*mfp;
@@ -748,9 +714,7 @@ mf_release_all()
  * Allocate a block header and a block of memory for it
  */
 	static BHDR *
-mf_alloc_bhdr(mfp, page_count)
-	MEMFILE		*mfp;
-	int			page_count;
+mf_alloc_bhdr(MEMFILE *mfp, int page_count)
 {
 	BHDR	*hp;
 
@@ -770,8 +734,7 @@ mf_alloc_bhdr(mfp, page_count)
  * Free a block header and the block of memory for it
  */
 	static void
-mf_free_bhdr(hp)
-	BHDR		*hp;
+mf_free_bhdr(BHDR *hp)
 {
 	free(hp->bh_data);
 	free(hp);
@@ -781,9 +744,7 @@ mf_free_bhdr(hp)
  * insert entry *hp in the free list
  */
 	static void
-mf_ins_free(mfp, hp)
-	MEMFILE	*mfp;
-	BHDR	*hp;
+mf_ins_free(MEMFILE *mfp, BHDR *hp)
 {
 	hp->bh_next = mfp->mf_free_first;
 	mfp->mf_free_first = hp;
@@ -794,8 +755,7 @@ mf_ins_free(mfp, hp)
  * Note: caller must check that mfp->mf_free_first is not NULL!
  */
 	static BHDR *
-mf_rem_free(mfp)
-	MEMFILE	*mfp;
+mf_rem_free(MEMFILE *mfp)
 {
 	BHDR	*hp;
 
@@ -810,9 +770,7 @@ mf_rem_free(mfp)
  * Return FAIL for failure, OK otherwise
  */
 	static int
-mf_read(mfp, hp)
-	MEMFILE		*mfp;
-	BHDR		*hp;
+mf_read(MEMFILE *mfp, BHDR *hp)
 {
 	long_u		offset;
 	unsigned	page_size;
@@ -847,9 +805,7 @@ mf_read(mfp, hp)
  * Return FAIL for failure, OK otherwise
  */
 	static int
-mf_write(mfp, hp)
-	MEMFILE		*mfp;
-	BHDR		*hp;
+mf_write(MEMFILE *mfp, BHDR *hp)
 {
 	long_u		offset;		/* offset in the file */
 	blocknr_t	nr;			/* block nr which is being written */
@@ -923,9 +879,7 @@ mf_write(mfp, hp)
  * Return FAIL for failure, OK otherwise
  */
 	static int
-mf_trans_add(mfp, hp)
-	MEMFILE	*mfp;
-	BHDR	*hp;
+mf_trans_add(MEMFILE *mfp, BHDR *hp)
 {
 	BHDR		*freep;
 	blocknr_t	new;
@@ -993,9 +947,7 @@ mf_trans_add(mfp, hp)
  * Return the positive new number when found, the old number when not found
  */
  	blocknr_t
-mf_trans_del(mfp, old)
-	MEMFILE		*mfp;
-	blocknr_t	old;
+mf_trans_del(MEMFILE *mfp, blocknr_t old)
 {
 	int			hash;
 	NR_TRANS	*np;
@@ -1026,8 +978,7 @@ mf_trans_del(mfp, old)
  * Used before doing a :cd
  */
 	void
-mf_fullname(mfp)
-	MEMFILE		*mfp;
+mf_fullname(MEMFILE *mfp)
 {
 	if (mfp != NULL && mfp->mf_fname != NULL && mfp->mf_xfname != NULL)
 	{
@@ -1041,8 +992,7 @@ mf_fullname(mfp)
  * return TRUE if there are any translations pending for 'mfp'
  */
 	int
-mf_need_trans(mfp)
-	MEMFILE		*mfp;
+mf_need_trans(MEMFILE *mfp)
 {
 	return (mfp->mf_fname != NULL && mfp->mf_neg_count > 0);
 }
@@ -1052,7 +1002,7 @@ mf_need_trans(mfp)
  * print statistics for a memfile (for debugging)
  */
 	void
-mf_statistics()
+mf_statistics(void)
 {
 	MEMFILE		*mfp;
 	BHDR		*hp;
@@ -1090,10 +1040,7 @@ mf_statistics()
  * open a file for a memfile
  */
 	static void
-mf_do_open(mfp, fname, new)
-	MEMFILE		*mfp;
-	char_u		*fname;
-	int			new;
+mf_do_open(MEMFILE *mfp, char_u *fname, int new)
 {
 	mfp->mf_fname = fname;
 	/*

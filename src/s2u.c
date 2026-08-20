@@ -11288,10 +11288,7 @@ static unsigned short s2utbl[] = {
 };
 
 void
-sjis2ucs(sjis, len, utf)
-unsigned char* sjis;
-int len;
-unsigned char* utf;
+sjis2ucs(unsigned char *sjis, int len, unsigned char *utf)
 {
   unsigned char c;
   unsigned short ucs;

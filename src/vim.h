@@ -178,6 +178,15 @@ typedef unsigned long	long_u;
 # ifndef __ARGS
 #  define __ARGS(x) x
 # endif /* __ARGS */
+/*
+ * __PARMS was left out here, so on every compiler that is neither Aztec, SAS,
+ * DICE, Turbo C nor Borland it fell through to the "()" fallback below -- which
+ * means every prototype in proto/*.pro was reduced to an empty parameter list
+ * and none of them have been checked against their definitions for 30 years.
+ */
+# ifndef __PARMS
+#  define __PARMS(x) x
+# endif /* __PARMS */
 # if defined(_SEQUENT_)
 #  include "ptx_stdlib.h"
 # endif

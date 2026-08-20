@@ -394,7 +394,7 @@ static char_u *get_varp __ARGS((struct param *));
  * Initialize the shell parameter and scroll size.
  */
 	void
-set_init()
+set_init(void)
 {
 	char_u	*p;
 	int		i;
@@ -588,8 +588,7 @@ set_init()
  * return FAIL if errors are detected, OK otherwise
  */
 	int
-doset(arg)
-	char_u		*arg;	/* parameter string (may be written to!) */
+doset(char_u *arg)
 {
 	register int i;
 	char_u		*s;
@@ -1262,9 +1261,7 @@ skip:
  * expand environment variable at the start of some string options
  */
 	static void
-param_expand(i, dofree)
-	int		i;
-	int		dofree;
+param_expand(int i, int dofree)
 {
 	char_u *p;
 
@@ -1305,8 +1302,7 @@ param_expand(i, dofree)
  * return -1 if not found
  */
 	static int
-findparam(arg)
-	char_u *arg;
+findparam(char_u *arg)
 {
 	int		i;
 	char	*s;
@@ -1335,8 +1331,7 @@ findparam(arg)
  * mark option 'arg' changed
  */
 	void
-paramchanged(arg)
-	char_u *arg;
+paramchanged(char_u *arg)
 {
 	int i;
 
@@ -1351,8 +1346,7 @@ paramchanged(arg)
  * if 'all' == 2: show all terminal parameters
  */
 	static void
-showparams(all)
-	int			all;
+showparams(int all)
 {
 	struct param   *p;
 	int				col;
@@ -1435,8 +1429,7 @@ showparams(all)
  * must not be called with a hidden option!
  */
 	static void
-showonep(p)
-		struct param *p;
+showonep(struct param *p)
 {
 	char_u			buf[64];
 	char_u			*varp;
@@ -1490,8 +1483,7 @@ showonep(p)
  * Return FAIL on error, OK otherwise.
  */
 	int
-makeset(fd)
-	FILE *fd;
+makeset(FILE *fd)
 {
 	struct param	*p;
 	char_u			*s;
@@ -1534,7 +1526,7 @@ makeset(fd)
  * Reset the "changed" flag, so the new value will not be freed.
  */
 	void
-clear_termparam()
+clear_termparam(void)
 {
 	struct param   *p;
 
@@ -1552,8 +1544,7 @@ clear_termparam()
  * return TRUE if 'p' starts with 't_'
  */
 	static int
-istermparam(p)
-	struct param *p;
+istermparam(struct param *p)
 {
 	return (p->fullname[0] == 't' && p->fullname[1] == '_');
 }
@@ -1569,7 +1560,7 @@ istermparam(p)
 #define COL_RULER 17		/* columns needed by ruler */
 
 	void
-comp_col()
+comp_col(void)
 {
 	int last_status = (p_ls == 2 || (p_ls == 1 && firstwin != lastwin));
 
@@ -1597,8 +1588,7 @@ comp_col()
 }
 
 	static char_u *
-get_varp(p)
-	struct param	*p;
+get_varp(struct param *p)
 {
 	if (!(p->flags & P_IND))
 		return p->var;
@@ -1660,9 +1650,7 @@ get_varp(p)
  * Used when creating a new window.
  */
 	void
-win_copy_options(wp_from, wp_to)
-	WIN		*wp_from;
-	WIN		*wp_to;
+win_copy_options(WIN *wp_from, WIN *wp_to)
 {
 	wp_to->w_p_list = wp_from->w_p_list;
 	wp_to->w_p_nu = wp_from->w_p_nu;
@@ -1681,9 +1669,7 @@ win_copy_options(wp_from, wp_to)
  * Used when creating a new buffer.
  */
 	void
-buf_copy_options(bp_from, bp_to)
-	BUF		*bp_from;
-	BUF		*bp_to;
+buf_copy_options(BUF *bp_from, BUF *bp_to)
 {
 	bp_to->b_p_ai = bp_from->b_p_ai;
 	bp_to->b_p_si = bp_from->b_p_si;
@@ -1724,8 +1710,7 @@ buf_copy_options(bp_from, bp_to)
 
 #ifdef WEBB_COMPLETE
 	void
-set_context_in_set_cmd(arg)
-	char_u *arg;
+set_context_in_set_cmd(char_u *arg)
 {
 	int 		nextchar;
 	int 		flags;
@@ -1812,10 +1797,7 @@ set_context_in_set_cmd(arg)
 }
 
 	int
-ExpandSettings(prog, num_file, file)
-	regexp *prog;
-	int *num_file;
-	char_u ***file;
+ExpandSettings(regexp *prog, int *num_file, char_u ***file)
 {
 	int num_normal = 0;		/* Number of matching non-term-code settings */
 	int num_term = 0;		/* Number of matching terminal code settings */

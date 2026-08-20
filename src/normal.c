@@ -80,7 +80,7 @@ extern int		restart_edit;	/* this is in edit.c */
  */
 
 	void
-normal()
+normal(void)
 {
 	register int	c;
 	long 			n;
@@ -2522,16 +2522,9 @@ normal_end:
 
 	static void
 #ifdef KANJI
-prep_redo(num, cmd, c, nchar, kchar)
+prep_redo(long num, int cmd, int c, int nchar, int kchar)
 #else
-prep_redo(num, cmd, c, nchar)
-#endif
-	long 	num;
-	int		cmd;
-	int		c;
-	int		nchar;
-#ifdef KANJI
-	int		kchar;
+prep_redo(long num, int cmd, int c, int nchar)
 #endif
 {
 	ResetRedobuff();
@@ -2563,7 +2556,7 @@ prep_redo(num, cmd, c, nchar)
  * return TRUE if operator was active
  */
 	static int
-checkclearop()
+checkclearop(void)
 {
 	if (operator == NOP)
 		return (FALSE);
@@ -2577,7 +2570,7 @@ checkclearop()
  * return TRUE if operator was active
  */
 	static int
-checkclearopq()
+checkclearopq(void)
 {
 	if (operator == NOP && VIsual.lnum == 0)
 		return (FALSE);
@@ -2586,7 +2579,7 @@ checkclearopq()
 }
 
 	static void
-clearopbeep()
+clearopbeep(void)
 {
 	CLEAROP;
 	beep();
@@ -2597,8 +2590,7 @@ clearopbeep()
  * the last command character, plus 'c1' and 'c2'
  */
 	static void
-premsg(c1, c2)
-	int c1, c2;
+premsg(int c1, int c2)
 {
 	char_u	buf[40];
 	char_u	*p;

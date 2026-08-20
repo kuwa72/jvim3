@@ -188,7 +188,7 @@ static void ml_lineadd __ARGS((BUF *, int));
  * return FAIL for failure, OK otherwise
  */
 	int
-ml_open()
+ml_open(void)
 {
 	MEMFILE		*mfp = NULL;
 	char_u		*fname = NULL;
@@ -311,7 +311,7 @@ error:
  * Used when 'updatecount' changes from zero to non-zero.
  */
 	void
-ml_open_files()
+ml_open_files(void)
 {
 	BUF			*buf;
 	MEMFILE		*mfp;
@@ -363,8 +363,7 @@ ml_open_files()
  * close memline for buffer 'buf' and delete the swap file
  */
 	void
-ml_close(buf)
-	BUF		*buf;
+ml_close(BUF *buf)
 {
 	if (buf->b_ml.ml_mfp == NULL)				/* not open */
 		return;
@@ -386,7 +385,7 @@ ml_close(buf)
  * Used when exiting.
  */
 	void
-ml_close_all()
+ml_close_all(void)
 {
 	BUF		*buf;
 
@@ -399,8 +398,7 @@ ml_close_all()
  * Used when the file has been written.
  */
 	void
-ml_timestamp(buf)
-	BUF			*buf;
+ml_timestamp(BUF *buf)
 {
 	MEMFILE		*mfp = NULL;
 	BHDR		*hp = NULL;
@@ -433,7 +431,7 @@ error:
  * try to recover curbuf from the .swp file
  */
 	void
-ml_recover()
+ml_recover(void)
 {
 	BUF			*buf = NULL;
 	MEMFILE		*mfp = NULL;
@@ -797,8 +795,7 @@ theend:
  * If 'check_file' is TRUE, check if original file exists and was not changed.
  */
 	void
-ml_sync_all(check_file)
-	int		check_file;
+ml_sync_all(int check_file)
 {
 	BUF				*buf;
 	struct stat		st;
@@ -846,9 +843,7 @@ ml_sync_all(check_file)
  * when message is TRUE the success of preserving is reported
  */
 	void
-ml_preserve(buf, message)
-	BUF		*buf;
-	int		message;
+ml_preserve(BUF *buf, int message)
 {
 	BHDR		*hp;
 	linenr_t	lnum;
@@ -914,8 +909,7 @@ theend:
  * having to check for error everywhere).
  */
 	char_u	*
-ml_get(lnum)
-	linenr_t	lnum;
+ml_get(linenr_t lnum)
 {
 	return ml_get_buf(curbuf, lnum, FALSE);
 }
@@ -924,14 +918,13 @@ ml_get(lnum)
  * ml_get_pos: get pointer to position 'pos'
  */
     char_u *
-ml_get_pos(pos)
-    FPOS	*pos;
+ml_get_pos(FPOS *pos)
 {
 	return (ml_get_buf(curbuf, pos->lnum, FALSE) + pos->col);
 }
 
 	char_u *
-ml_get_cursor()
+ml_get_cursor(void)
 {
 	return (ml_get_buf(curbuf, curwin->w_cursor.lnum, FALSE) + curwin->w_cursor.col);
 }
@@ -942,10 +935,7 @@ ml_get_cursor()
  *  will_change: if TRUE mark the buffer dirty (chars in the line will be changed)
  */
 	char_u	*
-ml_get_buf(buf, lnum, will_change)
-	BUF			*buf;
-	linenr_t	lnum;
-	int			will_change;		/* line will be changed */
+ml_get_buf(BUF *buf, linenr_t lnum, int will_change)
 {
 	BHDR	*hp;
 	DATA_BL	*dp;
@@ -999,7 +989,7 @@ errorret:
  * is in allocated memory.
  */
 	int
-ml_line_alloced()
+ml_line_alloced(void)
 {
 	return (curbuf->b_ml.ml_flags & ML_LINE_DIRTY);
 }
@@ -1013,11 +1003,7 @@ ml_line_alloced()
  * return FAIL for failure, OK otherwise
  */
 	int
-ml_append(lnum, line, len, newfile)
-	linenr_t	lnum;			/* append after this line (can be 0) */
-	char_u		*line;			/* text of the new line */
-	colnr_t		len;			/* length of new line, including NUL, or 0 */
-	int			newfile;		/* flag, see above */
+ml_append(linenr_t lnum, char_u *line, colnr_t len, int newfile)
 {
  	if (curbuf->b_ml.ml_line_lnum != 0)
 		ml_flush_line(curbuf);
@@ -1025,12 +1011,7 @@ ml_append(lnum, line, len, newfile)
 }
 
 	static int
-ml_append_int(buf, lnum, line, len, newfile)
-	BUF			*buf;
-	linenr_t	lnum;			/* append after this line (can be 0) */
-	char_u		*line;			/* text of the new line */
-	colnr_t		len;			/* length of line, including NUL, or 0 */
-	int			newfile;		/* flag, see above */
+ml_append_int(BUF *buf, linenr_t lnum, char_u *line, colnr_t len, int newfile)
 {
 	int			i;
 #if 0	/* ken */
@@ -1560,10 +1541,7 @@ ml_append_int(buf, lnum, line, len, newfile)
  * return FAIL for failure, OK otherwise
  */
 	int
-ml_replace(lnum, line, copy)
-	linenr_t	lnum;
-	char_u		*line;
-	int			copy;
+ml_replace(linenr_t lnum, char_u *line, int copy)
 {
 	int			status;
 
@@ -1613,17 +1591,14 @@ ml_replace(lnum, line, copy)
  * return FAIL for failure, OK otherwise
  */
 	int
-ml_delete(lnum)
-	linenr_t	lnum;
+ml_delete(linenr_t lnum)
 {
 	ml_flush_line(curbuf);
 	return ml_delete_int(curbuf, lnum);
 }
 
 	static int
-ml_delete_int(buf, lnum)
-	BUF			*buf;
-	linenr_t	lnum;
+ml_delete_int(BUF *buf, linenr_t lnum)
 {
 	BHDR	*hp;
 	MEMFILE	*mfp;
@@ -1769,8 +1744,7 @@ ml_delete_int(buf, lnum)
  * set the B_MARKED flag for line 'lnum'
  */
 	void
-ml_setmarked(lnum)
-	linenr_t lnum;
+ml_setmarked(linenr_t lnum)
 {
 	BHDR	*hp;
 	DATA_BL	*dp;
@@ -1798,7 +1772,7 @@ ml_setmarked(lnum)
  * find the first line with its B_MARKED flag set
  */
 	linenr_t
-ml_firstmarked()
+ml_firstmarked(void)
 {
 	BHDR		*hp;
 	DATA_BL		*dp;
@@ -1839,8 +1813,7 @@ ml_firstmarked()
  * return TRUE if line 'lnum' has a mark
  */
 	int
-ml_has_mark(lnum)
-	linenr_t	lnum;
+ml_has_mark(linenr_t lnum)
 {
 	BHDR		*hp;
 	DATA_BL		*dp;
@@ -1856,7 +1829,7 @@ ml_has_mark(lnum)
  * clear all DB_MARKED flags
  */
 	void
-ml_clearmarked()
+ml_clearmarked(void)
 {
 	BHDR		*hp;
 	DATA_BL		*dp;
@@ -1895,8 +1868,7 @@ ml_clearmarked()
  * flush ml_line if necessary
  */
 	static void
-ml_flush_line(buf)
-	BUF		*buf;
+ml_flush_line(BUF *buf)
 {
 	BHDR		*hp;
 	DATA_BL		*dp;
@@ -1983,10 +1955,7 @@ ml_flush_line(buf)
  * create a new, empty, data block
  */
 	static BHDR *
-ml_new_data(mfp, negative, page_count)
-	MEMFILE		*mfp;
-	int			negative;
-	int			page_count;
+ml_new_data(MEMFILE *mfp, int negative, int page_count)
 {
 	BHDR		*hp;
 	DATA_BL		*dp;
@@ -2007,8 +1976,7 @@ ml_new_data(mfp, negative, page_count)
  * create a new, empty, pointer block
  */
 	static BHDR *
-ml_new_ptr(mfp)
-	MEMFILE		*mfp;
+ml_new_ptr(MEMFILE *mfp)
 {
 	BHDR		*hp;
 	PTR_BL		*pp;
@@ -2040,10 +2008,7 @@ ml_new_ptr(mfp)
  * return: NULL for failure, pointer to block header otherwise
  */
 	static BHDR *
-ml_find_line(buf, lnum, action)
-	BUF			*buf;
-	linenr_t	lnum;
-	int			action;
+ml_find_line(BUF *buf, linenr_t lnum, int action)
 {
 	DATA_BL		*dp;
 	PTR_BL		*pp;
@@ -2241,8 +2206,7 @@ error_noblock:
  * return -1 for failure, number of the new entry otherwise
  */
 	static int
-ml_add_stack(buf)
-	BUF		*buf;
+ml_add_stack(BUF *buf)
 {
 	int		top;
 	IPTR	*newstack;
@@ -2278,9 +2242,7 @@ ml_add_stack(buf)
  * Count is the number of lines added, negative if lines have been deleted.
  */
 	static void
-ml_lineadd(buf, count)
-	BUF			*buf;
-	int			count;
+ml_lineadd(BUF *buf, int count)
 {
 	int			idx;
 	IPTR		*ip;
@@ -2310,9 +2272,7 @@ ml_lineadd(buf, count)
  * make swap file name out of the filename
  */
 	static char_u *
-makeswapname(buf, second_try)
-	BUF		*buf;
-	int		second_try;
+makeswapname(BUF *buf, int second_try)
 {
 	char_u		*r, *s, *fname;
 	char_u		*pdir;
@@ -2350,9 +2310,7 @@ makeswapname(buf, second_try)
  * Several names are tried to find one that does not exist
  */
 	static char_u *
-findswapname(buf, second_try)
-	BUF		*buf;
-	int		second_try;
+findswapname(BUF *buf, int second_try)
 {
 	char_u		*fname;
 	int			n;

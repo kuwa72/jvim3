@@ -15,9 +15,7 @@
 #include "vim.h"
 
 int
-main(argc, argv)
-	int		argc;
-	char	**argv;
+main(int argc, char **argv)
 {
 	register int	c;
 	char			buffer[100];

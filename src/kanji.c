@@ -509,8 +509,7 @@ static struct {
  * number of columns; never assume 2.
  */
 	int
-ISkanji(code)
-int			code;
+ISkanji(int code)
 {
 	if (code >= 0x100)
 		return 0;
@@ -524,15 +523,13 @@ int			code;
  * know whether a character is kana use utf_iskana().
  */
 	int
-ISkana(code)
-int			code;
+ISkana(int code)
 {
 	return 0;
 }
 
 	int
-ISdisp(code)
-int			code;
+ISdisp(int code)
 {
 	if (code >= 0x100)
 		return 0;
@@ -545,9 +542,7 @@ int			code;
 	   2 : trailing byte of a multi-byte character
 */
 	int
-ISkanjiPosition(ptr, pos)
-char_u	*	ptr;
-int			pos;
+ISkanjiPosition(char_u *ptr, int pos)
 {
 	char_u	*p;
 	char_u	*head;
@@ -577,17 +572,13 @@ int			pos;
 }
 
 	int
-ISkanjiPointer(ptr, p)
-char_u	*	ptr;
-char_u	*	p;
+ISkanjiPointer(char_u *ptr, char_u *p)
 {
 	return(ISkanjiPosition(ptr, p - ptr + 1));
 }
 
 	int
-ISkanjiCol(lnum, col)
-linenr_t	lnum;
-colnr_t		col;
+ISkanjiCol(linenr_t lnum, colnr_t col)
 {
 	return(ISkanjiPosition(ml_get_buf(curbuf, lnum, FALSE), col + 1));
 }
@@ -598,9 +589,7 @@ colnr_t		col;
  * ISkanjiCol() for stepping over a character.
  */
 	int
-kanjilenCol(lnum, col)
-linenr_t	lnum;
-colnr_t		col;
+kanjilenCol(linenr_t lnum, colnr_t col)
 {
 	return utf_lenat(ml_get_buf(curbuf, lnum, FALSE), (int)col);
 }
@@ -610,7 +599,7 @@ colnr_t		col;
  * it is already on a boundary.
  */
 	void
-kanji_align()
+kanji_align(void)
 {
 	curwin->w_cursor.col = (colnr_t)utf_headoff(
 								ml_get(curwin->w_cursor.lnum),
@@ -622,7 +611,7 @@ kanji_align()
  * already. The counterpart of kanji_align().
  */
 	void
-kanji_align_next()
+kanji_align_next(void)
 {
 	char_u	*base = ml_get(curwin->w_cursor.lnum);
 	int		 h = utf_headoff(base, (int)curwin->w_cursor.col);
@@ -636,9 +625,7 @@ kanji_align_next()
  * inclusive end of range has to cover the whole character.
  */
 	int
-kanji_endcol(lnum, col)
-linenr_t	lnum;
-colnr_t		col;
+kanji_endcol(linenr_t lnum, colnr_t col)
 {
 	char_u	*base = ml_get_buf(curbuf, lnum, FALSE);
 	int		 h = utf_headoff(base, (int)col);
@@ -651,10 +638,7 @@ colnr_t		col;
  * character boundary. Returns the adjusted length.
  */
 	int
-kanji_fixlen(base, startcol, len)
-char_u	*	base;
-int			startcol;
-int			len;
+kanji_fixlen(char_u *base, int startcol, int len)
 {
 	int		endcol = startcol + len;		/* one past the last byte */
 	int		h = utf_headoff(base, endcol);
@@ -665,27 +649,20 @@ int			len;
 }
 
 	int
-ISkanjiCur()
+ISkanjiCur(void)
 {
 	return(ISkanjiPosition(ml_get_buf(curbuf, curwin->w_cursor.lnum, FALSE),
 						curwin->w_cursor.col + 1));
 }
 
 	int
-ISkanjiFpos(po)
-FPOS	*	po;
+ISkanjiFpos(FPOS *po)
 {
 	return(ISkanjiPosition(ml_get_buf(curbuf, po->lnum, FALSE), po->col + 1));
 }
 
 	int
-vcol2col(wp, lnum, maxcol, wantcol, num, colum)
-WIN		*	wp;
-linenr_t	lnum;
-colnr_t		maxcol;
-int		*	wantcol;
-int			num;
-int			colum;
+vcol2col(WIN *wp, linenr_t lnum, colnr_t maxcol, int *wantcol, int num, int colum)
 {
 	char_u	*	line;
 	char_u	*	ptr;
@@ -749,9 +726,7 @@ int			colum;
  *	Japanese Character;
  */
 	int_u
-sjistojis(high, low)
-char_u		high;
-char_u		low;
+sjistojis(char_u high, char_u low)
 {
 	if (IS_X0212(high))
 	{
@@ -796,10 +771,7 @@ char_u		low;
 }
 
 	static int_u
-sjistoeuc(high, low, ss3)
-char_u		high;
-char_u		low;
-char_u	*	ss3;
+sjistoeuc(char_u high, char_u low, char_u *ss3)
 {
 	*ss3 = 0x00;
 	if (IS_X0212(high))
@@ -808,10 +780,7 @@ char_u	*	ss3;
 }
 
 	static int_u
-sjistoeuc3(high, low, ss3)
-char_u		high;
-char_u		low;
-char_u	*	ss3;
+sjistoeuc3(char_u high, char_u low, char_u *ss3)
 {
 	int		i;
 
@@ -873,9 +842,7 @@ char_u	*	ss3;
 }
 
 	int_u
-jistosjis(high, low)
-char_u		high;
-char_u		low;
+jistosjis(char_u high, char_u low)
 {
 	if (high & 1)
 		low += 0x1f;
@@ -890,17 +857,13 @@ char_u		low;
 }
 
 	static int_u
-euctosjis(high, low)
-char_u		high;
-char_u		low;
+euctosjis(char_u high, char_u low)
 {
 	return(jistosjis((char_u)(high & 0x7f), (char_u)(low & 0x7f)));
 }
 
 	static int_u
-euctosjis3(high, low)
-char_u		high;
-char_u		low;
+euctosjis3(char_u high, char_u low)
 {
 	int			i;
 	int_u		sjis;
@@ -958,8 +921,7 @@ char_u		low;
  * return kanji shift-in string
  */
 	static char_u *
-kanjiin(code)
-	int		code;
+kanjiin(int code)
 {
 	switch(code) {
 	case JP_JIS:		return "\033$B";
@@ -971,8 +933,7 @@ kanjiin(code)
  * return kanji shift-out string
  */
 	static char_u *
-asciiin(code)
-	int		code;
+asciiin(int code)
 {
 	switch(code) {
 	case JP_JIS:		return "\033(B";
@@ -984,8 +945,7 @@ asciiin(code)
  * return kana shift-in string
  */
 	static char_u *
-kanain(code)
-	int		code;
+kanain(int code)
 {
 	switch(code) {
 	case JP_JIS:		return "\033(I";
@@ -994,10 +954,7 @@ kanain(code)
 }
 
 	static char_u *
-JPdisp(now, mode, code)
-	int		*now;
-	int		mode;
-	int		code;		/* kanji code */
+JPdisp(int *now, int mode, int code)
 {
 	static	char_u	buffer[32];
 	char_u			*p;
@@ -1055,9 +1012,7 @@ JPdisp(now, mode, code)
  * convert SJIS letter into suitable letter.
  */
 	void
-kanjito(k1, k2, code)
-	char_u	*k1, *k2;
-	int		code;
+kanjito(char_u *k1, char_u *k2, int code)
 {
 	int_u		kanji;
 	char_u		ss3;
@@ -1085,9 +1040,7 @@ kanjito(k1, k2, code)
 }
 
 	void
-kanato(k1, k2, code)
-	char_u	*k1, *k2;
-	int		code;
+kanato(char_u *k1, char_u *k2, int code)
 {
 	switch(code) {
 	case JP_JIS:
@@ -1126,8 +1079,7 @@ kanato(k1, k2, code)
  * Character class of a code point, used to decide where a word ends.
  */
 	int
-jpclscp(cp)
-	int		cp;
+jpclscp(int cp)
 {
 	char_u	sjis[2];
 
@@ -1182,8 +1134,7 @@ jpclscp(cp)
  * character, -1 for anything else, or one of the JPC_ classes.
  */
 	int
-jpcls(ptr)
-char_u	*	ptr;
+jpcls(char_u *ptr)
 {
 	int		cp;
 
@@ -1204,9 +1155,7 @@ char_u	*	ptr;
  *	processing or not.
  */
 	int
-isjppunc(ptr, type)
-char_u	*	ptr;
-int			type;
+isjppunc(char_u *ptr, int type)
 {
 	char_u	sjis[2];
 	int		cp;
@@ -1236,9 +1185,7 @@ int			type;
  *	processing or not.
  */
 	int
-isaspunc(c, type)
-char_u		c;
-int			type;
+isaspunc(char_u c, int type)
 {
 	return(type ? jptab[c & 0x7f].punccasc: jptab[c & 0x7f].puncoasc);
 }
@@ -1248,8 +1195,7 @@ int			type;
  *	sentences or not.
  */
 	int
-isjsend(cp)
-char_u	*	cp;
+isjsend(char_u *cp)
 {
 	int	kanji	= sjistojis(cp[0], cp[1]);
 	int	k1		= (kanji & 0xff00) >> 8;
@@ -1265,10 +1211,7 @@ char_u	*	cp;
  *			tocase == others : swap case
  */
 	void
-jptocase(cp, kp, tocase)
-char_u	*	cp;
-char_u	*	kp;
-int			tocase;
+jptocase(char_u *cp, char_u *kp, int tocase)
 {
 	char_u		k;
 	int_u		kanji = sjistojis(*cp, *kp);
@@ -1308,8 +1251,7 @@ int			tocase;
  *	isspace(c, k) returns whether a kanji character ck space
  */
 	int
-isjpspace(ptr)
-char_u	*	ptr;
+isjpspace(char_u *ptr)
 {
 	int		cp;
 
@@ -1329,8 +1271,7 @@ char_u	*	ptr;
  */
 #ifdef UCODE
 	static int
-judge_sjis_euc(ptr)
-char_u	*	ptr;
+judge_sjis_euc(char_u *ptr)
 {
 	if (((0xa1 <= ptr[0] && ptr[0] <= 0xfe)
 				&& (0xa1 <= ptr[1] && ptr[1] <= 0xfe))
@@ -1347,8 +1288,7 @@ char_u	*	ptr;
 }
 
 	static int
-judge_ucs(ptr)
-char_u	*	ptr;
+judge_ucs(char_u *ptr)
 {
 	short_u	ucs;
 	char_u	dst[2];
@@ -1370,11 +1310,7 @@ char_u	*	ptr;
  *
  */
 	int
-judge_jcode(origcode, ubig, ptr, size)
-char_u	*	origcode;
-int		*	ubig;
-char_u	*	ptr;
-long		size;
+judge_jcode(char_u *origcode, int *ubig, char_u *ptr, long size)
 {
 	char	code;
 	int		i;
@@ -1862,22 +1798,19 @@ breakBreak:
  * which classifies UTF-8.
  */
 	static int
-sjis_islead(c)
-	int		c;
+sjis_islead(int c)
 {
 	return (kanji_map_sjis[c & 0xff] & 1) != 0;
 }
 
 	static int
-sjis_iskana(c)
-	int		c;
+sjis_iskana(int c)
 {
 	return (kanji_map_sjis[c & 0xff] & 2) != 0;	/* one byte halfwidth kana */
 }
 
 	static int
-sjis_isdisp(c)
-	int		c;
+sjis_isdisp(int c)
 {
 	return kanji_map_sjis[c & 0xff] != 0;
 }
@@ -1890,10 +1823,7 @@ sjis_isdisp(c)
  * two bytes without checking them, so anything else has to be rejected here.
  */
 	static int
-sjis_valid(c1, c2, len)
-	int		c1;
-	int		c2;
-	int		len;
+sjis_valid(int c1, int c2, int len)
 {
 	if (c1 < 0x80)
 		return TRUE;
@@ -1907,9 +1837,7 @@ sjis_valid(c1, c2, len)
 }
 
 	static int
-sjis2cp(src, len)
-	char_u	*src;
-	int		len;
+sjis2cp(char_u *src, int len)
 {
 	char_u	buf[2];
 	int		cp;
@@ -1930,9 +1858,7 @@ sjis2cp(src, len)
  * the character has no Shift-JIS form.
  */
 	static int
-cp2sjis(cp, buf)
-	int		cp;
-	char_u	*buf;
+cp2sjis(int cp, char_u *buf)
 {
 	char_u	w[2];
 	int		len;
@@ -1961,11 +1887,7 @@ cp2sjis(cp, buf)
  * Shift-JIS -> UTF-8. Returns the length written, or -1 when dst is too small.
  */
 	static int
-sjis2utf8_n(src, srclen, dst, dstlen)
-	char_u	*src;
-	int		srclen;
-	char_u	*dst;
-	int		dstlen;
+sjis2utf8_n(char_u *src, int srclen, char_u *dst, int dstlen)
 {
 	char_u	*d = dst;
 	int		i = 0;
@@ -2004,8 +1926,7 @@ sjis2utf8_n(src, srclen, dst, dstlen)
  * become '?'; that loss is inherent in writing a legacy encoding.
  */
 	static char_u *
-utf82sjis(src)
-	char_u	*src;
+utf82sjis(char_u *src)
 {
 	char_u	*top;
 	char_u	*d;
@@ -2049,9 +1970,7 @@ utf82sjis(src)
  * outside the BMP become a surrogate pair, so nothing is lost.
  */
 	static char_u *
-utf82ucs2(src, ubig)
-	char_u	*src;
-	int		ubig;
+utf82ucs2(char_u *src, int ubig)
 {
 	char_u	*top;
 	char_u	*d;
@@ -2115,12 +2034,7 @@ utf82ucs2(src, ubig)
  * -1 when it does not fit. Surrogate pairs are joined back together.
  */
 	int
-ucs22utf8_n(src, srclen, dst, dstlen, ubig)
-	char_u	*src;
-	int		srclen;
-	char_u	*dst;
-	int		dstlen;
-	int		ubig;
+ucs22utf8_n(char_u *src, int srclen, char_u *dst, int dstlen, int ubig)
 {
 	char_u	*d = dst;
 	int		i = 0;
@@ -2167,14 +2081,7 @@ ucs22utf8_n(src, srclen, dst, dstlen, ubig)
  * when it does not fit.
  */
 	int				/* return the length of dst */
-kanjiconvsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
-	char_u	*ptr;
-	int		ptrlen;
-	char_u	*dst;
-	int		dstlen;
-	char	*tail;
-	char	code;
-	int		*charsetp;
+kanjiconvsfrom(char_u *ptr, int ptrlen, char_u *dst, int dstlen, char *tail, char code, int *charsetp)
 {
 	char_u	*tmp;
 	int		n;
@@ -2257,10 +2164,7 @@ kanjiconvsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
  * buffer that the caller frees.
  */
 	char_u *
-kanjiconvsto(ptr, code, ubig)
-	char_u	*ptr;
-	int		code;
-	int		ubig;
+kanjiconvsto(char_u *ptr, int code, int ubig)
 {
 	char_u	*sjis;
 	char_u	*res;
@@ -2288,14 +2192,7 @@ kanjiconvsto(ptr, code, ubig)
 }
 
 	static int		/* return the length of dst */
-sjis_convsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
-	char_u	*ptr;
-	int		ptrlen;
-	char_u	*dst;
-	int		dstlen;
-	char	*tail;
-	char	code;
-	int		*charsetp;
+sjis_convsfrom(char_u *ptr, int ptrlen, char_u *dst, int dstlen, char *tail, char code, int *charsetp)
 {
 	char_u	*dtop;
 	int		c;
@@ -2726,10 +2623,7 @@ sjis_convsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp)
 #endif
 
 	static char_u *
-sjis_convsto(ptr, code, ubig)
-	char_u	*ptr;
-	int		code;
-	int		ubig;
+sjis_convsto(char_u *ptr, int code, int ubig)
 {
 	char_u	*top, *ptr2;
 	char_u	*cp;
@@ -2927,8 +2821,7 @@ sjis_convsto(ptr, code, ubig)
 }
 
 	char *
-fileconvsfrom(org)
-	char_u	*org;
+fileconvsfrom(char_u *org)
 {
 	static char_u	fnamebuf[2][MAXPATHL];
 	static int		cnt = 0;
@@ -2987,8 +2880,7 @@ fileconvsfrom(org)
 }
 
 	char *
-fileconvsto(org)
-	char_u	*org;
+fileconvsto(char_u *org)
 {
 	static char		fnamebuf[2][MAXPATHL];
 	static int		cnt = 0;
@@ -3039,13 +2931,7 @@ fileconvsto(org)
 }
 
 	void
-binaryconvsfrom(lnum, code, tail, ptr, len, dst)
-	linenr_t lnum;
-	char	code;
-	int		*tail;
-	char_u	*ptr;
-	int		len;
-	char_u	*dst;
+binaryconvsfrom(linenr_t lnum, char code, int *tail, char_u *ptr, int len, char_u *dst)
 {
 	char_u	*wk = ptr;
 	int		i;
@@ -3170,11 +3056,7 @@ normal:
 }
 
 	char_u *
-binaryconvsto(code, ptr, len, ubig)
-	char	code;
-	char_u	*ptr;
-	int		*len;
-	int		ubig;
+binaryconvsto(char code, char_u *ptr, int *len, int ubig)
 {
 	char_u				value = 0;
 	int					cnt = 0;
@@ -3310,8 +3192,7 @@ binaryconvsto(code, ptr, len, ubig)
  *
  */
 	static int
-jisx0201rto0208(src0, src1, dst0, dst1)
-	char_u src0, src1, *dst0, *dst1;
+jisx0201rto0208(char_u src0, char_u src1, char_u *dst0, char_u *dst1)
 {
 	char_u	c, y;
 	char_u	*x0201p, z;
@@ -3379,9 +3260,7 @@ static short	halfwidth_fold[] = {
  * code point, the semi voiced one the one after that.
  */
 	static int
-jp_voiced(cp, semi)
-	int		cp;
-	int		semi;
+jp_voiced(int cp, int semi)
 {
 	if (semi)
 	{
@@ -3409,8 +3288,7 @@ jp_voiced(cp, semi)
  *	halfwidth katakana	-> fullwidth, combining a following sound mark
  */
 	static int
-jp_foldstep(pp)
-	char_u	**pp;
+jp_foldstep(char_u **pp)
 {
 	char_u	*p = *pp;
 	int		cp;
@@ -3457,8 +3335,7 @@ jp_foldstep(pp)
  * code points rather than byte sequences.
  */
 	int
-jp_foldcp(cp)
-	int		cp;
+jp_foldcp(int cp)
 {
 	char_u	buf[UTF8_MAXLEN + 1];
 	char_u	*p = buf;
@@ -3475,10 +3352,7 @@ jp_foldcp(cp)
  * Tab and space are considered equal, as they were before.
  */
 	int
-jp_strnicmp(s1, s2, len)
-	char_u	*s1;
-	char_u	*s2;
-	size_t	len;
+jp_strnicmp(char_u *s1, char_u *s2, size_t len)
 {
 	char_u	*p1 = s1;
 	char_u	*p2 = s2;
@@ -3511,11 +3385,7 @@ int ucs2sjis __ARGS((unsigned short ucs, unsigned char* sjis));
 void sjis2ucs __ARGS((unsigned char* sjis, int len, unsigned char* ucs));
 
 	int
-wide2multi(ptr, size, ubig, first)
-	char_u	*	ptr;
-	int			size;
-	int			ubig;
-	int			first;
+wide2multi(char_u *ptr, int size, int ubig, int first)
 {
 	char_u	*	p = ptr;
 	char_u		buf[2];
@@ -3549,11 +3419,7 @@ wide2multi(ptr, size, ubig, first)
 }
 
 	void
-multi2wide(k1, k2, len, ubig)
-	char_u	*	k1;
-	char_u	*	k2;
-	int			len;
-	int			ubig;
+multi2wide(char_u *k1, char_u *k2, int len, int ubig)
 {
 	char_u	buf[2];
 	char_u	wbuf[2/*sizeof(WCHAR)*/];

@@ -92,9 +92,7 @@ static fptr do_lower __ARGS((char_u *, int));
 static fptr do_Lower __ARGS((char_u *, int));
 
 	static fptr
-do_Copy(d, c)
-	char_u *d;
-	int c;
+do_Copy(char_u *d, int c)
 {
 	*d = c;
 
@@ -102,9 +100,7 @@ do_Copy(d, c)
 }
 
 	static fptr
-do_upper(d, c)
-	char_u *d;
-	int c;
+do_upper(char_u *d, int c)
 {
 #ifdef KANJI
 	if (ISkanji(c))
@@ -117,9 +113,7 @@ do_upper(d, c)
 }
 
 	static fptr
-do_Upper(d, c)
-	char_u *d;
-	int c;
+do_Upper(char_u *d, int c)
 {
 #ifdef KANJI
 	if (ISkanji(c))
@@ -132,9 +126,7 @@ do_Upper(d, c)
 }
 
 	static fptr
-do_lower(d, c)
-	char_u *d;
-	int c;
+do_lower(char_u *d, int c)
 {
 #ifdef KANJI
 	if (ISkanji(c))
@@ -147,9 +139,7 @@ do_lower(d, c)
 }
 
 	static fptr
-do_Lower(d, c)
-	char_u *d;
-	int c;
+do_Lower(char_u *d, int c)
 {
 #ifdef KANJI
 	if (ISkanji(c))
@@ -162,11 +152,7 @@ do_Lower(d, c)
 }
 
 	static fptr
-strnfcpy(f, d, s, n)
-	fptr f;
-	char_u *d;
-	char_u *s;
-	int n;
+strnfcpy(fptr f, char_u *d, char_u *s, int n)
 {
 	while (n-- > 0) {
 #ifdef KANJI
@@ -202,9 +188,7 @@ strnfcpy(f, d, s, n)
  * endless loop.
  */
 	char_u *
-regtilde(source, magic)
-	char_u	*source;
-	int		magic;
+regtilde(char_u *source, int magic)
 {
 	char_u	*newsub = NULL;
 	char_u	*tmpsub;
@@ -268,12 +252,7 @@ regtilde(source, magic)
  * Returns the size of the replacement, including terminating \0.
  */
 	int
-regsub(prog, source, dest, copy, magic)
-	regexp		   *prog;
-	char_u		   *source;
-	char_u		   *dest;
-	int 			copy;
-	int 			magic;
+regsub(regexp *prog, char_u *source, char_u *dest, int copy, int magic)
 {
 	register char_u  *src;
 	register char_u  *dst;

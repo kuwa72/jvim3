@@ -44,9 +44,7 @@ typedef USHORT (WINAPI *CAPTURESTACKBACKTRACE)(ULONG, ULONG, PVOID *, PULONG);
  * Directory the reports go to. Never fails: falls back to the current dir.
  */
 	static void
-crash_getdir(buf, len)
-	char	*buf;
-	int		len;
+crash_getdir(char *buf, int len)
 {
 	char	*p;
 
@@ -70,8 +68,7 @@ crash_getdir(buf, len)
 }
 
 	static const char *
-crash_excname(code)
-	DWORD	code;
+crash_excname(DWORD code)
 {
 	switch (code)
 	{
@@ -94,10 +91,7 @@ crash_excname(code)
  * was linked at (what addr2line wants, ASLR undone).
  */
 	static void
-crash_where(fp, what, addr)
-	FILE			*fp;
-	const char		*what;
-	void			*addr;
+crash_where(FILE *fp, const char *what, void *addr)
 {
 	MEMORY_BASIC_INFORMATION	mbi;
 	char						name[MAXPATHL];
@@ -136,9 +130,7 @@ crash_where(fp, what, addr)
  * -fno-omit-frame-pointer, which makefile.mingw passes.
  */
 	static void
-crash_backtrace(fp, ep)
-	FILE				*fp;
-	EXCEPTION_POINTERS	*ep;
+crash_backtrace(FILE *fp, EXCEPTION_POINTERS *ep)
 {
 #if defined(_X86_) || defined(__i386__)
 	DWORD_PTR	*frame;
@@ -187,9 +179,7 @@ crash_backtrace(fp, ep)
 }
 
 	static void
-crash_registers(fp, ctx)
-	FILE		*fp;
-	CONTEXT		*ctx;
+crash_registers(FILE *fp, CONTEXT *ctx)
 {
 #if defined(_X86_) || defined(__i386__)
 	fprintf(fp, "\nregisters:\n");
@@ -215,8 +205,7 @@ crash_registers(fp, ctx)
  * flushed by then.
  */
 	static void
-crash_editorstate(fp)
-	FILE	*fp;
+crash_editorstate(FILE *fp)
 {
 	fprintf(fp, "\neditor state:\n");
 	fflush(fp);
@@ -239,8 +228,7 @@ crash_editorstate(fp)
 }
 
 	static LONG WINAPI
-crash_filter(ep)
-	EXCEPTION_POINTERS	*ep;
+crash_filter(EXCEPTION_POINTERS *ep)
 {
 	FILE			*fp;
 	SYSTEMTIME		st;
@@ -357,8 +345,7 @@ crash_filter(ep)
  * print to.
  */
 	void
-w32crash_init(gui)
-	int		gui;
+w32crash_init(int gui)
 {
 	crash_gui = gui;
 	SetUnhandledExceptionFilter(crash_filter);

@@ -23,9 +23,7 @@ static WIN		*prevwin = NULL;		/* previous window */
  * all CTRL-W window commands are handled here, called from normal().
  */
 	void
-do_window(nchar, Prenum)
-	int		nchar;
-	long	Prenum;
+do_window(int nchar, long Prenum)
 {
 	long	Prenum1;
 	WIN		*wp;
@@ -223,9 +221,7 @@ do_window(nchar, Prenum)
  * return FAIL for failure, OK otherwise
  */
 	int
-win_split(new_height, redraw)
-	long	new_height;
-	int		redraw;
+win_split(long new_height, int redraw)
 {
 	WIN			*wp;
 	linenr_t	lnum;
@@ -374,8 +370,7 @@ win_split(new_height, redraw)
  * called when there is just one window, filling the whole screen.
  */
 	int
-make_windows(count)
-	int		count;
+make_windows(int count)
 {
 	int		maxcount;
 	int		todo;
@@ -418,8 +413,7 @@ make_windows(count)
  * Exchange current and next window
  */
 	static void
-win_exchange(Prenum)
-	long		Prenum;
+win_exchange(long Prenum)
 {
 	WIN		*wp;
 	WIN		*wp2;
@@ -480,9 +474,7 @@ win_exchange(Prenum)
  *				   if upwards FALSE the first window becomes the second one
  */
 	static void
-win_rotate(upwards, count)
-	int		upwards;
-	int		count;
+win_rotate(int upwards, int count)
 {
 	WIN			 *wp;
 	int			 height;
@@ -525,9 +517,7 @@ win_rotate(upwards, count)
  * make all windows the same height
  */
 	void
-win_equal(next_curwin, redraw)
-	WIN		*next_curwin;			/* pointer to current window to be */
-	int		redraw;
+win_equal(WIN *next_curwin, int redraw)
 {
 	int		total;
 	int		less;
@@ -608,8 +598,7 @@ win_equal(next_curwin, redraw)
  * called by :quit, :close, :xit, :wq and findtag()
  */
 	void
-close_window(free_buf)
-	int		free_buf;
+close_window(int free_buf)
 {
 	WIN 	*wp;
 
@@ -663,8 +652,7 @@ close_window(free_buf)
  * called by :only and do_arg_all();
  */
 	void
-close_others(message)
-	int		message;
+close_others(int message)
 {
 	WIN 	*wp;
 	WIN 	*nextwp;
@@ -714,8 +702,7 @@ close_others(message)
  * called when a new file is being edited
  */
 	void
-win_init(wp)
-	WIN		*wp;
+win_init(WIN *wp)
 {
 	wp->w_redr_type = NOT_VALID;
 	wp->w_cursor.lnum = 1;
@@ -732,9 +719,7 @@ win_init(wp)
  * make window wp the current window
  */
 	void
-win_enter(wp, undo_sync)
-	WIN		*wp;
-	int		undo_sync;
+win_enter(WIN *wp, int undo_sync)
 {
 	if (wp == curwin)			/* nothing to do */
 		return;
@@ -756,8 +741,7 @@ win_enter(wp, undo_sync)
  * allocate a window structure and link it in the window list
  */
 	WIN *
-win_alloc(after)
-	WIN		*after;
+win_alloc(WIN *after)
 {
 	WIN		*new;
 
@@ -789,8 +773,7 @@ win_alloc(after)
  * remove window 'wp' from the window list and free the structure
  */
 	void
-win_free(wp)
-	WIN		*wp;
+win_free(WIN *wp)
 {
 	if (prevwin == wp)
 		prevwin = NULL;
@@ -800,8 +783,7 @@ win_free(wp)
 }
 
 	static void
-win_append(after, wp)
-	WIN		*after, *wp;
+win_append(WIN *after, WIN *wp)
 {
 	WIN 	*before;
 
@@ -826,8 +808,7 @@ win_append(after, wp)
  * remove window from the window list
  */
 	static void
-win_remove(wp)
-	WIN		*wp;
+win_remove(WIN *wp)
 {
 	if (wp->w_prev)
 		wp->w_prev->w_next = wp->w_next;
@@ -844,8 +825,7 @@ win_remove(wp)
  * return FAIL for failure, OK for success
  */
 	int
-win_alloc_lsize(wp)
-	WIN		*wp;
+win_alloc_lsize(WIN *wp)
 {
 	wp->w_lsize_valid = 0;
 	wp->w_lsize_lnum = (linenr_t *) malloc((size_t) (Rows * sizeof(linenr_t)));
@@ -864,8 +844,7 @@ win_alloc_lsize(wp)
  * free lsize arrays for a window
  */
  	void
-win_free_lsize(wp)
-	WIN		*wp;
+win_free_lsize(WIN *wp)
 {
 	free(wp->w_lsize_lnum);
 	free(wp->w_lsize);
@@ -875,7 +854,7 @@ win_free_lsize(wp)
  * call this fuction whenever Rows changes value
  */
 	void
-screen_new_rows()
+screen_new_rows(void)
 {
 	WIN		*wp;
 	int		extra_lines;
@@ -921,7 +900,7 @@ screen_new_rows()
  * returns the row just after the last window
  */
 	static int
-win_comp_pos()
+win_comp_pos(void)
 {
 	WIN		*wp;
 	int		row;
@@ -944,8 +923,7 @@ win_comp_pos()
  * set current window height
  */
 	void
-win_setheight(height)
-	int		height;
+win_setheight(int height)
 {
 	WIN		*wp;
 	int		room;				/* total number of lines available */
@@ -1041,8 +1019,7 @@ win_setheight(height)
 }
 
 	void
-win_comp_scroll(wp)
-	WIN		*wp;
+win_comp_scroll(WIN *wp)
 {
 	wp->w_p_scroll = (wp->w_height >> 1);
 	if (wp->w_p_scroll == 0)
@@ -1053,7 +1030,7 @@ win_comp_scroll(wp)
  * command_height: called whenever p_ch has been changed
  */
 	void
-command_height()
+command_height(void)
 {
 	int		current;
 
@@ -1079,7 +1056,7 @@ command_height()
 }
 
 	void
-last_status()
+last_status(void)
 {
 	if (lastwin->w_status_height)
 	{
@@ -1119,7 +1096,7 @@ last_status()
  * NULL is returned if the file name or file is not found.
  */
 	char_u *
-file_name_at_cursor()
+file_name_at_cursor(void)
 {
 	char_u	*ptr;
 	char_u	*dir;

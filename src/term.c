@@ -98,9 +98,7 @@ Tcarr term_strings;
  *   so that parse_builtin_tcap can handle them.
  */
 	static void
-parse_builtin_tcap(tc, s)
-	Tcarr *tc;
-	char_u *s;
+parse_builtin_tcap(Tcarr *tc, char_u *s)
 {
 	char_u **p = &tc->t_name;
 
@@ -119,11 +117,11 @@ parse_builtin_tcap(tc, s)
 #ifdef TERMCAP
 # ifndef linux		/* included in <termlib.h> */
 #  ifndef AMIGA		/* included in proto/termlib.pro */
-int				tgetent();
-int				tgetnum();
-char			*tgetstr();
-int				tgetflag();
-int				tputs();
+int				tgetent __ARGS((char *, char *));
+int				tgetnum __ARGS((char *));
+char			*tgetstr __ARGS((char *, char **));
+int				tgetflag __ARGS((char *));
+int				tputs __ARGS((char *, int, int (*)(int)));
 #  endif /* AMIGA */
 #  ifndef hpux
 extern short	ospeed;
@@ -141,8 +139,7 @@ char		*UP, *BC, PC;		/* should be extern, but some don't have them */
 #endif
 
 	void
-set_term(term)
-	char_u *term;
+set_term(char_u *term)
 {
 	char_u **p = builtin_tcaps;
 #ifdef TERMCAP
@@ -378,7 +375,7 @@ set_term(term)
  * and "li" entries never change. But this may happen on some systems.
  */
 	void
-getlinecol()
+getlinecol(void)
 {
 	char_u			tbuf[TBUFSZ];
 
@@ -395,8 +392,7 @@ getlinecol()
 static char_u *tltoa __PARMS((unsigned long));
 
 	static char_u *
-tltoa(i)
-	unsigned long i;
+tltoa(unsigned long i)
 {
 	static char_u buf[16];
 	char_u		*p;
@@ -421,9 +417,7 @@ tltoa(i)
  */
 
 	char *
-tgoto(cm, x, y)
-	char *cm;
-	int x, y;
+tgoto(char *cm, int x, int y)
 {
 	static char buf[30];
 	char *p, *s, *e;
@@ -472,8 +466,7 @@ tgoto(cm, x, y)
  * The optional argument is given with the -T command line option.
  */
 	void
-termcapinit(term)
-	char_u *term;
+termcapinit(char_u *term)
 {
 	if (!term)
 		term = vimgetenv((char_u *)"TERM");
@@ -495,7 +488,7 @@ static int				bpos = 0;		/* number of chars in outbuf */
  * flushbuf(): flush the output buffer
  */
 	void
-flushbuf()
+flushbuf(void)
 {
 	if (bpos != 0)
 	{
@@ -533,8 +526,7 @@ flushbuf()
  * calling through a mismatched function pointer is undefined.
  */
 	int
-outchar(c)
-	int			c;
+outchar(int c)
 {
 #ifdef UNIX
 	if (c == '\n')		/* turn LF into CR-LF (CRMOD does not seem to do this) */
@@ -561,8 +553,7 @@ outchar(c)
  *					 Flush it if it becomes full.
  */
 	void
-outchar2(c1, c2)
-	unsigned	c1, c2;
+outchar2(unsigned c1, unsigned c2)
 {
 	outbuf[bpos++] = c1;
 	outbuf[bpos++] = c2;
@@ -580,8 +571,7 @@ outchar2(c1, c2)
  * information. (jw)
  */
 	void
-outstrn(s)
-	char_u *s;
+outstrn(char_u *s)
 {
 	if (bpos > BSIZE - 20)		/* avoid terminal strings being split up */
 		flushbuf();
@@ -594,8 +584,7 @@ outstrn(s)
  * If TERMCAP is defined use the termcap parser. (jw)
  */
 	void
-outstr(s)
-	register char_u			 *s;
+outstr(register char_u *s)
 {
 	if (bpos > BSIZE - 20)		/* avoid terminal strings being split up */
 		flushbuf();
@@ -616,9 +605,7 @@ outstr(s)
  * cursor positioning using termcap parser. (jw)
  */
 	void
-windgoto(row, col)
-	int		row;
-	int		col;
+windgoto(int row, int col)
 {
 	OUTSTR(tgoto((char *)T_CM, col, row));
 }
@@ -629,15 +616,14 @@ windgoto(row, col)
  */
 
 	void
-setcursor()
+setcursor(void)
 {
 	if (!RedrawingDisabled)
 		windgoto(curwin->w_winpos + curwin->w_row, curwin->w_col);
 }
 
 	void
-ttest(pairs)
-	int	pairs;
+ttest(int pairs)
 {
 	char buf[70];
 	char *s = "terminal capability %s required.\n";
@@ -717,10 +703,7 @@ ttest(pairs)
  */
 
 	int
-inchar(buf, maxlen, time)
-	char_u	*buf;
-	int		maxlen;
-	int		time;						/* milli seconds */
+inchar(char_u *buf, int maxlen, int time)
 {
 	int				len;
 	int				retesc = FALSE;		/* return ESC with gotint */
@@ -868,8 +851,7 @@ retry:
  * Note: should always be called with buf == typestr!
  */
 	int
-check_termcode(buf)
-	char_u	*buf;
+check_termcode(char_u *buf)
 {
 	char_u 	**p;
 	int		slen;
@@ -920,14 +902,13 @@ check_termcode(buf)
  * outnum - output a (big) number fast
  */
 	void
-outnum(n)
-	register long n;
+outnum(register long n)
 {
 	OUTSTRN(tltoa((unsigned long)n));
 }
  
 	void
-check_winsize()
+check_winsize(void)
 {
 	if (Columns < MIN_COLUMNS)
 		Columns = MIN_COLUMNS;
@@ -946,9 +927,7 @@ check_winsize()
  * it fails use 'width' and 'height'.
  */
 	void
-set_winsize(width, height, mustset)
-	int		width, height;
-	int		mustset;
+set_winsize(int width, int height, int mustset)
 {
 	register int 		tmp;
 
@@ -991,8 +970,7 @@ set_winsize(width, height, mustset)
 }
 
 	void
-settmode(raw)
-	int	 raw;
+settmode(int raw)
 {
 	static int		oldraw = FALSE;
 
@@ -1004,7 +982,7 @@ settmode(raw)
 }
 
 	void
-starttermcap()
+starttermcap(void)
 {
 	outstr(T_TS);	/* start termcap mode */
 	outstr(T_KS);	/* start "keypad transmit" mode */
@@ -1013,7 +991,7 @@ starttermcap()
 }
 
 	void
-stoptermcap()
+stoptermcap(void)
 {
 	outstr(T_KE);	/* stop "keypad transmit" mode */
 	flushbuf();
@@ -1028,7 +1006,7 @@ stoptermcap()
 static int cursor_is_off = FALSE;
 
 	void
-cursor_on()
+cursor_on(void)
 {
 	if (cursor_is_off && (!VIsual.lnum || highlight == NULL))
 	{
@@ -1038,7 +1016,7 @@ cursor_on()
 }
 
 	void
-cursor_off()
+cursor_off(void)
 {
 	if (!cursor_is_off)
 		outstr(T_CI);			/* disable cursor */
@@ -1049,8 +1027,7 @@ cursor_off()
  * set scrolling region for window 'wp'
  */
 	void
-scroll_region_set(wp)
-	WIN		*wp;
+scroll_region_set(WIN *wp)
 {
 	OUTSTR(tgoto((char *)T_CS, wp->w_winpos + wp->w_height - 1, wp->w_winpos));
 }
@@ -1059,7 +1036,7 @@ scroll_region_set(wp)
  * reset scrolling region to the whole screen
  */
 	void
-scroll_region_reset()
+scroll_region_reset(void)
 {
 	OUTSTR(tgoto((char *)T_CS, (int)Rows - 1, 0));
 }

@@ -21,8 +21,7 @@
  * input is stepped over rather than looped on.
  */
 	int
-utf_len(c)
-	int		c;
+utf_len(int c)
 {
 	unsigned	b = (unsigned)c & 0xff;
 
@@ -43,8 +42,7 @@ utf_len(c)
  * Byte class: UTF8_ASCII, UTF8_LEAD or UTF8_TAIL.
  */
 	int
-utf_class(c)
-	int		c;
+utf_class(int c)
 {
 	if (UTF8_ISTAIL(c))
 		return UTF8_TAIL;
@@ -59,9 +57,7 @@ utf_class(c)
  * of bytes consumed (always at least 1, so callers can make progress).
  */
 	int
-utf_decode(ptr, lenp)
-	char_u	*ptr;
-	int		*lenp;
+utf_decode(char_u *ptr, int *lenp)
 {
 	int		len;
 	int		i;
@@ -124,9 +120,7 @@ utf_decode(ptr, lenp)
  * always advances.
  */
 	int
-utf_encode(cp, buf)
-	int		cp;
-	char_u	*buf;
+utf_encode(int cp, char_u *buf)
 {
 	if (cp < 0)
 		goto bad;
@@ -168,8 +162,7 @@ bad:
  * wide table makes both readable.
  */
 	static int
-utf_iszerowidth(cp)
-	int		cp;
+utf_iszerowidth(int cp)
 {
 	return ((cp >= 0x0300 && cp <= 0x036f)		/* combining diacriticals */
 			|| (cp >= 0x0483 && cp <= 0x0489)
@@ -242,8 +235,7 @@ static struct { int first, last; } utf_wide[] = {
  * Display width of a code point, in columns.
  */
 	int
-utf_cpwidth(cp)
-	int		cp;
+utf_cpwidth(int cp)
 {
 	int		lo, hi, mid;
 
@@ -273,8 +265,7 @@ utf_cpwidth(cp)
  * text. A malformed byte is shown as "[XX]" by transchar(), so it is 4.
  */
 	int
-utf_width(ptr)
-	char_u	*ptr;
+utf_width(char_u *ptr)
 {
 	int		cp;
 	int		len;
@@ -296,9 +287,7 @@ utf_width(ptr)
  * the string, so we never walk off the front.
  */
 	char_u *
-utf_head(base, ptr)
-	char_u	*base;
-	char_u	*ptr;
+utf_head(char_u *base, char_u *ptr)
 {
 	char_u	*p = ptr;
 
@@ -311,9 +300,7 @@ utf_head(base, ptr)
  * Start of the character before the one at ptr, or base.
  */
 	char_u *
-utf_prev(base, ptr)
-	char_u	*base;
-	char_u	*ptr;
+utf_prev(char_u *base, char_u *ptr)
 {
 	if (ptr <= base)
 		return base;
@@ -325,9 +312,7 @@ utf_prev(base, ptr)
  * from the start of str. Used to snap a column onto a character boundary.
  */
 	int
-utf_headoff(str, col)
-	char_u	*str;
-	int		col;
+utf_headoff(char_u *str, int col)
 {
 	char_u	*p;
 
@@ -341,9 +326,7 @@ utf_headoff(str, col)
  * Length in bytes of the character at str[col], at least 1.
  */
 	int
-utf_lenat(str, col)
-	char_u	*str;
-	int		col;
+utf_lenat(char_u *str, int col)
 {
 	int		len;
 	int		i;
@@ -366,8 +349,7 @@ utf_lenat(str, col)
  * katakana block, which used to be the one-byte kana of Shift-JIS.
  */
 	int
-utf_iskana(ptr)
-	char_u	*ptr;
+utf_iskana(char_u *ptr)
 {
 	int		cp = utf_decode(ptr, NULL);
 
@@ -383,8 +365,7 @@ utf_iskana(ptr)
  * Number of characters (not bytes) in str.
  */
 	int
-utf_strlen(str)
-	char_u	*str;
+utf_strlen(char_u *str)
 {
 	int		n = 0;
 

@@ -38,12 +38,7 @@
  */
 
 	void
-dosub(lp, up, cmd, nextcommand, use_old)
-	linenr_t	lp;
-	linenr_t	up;
-	char_u		*cmd;
-	char_u		**nextcommand;
-	int			use_old;
+dosub(linenr_t lp, linenr_t up, char_u *cmd, char_u **nextcommand, int use_old)
 {
 	linenr_t		lnum;
 	long			i;
@@ -446,10 +441,7 @@ outofmem:
  */
 
 	void
-doglob(type, lp, up, cmd)
-	int 		type;
-	linenr_t	lp, up;
-	char_u		*cmd;
+doglob(int type, linenr_t lp, linenr_t up, char_u *cmd)
 {
 	linenr_t		lnum;		/* line number according to old situation */
 	linenr_t		old_lcount; /* curbuf->b_ml.ml_line_count before the command */

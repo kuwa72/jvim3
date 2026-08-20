@@ -91,7 +91,7 @@ static int screen_ins_lines __ARGS((int, int, int, int));
  * (in rows) hasn't changed.
  */
 	void
-updateline()
+updateline(void)
 {
 	int 		row;
 	int 		n;
@@ -137,8 +137,7 @@ updateline()
  */
 
 	void
-updateScreen(type)
-	int 			type;
+updateScreen(int type)
 {
 	WIN				*wp;
 
@@ -228,8 +227,7 @@ updateScreen(type)
  * This may cause the windows below it also to be redrawn
  */
 	void
-win_update(wp)
-	WIN		*wp;
+win_update(WIN *wp)
 {
 	int				type = wp->w_redr_type;
 	register int	row;
@@ -524,7 +522,7 @@ win_update(wp)
  * mark all status lines for redraw; used after first :cd
  */
 	void
-status_redraw_all()
+status_redraw_all(void)
 {
 	WIN		*wp;
 
@@ -539,8 +537,7 @@ status_redraw_all()
  * If inversion is possible we use it. Else '=' characters are used.
  */
 	void
-win_redr_status(wp)
-	WIN		*wp;
+win_redr_status(WIN *wp)
 {
 	int		row;
 	int		col;
@@ -599,11 +596,7 @@ win_redr_status(wp)
  */
 
 	static int
-win_line(wp, lnum, startrow, endrow)
-		WIN				*wp;
-		linenr_t		lnum;
-		int 			startrow;
-		int 			endrow;
+win_line(WIN *wp, linenr_t lnum, int startrow, int endrow)
 {
 	char_u 			*screenp;
 	int				c;
@@ -1070,9 +1063,7 @@ win_line(wp, lnum, startrow, endrow)
  * Note: must do screen_start() before this!
  */
 	void
-screen_outchar(c, row, col)
-	int		c;
-	int		row, col;
+screen_outchar(int c, int row, int col)
 {
 	char_u		buf[2];
 
@@ -1089,10 +1080,7 @@ screen_outchar(c, row, col)
  * Note: caller must make sure that row is valid!
  */
 	void
-screen_msg(msg, row, col)
-	char_u	*msg;
-	int		row;
-	int		col;
+screen_msg(char_u *msg, int row, int col)
 {
 	char_u	*screenp;
 
@@ -1162,7 +1150,7 @@ static int	oldrow, oldcol;		/* old cursor position */
  * reset cursor position. Use whenever cursor moved before calling screen_char.
  */
 	void
-screen_start()
+screen_start(void)
 {
 	oldcol = 9999;
 }
@@ -1173,8 +1161,7 @@ screen_start()
  * return FAIL if highlighting is not possible, OK otherwise
  */
 	int
-set_highlight(context)
-	int		context;
+set_highlight(int context)
 {
 	int		len;
 	int		i;
@@ -1221,7 +1208,7 @@ set_highlight(context)
 }
 
 	void
-start_highlight()
+start_highlight(void)
 {
 	if (highlight != NULL)
 	{
@@ -1235,7 +1222,7 @@ start_highlight()
 }
 
 	void
-stop_highlight()
+stop_highlight(void)
 {
 	if (invert)
 	{
@@ -1248,10 +1235,7 @@ stop_highlight()
  * put character '*p' on the screen at position 'row' and 'col'
  */
 	static void
-screen_char(p, row, col)
-		char_u	*p;
-		int 	row;
-		int 	col;
+screen_char(char_u *p, int row, int col)
 {
 #ifndef KANJI
 	int			c;
@@ -1349,9 +1333,7 @@ screen_char(p, row, col)
  * display encoding, so we emit UTF-8 here.
  */
 	static int
-out_cell(row, col)
-	int		row;
-	int		col;
+out_cell(int row, int col)
 {
 	int		cp;
 	int		i;
@@ -1381,10 +1363,7 @@ out_cell(row, col)
  * with character 'c1' in first column followed by 'c2' in the other columns.
  */
 	void
-screen_fill(start_row, end_row, start_col, end_col, c1, c2)
-	int 	start_row, end_row;
-	int		start_col, end_col;
-	int		c1, c2;
+screen_fill(int start_row, int end_row, int start_col, int end_col, int c1, int c2)
 {
 	int				row;
 	int				col;
@@ -1477,7 +1456,7 @@ screen_fill(start_row, end_row, start_col, end_col, c1, c2)
  * recompute all w_botline's. Called after Rows changed.
  */
 	void
-comp_Botline_all()
+comp_Botline_all(void)
 {
 	WIN		*wp;
 
@@ -1489,8 +1468,7 @@ comp_Botline_all()
  * compute wp->w_botline. Can be called after wp->w_topline changed.
  */
 	void
-comp_Botline(wp)
-	WIN			*wp;
+comp_Botline(WIN *wp)
 {
 	linenr_t	lnum;
 	int			done = 0;
@@ -1504,8 +1482,7 @@ comp_Botline(wp)
 }
 
 	static void
-screenalloc(clear)
-	int		clear;
+screenalloc(int clear)
 {
 	static int		old_Rows = 0;
 	static int		old_Columns = 0;
@@ -1611,14 +1588,14 @@ screenalloc(clear)
 }
 
 	void
-screenclear()
+screenclear(void)
 {
 	screenalloc(FALSE);			/* allocate screen buffers if size changed */
 	screenclear2();
 }
 
 	static void
-screenclear2()
+screenclear2(void)
 {
 	if (starting || Nextscreen == NULL)
 		return;
@@ -1650,7 +1627,7 @@ screenclear2()
  * check cursor for a valid lnum
  */
 	void
-check_cursor()
+check_cursor(void)
 {
 	if (curwin->w_cursor.lnum > curbuf->b_ml.ml_line_count)
 		curwin->w_cursor.lnum = curbuf->b_ml.ml_line_count;
@@ -1659,7 +1636,7 @@ check_cursor()
 }
 
 	void
-cursupdate()
+cursupdate(void)
 {
 	linenr_t		p;
 	long 			nlines;
@@ -1803,8 +1780,7 @@ cursupdate()
  * compute curwin->w_col and curwin->w_virtcol
  */
 	void
-curs_columns(scroll)
-	int scroll;			/* when TRUE, may scroll horizontally */
+curs_columns(int scroll)
 {
 	int diff;
 
@@ -1917,10 +1893,7 @@ curs_columns(scroll)
  * type = 3: on the last position of this character (TAB)
  */
 	int
-getvcol(wp, pos, type)
-	WIN		*wp;
-	FPOS	*pos;
-	int		type;
+getvcol(WIN *wp, FPOS *pos, int type)
 {
 	int				col;
 	int				vcol;
@@ -1992,8 +1965,7 @@ getvcol(wp, pos, type)
 }
 
 	void
-scrolldown(nlines)
-	long	nlines;
+scrolldown(long nlines)
 {
 	register long	done = 0;	/* total # of physical lines done */
 
@@ -2016,8 +1988,7 @@ scrolldown(nlines)
 }
 
 	void
-scrollup(nlines)
-	long	nlines;
+scrollup(long nlines)
 {
 #ifdef NEVER
 	register long	done = 0;	/* total # of physical lines done */
@@ -2048,12 +2019,7 @@ scrollup(nlines)
  * Returns FAIL if the lines are not inserted, OK for success.
  */
 	int
-win_ins_lines(wp, row, nlines, invalid, mayclear)
-	WIN		*wp;
-	int		row;
-	int		nlines;
-	int		invalid;
-	int		mayclear;
+win_ins_lines(WIN *wp, int row, int nlines, int invalid, int mayclear)
 {
 	int		did_delete;
 	int		nextrow;
@@ -2147,12 +2113,7 @@ win_ins_lines(wp, row, nlines, invalid, mayclear)
  * Return OK for success, FAIL if the lines are not deleted.
  */
 	int
-win_del_lines(wp, row, nlines, invalid, mayclear)
-	WIN				*wp;
-	int 			row;
-	int 			nlines;
-	int				invalid;
-	int				mayclear;
+win_del_lines(WIN *wp, int row, int nlines, int invalid, int mayclear)
 {
 	int			retval;
 
@@ -2222,8 +2183,7 @@ win_del_lines(wp, row, nlines, invalid, mayclear)
  * window 'wp' and everything after it is messed up, mark it for redraw
  */
 	void
-win_rest_invalid(wp)
-	WIN			*wp;
+win_rest_invalid(WIN *wp)
 {
 	while (wp)
 	{
@@ -2254,11 +2214,7 @@ win_rest_invalid(wp)
  * return FAIL for failure, OK for success.
  */
 	static int
-screen_ins_lines(off, row, nlines, end)
-	int			off;
-	int 		row;
-	int 		nlines;
-	int			end;
+screen_ins_lines(int off, int row, int nlines, int end)
 {
 	int 		i;
 	int 		j;
@@ -2346,11 +2302,7 @@ screen_ins_lines(off, row, nlines, end)
  * Return OK for success, FAIL if the lines are not deleted.
  */
 	int
-screen_del_lines(off, row, nlines, end)
-	int				off;
-	int 			row;
-	int 			nlines;
-	int				end;
+screen_del_lines(int off, int row, int nlines, int end)
 {
 	int 		j;
 	int 		i;
@@ -2448,7 +2400,7 @@ screen_del_lines(off, row, nlines, end)
  * cleared only if a mode is shown.
  */
 	void
-showmode()
+showmode(void)
 {
 	int		did_clear = clear_cmdline;
 	int		need_clear = FALSE;
@@ -2486,7 +2438,7 @@ showmode()
  * delete mode message
  */
 	void
-delmode()
+delmode(void)
 {
 	if (Recording)
 		MSG("recording");
@@ -2499,16 +2451,13 @@ delmode()
  * if always is FALSE, only print if position has changed
  */
 	void
-showruler(always)
-	int		always;
+showruler(int always)
 {
 	win_redr_ruler(curwin, always);
 }
 
 	void
-win_redr_ruler(wp, always)
-	WIN		*wp;
-	int		always;
+win_redr_ruler(WIN *wp, int always)
 {
 	static linenr_t	oldlnum = 0;
 	static colnr_t	oldcol = 0;
@@ -2558,7 +2507,7 @@ win_redr_ruler(wp, always)
  * Used by msg() to decide to use either screen_msg() or printf().
  */
 	int
-screen_valid()
+screen_valid(void)
 {
 	screenalloc(FALSE);		/* allocate screen buffers if size changed */
 	return (Nextscreen != NULL);

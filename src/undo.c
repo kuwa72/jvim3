@@ -67,7 +67,7 @@ static long		u_newcount, u_oldcount;
  * save the current line for both the "u" and "U" command
  */
 	int
-u_save_cursor()
+u_save_cursor(void)
 {
 	return (u_save((linenr_t)(curwin->w_cursor.lnum - 1), (linenr_t)(curwin->w_cursor.lnum + 1)));
 }
@@ -78,8 +78,7 @@ u_save_cursor()
  * Returns FALSE when lines could not be saved.
  */
 	int
-u_save(top, bot)
-	linenr_t top, bot;
+u_save(linenr_t top, linenr_t bot)
 {
 	if (top > curbuf->b_ml.ml_line_count || top >= bot || bot > curbuf->b_ml.ml_line_count + 1)
 		return FALSE;	/* rely on caller to do error messages */
@@ -95,8 +94,7 @@ u_save(top, bot)
  * The line is replaced, so the new bottom line is lnum + 1.
  */
 	int
-u_savesub(lnum)
-	linenr_t	lnum;
+u_savesub(linenr_t lnum)
 {
 	return (u_savecommon(lnum - 1, lnum + 1, lnum + 1));
 }
@@ -106,8 +104,7 @@ u_savesub(lnum)
  * The line is inserted, so the new bottom line is lnum + 1.
  */
  	int
-u_inssub(lnum)
-	linenr_t	lnum;
+u_inssub(linenr_t lnum)
 {
 	return (u_savecommon(lnum - 1, lnum, lnum + 1));
 }
@@ -117,17 +114,13 @@ u_inssub(lnum)
  * The lines are deleted, so the new bottom line is lnum.
  */
 	int
-u_savedel(lnum, nlines)
-	linenr_t	lnum;
-	long		nlines;
+u_savedel(linenr_t lnum, long nlines)
 {
 	return (u_savecommon(lnum - 1, lnum + nlines, lnum));
 }
 
 	static int 
-u_savecommon(top, bot, newbot)
-	linenr_t top, bot;
-	linenr_t newbot;
+u_savecommon(linenr_t top, linenr_t bot, linenr_t newbot)
 {
 	linenr_t		lnum;
 	long			i;
@@ -238,8 +231,7 @@ nomem:
 }
 
 	void
-u_undo(count)
-	int count;
+u_undo(int count)
 {
 	/*
 	 * If we get an undo command while executing a macro, we behave like the 
@@ -276,8 +268,7 @@ u_undo(count)
 }
 
 	void
-u_redo(count)
-	int count;
+u_redo(int count)
 {
 	u_newcount = 0;
 	u_oldcount = 0;
@@ -303,7 +294,7 @@ u_redo(count)
  * The replaced lines in the file are saved in the entry list for the next undo/redo.
  */
 	static void
-u_undoredo()
+u_undoredo(void)
 {
 	char_u		**newarray = NULL;
 	linenr_t	oldsize;
@@ -430,7 +421,7 @@ u_undoredo()
  * in some cases, but it's better than nothing).
  */
 	static void
-u_undo_end()
+u_undo_end(void)
 {
 	if ((u_oldcount -= u_newcount) != 0)
 		msgmore(-u_oldcount);
@@ -444,7 +435,7 @@ u_undo_end()
  * u_sync: stop adding to the current entry list
  */
 	void
-u_sync()
+u_sync(void)
 {
 	if (curbuf->b_u_synced)
 		return;				/* already synced */
@@ -457,8 +448,7 @@ u_sync()
  * Now an undo means that the buffer is modified.
  */
 	void
-u_unchanged(buf)
-	BUF		*buf;
+u_unchanged(BUF *buf)
 {
 	register struct u_header *uh;
 
@@ -472,7 +462,7 @@ u_unchanged(buf)
  * 				It is called only when b_u_synced is FALSE.
  */
 	static void
-u_getbot()
+u_getbot(void)
 {
 	register struct u_entry *uep;
 
@@ -507,8 +497,7 @@ u_getbot()
  * u_freelist: free one entry list and adjust the pointers
  */
 	static void
-u_freelist(uhp)
-	struct u_header *uhp;
+u_freelist(struct u_header *uhp)
 {
 	register struct u_entry *uep, *nuep;
 
@@ -539,9 +528,7 @@ u_freelist(uhp)
  * free entry 'uep' and 'n' lines in uep->ue_array[]
  */
 	static void
-u_freeentry(uep, n)
-	struct u_entry *uep;
-	register long n;
+u_freeentry(struct u_entry *uep, register long n)
 {
 	while (n)
 		u_free_line(uep->ue_array[--n]);
@@ -552,8 +539,7 @@ u_freeentry(uep, n)
  * invalidate the undo buffer; called when storage has already been released
  */
 	void
-u_clearall(buf)
-	BUF		*buf;
+u_clearall(BUF *buf)
 {
 	buf->b_u_newhead = buf->b_u_oldhead = buf->b_u_curhead = NULL;
 	buf->b_u_synced = TRUE;
@@ -566,8 +552,7 @@ u_clearall(buf)
  * save the line "lnum" for the "U" command
  */
 	void
-u_saveline(lnum)
-	linenr_t lnum;
+u_saveline(linenr_t lnum)
 {
 	if (lnum == curbuf->b_u_line_lnum)		/* line is already saved */
 		return;
@@ -587,7 +572,7 @@ u_saveline(lnum)
  * (this is used externally for crossing a line while in insert mode)
  */
 	void
-u_clearline()
+u_clearline(void)
 {
 	if (curbuf->b_u_line_ptr != NULL)
 	{
@@ -603,7 +588,7 @@ u_clearline()
  * We also allow the cursor to be in another line.
  */
 	void
-u_undoline()
+u_undoline(void)
 {
 	colnr_t t;
 	char_u	*old;
@@ -702,8 +687,7 @@ u_undoline()
  * Allocate a block of memory and link it in the allocated block list.
  */
 	static char_u *
-u_blockalloc(size)
-	long_u	size;
+u_blockalloc(long_u size)
 {
 	struct m_block *p;
 	struct m_block *mp, *next;
@@ -730,8 +714,7 @@ u_blockalloc(size)
  * free all allocated memory blocks for the buffer 'buf'
  */
 	void
-u_blockfree(buf)
-	BUF		*buf;
+u_blockfree(BUF *buf)
 {
 	struct m_block	*p, *np;
 
@@ -750,8 +733,7 @@ u_blockfree(buf)
  * Insert the chunk into the correct free list, keeping it sorted on address.
  */
 	static void
-u_free_line(ptr)
-	char_u *ptr;
+u_free_line(char_u *ptr)
 {
 	register info_t		*next;
 	register info_t		*prev, *curr;
@@ -852,8 +834,7 @@ u_free_line(ptr)
  * 'size' characters plus a terminating NUL.
  */
 	static char_u *
-u_alloc_line(size)
-	register unsigned size;
+u_alloc_line(register unsigned size)
 {
 	register info_t *mp, *mprev, *mp2;
 	struct m_block	*mbp;
@@ -948,8 +929,7 @@ u_alloc_line(size)
  * u_save_line(): allocate memory with u_alloc_line() and copy line 'lnum' into it.
  */
 	static char_u *
-u_save_line(lnum)
-	linenr_t	lnum;
+u_save_line(linenr_t lnum)
 {
 	register char_u *src;
 	register char_u *dst;

@@ -25,11 +25,7 @@
  * type = 1   right aligned
  */
 	void
-do_align(start, end, width, type)
-	linenr_t	start;
-	linenr_t	end;
-	int			width;
-	int			type;
+do_align(linenr_t start, linenr_t end, int width, int type)
 {
 	FPOS	pos;
 	int		len;
@@ -84,10 +80,7 @@ do_align(start, end, width, type)
  * return FAIL for failure, OK otherwise
  */
 	int
-do_move(line1, line2, n)
-	linenr_t	line1;
-	linenr_t	line2;
-	linenr_t	n;
+do_move(linenr_t line1, linenr_t line2, linenr_t n)
 {
 	char_u		*q;
 	int			has_mark;
@@ -157,10 +150,7 @@ do_move(line1, line2, n)
  * :copy command - copy lines line1-line2 to line n
  */
 	void
-do_copy(line1, line2, n)
-	linenr_t	line1;
-	linenr_t	line2;
-	linenr_t	n;
+do_copy(linenr_t line1, linenr_t line2, linenr_t n)
 {
 	linenr_t		lnum;
 	char_u			*p;
@@ -211,11 +201,7 @@ do_copy(line1, line2, n)
  * the command.
  */
 	void
-dobang(addr_count, line1, line2, forceit, arg)
-	int			addr_count;
-	linenr_t	line1, line2;
-	int			forceit;
-	char_u		*arg;
+dobang(int addr_count, linenr_t line1, linenr_t line2, int forceit, char_u *arg)
 {
 	static	char_u	*prevcmd = NULL;		/* the previous command */
 	char_u			*t;
@@ -305,8 +291,7 @@ dobang(addr_count, line1, line2, forceit, arg)
  * call a shell to execute a command
  */
 	void
-doshell(cmd)
-	char_u	*cmd;
+doshell(char_u *cmd)
 {
 	BUF		*buf;
 
@@ -384,10 +369,7 @@ doshell(cmd)
  * We use output redirection if do_out is TRUE.
  */
 	void
-dofilter(line1, line2, buff, do_in, do_out)
-	linenr_t	line1, line2;
-	char_u		*buff;
-	int			do_in, do_out;
+dofilter(linenr_t line1, linenr_t line2, char_u *buff, int do_in, int do_out)
 {
 #ifdef LATTICE
 	char_u		itmp[L_tmpnam];		/* use tmpnam() */

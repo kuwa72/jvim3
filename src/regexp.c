@@ -189,8 +189,7 @@ static char_u	* regstrext __ARGS((char_u *));
 #endif
 
 	static int
-ismult(c)
-	int c;
+ismult(int c)
 {
 	return (c == Magic('*') || c == Magic('+') || c == Magic('='));
 }
@@ -288,9 +287,7 @@ static int		strcspn __ARGS((const char_u *, const char_u *));
  * skip strings inside [ and ].
  */
 	char_u *
-skip_regexp(p, dirc)
-	char_u	*p;
-	int		dirc;
+skip_regexp(char_u *p, int dirc)
 {
 	int		in_range = FALSE;
 
@@ -340,8 +337,7 @@ skip_regexp(p, dirc)
  * of the structure of the compiled regexp.
  */
 	regexp		   *
-regcomp(exp)
-	char_u		   *exp;
+regcomp(char_u *exp)
 {
 	register regexp *r;
 	register char_u  *scan;
@@ -461,9 +457,7 @@ regcomp(exp)
  * follows makes it hard to avoid.
  */
 	static char_u *
-reg(paren, flagp)
-	int 			paren;		/* Parenthesized? */
-	int 		   *flagp;
+reg(int paren, int *flagp)
 {
 	register char_u  *ret;
 	register char_u  *br;
@@ -540,8 +534,7 @@ reg(paren, flagp)
  * Implements the concatenation operator.
  */
 	static char_u    *
-regbranch(flagp)
-	int 		   *flagp;
+regbranch(int *flagp)
 {
 	register char_u  *ret;
 	register char_u  *chain;
@@ -579,8 +572,7 @@ regbranch(flagp)
  * endmarker role is not redundant.
  */
 static char_u    *
-regpiece(flagp)
-	int 		   *flagp;
+regpiece(int *flagp)
 {
 	register char_u  *ret;
 	register int	op;
@@ -641,8 +633,7 @@ regpiece(flagp)
  * faster to run.
  */
 static char_u    *
-regatom(flagp)
-	int 		   *flagp;
+regatom(int *flagp)
 {
 	register char_u  *ret;
 	int 			flags;
@@ -884,8 +875,7 @@ regatom(flagp)
  - regnode - emit a node
  */
 static char_u    *				/* Location. */
-regnode(op)
-	int			op;
+regnode(int op)
 {
 	register char_u  *ret;
 	register char_u  *ptr;
@@ -908,8 +898,7 @@ regnode(op)
  - regc - emit (if appropriate) a byte of code
  */
 static void
-regc(b)
-	int			b;
+regc(int b)
 {
 	if (regcode != &regdummy)
 		*regcode++ = b;
@@ -922,9 +911,7 @@ regc(b)
  - regjp - emit (if appropriate) a word of code
  */
 static void
-regjp(b, k)
-	int			b;
-	char_u		k;
+regjp(int b, char_u k)
 {
 	if (regcode != &regdummy)
 	{
@@ -940,7 +927,7 @@ regjp(b, k)
  - unregc - take back (if appropriate) a byte of code
  */
 static void
-unregc()
+unregc(void)
 {
 	if (regcode != &regdummy)
 #ifdef KANJI
@@ -961,9 +948,7 @@ unregc()
  * Means relocating the operand.
  */
 static void
-reginsert(op, opnd)
-	int			op;
-	char_u		   *opnd;
+reginsert(int op, char_u *opnd)
 {
 	register char_u  *src;
 	register char_u  *dst;
@@ -989,9 +974,7 @@ reginsert(op, opnd)
  - regtail - set the next-pointer at the end of a node chain
  */
 static void
-regtail(p, val)
-	char_u		   *p;
-	char_u		   *val;
+regtail(char_u *p, char_u *val)
 {
 	register char_u  *scan;
 	register char_u  *temp;
@@ -1021,9 +1004,7 @@ regtail(p, val)
  - regoptail - regtail on operand of first argument; nop if operandless
  */
 static void
-regoptail(p, val)
-	char_u		   *p;
-	char_u		   *val;
+regoptail(char_u *p, char_u *val)
 {
 	/* "Operandless" and "op != BRANCH" are synonymous in practice. */
 	if (p == NULL || p == &regdummy || OP(p) != BRANCH)
@@ -1041,15 +1022,14 @@ static int		prevchr;
 static int		nextchr;	/* used for ungetchr() */
 
 static void
-initchr(str)
-char_u *str;
+initchr(char_u *str)
 {
 	regparse = str;
 	curchr = prevchr = nextchr = -1;
 }
 
 static int
-peekchr()
+peekchr(void)
 {
 	if (curchr < 0) {
 		switch (curchr = regparse[0]) {
@@ -1104,7 +1084,7 @@ peekchr()
 }
 
 static void
-skipchr()
+skipchr(void)
 {
 #ifdef KANJI
 	if (ISkanji(*regparse))
@@ -1118,7 +1098,7 @@ skipchr()
 }
 
 static int
-getchr()
+getchr(void)
 {
 	int chr;
 
@@ -1132,7 +1112,7 @@ getchr()
  * put character back. Works only once!
  */
 static void
-ungetchr()
+ungetchr(void)
 {
 	nextchr = curchr;
 	curchr = prevchr;
@@ -1183,10 +1163,7 @@ static char_u    *regprop __ARGS((char_u *));
  - regexec - match a regexp against a string
  */
 int
-regexec(prog, string, at_bol)
-	register regexp *prog;
-	register char_u  *string;
-	int 			at_bol;
+regexec(register regexp *prog, register char_u *string, int at_bol)
 {
 	register char_u  *s;
 
@@ -1272,9 +1249,7 @@ regexec(prog, string, at_bol)
  - regtry - try match at specific point
  */
 static int						/* 0 failure, 1 success */
-regtry(prog, string)
-	regexp		   *prog;
-	char_u		   *string;
+regtry(regexp *prog, char_u *string)
 {
 	register int	i;
 	register char_u **sp;
@@ -1309,8 +1284,7 @@ regtry(prog, string)
  * by recursion.
  */
 static int						/* 0 failure, 1 success */
-regmatch(prog)
-	char_u		   *prog;
+regmatch(char_u *prog)
 {
 	register char_u  *scan;		/* Current node. */
 	char_u		   *next;		/* Next node. */
@@ -1656,8 +1630,7 @@ regmatch(prog)
  - regrepeat - repeatedly match something simple, report how many
  */
 static int
-regrepeat(p)
-	char_u		   *p;
+regrepeat(char_u *p)
 {
 	register int	count = 0;
 	register char_u  *scan;
@@ -1746,8 +1719,7 @@ regrepeat(p)
  - regnext - dig the "next" pointer out of a node
  */
 static char_u    *
-regnext(p)
-	register char_u  *p;
+regnext(register char_u *p)
 {
 	register int	offset;
 
@@ -1770,8 +1742,7 @@ regnext(p)
  - regdump - dump a regexp onto stdout in vaguely comprehensible form
  */
 void
-regdump(r)
-	regexp		   *r;
+regdump(regexp *r)
 {
 	register char_u  *s;
 	register int	op = EXACTLY;		/* Arbitrary non-END op. */
@@ -1814,8 +1785,7 @@ regdump(r)
  - regprop - printable representation of opcode
  */
 static char_u    *
-regprop(op)
-	char_u		   *op;
+regprop(char_u *op)
 {
 	register char_u  *p;
 	static char_u 	buf[50];
@@ -1919,9 +1889,7 @@ regprop(op)
  */
 
 static int
-strcspn(s1, s2)
-	const char_u		   *s1;
-	const char_u		   *s2;
+strcspn(const char_u *s1, const char_u *s2)
 {
 	register char_u  *scan1;
 	register char_u  *scan2;
@@ -1943,9 +1911,7 @@ strcspn(s1, s2)
  * Return 0 if strings match, non-zero otherwise.
  */
 	int
-cstrncmp(s1, s2, n)
-	char_u		   *s1, *s2;
-	int 			n;
+cstrncmp(char_u *s1, char_u *s2, int n)
 {
 #ifdef KANJI
 	if (reg_jic)
@@ -1962,9 +1928,7 @@ cstrncmp(s1, s2, n)
  * cstrchr: This function is used a lot for simple searches, keep it fast!
  */
 	char_u *
-cstrchr(s, c)
-	char_u		   *s;
-	register int	c;
+cstrchr(char_u *s, register int c)
 {
 	register char_u		   *p;
 
@@ -2000,9 +1964,7 @@ cstrchr(s, c)
 
 #ifdef KANJI
 static	char *
-strjpchr(s, c, k)
-	char_u			*s;
-	char_u			c, k;
+strjpchr(char_u *s, char_u c, char_u k)
 {
 	if (reg_jic)
 	{
@@ -2066,9 +2028,7 @@ strjpchr(s, c, k)
  * a time over a three byte character.
  */
 static	char *
-mstrjpchr(s, ptr)
-	char_u			*s;
-	char_u			*ptr;
+mstrjpchr(char_u *s, char_u *ptr)
 {
 	int		cp;
 	int		fold = 0;
@@ -2129,8 +2089,7 @@ mstrjpchr(s, ptr)
 
 #ifndef notdef
 static char_u	*
-regstrext(exp)
-	char_u		   *exp;
+regstrext(char_u *exp)
 {
 	char_u			*	p;
 	char_u			*	w;

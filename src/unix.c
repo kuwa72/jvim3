@@ -157,9 +157,7 @@ static int show_shell_mess = TRUE;
 #define FALSE 0
 
 	void
-mch_write(s, len)
-	char_u	*s;
-	int		len;
+mch_write(char_u *s, int len)
 {
 	write(1, (char *)s, len);
 }
@@ -172,10 +170,7 @@ mch_write(s, len)
  * If wtime == -1 wait forever for characters.
  */
 	int
-GetChars(buf, maxlen, wtime)
-	char_u	*buf;
-	int		maxlen;
-	int		wtime;			/* don't use "time", MIPS cannot handle it */
+GetChars(char_u *buf, int maxlen, int wtime)
 {
 	int		len;
 
@@ -223,21 +218,20 @@ GetChars(buf, maxlen, wtime)
  * return non-zero if a character is available
  */
 	int
-mch_char_avail()
+mch_char_avail(void)
 {
 	return WaitForChar(0);
 }
 
 	long
-mch_avail_mem(special)
-	int special;
+mch_avail_mem(int special)
 {
 	return 0x7fffffff;		/* virual memory eh */
 }
 
 #ifndef FD_ZERO
 	void
-vim_delay()
+vim_delay(void)
 {
 # ifdef notdef
 	poll(0, 0, 500);
@@ -260,7 +254,7 @@ extern int select __ARGS((int, fd_set *, fd_set *, fd_set *, struct timeval *));
 # endif
 
 	void
-vim_delay()
+vim_delay(void)
 {
 #  ifdef notdef
 	struct timeval tv;
@@ -289,18 +283,12 @@ vim_delay()
 sig_winch()
 #else
 # if defined(_SEQUENT_) || defined(SCO) || defined(ISC)
-sig_winch(sig, code)
-	int		sig;
-	int		code;
+sig_winch(int sig, int code)
 # else
 #  if defined(USL) || defined(SIG_WINCH_ONE_ARG)
-sig_winch(sig)
-	int		sig;
+sig_winch(int sig)
 #  else
-sig_winch(sig, code, scp)
-	int		sig;
-	int		code;
-	struct sigcontext *scp;
+sig_winch(int sig, int code, struct sigcontext *scp)
 #  endif
 # endif
 #endif
@@ -317,7 +305,7 @@ sig_winch(sig, code, scp)
  * otherwise fake it by starting a new shell.
  */
 	void
-mch_suspend()
+mch_suspend(void)
 {
 #if defined(FEPCTRL) && defined(ONEW)
 	onew_freqsave();
@@ -333,7 +321,7 @@ mch_suspend()
 }
 
 	void
-mch_windinit()
+mch_windinit(void)
 {
 	Columns = 80;
 	Rows = 24;
@@ -359,9 +347,7 @@ mch_windinit()
 #define BUF2SIZE 320		/* lenght of buffer for argument with complete path */
 
 	void
-check_win(argc, argv)
-	int		argc;
-	char	**argv;
+check_win(int argc, char **argv)
 {
 	if (!isatty(0) || !isatty(1))
     {
@@ -375,8 +361,7 @@ check_win(argc, argv)
  *				 This will cause the filename to remain exactly the same.
  */
 	void
-fname_case(name)
-	char_u *name;
+fname_case(char_u *name)
 {
 }
 
@@ -387,7 +372,7 @@ fname_case(name)
  * return FAIL for failure, OK otherwise
  */
 	static int
-get_x11_windis()
+get_x11_windis(void)
 {
 	char		*winid;
 
@@ -410,7 +395,7 @@ get_x11_windis()
  * Determine original x11 Window Title
  */
 	static void
-get_x11_title()
+get_x11_title(void)
 {
 	XTextProperty	text_prop;
 
@@ -433,7 +418,7 @@ get_x11_title()
  */
 
 	static void
-get_x11_icon()
+get_x11_icon(void)
 {
 	XTextProperty text_prop;
 
@@ -470,8 +455,7 @@ Vim is stopped in an uncontrolled way.
  * get_x11_windis() must be called before this and have returned OK
  */
 	static void
-set_x11_title(title)
-	char_u		*title;
+set_x11_title(char_u *title)
 {
 	XTextProperty text_prop;
 
@@ -489,8 +473,7 @@ set_x11_title(title)
  * get_x11_windis() must be called before this and have returned OK
  */
 	static void
-set_x11_icon(icon)
-	char_u		*icon;
+set_x11_icon(char_u *icon)
 {
 	XTextProperty text_prop;
 
@@ -508,13 +491,13 @@ set_x11_icon(icon)
 # ifdef notdef		/* original */
 
 	static void
-get_x11_title()
+get_x11_title(void)
 {
 	oldtitle = (char_u *)"Thanks for flying Vim";
 }
 
 	static void
-get_x11_icon()
+get_x11_icon(void)
 {
 	if (STRNCMP(term_strings.t_name, "builtin_", 8) == 0)
 		oldicon = term_strings.t_name + 8;
@@ -525,7 +508,7 @@ get_x11_icon()
 # else
 
 	static char_u *
-get_term_strings()
+get_term_strings(void)
 {
 	if (STRNCMP(term_strings.t_name, "builtin_", 8) == 0)
 		return term_strings.t_name + 8;
@@ -534,13 +517,13 @@ get_term_strings()
 }
 
 	static void
-get_x11_title()
+get_x11_title(void)
 {
 	oldtitle = get_term_strings();
 }
 
 	static void
-get_x11_icon()
+get_x11_icon(void)
 {
 	oldicon = get_term_strings();
 }
@@ -555,9 +538,7 @@ get_x11_icon()
  * Currently only works for x11.
  */
 	void
-mch_settitle(title, icon)
-	char_u *title;
-	char_u *icon;
+mch_settitle(char_u *title, char_u *icon)
 {
 	int			type = 0;
 
@@ -659,8 +640,7 @@ mch_settitle(title, icon)
  *	3  Restore title and icon
  */
 	void
-mch_restore_title(which)
-	int which;
+mch_restore_title(int which)
 {
 	mch_settitle((which & 1) ? oldtitle : NULL, (which & 2) ? oldicon : NULL);
 }
@@ -670,9 +650,7 @@ mch_restore_title(which)
  * Return OK for success, FAIL for failure.
  */
 	int
-vim_dirname(buf, len)
-	char_u *buf;
-	int len;
+vim_dirname(char_u *buf, int len)
 {
 	/* Was "extern int errno" plus sys_errlist[]: errno is thread local now and
 	 * sys_errlist[] is gone from current libcs.
@@ -695,9 +673,7 @@ vim_dirname(buf, len)
  * return FAIL for failure, OK for success
  */
 	int
-FullName(fname, buf, len)
-	char_u *fname, *buf;
-	int len;
+FullName(char_u *fname, char_u *buf, int len)
 {
 	int		l;
 	char_u	olddir[MAXPATHL];
@@ -756,8 +732,7 @@ FullName(fname, buf, len)
  * return TRUE is fname is an absolute path name
  */
 	int
-isFullName(fname)
-	char_u		*fname;
+isFullName(char_u *fname)
 {
 	return (*fname == '/');
 }
@@ -766,8 +741,7 @@ isFullName(fname)
  * get file permissions for 'name'
  */
 	long
-getperm(name)
-	char_u *name;
+getperm(char_u *name)
 {
 	struct stat statb;
 
@@ -782,9 +756,7 @@ getperm(name)
  * return FAIL for failure, OK otherwise
  */
 	int
-setperm(name, perm)
-	char_u *name;
-	int perm;
+setperm(char_u *name, int perm)
 {
 #ifdef SCO
 	return (chmod((char *)name, (mode_t)perm) == 0 ? OK : FAIL);
@@ -799,8 +771,7 @@ setperm(name, perm)
  * return -1 for error
  */
 	int
-isdir(name)
-	char_u *name;
+isdir(char_u *name)
 {
 	struct stat statb;
 
@@ -814,8 +785,7 @@ isdir(name)
 }
 
 	void
-mch_windexit(r)
-	int r;
+mch_windexit(int r)
 {
 #ifdef FEPCTRL
 	if (FepInit)
@@ -834,8 +804,7 @@ mch_windexit(r)
 }
 
 	void
-mch_settmode(raw)
-	int				raw;
+mch_settmode(int raw)
 {
 #if defined(ECHOE) && defined(ICANON) && !defined(__NeXT__)
 	/* for "new" tty systems */
@@ -902,8 +871,7 @@ mch_settmode(raw)
  * set screen mode, always fails.
  */
 	int
-mch_screenmode(arg)
-	char_u	 *arg;
+mch_screenmode(char_u *arg)
 {
 	EMSG("Screen mode setting not supported");
 	return FAIL;
@@ -917,7 +885,7 @@ mch_screenmode(arg)
  * 4. keep using the old values
  */
 	int
-mch_get_winsize()
+mch_get_winsize(void)
 {
 	int			old_Rows = Rows;
 	int			old_Columns = Columns;
@@ -996,16 +964,13 @@ mch_get_winsize()
 }
 
 	void
-mch_set_winsize()
+mch_set_winsize(void)
 {
 	/* should try to set the window size to Rows and Columns */
 }
 
 	int
-call_shell(cmd, dummy, cooked)
-	char_u	*cmd;
-	int		dummy;
-	int		cooked;
+call_shell(char_u *cmd, int dummy, int cooked)
 {
 #ifdef USE_SYSTEM		/* use system() to start the shell: simple but slow */
 
@@ -1201,9 +1166,7 @@ static char_u		inbuf[INBUFLEN];	/* internal typeahead buffer */
 static int		inbufcount = 0;		/* number of chars in inbuf[] */
 
 	static int
-Read(buf, maxlen)
-	char_u	*buf;
-	long	maxlen;
+Read(char_u *buf, long maxlen)
 {
 	if (inbufcount == 0)		/* if the buffer is empty, fill it */
 		fill_inbuf();
@@ -1217,7 +1180,7 @@ Read(buf, maxlen)
 }
 
 	void
-breakcheck()
+breakcheck(void)
 {
 /*
  * check for CTRL-C typed by reading all available characters
@@ -1227,7 +1190,7 @@ breakcheck()
 }
 
 	static void
-fill_inbuf()
+fill_inbuf(void)
 {
 	int		len;
 
@@ -1269,8 +1232,7 @@ fill_inbuf()
  */
 
 	static int
-WaitForChar(ticks)
-	int ticks;
+WaitForChar(int ticks)
 {
 	if (inbufcount)		/* something in inbuf[] */
 		return 1;
@@ -1282,8 +1244,7 @@ WaitForChar(ticks)
  * ticks = -1 will block forever
  */
 	static int
-RealWaitForChar(ticks)
-	int ticks;
+RealWaitForChar(int ticks)
 {
 #ifndef FD_ZERO
 	struct pollfd fds;
@@ -1349,13 +1310,7 @@ remove(buf)
 #endif
 
 	int
-ExpandWildCards(num_pat, pat, num_file, file, files_only, list_notfound)
-	int 			num_pat;
-	char_u		  **pat;
-	int 		   *num_file;
-	char_u		 ***file;
-	int				files_only;
-	int				list_notfound;
+ExpandWildCards(int num_pat, char_u **pat, int *num_file, char_u ***file, int files_only, int list_notfound)
 {
 	char_u	tmpname[TMPNAMELEN];
 	char_u	*command;
@@ -1561,9 +1516,7 @@ ExpandWildCards(num_pat, pat, num_file, file, files_only, list_notfound)
 }
 
 	void
-FreeWild(num, file)
-	int		num;
-	char_u	**file;
+FreeWild(int num, char_u **file)
 {
 	if (file == NULL || num == 0)
 		return;
@@ -1573,8 +1526,7 @@ FreeWild(num, file)
 }
 
 	int
-has_wildcard(p)
-	char_u *p;
+has_wildcard(char_u *p)
 {
 #ifdef __STDC__
 	return strpbrk((char *)p, "*?[{`~$") != NULL;
@@ -1587,9 +1539,7 @@ has_wildcard(p)
 }
 
 	int
-have_wildcard(num, file)
-	int		num;
-	char_u	**file;
+have_wildcard(int num, char_u **file)
 {
 	register int i;
 
@@ -1606,8 +1556,7 @@ have_wildcard(num, file)
  * destination exists.
  */
 	int
-rename(src, dest)
-	char_u *src, *dest;
+rename(char_u *src, char_u *dest)
 {
 	struct stat		st;
 

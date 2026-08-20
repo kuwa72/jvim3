@@ -46,7 +46,7 @@ static linenr_t buflist_findlnum __ARGS((BUF *));
  * return FAIL for failure, OK otherwise
  */
  	int
-open_buffer()
+open_buffer(void)
 {
 	if (readonlymode && curbuf->b_filename != NULL)
 		curbuf->b_p_ro = TRUE;
@@ -150,10 +150,7 @@ open_buffer()
  * if 'remove' is TRUE, remove the buffer from the buffer list.
  */
 	void
-close_buffer(buf, free_buf, remove)
-	BUF		*buf;
-	int		free_buf;
-	int		remove;
+close_buffer(BUF *buf, int free_buf, int remove)
 {
 	if (buf->b_nwindows > 0)
 		--buf->b_nwindows;
@@ -202,8 +199,7 @@ close_buffer(buf, free_buf, remove)
  * buf_clear() - make buffer empty
  */
 	void
-buf_clear(buf)
-	BUF		*buf;
+buf_clear(BUF *buf)
 {
 	buf->b_ml.ml_line_count = 1;
 	buf->b_changed = FALSE;
@@ -219,8 +215,7 @@ buf_clear(buf)
  * buf_freeall() - free all things allocated for the buffer
  */
 	void
-buf_freeall(buf)
-	BUF		*buf;
+buf_freeall(BUF *buf)
 {
 	u_blockfree(buf);				/* free the memory allocated for undo */
 	ml_close(buf);					/* close and delete the memline/memfile */
@@ -232,12 +227,7 @@ buf_freeall(buf)
  * Implementation of the command for the buffer list
  */
 	int
-do_buffer(action, start, dir, count, forceit)
-	int		action;		/* 0 = normal, 1 = split window, 2 = unload, 3 = delete */
-	int		start;		/* 0 = current, 1 = first, 2 = last, 3 = modified */
-	int		dir;		/* FORWARD or BACKWARD */
-	int		count;		/* buffer number or number of buffers */
-	int		forceit;	/* TRUE for :bdelete! */
+do_buffer(int action, int start, int dir, int count, int forceit)
 {
 	BUF		*buf;
 	int		retval;
@@ -380,8 +370,7 @@ do_buffer(action, start, dir, count, forceit)
  * (old curbuf must have been freed already)
  */
 	static void
-enter_buffer(buf)
-	BUF		*buf;
+enter_buffer(BUF *buf)
 {
 	int		need_fileinfo = TRUE;
 
@@ -430,11 +419,7 @@ enter_buffer(buf)
  * This is the ONLY way to create a new buffer.
  */
 	BUF *
-buflist_new(fname, sfname, lnum, use_curbuf)
-	char_u		*fname;
-	char_u		*sfname;
-	linenr_t	lnum;
-	int			use_curbuf;
+buflist_new(char_u *fname, char_u *sfname, linenr_t lnum, int use_curbuf)
 {
 	static int	top_file_num = 1;			/* highest file number */
 	BUF			*buf;
@@ -552,10 +537,7 @@ buflist_new(fname, sfname, lnum, use_curbuf)
  * return FAIL for failure, OK for success
  */
 	int
-buflist_getfile(n, lnum, setpm)
-	int			n;
-	linenr_t	lnum;
-	int			setpm;
+buflist_getfile(int n, linenr_t lnum, int setpm)
 {
 	BUF		*buf;
 
@@ -581,7 +563,7 @@ buflist_getfile(n, lnum, setpm)
  * go to the last know line number for the current buffer
  */
 	void
-buflist_getlnum()
+buflist_getlnum(void)
 {
 	linenr_t	lnum;
 
@@ -597,8 +579,7 @@ buflist_getlnum()
  * 'fname' must have a full path.
  */
 	static BUF	*
-buflist_findname(fname)
-	char_u		*fname;
+buflist_findname(char_u *fname)
 {
 	BUF			*buf;
 
@@ -612,8 +593,7 @@ buflist_findname(fname)
  * find file in buffer name list by number
  */
 	static BUF	*
-buflist_findnr(nr)
-	int			nr;
+buflist_findnr(int nr)
 {
 	BUF			*buf;
 
@@ -629,8 +609,7 @@ buflist_findnr(nr)
  * get name of file 'n' in the buffer list
  */
  	char_u *
-buflist_nr2name(n)
-	int n;
+buflist_nr2name(int n)
 {
 	BUF		*buf;
 	char_u	*fname;
@@ -651,9 +630,7 @@ buflist_nr2name(n)
  * set the lnum for the buffer 'buf' and the current window
  */
 	static void
-buflist_setlnum(buf, lnum)
-	BUF			*buf;
-	linenr_t	lnum;
+buflist_setlnum(BUF *buf, linenr_t lnum)
 {
 	WINLNUM		*wlp;
 
@@ -693,8 +670,7 @@ buflist_setlnum(buf, lnum)
  * find the lnum for the buffer 'buf' for the current window
  */
 	static linenr_t
-buflist_findlnum(buf)
-	BUF		*buf;
+buflist_findlnum(BUF *buf)
 {
 	WINLNUM 	*wlp;
 
@@ -715,7 +691,7 @@ buflist_findlnum(buf)
  * list all know file names (for :files and :buffers command)
  */
 	void
-buflist_list()
+buflist_list(void)
 {
 	BUF			*buf;
 	int			len;
@@ -767,10 +743,7 @@ buflist_list()
  * return FAIL if not found, OK for success
  */
 	int
-buflist_name_nr(fnum, fname, lnum)
-	int			fnum;
-	char_u		**fname;
-	linenr_t	*lnum;
+buflist_name_nr(int fnum, char_u **fname, linenr_t *lnum)
 {
 	BUF			*buf;
 
@@ -794,9 +767,7 @@ buflist_name_nr(fnum, fname, lnum)
  * 		OK otherwise.
  */
 	int
-setfname(fname, sfname, message)
-	char_u *fname, *sfname;
-	int		message;
+setfname(char_u *fname, char_u *sfname, int message)
 {
 	BUF		*buf;
 
@@ -854,10 +825,7 @@ setfname(fname, sfname, message)
  * used by dowrite() and doecmd()
  */
 	void
-setaltfname(fname, sfname, lnum)
-	char_u		*fname;
-	char_u		*sfname;
-	linenr_t	lnum;
+setaltfname(char_u *fname, char_u *sfname, linenr_t lnum)
 {
 	BUF		*buf;
 
@@ -872,8 +840,7 @@ setaltfname(fname, sfname, lnum)
  * used by qf_init(), main() and doarglist()
  */
 	int
-buflist_add(fname)
-	char_u		*fname;
+buflist_add(char_u *fname)
 {
 	BUF		*buf;
 
@@ -887,7 +854,7 @@ buflist_add(fname)
  * set alternate lnum for current window
  */
 	void
-buflist_altlnum()
+buflist_altlnum(void)
 {
 	buflist_setlnum(curbuf, curwin->w_cursor.lnum);
 }
@@ -897,8 +864,7 @@ buflist_altlnum()
  * fname must have a full path (expanded by FullName)
  */
 	int
-otherfile(fname)
-	char_u	*fname;
+otherfile(char_u *fname)
 {									/* no name is different */
 	if (fname == NULL || *fname == NUL || curbuf->b_filename == NULL)
 		return TRUE;
@@ -906,8 +872,7 @@ otherfile(fname)
 }
 
 	void
-fileinfo(fullname)
-	int fullname;
+fileinfo(int fullname)
 {
 	char_u		*name;
 
@@ -1012,7 +977,7 @@ static char_u *lasttitle = NULL;
 static char_u *lasticon = NULL;
 
 	void
-maketitle()
+maketitle(void)
 {
 	char_u		*t;
 	char_u		*i;
@@ -1052,7 +1017,7 @@ maketitle()
 }
 
 	void
-resettitle()
+resettitle(void)
 {
 #ifdef KANJI
 	char_u	*	t = NULL;
@@ -1085,8 +1050,7 @@ resettitle()
  * If fname is not a full path, make it a full path
  */
 	char_u	*
-fix_fname(fname)
-	char_u	*fname;
+fix_fname(char_u *fname)
 {
 	if (fname != NameBuff)			/* if not already expanded */
 	{
@@ -1127,9 +1091,7 @@ fix_fname(fname)
  * make fname a full file name, set sfname to fname if not NULL
  */
 	void
-fname_expand(fname, sfname)
-	char_u		**fname;
-	char_u		**sfname;
+fname_expand(char_u **fname, char_u **sfname)
 {
 	if (*fname == NULL)			/* if no file name given, nothing to do */
 		return;
@@ -1142,7 +1104,7 @@ fname_expand(fname, sfname)
  * do_arg_all: open a window for each argument
  */
 	void
-do_arg_all()
+do_arg_all(void)
 {
 	int		win_count;
 	int		i;
@@ -1179,8 +1141,7 @@ do_arg_all()
  * when 'all' is TRUE, also load inactive buffers
  */
 	void
-do_buffer_all(all)
-	int		all;
+do_buffer_all(int all)
 {
 	int		win_count;
 	BUF		*buf;

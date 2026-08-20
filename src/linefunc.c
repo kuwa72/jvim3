@@ -25,8 +25,7 @@
  */
 
 	void
-coladvance(wcol)
-	colnr_t 		wcol;
+coladvance(colnr_t wcol)
 {
 	int 				index;
 	register char_u		*ptr;
@@ -78,14 +77,13 @@ coladvance(wcol)
  * Return 1 when crossing a line, -1 when at end of file, 0 otherwise.
  */
 	int
-inc_cursor()
+inc_cursor(void)
 {
 	return inc(&curwin->w_cursor);
 }
 
 	int
-inc(lp)
-	register FPOS  *lp;
+inc(register FPOS *lp)
 {
 	register char_u  *p = ml_get_pos(lp);
 
@@ -114,8 +112,7 @@ inc(lp)
  * incl(lp): same as inc(), but skip the NUL at the end of non-empty lines
  */
 	int
-incl(lp)
-	register FPOS *lp;
+incl(register FPOS *lp)
 {
 	register int r;
 
@@ -131,14 +128,13 @@ incl(lp)
  * Return 1 when crossing a line, -1 when at start of file, 0 otherwise.
  */
 	int
-dec_cursor()
+dec_cursor(void)
 {
 	return dec(&curwin->w_cursor);
 }
 
 	int
-dec(lp)
-	register FPOS  *lp;
+dec(register FPOS *lp)
 {
 	if (lp->col > 0)
 	{			/* still within line */
@@ -164,8 +160,7 @@ dec(lp)
  * decl(lp): same as dec(), but skip the NUL at the end of non-empty lines
  */
 	int
-decl(lp)
-		register FPOS *lp;
+decl(register FPOS *lp)
 {
 		register int r;
 
@@ -178,7 +173,7 @@ decl(lp)
  * make sure curwin->w_cursor in on a valid character
  */
 	void
-adjust_cursor()
+adjust_cursor(void)
 {
 	int len;
 

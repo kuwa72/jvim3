@@ -17,8 +17,7 @@
 
 
 	char_u *
-transchar(c)
-	int	 c;
+transchar(int c)
 {
 #ifdef KANJI
 	static char_u buf[5];
@@ -68,8 +67,7 @@ transchar(c)
  * up with the width of the text.
  */
 	int
-charsize(p)
-	char_u *p;
+charsize(char_u *p)
 {
 #ifdef KANJI
 	int		c = *p;
@@ -91,8 +89,7 @@ charsize(p)
  * 4, a printable ASCII byte is 1. For bytes only; use charsize() for text.
  */
 	int
-transcharsize(c)
-	int c;
+transcharsize(int c)
 {
 #ifdef KANJI
 	c &= 0xff;
@@ -106,8 +103,7 @@ transcharsize(c)
  * return the number of characters string 's' will take on the screen
  */
 	int
-strsize(s)
-	char_u *s;
+strsize(char_u *s)
 {
 	int	len = 0;
 
@@ -124,9 +120,7 @@ strsize(s)
  * into account the size of a tab
  */
 	int
-chartabsize(p, col)
-	char_u			*p;
-	long			col;
+chartabsize(char_u *p, long col)
 {
 	register int	c = *p;
 
@@ -151,8 +145,7 @@ chartabsize(p, col)
  * return TRUE if 'c' is an identifier character
  */
 	int
-isidchar(c)
-	int c;
+isidchar(int c)
 {
 		return (
 #ifdef __STDC__
@@ -180,8 +173,7 @@ isidchar(c)
  * return TRUE if 'c' is an abbr character
  */
 	int
-isabchar(c)
-	int c;
+isabchar(int c)
 {
 		return (
 #ifdef __STDC__

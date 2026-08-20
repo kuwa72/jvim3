@@ -50,7 +50,7 @@ static int	qf_nonevalid;		/* set to TRUE if not a single valid entry found */
  * Return FAIL for error, OK for success.
  */
 	int
-qf_init()
+qf_init(void)
 {
 	char_u 			namebuf[CMDBUFFSIZE + 1];
 	char_u			errmsg[CMDBUFFSIZE + 1];
@@ -275,9 +275,7 @@ error2:
  * else go to entry "errornr"
  */
 	void
-qf_jump(dir, errornr)
-	int		dir;
-	int		errornr;
+qf_jump(int dir, int errornr)
 {
 	linenr_t		i;
 
@@ -356,7 +354,7 @@ qf_jump(dir, errornr)
  * list all errors
  */
 	void
-qf_list()
+qf_list(void)
 {
 	struct qf_line *qfp;
 	int i;
@@ -389,7 +387,7 @@ qf_list()
  * free the error list
  */
 	static void
-qf_free()
+qf_free(void)
 {
 	struct qf_line *qfp;
 
@@ -407,10 +405,7 @@ qf_free()
  * qf_mark_adjust: adjust marks
  */
    void
-qf_mark_adjust(line1, line2, inc)
-	linenr_t	line1;
-	linenr_t	line2;
-	long		inc;
+qf_mark_adjust(linenr_t line1, linenr_t line2, long inc)
 {
 	register int i;
 	struct qf_line *qfp;
@@ -437,8 +432,7 @@ qf_mark_adjust(line1, line2, inc)
  *  other     n			"  Error n"
  */
 	static char_u *
-qf_types(c, nr)
-	int c, nr;
+qf_types(int c, int nr)
 {
 	static char_u	buf[20];
 	char_u		*p1;

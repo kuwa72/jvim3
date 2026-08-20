@@ -83,9 +83,7 @@ static linenr_t get_address __ARGS((char_u **));
  */
 
 	int
-getcmdline(firstc, buff)
-	int			firstc; 	/* either ':', '/', or '?' */
-	char_u		*buff;	 	/* buffer for command string */
+getcmdline(int firstc, char_u *buff)
 {
 #ifdef KANJI
 	unsigned int	 	c;
@@ -664,9 +662,7 @@ returncmd:
  * Used for CTRL-V and CTRL-K
  */
 	static void
-putcmdline(c, buff)
-	int		c;
-	char_u	*buff;
+putcmdline(int c, char_u *buff)
 {
 	char_u	buf[2];
 
@@ -681,7 +677,7 @@ putcmdline(c, buff)
  * this fuction is called when the screen size changes
  */
 	void
-redrawcmdline()
+redrawcmdline(void)
 {
 	msg_scrolled = 0;
 	compute_cmdrow();
@@ -690,7 +686,7 @@ redrawcmdline()
 }
 
 	void
-compute_cmdrow()
+compute_cmdrow(void)
 {
 	cmdline_row = lastwin->w_winpos + lastwin->w_height + lastwin->w_status_height;
 }
@@ -699,7 +695,7 @@ compute_cmdrow()
  * Redraw what is currently on the command line.
  */
 	void
-redrawcmd()
+redrawcmd(void)
 {
 	register int	i;
 
@@ -722,7 +718,7 @@ redrawcmd()
 }
 
 	static void
-cursorcmd()
+cursorcmd(void)
 {
 #ifdef KANJI
 	int			i;
@@ -773,8 +769,7 @@ cursorcmd()
  * backspaces and the replacement string is inserted, followed by "c".
  */
 	static int
-ccheck_abbr(c)
-	int c;
+ccheck_abbr(int c)
 {
 	if (p_paste || no_abbr)			/* no abbreviations or in paste mode */
 		return FALSE;
@@ -793,8 +788,7 @@ ccheck_abbr(c)
  * return FAIL if commandline could not be executed, OK otherwise
  */
 	int
-docmdline(cmdline)
-	char_u		*cmdline;
+docmdline(char_u *cmdline)
 {
 	char_u		buff[CMDBUFFSIZE];		/* command line */
 	char_u		*nextcomm;
@@ -854,8 +848,7 @@ docmdline(cmdline)
  * This function may be called recursively!
  */
 	static char_u *
-DoOneCmd(buff)
-	char_u *buff;
+DoOneCmd(char_u *buff)
 {
 	char_u				cmdbuf[CMDBUFFSIZE];	/* for '%' and '#' expansion */
 	char_u				c;
@@ -2366,8 +2359,7 @@ doend:
  * return FAIL for failure, OK otherwise
  */
 	int
-autowrite(buf)
-	BUF		*buf;
+autowrite(BUF *buf)
 {
 	if (!p_aw || (!forceit && buf->b_p_ro) || buf->b_filename == NULL)
 		return FAIL;
@@ -2378,7 +2370,7 @@ autowrite(buf)
  * flush all buffers, except the ones that are readonly
  */
 	void
-autowrite_all()
+autowrite_all(void)
 {
 	BUF		*buf;
 
@@ -2395,8 +2387,7 @@ autowrite_all()
  * return FAIL for failure, OK otherwise
  */
 	static int
-buf_write_all(buf)
-	BUF		*buf;
+buf_write_all(BUF *buf)
 {
 	return (buf_write(buf, buf->b_filename, buf->b_sfilename, (linenr_t)1, buf->b_ml.ml_line_count, 0, 0, TRUE));
 }
@@ -2411,9 +2402,7 @@ buf_write_all(buf)
  * return FAIL for failure, OK otherwise
  */
 	static int
-dowrite(fname, append)
-	char_u	*fname;
-	int		append;
+dowrite(char_u *fname, int append)
 {
 	FILE	*fd;
 	int		other;
@@ -2490,12 +2479,7 @@ dowrite(fname, append)
  * return FAIL for failure, OK otherwise
  */
 	int
-doecmd(fname, sfname, command, hide, newlnum)
-	char_u		*fname;
-	char_u		*sfname;
-	char_u		*command;
-	int			hide;
-	linenr_t	newlnum;
+doecmd(char_u *fname, char_u *sfname, char_u *command, int hide, linenr_t newlnum)
 {
 	int			other_file;				/* TRUE if editing another file */
 	int			oldbuf = FALSE;			/* TRUE if using existing buffer */
@@ -2653,8 +2637,7 @@ doecmd(fname, sfname, command, hide, newlnum)
  * get + command from ex argument
  */
 	static char_u *
-getargcmd(argp)
-	char_u **argp;
+getargcmd(char_u **argp)
 {
 	char_u *arg = *argp;
 	char_u *command = NULL;
@@ -2685,8 +2668,7 @@ getargcmd(argp)
  * look for command separator '|' or '\n'
  */
 	static char_u *
-checknextcomm(arg)
-	char_u *arg;
+checknextcomm(char_u *arg)
 {
 	char_u *p;
 	char_u *nextcomm = NULL;
@@ -2712,8 +2694,7 @@ checknextcomm(arg)
 }
 
 	static void
-domake(arg)
-	char_u *arg;
+domake(char_u *arg)
 {
 	if (*p_ef == NUL)
 	{
@@ -2755,8 +2736,7 @@ domake(arg)
  * Return FAIL for failure, OK otherwise.
  */
 	static int
-doarglist(str)
-	char_u *str;
+doarglist(char_u *str)
 {
 	int		new_count = 0;
 	char_u	**new_files = NULL;
@@ -2868,9 +2848,7 @@ doarglist(str)
 }
 
 	void
-gotocmdline(clr, firstc)
-	int				clr;
-	int				firstc;
+gotocmdline(int clr, int firstc)
 {
 	msg_start();
 	if (clr)			/* clear the bottom line(s) */
@@ -2881,14 +2859,14 @@ gotocmdline(clr, firstc)
 }
 
 	void
-gotocmdend()
+gotocmdend(void)
 {
 	windgoto((int)Rows - 1, 0);
 	outchar('\n');
 }
 
 	static int
-check_readonly()
+check_readonly(void)
 {
 	if (!forceit && curbuf->b_p_ro)
 	{
@@ -2902,10 +2880,7 @@ check_readonly()
  * return TRUE if buffer was changed and cannot be abandoned.
  */
 	static int
-check_changed(buf, checkaw, mult_win)
-	BUF		*buf;
-	int		checkaw;		/* do autowrite if buffer was changed */
-	int		mult_win;		/* check also when several windows for this buffer */
+check_changed(BUF *buf, int checkaw, int mult_win)
 {
 	if (	!forceit &&
 			buf->b_changed && (mult_win || buf->b_nwindows <= 1) &&
@@ -2921,8 +2896,7 @@ check_changed(buf, checkaw, mult_win)
  * return TRUE if any buffer was changed and cannot be abandoned.
  */
 	static int
-check_changed_any(checkaw)
-	int		checkaw;		/* do autowrite if buffer was changed */
+check_changed_any(int checkaw)
 {
 	BUF		*buf;
 
@@ -2946,7 +2920,7 @@ check_changed_any(checkaw)
  * give error message for FAIL
  */
 	int
-check_fname()
+check_fname(void)
 {
 	if (curbuf->b_filename == NULL)
 	{
@@ -2965,8 +2939,7 @@ check_fname()
  * return OK otherwise
  */
 	static int
-check_more(message)
-	int message;			/* when FALSE check only, no messages */
+check_more(int message)
 {
 	if (!forceit && firstwin == lastwin && curwin->w_arg_idx + 1 < arg_count &&
 									quitmore == 0)
@@ -2988,11 +2961,7 @@ check_more(message)
  * 'lnum' is the line number for the cursor in the new file (if non-zero).
  */
 	int
-getfile(fname, sfname, setpm, lnum)
-	char_u		*fname;
-	char_u		*sfname;
-	int			setpm;
-	linenr_t	lnum;
+getfile(char_u *fname, char_u *sfname, int setpm, linenr_t lnum)
 {
 	int other;
 
@@ -3032,10 +3001,7 @@ getfile(fname, sfname, setpm, lnum)
  * line (on my terminal, anyway) -- webb.
  */
 	static void
-vim_strncpy(to, from, len)
-	char_u *to;
-	char_u *from;
-	int len;
+vim_strncpy(char_u *to, char_u *from, int len)
 {
 	int i;
 
@@ -3071,9 +3037,7 @@ vim_strncpy(to, from, len)
 #else
 	static void
 #endif /* WEBB_COMPLETE */
-nextwild(buff, type)
-	char_u *buff;
-	int		type;
+nextwild(char_u *buff, int type)
 {
 	int		i;
 	char_u	*p1;
@@ -3160,10 +3124,7 @@ nextwild(buff, type)
  * mode =  5: return longest matched part
  */
 	char_u *
-ExpandOne(str, list_notfound, mode)
-	char_u	*str;
-	int		list_notfound;
-	int		mode;
+ExpandOne(char_u *str, int list_notfound, int mode)
 {
 	char_u		*ss = NULL;
 	static char_u **cmd_files = NULL;	  /* list of input files */
@@ -3366,13 +3327,10 @@ ExpandOne(str, list_notfound, mode)
  */
 #ifdef WEBB_COMPLETE
 	static int
-showmatches(buff)
-	char_u *buff;
+showmatches(char_u *buff)
 #else
 	static void
-showmatches(file, len)
-	char_u *file;
-	int	len;
+showmatches(char_u *file, int len)
 #endif /* WEBB_COMPLETE */
 {
 	char_u *file_str;
@@ -3514,9 +3472,7 @@ showmatches(file, len)
  * copy the file name into allocated memory and add a '*' at the end
  */
 	static char_u *
-addstar(fname, len)
-	char_u	*fname;
-	int		len;
+addstar(char_u *fname, int len)
 {
 	char_u	*retval;
 #ifdef WEBB_COMPLETE
@@ -3621,8 +3577,7 @@ addstar(fname, len)
  * return FAIL if file could not be opened, OK otherwise
  */
 	int
-dosource(fname)
-	register char_u *fname;
+dosource(register char_u *fname)
 {
 	register FILE	*fp;
 	register int	len;
@@ -3834,8 +3789,7 @@ dosource(fname)
  * get single EX address
  */
 	static linenr_t
-get_address(ptr)
-	char_u		**ptr;
+get_address(char_u **ptr)
 {
 	linenr_t	cursor_lnum = curwin->w_cursor.lnum;
 	int			c;
@@ -3945,9 +3899,7 @@ error:
  * -- webb.
  */
 	static void
-set_expand_context(firstc, buff)
-	int			firstc; 	/* either ':', '/', or '?' */
-	char_u		*buff;	 	/* buffer for command string */
+set_expand_context(int firstc, char_u *buff)
 {
 	char_u		*nextcomm;
 	char_u		old_char;
@@ -3968,9 +3920,7 @@ set_expand_context(firstc, buff)
  * change that much -- webb.
  */
 	static char_u *
-set_one_cmd_context(firstc, buff)
-	int			firstc; 	/* either ':', '/', or '?' */
-	char_u		*buff;	 	/* buffer for command string */
+set_one_cmd_context(int firstc, char_u *buff)
 {
 	register char_u		*p;
 	char_u				*cmd, *arg;
@@ -4344,12 +4294,7 @@ set_one_cmd_context(firstc, buff)
  * expand_pattern -- webb.
  */
 	static int
-ExpandFromContext(pat, num_file, file, files_only, list_notfound)
-	char_u *pat;
-	int *num_file;
-	char_u ***file;
-	int files_only;
-	int list_notfound;
+ExpandFromContext(char_u *pat, int *num_file, char_u ***file, int files_only, int list_notfound)
 {
 	regexp	*prog;
 	int		cmdidx;

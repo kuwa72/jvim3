@@ -65540,9 +65540,7 @@ static unsigned short u2stbl[] = {
 };
 
 int
-ucs2sjis(ucs, sjis)
-unsigned short ucs;
-unsigned char* sjis;
+ucs2sjis(unsigned short ucs, unsigned char *sjis)
 {
   unsigned short sj = u2stbl[ucs];
   if (sj < 0x100) {

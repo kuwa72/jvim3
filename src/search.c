@@ -84,9 +84,7 @@ static int grepexec __ARGS((regexp *, char_u *, int, linenr_t));
 static int do_wrapnext __ARGS((int));
 
 static char_u *
-skip_grepregexp(orgstr, dirc)
-char_u		*	orgstr;
-int				dirc;
+skip_grepregexp(char_u *orgstr, int dirc)
 {
 	regexp	*	prog;
 	char_u		pattern[CMDBUFFSIZE];
@@ -263,14 +261,7 @@ error:
 }
 
 static int
-grepsub(gp, string, at_bol, lnum, look, match, matchend)
-register GREP *gp;
-register char_u  *string;
-int 			at_bol;
-linenr_t		lnum;
-int			*	look;
-char_u		**	match;
-char_u		**	matchend;
+grepsub(register GREP *gp, register char_u *string, int at_bol, linenr_t lnum, int *look, char_u **match, char_u **matchend)
 {
 	linenr_t		i;
 	int				found = FALSE;
@@ -406,11 +397,7 @@ char_u		**	matchend;
 }
 
 static int
-grepexec(prog, string, at_bol, lnum)
-register regexp *prog;
-register char_u  *string;
-int 			at_bol;
-linenr_t		lnum;
+grepexec(register regexp *prog, register char_u *string, int at_bol, linenr_t lnum)
 {
 	int				look = FALSE;
 	char_u		*	match		= NULL;
@@ -428,8 +415,7 @@ linenr_t		lnum;
 }
 
 static int
-do_wrapnext(dir)
-int			dir;
+do_wrapnext(int dir)
 {
 	int			other = TRUE;
 	int			more = p_more;
@@ -474,10 +460,7 @@ int			dir;
  *
  */
 	regexp *
-myregcomp(pat, sub_cmd, which_pat)
-	char_u	*pat;
-	int		sub_cmd;
-	int		which_pat;
+myregcomp(char_u *pat, int sub_cmd, int which_pat)
 {
 	regexp *retval;
 
@@ -568,13 +551,7 @@ myregcomp(pat, sub_cmd, which_pat)
  * Return OK for success, FAIL for failure.
  */
 	int
-searchit(pos, dir, str, count, end, message)
-	FPOS	*pos;
-	int 	dir;
-	char_u	*str;
-	long	count;
-	int		end;
-	int		message;
+searchit(FPOS *pos, int dir, char_u *str, long count, int end, int message)
 {
 	int 				found;
 	linenr_t			lnum = 0;			/* init to shut up gcc */
@@ -801,13 +778,7 @@ retry:
  * return 0 for failure, 1 for found, 2 for found and line offset added
  */
 	int
-dosearch(dirc, str, reverse, count, echo, message)
-	int				dirc;
-	char_u		   *str;
-	int				reverse;
-	long			count;
-	int				echo;
-	int				message;
+dosearch(int dirc, char_u *str, int reverse, long count, int echo, int message)
 {
 	FPOS			pos;		/* position of the last match */
 	char_u			*searchstr;
@@ -1014,15 +985,10 @@ end_dosearch:
  */
 	int
 #ifndef KANJI
-searchc(c, dir, type, count)
+searchc(int c, register int dir, int type, long count)
 #else
-searchc(c, k, dir, type, count)
-	int				k;
+searchc(int c, int k, register int dir, int type, long count)
 #endif
-	int 			c;
-	register int	dir;
-	int 			type;
-	long			count;
 {
 	static int	 	lastc = NUL;	/* last character searched for */
 #ifdef KANJI
@@ -1118,8 +1084,7 @@ searchc(c, k, dir, type, count)
  * Improvement over vi: Braces inside quotes are ignored.
  */
 	FPOS		   *
-showmatch(initc)
-	int		initc;
+showmatch(int initc)
 {
 	static FPOS		pos;				/* current search position */
 	int				findc;				/* matching brace */
@@ -1530,10 +1495,7 @@ showmatch(initc)
  * Return TRUE if a line was found.
  */
 	int
-findfunc(dir, what, count)
-	int 		dir;
-	int			what;
-	long		count;
+findfunc(int dir, int what, long count)
 {
 	linenr_t	curr;
 
@@ -1573,9 +1535,7 @@ findfunc(dir, what, count)
  * Return TRUE if the next sentence was found.
  */
 	int
-findsent(dir, count)
-		int 	dir;
-		long	count;
+findsent(int dir, long count)
 {
 	FPOS			pos, tpos;
 	register int	c;
@@ -1688,11 +1648,7 @@ found:
  * If 'both' is TRUE also stop at '}'.
  */
 	int
-findpar(dir, count, what, both)
-	register int	dir;
-	long			count;
-	int 			what;
-	int				both;
+findpar(register int dir, long count, int what, int both)
 {
 	register linenr_t	curr;
 	int					did_skip;		/* TRUE after separating lines have
@@ -1740,9 +1696,7 @@ findpar(dir, count, what, both)
  * check if the string 's' is a nroff macro that is in option 'opt'
  */
 	static int
-inmacro(opt, s)
-		char_u *opt;
-		register char_u *s;
+inmacro(char_u *opt, register char_u *s)
 {
 		register char_u *macro;
 
@@ -1764,10 +1718,7 @@ inmacro(opt, s)
  * If 'both' is TRUE also stop at '}'
  */
 	int
-startPS(lnum, para, both)
-	linenr_t	lnum;
-	int 		para;
-	int			both;
+startPS(linenr_t lnum, int para, int both)
 {
 	register char_u *s;
 
@@ -1805,7 +1756,7 @@ static int		stype;			/* type of the word motion being performed */
  * reported as class 1 since only white space boundaries are of interest.
  */
 	static int
-cls()
+cls(void)
 {
 	register int c;
 
@@ -1856,10 +1807,7 @@ cls()
  * If eol is TRUE, last word stops at end of line (for operators).
  */
 	int
-fwd_word(count, type, eol)
-	long		count;
-	int 		type;
-	int			eol;
+fwd_word(long count, int type, int eol)
 {
 	int 		sclass; 	/* starting class */
 	int			i;
@@ -1911,9 +1859,7 @@ fwd_word(count, type, eol)
  * Returns TRUE if top of the file was reached.
  */
 	int
-bck_word(count, type)
-	long		count;
-	int 		type;
+bck_word(long count, int type)
 {
 	int 		sclass; 	/* starting class */
 
@@ -1973,10 +1919,7 @@ finished:
  * If stop is TRUE and we are already on the end of a word, move one less.
  */
 	int
-end_word(count, type, stop)
-	long		count;
-	int 		type;
-	int			stop;
+end_word(long count, int type, int stop)
 {
 	int 		sclass; 	/* starting class */
 
@@ -2020,9 +1963,7 @@ end_word(count, type, stop)
 }
 
 	int
-skip_chars(class, dir)
-	int class;
-	int dir;
+skip_chars(int class, int dir)
 {
 		while (cls() == class)
 			if ((dir == FORWARD ? inc_cursor() : dec_cursor()) == -1)

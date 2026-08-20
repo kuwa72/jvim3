@@ -28,11 +28,11 @@ DEFINES = -DKANJI -DUCODE -DTRACK -DFEPCTRL -DCRMARK -DFEXRC -DNT106KEY \
 	  -DWEBB_COMPLETE -DWEBB_KEYWORD_COMPL -DNO_FREE_NULL -DXARGS \
 	  -DTERMCAP -DSYNTAX -DUSE_GREP -DUSE_TAGEX -DUSE_OPT -DUSE_HISTORY
 
-# -std=gnu89: the sources use K&R function definitions throughout, which C23
-#             (gcc's default since 14) rejects.
+# The dialect is the compiler's own now: the K&R function definitions that made
+# -std=gnu89 necessary are all prototypes.
 # -fno-omit-frame-pointer: w32crash.c walks the frame pointer chain to report
 #             the stack on a crash.
-STD	= -std=gnu89 -fcommon -fno-omit-frame-pointer
+STD	= -fcommon -fno-omit-frame-pointer
 OPT	= -O2 -g
 # make ... WARN=1 shows the warnings that matter, mainly the pointer/int casts
 # that make a 64 bit build unsafe. -Wpointer-sign is suppressed: the sources mix

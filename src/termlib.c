@@ -68,9 +68,7 @@ short	ospeed;               /* Baud rate (1-16, 1=300, 16=19200), as in stty */
 #endif
 
 	int
-tgetent(tbuf, term)
-	char	*tbuf;               /* Buffer to hold termcap entry, TBUFSZ bytes max */
-	char	*term;               /* Name of terminal */
+tgetent(char *tbuf, char *term)
 {
 	char    tcbuf[32];           /* Temp buffer to handle */
 	char	*tcptr = tcbuf;      /* extended entries */
@@ -133,10 +131,7 @@ tgetent(tbuf, term)
 }
 
 	static int
-getent(tbuf, term, termcap, buflen)
-	char	*tbuf, *term;
-	FILE	*termcap;
-	int		buflen;
+getent(char *tbuf, char *term, FILE *termcap, int buflen)
 {
 	char    *tptr;
 	int		tlen = strlen(term);
@@ -216,8 +211,7 @@ nextent(tbuf, termcap, buflen)         /* Read 1 entry from TERMCAP file */
  */
 
 	int
-tgetflag(id)
-	char *id;
+tgetflag(char *id)
 {
 	char	buf[256], *ptr = buf;
 
@@ -235,8 +229,7 @@ tgetflag(id)
  */
 
 	int
-tgetnum(id)
-char *id;
+tgetnum(char *id)
 {
 	char *ptr, buf[256];
 	ptr = buf;
@@ -275,8 +268,7 @@ char *id;
  */
 
 char *
-tgetstr(id, buf)
-char    *id, **buf;
+tgetstr(char *id, char **buf)
 {
 	int    len = strlen(id);
 	char *tmp=tent;
@@ -384,10 +376,7 @@ char    *id, **buf;
  */
 
 char *
-tgoto(cm, col, line)
-char	*cm;                                      /* cm string, from termcap */
-int	col,                                           /* column, x position */
-	line;                                            /* line, y position */
+tgoto(char *cm, int col, int line)
 {
 	char	gx, gy,                                           /*    x, y */
 		*ptr,                                     /* pointer in 'cm' */
@@ -579,10 +568,9 @@ long _bauds[16]={
 	4800,	9600,	19200,	19200 };
 
 	int
-tputs(cp, affcnt, outc)
-char *cp;                                                 /* string to print */
-int affcnt;                                      /* Number of lines affected */
-int (*outc) __ARGS((int));                        /* routine to output 1 character */
+tputs(char *cp,				/* string to print */
+	int affcnt,				/* number of lines affected */
+	int (*outc) __ARGS((int)))	/* routine to output one character */
 {
 #ifndef MSDOS		/* DOSGEN */
 	long	frac,                    /* 10^(#digits after decimal point) */

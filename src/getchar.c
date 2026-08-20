@@ -129,8 +129,7 @@ static int		convert_special __ARGS((char_u *));
  * free and clear a buffer
  */
 	static void
-free_buff(buf)
-	struct buffheader *buf;
+free_buff(struct buffheader *buf)
 {
 		register struct bufblock *p, *np;
 
@@ -146,9 +145,7 @@ free_buff(buf)
  * return the contents of a buffer as a single string
  */
 	static char_u *
-get_bufcont(buffer, dozero)
-	struct buffheader	*buffer;
-	int					dozero;		/* count == zero is not an error */
+get_bufcont(struct buffheader *buffer, int dozero)
 {
 		long_u			count = 0;
 		char_u			*p = NULL;
@@ -181,7 +178,7 @@ get_bufcont(buffer, dozero)
  *	and clear the record buffer
  */
 	char_u *
-get_recorded()
+get_recorded(void)
 {
 	char_u *p;
 
@@ -194,7 +191,7 @@ get_recorded()
  * return the contents of the redo buffer as a single string
  */
 	char_u *
-get_inserted()
+get_inserted(void)
 {
 		return(get_bufcont(&redobuff, FALSE));
 }
@@ -203,9 +200,7 @@ get_inserted()
  * add string "s" after the current block of buffer "buf"
  */
 	static void
-add_buff(buf, s)
-	register struct buffheader	*buf;
-	char_u						*s;
+add_buff(register struct buffheader *buf, char_u *s)
 {
 	struct bufblock *p;
 	long_u 			n;
@@ -253,9 +248,7 @@ add_buff(buf, s)
 }
 
 	static void
-add_num_buff(buf, n)
-	struct buffheader *buf;
-	long 			  n;
+add_num_buff(struct buffheader *buf, long n)
 {
 		char_u	number[32];
 
@@ -264,9 +257,7 @@ add_num_buff(buf, n)
 }
 
 	static void
-add_char_buff(buf, c)
-	struct buffheader *buf;
-	int 			  c;
+add_char_buff(struct buffheader *buf, int c)
 {
 		char_u	temp[2];
 
@@ -280,8 +271,7 @@ add_char_buff(buf, c)
  * If advance == TRUE go to the next char.
  */
 	static int
-read_stuff(advance)
-	int			advance;
+read_stuff(int advance)
 {
 	register char_u c;
 	register struct bufblock *curr;
@@ -313,7 +303,7 @@ read_stuff(advance)
  * prepare stuff buffer for reading (if it contains something)
  */
 	static void
-start_stuff()
+start_stuff(void)
 {
 	if (stuffbuff.bh_first.b_next != NULL)
 	{
@@ -326,7 +316,7 @@ start_stuff()
  * check if the stuff buffer is empty
  */
 	int
-stuff_empty()
+stuff_empty(void)
 {
 	return (stuffbuff.bh_first.b_next == NULL);
 }
@@ -337,8 +327,7 @@ stuff_empty()
  * flush all typeahead characters (used when interrupted by a CTRL-C).
  */
 	void
-flush_buffers(typeahead)
-	int typeahead;
+flush_buffers(int typeahead)
 {
 	struct noremap *p;
 
@@ -376,53 +365,47 @@ flush_buffers(typeahead)
 }
 
 	void
-ResetRedobuff()
+ResetRedobuff(void)
 {
 	if (!block_redo)
 		free_buff(&redobuff);
 }
 
 	void
-AppendToRedobuff(s)
-	char_u		   *s;
+AppendToRedobuff(char_u *s)
 {
 	if (!block_redo)
 		add_buff(&redobuff, s);
 }
 
 	void
-AppendCharToRedobuff(c)
-	int			   c;
+AppendCharToRedobuff(int c)
 {
 	if (!block_redo)
 		add_char_buff(&redobuff, c);
 }
 
 	void
-AppendNumberToRedobuff(n)
-	long 			n;
+AppendNumberToRedobuff(long n)
 {
 	if (!block_redo)
 		add_num_buff(&redobuff, n);
 }
 
 	void
-stuffReadbuff(s)
-	char_u		   *s;
+stuffReadbuff(char_u *s)
 {
 	add_buff(&stuffbuff, s);
 }
 
 	void
-stuffcharReadbuff(c)
-	int			   c;
+stuffcharReadbuff(int c)
 {
 	add_char_buff(&stuffbuff, c);
 }
 
 	void
-stuffnumReadbuff(n)
-	long	n;
+stuffnumReadbuff(long n)
 {
 	add_num_buff(&stuffbuff, n);
 }
@@ -433,8 +416,7 @@ stuffnumReadbuff(n)
  * if init is TRUE, prepare for redo, return FAIL if nothing to redo, OK otherwise
  */
 	static int
-read_redo(init)
-	int			init;
+read_redo(int init)
 {
 	static struct bufblock	*bp;
 	static char_u			*p;
@@ -462,7 +444,7 @@ read_redo(init)
  * copy the rest of the redo buffer into the stuff buffer (could be done faster)
  */
 	void
-copy_redo()
+copy_redo(void)
 {
 	register int c;
 
@@ -478,8 +460,7 @@ extern int redo_Visual_busy;		/* this is in normal.c */
  * return FAIL for failure, OK otherwise
  */
 	int
-start_redo(count)
-	long count;
+start_redo(long count)
 {
 	register int c;
 
@@ -528,7 +509,7 @@ start_redo(count)
  * return FAIL for failure, OK otherwise
  */
 	int
-start_redo_ins()
+start_redo_ins(void)
 {
 	register int c;
 
@@ -555,13 +536,13 @@ start_redo_ins()
 }
 
 	void
-set_redo_ins()
+set_redo_ins(void)
 {
 	block_redo = TRUE;
 }
 
 	void
-stop_redo_ins()
+stop_redo_ins(void)
 {
 	block_redo = FALSE;
 }
@@ -572,7 +553,7 @@ stop_redo_ins()
  * be impossible to type anything.
  */
 	static void
-init_typestr()
+init_typestr(void)
 {
 	if (typestr == NULL)
 	{
@@ -586,9 +567,7 @@ init_typestr()
  * return FAIL for failure, OK otherwise
  */
 	int
-ins_typestr(str, noremap)
-	char_u	*str;
-	int		noremap;
+ins_typestr(char_u *str, int noremap)
 {
 	register char_u	*s;
 	register int	newlen;
@@ -648,8 +627,7 @@ ins_typestr(str, noremap)
  * remove "len" characters from the front of typestr
  */
 	void
-del_typestr(len)
-	int	len;
+del_typestr(int len)
 {
 	struct noremap *p;
 
@@ -695,9 +673,7 @@ extern int arrow_used;			/* this is in edit.c */
  * If recording is on put the character in the recordbuffer.
  */
 	static void
-gotchars(s, len)
-	char_u	*s;
-	int		len;
+gotchars(char_u *s, int len)
 {
 	while (len--)
 	{
@@ -718,8 +694,7 @@ gotchars(s, len)
  * return OK on success, FAIL on error
  */
 	int
-openscript(name)
-	char_u *name;
+openscript(char_u *name)
 {
 	int oldcurscript;
 
@@ -771,8 +746,7 @@ openscript(name)
  * characters reaches 'updatecount'.
  */
 	void
-updatescript(c)
-	int c;
+updatescript(int c)
 {
 	static int		count = 0;
 
@@ -797,7 +771,7 @@ updatescript(c)
  * vpeekc() (advance is FALSE): just look whether there is a character available.
  */
 	int
-vgetc()
+vgetc(void)
 {
 #ifdef KANJI
 	int				c;
@@ -845,7 +819,7 @@ vgetc()
 }
 
 	int
-vpeekc()
+vpeekc(void)
 {
 #if defined(FEPCTRL) && (defined(CANNA) || defined(ONEW))
 	if (curbuf->b_p_fc && fep_get_mode() && read_stuff(FALSE) == NUL)
@@ -855,8 +829,7 @@ vpeekc()
 }
 
 	static int
-vgetorpeek(advance)
-	int		advance;
+vgetorpeek(int advance)
 {
 	register int	c;
 	int				n = 0;		/* init for GCC */
@@ -1163,10 +1136,7 @@ vgetorpeek(advance)
  *		  4 for out of mem
  */
 	int
-domap(maptype, keys, mode)
-	int		maptype;
-	char_u	*keys;
-	int		mode;
+domap(int maptype, char_u *keys, int mode)
 {
 	struct mapblock		*mp, *mprev;
 	char_u				*arg;
@@ -1405,8 +1375,7 @@ domap(maptype, keys, mode)
 }
 
 	static void
-showmap(mp)
-	struct mapblock *mp;
+showmap(struct mapblock *mp)
 {
 	int len;
 
@@ -1448,11 +1417,7 @@ showmap(mp)
  * return TRUE if there is an abbreviation, FALSE if not
  */
 	int
-check_abbr(c, ptr, col, mincol)
-	int		c;
-	char_u	*ptr;
-	int		col;
-	int		mincol;
+check_abbr(int c, char_u *ptr, int col, int mincol)
 {
 	int				len;
 	int				j;
@@ -1540,8 +1505,7 @@ check_abbr(c, ptr, col, mincol)
  * Return FAIL on error, OK otherwise.
  */
 	int
-makemap(fd)
-	FILE *fd;
+makemap(FILE *fd)
 {
 	struct mapblock *mp;
 	char_u			c1;
@@ -1603,10 +1567,7 @@ makemap(fd)
  * return FAIL for failure, OK otherwise
  */
 	int
-putescstr(fd, str, set)
-	FILE		*fd;
-	char_u		*str;
-	int			set;		/* TRUE for makeset, FALSE for makemap */
+putescstr(FILE *fd, char_u *str, int set)
 {
 	for ( ; *str; ++str)
 	{
@@ -1703,9 +1664,7 @@ static struct {
 };
 
 static int
-show_special(keys, len)
-	char_u	*keys;
-	int		 len;
+show_special(char_u *keys, int len)
 {
 	int				i;
 	char_u			buf[CMDBUFFSIZE + 1];
@@ -1740,8 +1699,7 @@ show_special(keys, len)
 }
 
 static char_u *
-put_special(keys)
-	char_u	*keys;
+put_special(char_u *keys)
 {
 	int				i;
 
@@ -1754,8 +1712,7 @@ put_special(keys)
 }
 
 static int
-convert_special(keys)
-	char_u	*keys;
+convert_special(char_u *keys)
 {
 	int				i;
 

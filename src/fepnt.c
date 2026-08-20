@@ -80,7 +80,7 @@ extern int						GuiWin;
 #endif
 
 int
-fep_init()
+fep_init(void)
 {
 	UINT		w;
 
@@ -164,7 +164,7 @@ fep_init()
 }
 
 void
-fep_term()
+fep_term(void)
 {
 	if (imeheap != NULL && (ime = (IMESTRUCT *)GlobalLock(imeheap)) != NULL)
 	{
@@ -183,7 +183,7 @@ fep_term()
 }
 
 void
-fep_on()
+fep_on(void)
 {
 	if (imeheap != NULL && (ime = (IMESTRUCT *)GlobalLock(imeheap)) != NULL)
 	{
@@ -195,7 +195,7 @@ fep_on()
 }
 
 void
-fep_off()
+fep_off(void)
 {
 	if (imeheap != NULL && (ime = (IMESTRUCT *)GlobalLock(imeheap)) != NULL)
 	{
@@ -207,7 +207,7 @@ fep_off()
 }
 
 void
-fep_force_off()
+fep_force_off(void)
 {
 #ifdef VIM_GUI
 	if (GuiWin)
@@ -233,7 +233,7 @@ fep_force_off()
 }
 
 void
-fep_force_on()
+fep_force_on(void)
 {
 #ifdef VIM_GUI
 	if (GuiWin)
@@ -259,7 +259,7 @@ fep_force_on()
 }
 
 int
-fep_get_mode()
+fep_get_mode(void)
 {
 #ifdef VIM_GUI
 	if (GuiWin)
@@ -289,8 +289,7 @@ fep_get_mode()
  *	WINDOWS IME display sync routine
  */
 void
-fep_win_sync(hWnd)
-HWND			hWnd;
+fep_win_sync(HWND hWnd)
 {
 	HIMC			hImc;
 	COMPOSITIONFORM	CompForm;
@@ -309,9 +308,7 @@ HWND			hWnd;
  *	WINDOWS IME display font routine
  */
 void
-fep_win_font(hWnd, font)
-HWND		hWnd;
-LOGFONT	*	font;
+fep_win_font(HWND hWnd, LOGFONT *font)
 {
 	HANDLE		hWork;
 	LPLOGFONT	pFont;

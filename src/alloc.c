@@ -31,16 +31,13 @@
  * Use lalloc for larger blocks.
  */
 	char_u *
-alloc(size)
-	unsigned		size;
+alloc(unsigned size)
 {
 	return (lalloc((long_u)size, TRUE));
 }
 
 	char_u *
-lalloc(size, message)
-	long_u			size;
-	int				message;
+lalloc(long_u size, int message)
 {
 	register char_u   *p;			/* pointer to new storage space */
 	static int	releasing = FALSE;	/* don't do mf_release_all() recursive */
@@ -95,8 +92,7 @@ lalloc(size, message)
  * copy a string into newly allocated memory
  */
 	char_u *
-strsave(string)
-	char_u		   *string;
+strsave(char_u *string)
 {
 	char_u *p;
 
@@ -111,9 +107,7 @@ strsave(string)
 }
 
 	char_u *
-strnsave(string, len)
-	char_u		*string;
-	int 		len;
+strnsave(char_u *string, int len)
 {
 	char_u *p;
 
@@ -134,9 +128,7 @@ strnsave(string, len)
  * copy a number of spaces
  */
 	void
-copy_spaces(ptr, count)
-	char_u	*ptr;
-	size_t	count;
+copy_spaces(char_u *ptr, size_t count)
 {
 	register size_t	i = count;
 	register char_u	*p = ptr;
@@ -149,8 +141,7 @@ copy_spaces(ptr, count)
  * delete spaces at the end of the string
  */
 	void
-del_spaces(ptr)
-	char_u *ptr;
+del_spaces(char_u *ptr)
 {
 	char_u	*q;
 
@@ -165,8 +156,7 @@ del_spaces(ptr)
  * replacement for free() that cannot handle NULL pointers
  */
 	void
-nofreeNULL(x)
-	void *x;
+nofreeNULL(void *x)
 {
 	if (x != NULL)
 		free(x);
@@ -175,10 +165,7 @@ nofreeNULL(x)
 
 #if defined(BSD_UNIX) && !defined(__bsdi__)
 	char *
-bsdmemset(ptr, c, size)
-	char	*ptr;
-	int		c;
-	long	size;
+bsdmemset(char *ptr, int c, long size)
 {
 	register char *p = ptr;
 
@@ -226,10 +213,7 @@ memmove(desti, source, len)
  * return 0 for match, 1 for difference
  */
 	int
-vim_strnicmp(s1, s2, len)
-	char_u	*s1;
-	char_u	*s2;
-	size_t	len;
+vim_strnicmp(char_u *s1, char_u *s2, size_t len)
 {
 	while (len)
 	{
@@ -258,9 +242,7 @@ vim_strnicmp(s1, s2, len)
 }
 
 	int
-vim_stricmp(s1, s2)
-	char	*s1;
-	char	*s2;
+vim_stricmp(char *s1, char *s2)
 {
 	while (*s1)
 	{
