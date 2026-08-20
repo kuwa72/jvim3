@@ -5,6 +5,7 @@ This adds a mingw-w64 build of a minimal configuration: core editor, Win32 GUI,
 and kanji/UTF-8 file I/O.
 
 For Linux, the BSDs and macOS see [BUILDING-unix.md](BUILDING-unix.md).
+日本語の手順は [BUILDING.ja.md](BUILDING.ja.md) にあります。
 
 ## Build
 

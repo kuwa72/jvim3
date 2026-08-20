@@ -1,0 +1,227 @@
+# JVim 3 — 日本語化 Vim 3.0 を UTF-8 で
+
+[English](README.md) | **日本語**
+
+JVim 3 は、Bram Moolenaar の Vim 3.0 を土田健一さんが日本語化したエディタです。
+最終版 3.0-j2.1b は 2002 年 12 月のものです。このリポジトリはそれを現代のシステ
+ムで動くようにしたもので、内部にひとつ大きな変更を入れています。**バッファが
+Shift-JIS ではなく UTF-8 を保持する**ようになりました。CP932 に席のない文字 —
+ハングル、アクセント付きラテン文字、絵文字、BMP 外の文字 — が、読み込み・編集・
+保存を通って壊れずに残ります。
+
+中身は 1994 年のエディタのままです。それが狙いです。1 MB 程度の実行ファイル 1 個、
+プラグインもスクリプト言語も起動待ちもなし。vi のキー操作に、Vim 3.0 が足した
+ぶんだけ — 多段 undo、複数ウィンドウ、コマンドライン履歴と補完、シンタックス
+カラー、そしてコマンドモードを理解している IME 制御。それが欲しいエディタなら、
+これは今のマシンで動きます。
+
+```
+最新リリース   v3.0-j2.1b-utf8.4
+対応環境       Windows 10/11 (Win32 GUI + コンソール)、Linux、macOS、
+               FreeBSD、NetBSD、OpenBSD、DragonFly
+テスト         100 ケース。上記すべてで CI が実行
+ライセンス     パブリックドメイン / charityware — uganda.txt 参照
+```
+
+## このリポジトリで変わったこと
+
+| | |
+| --- | --- |
+| 内部 UTF-8 | バッファは UTF-8。変換は端 (ファイル、端末、GUI、キーボード、クリップボード、パイプ) だけで行います。1 文字は 1〜4 バイト、幅は 1〜2 桁。「必ず 2 バイト 2 桁」という前提はなくなりました。 |
+| Unicode の Win32 GUI | `RegisterClassW` のウィンドウ、`ExtTextOutW` による描画、`CF_UNICODETEXT` のクリップボード、`SetWindowTextW` のタイトル、UTF-16 の `WM_CHAR` を UTF-8 に組み直す入力。ダイアログ・メニュー・フォント名・レジストリも明示的に UTF-16 で扱います。 |
+| CP932 外のファイル名 | マニフェストでプロセスのコードページを UTF-8 に指定しているので、`...A` 系のファイル API が UTF-8 を受け取り、`🍣.txt` が開けます。 |
+| 画面スケーリング | プロセスをモニタ単位 DPI 対応にし、保存済みのフォントサイズ・ウィンドウサイズを目の前の DPI に読み替えます。125%・150% でも文字がぼやけず、別倍率のモニタへ移動しても保たれます。 |
+| Unix 系ならビルドできる | `scripts/build-unix.sh` が、makefile の 3 行をコメントアウトさせる代わりに、コンパイラに環境を問い合わせます。`scripts/build-mingw.sh` は mingw-w64 で Windows 版をクロスビルドします。 |
+| 100 個のテスト | エンコーディング 42 ケースと編集 58 ケース。実際の pty 越しに動かします。push ごとに 6 つの OS で実行されます。 |
+| 長年のバグを修正 | 15 件。一覧は [BUILDING-mingw.md](BUILDING-mingw.md#bugs-found-along-the-way) にあります。正規表現の `[あ]` が `い` にもマッチする、コマンドラインが `buff[-1]` を読む、絵文字 1 個でファイル全体が Shift-JIS と誤判定される、端末入力で 2 回の読み込みにまたがった文字が化ける、など。 |
+| 削除した機能 2 つ | BDF フォント描画と、書庫 (LHA/ZIP/TAR) 内のファイル編集をソースごと削除しました。再配布の条件が扱いにくかったためです。[後述](#ライセンス)。 |
+
+## 入手する
+
+### Windows
+
+[リリースページ](https://github.com/kuwa72/jvim3/releases)から zip を取って、好きな
+場所に展開してください。インストール作業はありません。`%VIM%` が未設定なら実行
+ファイルのあるディレクトリを `%VIM%` として扱うので、exe の隣に置いたヘルプファイル
+や `_vimrc` はそのまま見つかります。
+
+| パッケージ | 中身 | |
+| --- | --- | --- |
+| `jvim3-*-win32.zip` | `jvim32w.exe`, `jvim32.exe` | **こちらをどうぞ。** 32 ビット。64 ビット Windows でも WoW64 で動きます。 |
+| `jvim3-*-win64.zip` | `jvim64w.exe`, `jvim64.exe` | ネイティブ 64 ビット。ポインタが切られる箇所はなくなりましたが、それは動くことと同義ではありません。誰も実行していません。試したら[結果を教えてください](https://github.com/kuwa72/jvim3/issues)。 |
+
+`jvim32w.exe` が GUI 版、`jvim32.exe` がコンソールから起動する版です。後者に
+`-nw` を付けるとウィンドウを開かずコンソールで動きます。
+
+パッケージには `jvim3.hlp` (日本語ヘルプ) と `_jvimrc.sample` も入っています。
+`jvim3.hlp` は `vim.hlp` にリネームするか、`_vimrc` に
+`set helpfile=$VIM\jvim3.hlp` と書いてください。そうしないと `:help` が見つけら
+れません。残りの初期設定は [USAGE.ja.md](USAGE.ja.md#windows-での最初の設定) に
+あります。
+
+### Linux、macOS、FreeBSD、NetBSD、OpenBSD、DragonFly
+
+```sh
+git clone https://github.com/kuwa72/jvim3
+cd jvim3
+./scripts/build-unix.sh test        # src/jvim3 をビルドして 100 個のテストを実行
+```
+
+必要なのは C コンパイラと、組み込みの端末定義ではなく本物の端末データベースを
+使うための curses / termcap ライブラリです (Debian・Ubuntu なら
+`libncurses-dev`、macOS と BSD には最初から入っています)。スクリプトは何を見つけ
+たかを表示します。
+
+```
+configuring for Linux 6.18.33, cc
+  dialect                (compiler default)
+  tentative globals      -fcommon
+  machine                -DBSD_UNIX
+  setlocale              yes
+  mkstemp                yes
+  terminal               -DTERMCAP -DSOME_BUILTIN_TCAPS -ltinfo
+  X11 title              yes
+```
+
+手でインストールする場合:
+
+```sh
+sudo install -m 755 src/jvim3           /usr/local/bin/
+sudo install -m 644 doc.j/vim.hlp       /usr/local/lib/jvim3.hlp   # 英語版は doc/vim.hlp
+sudo install -m 644 doc/vim.1           /usr/local/man/man1/jvim3.1
+```
+
+これがビルド時に埋め込まれるパスです。ディストリビューションのパッケージはまだ
+ありません。作った方は知らせてください。ここからリンクします。
+
+### Windows 版を自分でビルドする
+
+```sh
+sudo apt install mingw-w64                  # Linux または WSL からクロスビルド
+./scripts/build-mingw.sh both               # dist/i686/jvim32w.exe + jvim32.exe
+```
+
+MSYS2 の **MINGW32** シェルなら `pacman -S mingw-w64-i686-gcc make` を入れて同じ
+スクリプトを実行します。詳細は [BUILDING.ja.md](BUILDING.ja.md) と
+[BUILDING-mingw.md](BUILDING-mingw.md)。
+
+## ドキュメント
+
+このリポジトリのドキュメント:
+
+| | |
+| --- | --- |
+| [USAGE.ja.md](USAGE.ja.md) / [USAGE.md](USAGE.md) | 起動方法、設定ファイルの場所、文字コードの扱い、IME、画面表示、トラブルシューティング。**まずここから。** |
+| [BUILDING.ja.md](BUILDING.ja.md) | Unix / Windows 両方のビルド手順 (日本語)。 |
+| [BUILDING-unix.md](BUILDING-unix.md) | Linux・macOS・BSD でのビルド。スクリプトが何を検出するか、CI が何を見ているか、何が検証済みで何がそうでないか (英語)。 |
+| [BUILDING-mingw.md](BUILDING-mingw.md) | Windows 版のビルドと、UTF-8 化・Unicode GUI・DPI 対応・1 行の描画が実際にどう動いているかの詳しい話 (英語)。 |
+
+JVim 自身のマニュアル (`doc.j/`、ISO-2022-JP):
+
+| | |
+| --- | --- |
+| [doc.j/readme.doc](doc.j/readme.doc) | JVim 3.0-j2.1b の説明書。増えているオプション・コマンド、syntax の設定、tips。 |
+| [doc.j/differen.doc](doc.j/differen.doc) | vi との違い (difference.doc の日本語版)。 |
+| [doc.j/fepctrl.doc](doc.j/fepctrl.doc) | FEP/IME 制御について。 |
+| [doc.j/vim.hlp](doc.j/vim.hlp) | `:help` の日本語版。 |
+
+Vim 3.0 のマニュアル (`doc/`、1994 年、英語):
+
+| | |
+| --- | --- |
+| [doc/reference.doc](doc/reference.doc) | 全コマンド・全オプション。リファレンス。 |
+| [doc/difference.doc](doc/difference.doc) | vi に対して Vim が足したもの、違うところ。 |
+| [doc/windows.doc](doc/windows.doc) | 複数ウィンドウとバッファ。 |
+| [doc/index](doc/index) | コマンドのアルファベット順一覧。 |
+| [tutor/tutor](tutor/tutor) | vi が初めての人向けの 1 時間コース。 |
+| [README](README) | Vim 3.0 自身の README (1994 年)。そのまま残しています。ここに書かれたビルド手順は、このリポジトリが置き換えたものです。 |
+
+`doc.j/` の中で MS-DOS、Windows 95、BOW、書庫内編集、BDF フォントについて書いて
+ある箇所は、もう手順ではなく歴史です。
+
+## 現状と限界
+
+正直に書いておきます。
+
+- **リリースしている Windows 版は 32 ビット。** 64 ビット版はコンパイルは通りま
+  すが実行されたことがなく、CI にも Windows の実行時テストはありません。Windows
+  版の確認はコンパイルと、同じ移植部分のソースを Unix でテストすることで代えて
+  います。
+- **GDI はカラー絵文字を描きません。** カラーのグリフレイヤーには DirectWrite が
+  必要です。表示されるのはフォールバックフォントの白黒アウトラインになります。
+  幅も編集も正しく扱われます。
+- **絵文字の異体字シーケンスは基底文字の幅になります。** `⚠️` は 1 桁とみなされ
+  ますが、フォントは 2 桁で描くので隣にはみ出します。直すには、画面のセルが 1 コード
+  ポイントではなくシーケンスを持てるようにする必要があります。
+- **UCS-2 の読み込みはいまも CP932 を経由します。** そのため CP932 外の文字は
+  読み込み時に失われます。書き出しは直接変換で無損失です。先に UTF-8 に変換して
+  ください。
+- **EUC-JP・Shift-JIS・ISO-2022-JP への保存は、その符号にある文字だけ**が残りま
+  す。仕様であってバグではありません。UTF-8 と UCS-2 はバイト単位で往復します。
+- **Windows のコンソールモードでの日本語入力は不安定です。** 2002 年当時もそうで
+  した。GUI を使ってください。
+- **実機の本物の IME で長く使った実績はありません。** CI とランナー、pty、シリアル
+  コンソールでの確認です。報告は歓迎します。
+
+## テスト
+
+```sh
+./scripts/build-unix.sh test           # ビルドして両方のスイートを実行
+./scripts/test-encoding.sh src/jvim3   # 42 ケース: 文字コード、マルチバイト編集
+./scripts/test-editing.sh  src/jvim3   # 58 ケース: 移動、オペレータ、レジスタ、
+                                       #   マーク、undo、ex の範囲指定、:g、:s、:!
+```
+
+どちらも本物の pty (`scripts/ptyrun.c`) 越しにエディタを動かしてバイト列を比較
+するので、人が打つのと同じ入力経路を通ります。各ケースには 20 秒の制限があり、
+キー入力待ちで止まったケースはスイートを固めずに失敗します。
+
+push と pull request のたびに、Linux・macOS・FreeBSD・NetBSD・OpenBSD・DragonFly
+の 6 環境で 100 ケースすべてを実行し、Windows 版を両アーキテクチャでクロスビルド
+します。`v*` のタグはそれに加えて Windows の zip を公開するので、壊れたビルドが
+リリースになることはありません
+([.github/workflows/build.yml](.github/workflows/build.yml))。
+
+## 開発に参加する
+
+Issue と pull request は <https://github.com/kuwa72/jvim3> へ。
+
+取り込みやすい変更の条件は 2 つです。`./scripts/build-unix.sh test` が通ること、
+そして CI がエラー扱いにしている警告 (暗黙の宣言、ポインタ型の不一致、プロトタイプ
+なし、return なし) を増やさないこと。`-Wpointer-sign` の警告は想定内で残していま
+す。理由は [BUILDING-unix.md](BUILDING-unix.md#warnings) に書いてあります。
+
+特に助かるのは、64 ビット Windows 版を実際に動かしてみること、実機の IME で使って
+みて壊れたところを報告してくれることです。
+
+## ライセンス
+
+Vim 3.0 は**パブリックドメイン**です。そのうえで Bram Moolenaar は、気に入ったら
+自分ではなくウガンダの Kibaale Children's Centre に寄付してほしいと書きました
+(charityware)。本人の文章が [uganda.txt](uganda.txt)、日本語訳が
+[doc.j/uganda.jp](doc.j/uganda.jp) です。この呼びかけは今も有効で、現在の寄付方法
+は [Vim の ICCF のページ](https://www.vim.org/iccf/)にあります。
+
+土田健一さんは日本語化部分の**著作権を放棄**しています (`doc.j/readme.doc` §12)。
+希望として挙げられているのは、ソースを使ったら公開してほしいということだけで、
+一切の保証はしないと明記されています。ここでも同じです。**このソフトウェアには
+いかなる保証もありません。**
+
+上記の条件に含まれていなかった 2 つのディレクトリは、このリポジトリから完全に削除
+しました。`src/bdf/` (GPL での配布が必要だが、ファイル自身にライセンス表記がない)
+と `src/exfile/` (使用時に著者への連絡が必要、つまり自由なライセンスではない) です。
+残っているのは、Vim 3.0 のパブリックドメインと、著者が権利を放棄した日本語化部分
+だけです。
+
+## クレジット
+
+Vim 3.0 は **Bram Moolenaar** 作。元は Tim Thompson、Tony Andrews、G. R. Walter の
+Stevie です。全一覧は [credits.txt](credits.txt) にあります。
+
+日本語化は **土田健一**さん。**小笠原博之**さんの Vim 3.0 用日本語化パッチと
+**中村敦司**さんの Vim 2.0 用パッチをベースに、Onew メーリングリストの方々の協力
+のもとで作られました。IME 制御には**太田純**さんの FEPCTRL ライブラリを使ってい
+ます。
+
+このリポジトリでの UTF-8 化、Unicode GUI、ビルドとテストのスクリプトは
+[kuwa72](https://github.com/kuwa72) によるものです。

@@ -1,5 +1,7 @@
 # Building JVim 3 on Unix
 
+日本語の手順は [BUILDING.ja.md](BUILDING.ja.md) にあります。
+
 ```sh
 ./scripts/build-unix.sh          # build src/jvim3
 ./scripts/build-unix.sh test     # build, then run the encoding tests
@@ -34,10 +36,11 @@ for a key fails instead of hanging the suite.
 ## What CI covers
 
 Every push and pull request builds and runs both suites on **Linux**,
-**macOS**, **FreeBSD**, **NetBSD** and **OpenBSD**, and cross builds the Windows
-executables with mingw-w64. A tag matching `v*` does the same and then publishes
-the Windows build to the release page, so a broken build cannot become a
-release. See [.github/workflows/build.yml](.github/workflows/build.yml).
+**macOS**, **FreeBSD**, **NetBSD**, **OpenBSD** and **DragonFly**, and cross
+builds the Windows executables with mingw-w64, 32 and 64 bit. A tag matching
+`v*` does the same and then publishes the Windows build to the release page, so
+a broken build cannot become a release. See
+[.github/workflows/build.yml](.github/workflows/build.yml).
 
 The BSDs run in a VM on the Linux runner, from a prebuilt guest that boots in a
 couple of minutes. `scripts/test-bsd-docker.sh` below does the same thing on
@@ -156,13 +159,13 @@ Verified on macOS (Darwin 25.5, Apple clang, arm64) in CI:
 - `-DBSD4_4`, i.e. `<termios.h>`; nothing here relies on `<sgtty.h>` any more
 
 Verified in CI, on whatever release the VM images carry — FreeBSD 15.1,
-NetBSD 11.0 and OpenBSD 7.9 at the time of writing. All 100 tests on each.
-OpenBSD had never been built at all before that; `-lncursesw` is what it finds.
+NetBSD 11.0 and OpenBSD 7.9 at the time of writing, plus DragonFly. All 100
+tests on each. OpenBSD had never been built at all before that; `-lncursesw` is
+what it finds. DragonFly is CI only: `scripts/test-bsd-docker.sh` has no guest
+for it, so it has never been looked at interactively.
 
 **Not** verified:
 
-- DragonFly. `MODERN_LIBC`, `sig_winch()` and the `BSD4_4` default name it,
-  on the assumption that what its relatives need it needs too.
 - Real hardware, a real terminal and a real IME. Everything above is a serial
   console, a pty or a CI runner.
 - X11 title saving anywhere but Linux: no BSD guest and no CI runner has the X
