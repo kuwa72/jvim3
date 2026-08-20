@@ -114,7 +114,7 @@ jobs:
           run: ./scripts/build-unix.sh test
 
   windows:
-    name: Windows build (mingw-w64, i686)
+    name: Windows build (mingw-w64, 32 and 64 bit)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -133,25 +133,35 @@ jobs:
             gcc-mingw-w64-x86-64-win32 binutils-mingw-w64-x86-64
           i686-w64-mingw32-gcc --version | head -1
       # 64 bit compiles clean of pointer truncation now, and this keeps it that
-      # way. It has never been run, so it is a compile check and the release
-      # stays 32 bit. It goes first because "clean" takes dist/ with it.
+      # way. It goes before the packaging because "clean" takes dist/ with it.
       - name: Compile 64 bit, and refuse a truncated pointer
         run: |
           ARCH=x86_64 ./scripts/build-mingw.sh warn 2>&1 | tee /tmp/w64.log | tail -2
           ! grep -qE 'pointer-to-int-cast|int-to-pointer-cast|error:' /tmp/w64.log
           ARCH=x86_64 ./scripts/build-mingw.sh clean
-      - name: Build the GUI and console executables
-        run: ./scripts/build-mingw.sh both
-      - name: Package dist/i686
+      - name: Build and package both architectures
         run: |
-          name=jvim3-${GITHUB_REF_NAME:-snapshot}-win32
-          cp -r dist/i686 "$name"
           mkdir -p out
-          zip -r "out/$name.zip" "$name"
+          for arch in i686 x86_64; do
+            case $arch in
+            i686)	bits=32 ;;
+            x86_64)	bits=64 ;;
+            esac
+            ARCH=$arch ./scripts/build-mingw.sh both
+            name=jvim3-${GITHUB_REF_NAME:-snapshot}-win$bits
+            mkdir "$name"
+            cp -p "dist/$arch/jvim3.hlp" "dist/$arch/_jvimrc.sample" "$name/"
+            # makefile.mingw calls its targets jvim32*.exe whatever the
+            # architecture is; the name in the zip says which one it is.
+            cp -p "dist/$arch/jvim32w.exe" "$name/jvim${bits}w.exe"
+            cp -p "dist/$arch/jvim32.exe" "$name/jvim$bits.exe"
+            zip -qr "out/$name.zip" "$name"
+            ARCH=$arch ./scripts/build-mingw.sh clean
+          done
           ls -l out
       - uses: actions/upload-artifact@v5
         with:
-          name: win32
+          name: windows
           path: out/*.zip
           if-no-files-found: error
 
@@ -164,7 +174,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/download-artifact@v5
         with:
-          name: win32
+          name: windows
           path: out
       - name: Create the release
         env:
@@ -175,12 +185,20 @@ jobs:
             --notes "$(cat <<'EOF'
           JVim 3.0-j2.1b with UTF-8 support.
 
-          `jvim3-*-win32.zip` holds the 32 bit Windows build: `jvim32w.exe`
-          (GUI), `jvim32.exe` (console), the help file and a sample `_jvimrc`.
-          Point `%VIM%` at that directory. It runs on 64 bit Windows under
-          WoW64; see BUILDING-mingw.md for why 32 bit is the one to use.
+          Two Windows builds, each with a GUI and a console executable, the
+          help file and a sample `_jvimrc`. Unpack one and point `%VIM%` at
+          the directory.
 
-          Build it yourself with `scripts/build-mingw.sh both` for Windows or
-          `scripts/build-unix.sh test` on Linux, the BSDs and macOS.
+          | | |
+          | --- | --- |
+          | `jvim3-*-win32.zip` | `jvim32w.exe`, `jvim32.exe`. The one that has been used; runs on 64 bit Windows under WoW64. |
+          | `jvim3-*-win64.zip` | `jvim64w.exe`, `jvim64.exe`. Native 64 bit. It compiles with nothing truncating a pointer any more, but it has never been run: there is no Windows runtime test here. Try it and say what happens. |
+
+          Both are built by CI from this tag, after the build and 100 tests
+          pass on Linux, macOS, FreeBSD, NetBSD, OpenBSD and DragonFly.
+
+          Build it yourself with `scripts/build-mingw.sh both`
+          (`ARCH=x86_64` for 64 bit), or `scripts/build-unix.sh test` on
+          Linux, the BSDs and macOS.
           EOF
           )"
