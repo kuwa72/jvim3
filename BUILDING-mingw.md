@@ -251,38 +251,82 @@ where Terminal 8x12 was tall, so the dialogs come out about a third taller.
 To go back to the stretched-but-larger rendering, the exe's Properties >
 Compatibility > Change high DPI settings can override the manifest per user.
 
-### Background first, then the glyphs
+### Drawing a row of text
 
-`PrintChar()` draws a run of cells in two calls: one `ExtTextOut` with
-`ETO_OPAQUE` and no string to fill the run's rectangle in the background
-colour, then the glyphs over it with the background mode `TRANSPARENT`.
+Getting an emoji on the screen intact took unpicking four separate faults, three
+of them of long standing. What the drawing does now, and why:
 
-It used to be one call, `ETO_OPAQUE` with the string and the background mode
-left `OPAQUE`, and that is a cell at a time: `ExtTextOut` fills each glyph's own
-advance box immediately before drawing that glyph, left to right. A glyph whose
-ink is wider than the advance it was given therefore had the overhang painted
-out by the box of the glyph after it — in the same call, so redrawing reproduced
-it exactly rather than repairing it.
+**The background of a row goes down before any of its glyphs.**
+`PaintWindow()` fills the row's damaged span, in spans of one colour, and only
+then walks the runs drawing text. `PrintChar()` paints no background at all.
 
-Emoji are where that showed. No fixed pitch text font carries them, so they
-arrive from whatever GDI links to, and a fallback font's ink does not promise to
-sit inside two of the base font's half widths. Half the glyph went missing, and
-at the end of a line the trailing blanks did the same to the last character. A
-rectangle filled once cannot do that to its own contents.
+It used to be one `ExtTextOut` per run with `ETO_OPAQUE` and the background mode
+left `OPAQUE`, which paints a cell at a time: `ExtTextOut` fills each glyph's own
+advance box immediately before drawing that glyph. A glyph whose ink is wider
+than its advance had the overhang painted out by the box of the glyph after it,
+in the same call, so redrawing reproduced it exactly rather than repairing it.
+Filling once per run was not enough either — the run loop starts a new run
+wherever the attribute changes *or* the text crosses between ASCII and a
+multi-byte character, so a line of Japanese is chopped into a good many runs and
+the blanks after the last word are a run of their own. That is why the last
+character of a line lost its right side while a line ending in a full stop,
+whose glyph sits well inside its cell, looked perfectly fine.
 
-The repainted span also reaches one cell to the right now, as it already did to
-the left: ink can lean out of the cells it was given, and with the background no
-longer painted per cell there is nothing to hide a neighbour that leans in.
+**A character outside the BMP is drawn by itself.** `lpDx` is documented as one
+entry per character of the string, but GDI applies it per *glyph*, and a
+surrogate pair is two characters that become one glyph. The entry meant for the
+character after the pair was eaten by the pair itself: that character advanced
+by the zero belonging to the low surrogate and landed on its neighbour, and
+every entry after it was off by one place. Mostly they hold the same number, so
+it very nearly looked right — the line simply came out a cell short with its
+tail half a character left of the grid. So an astral character gets its own
+`ExtTextOut` at a known x with no `lpDx` to misread, and the run picks up again
+where the grid says the next cell starts.
 
-Two limits worth knowing. GDI draws no colour emoji at all — `COLR`/`CBDT`
-layers need DirectWrite — so what appears is the fallback font's monochrome
-outline. And an emoji presentation sequence still gets the width of its base
-character: `utf_cpwidth()` in `utf8.c` reads one code point, and `⚠️` is U+26A0,
+**East Asian Ambiguous is two columns.** `utf_ambig[]` in `utf8.c` holds the A
+class of `EastAsianWidth.txt`, which was drawn up from the legacy CJK charsets
+and so is very nearly the set CP932 encodes as double byte — the set a Japanese
+font draws double width. `→` is the everyday case: U+2192 is CP932 0x81A8, and
+MS Gothic and Myrica both give it a full width glyph, so calling it one column
+put it on top of whatever followed. This is what `'ambiwidth'` set to double
+means elsewhere. Left out, though the A class has them, is everything below
+U+2000 that is a letter rather than a symbol — Latin-1, Latin Extended, IPA, the
+spacing modifiers — because those come out of the Latin half of a mixed font at
+half width. Greek and Cyrillic are in: a Japanese font takes those from its CJK
+half, CP932 having them in JIS X 0208 rows 6 and 7.
+
+Widening the search meant lowering the fast path in `utf_cpwidth()` that
+returned 1 for anything under U+1100, and that cut had been standing in front of
+the zero width test: every combining mark below it — the Latin diacriticals,
+Hebrew points, Arabic harakat, the Thai marks — was given a column of its own,
+which is not what `utf_iszerowidth()` lists them for. The cut is at U+0300 now,
+so they get none.
+
+**A text write damages the whole row.** In `mch_write()`, `prefix` counts bytes
+and `v_col` counts columns, and since the screen holds UTF-8 the two part
+company the moment anything is not ASCII: three bytes for the two columns of a
+kana, four for the two of an emoji. The code treats them as the same thing, so
+`v_col` runs ahead of where the text really is.
+
+Reckoning it properly turns out to be the wrong repair. The damaged rectangle
+came out too wide for the same reason, and too wide is harmless — it is what
+kept the display honest while `v_col` drifted. Made exact, it stopped covering
+for the drift and lines began to end early. So the rectangle is the row: nothing
+is left unpainted, ink that leans out of its cells is inside the clip region
+wherever it lands, and `BeginPaint()` is spared the arithmetic. `clreol` needs
+its own patch on top, since it blanks to the end of the line straight to the
+screen and redraws no text; it asks for the character before the cut back
+afterwards, never before, or the `UpdateWindow()` in front of the blanking
+services the request and the blanking wipes it again.
+
+Two limits remain. GDI draws no colour emoji at all — `COLR`/`CBDT` layers need
+DirectWrite — so what appears is the fallback font's monochrome outline. And an
+emoji presentation sequence gets the width of its base character: `⚠️` is U+26A0,
 which East Asian Width calls Neutral, followed by a variation selector that
-`utf_iszerowidth()` correctly gives no cell of its own. So it is allotted one
-column where a font draws two. Getting that right means a cell holding a
-sequence rather than a single code point, which the screen planes in `screen.c`
-do not do yet.
+`utf_iszerowidth()` rightly gives no cell of its own, so it is allotted one
+column where a font draws two and leans on its neighbour. Fixing that means a
+cell that can hold a sequence rather than a single code point, which the screen
+planes in `screen.c` do not do yet.
 
 ### The GUI's own strings
 

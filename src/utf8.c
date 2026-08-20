@@ -180,13 +180,15 @@ utf_iszerowidth(int cp)
 			|| (cp >= 0xe0100 && cp <= 0xe01ef));
 }
 
+typedef struct { int first, last; } utf_range;
+
 /*
  * East Asian Wide and Fullwidth: two columns. Sorted ranges, binary searched.
  * Derived from EastAsianWidth.txt (W and F); ranges are merged where the gaps
  * only hold unassigned code points, which keeps the table small without
  * changing the answer for assigned characters.
  */
-static struct { int first, last; } utf_wide[] = {
+static utf_range utf_wide[] = {
 	{0x1100, 0x115f},		/* Hangul Jamo initial consonants */
 	{0x231a, 0x231b},
 	{0x2329, 0x232a},
@@ -232,29 +234,120 @@ static struct { int first, last; } utf_wide[] = {
 };
 
 /*
+ * East Asian Ambiguous (the A class of EastAsianWidth.txt): one column in a
+ * Western context and two in an East Asian one, which is not a contradiction
+ * so much as a record of history. The class was drawn up from the legacy CJK
+ * charsets, so it is very nearly the set of characters CP932 and its cousins
+ * encode as double byte -- and a Japanese font draws exactly those double
+ * width. An arrow is the everyday case: U+2192 is CP932 0x81A8, and MS Gothic,
+ * Myrica and the rest give it a full width glyph. Called one column it lands on
+ * top of whatever follows it.
+ *
+ * So: two, which is what 'ambiwidth' set to double means elsewhere.
+ *
+ * Deliberately not here, though the A class has them, is everything below
+ * U+2000 that is a letter rather than a symbol -- Latin-1, Latin Extended, IPA,
+ * the spacing modifiers. Those come out of the Latin half of a mixed Japanese
+ * font, half width, and calling them double would push Western text apart to
+ * no purpose. Greek and Cyrillic are in, because a Japanese font takes those
+ * from its CJK half and draws them full width, CP932 having them in JIS X 0208
+ * rows 6 and 7.
+ */
+static utf_range utf_ambig[] = {
+	{0x0391, 0x03a1}, {0x03a3, 0x03a9},		/* Greek capitals */
+	{0x03b1, 0x03c1}, {0x03c3, 0x03c9},		/* Greek smalls */
+	{0x0401, 0x0401}, {0x0410, 0x044f}, {0x0451, 0x0451},	/* Cyrillic */
+	{0x2010, 0x2010}, {0x2013, 0x2016}, {0x2018, 0x2019},
+	{0x201c, 0x201d}, {0x2020, 0x2022}, {0x2024, 0x2027},
+	{0x2030, 0x2030}, {0x2032, 0x2033}, {0x2035, 0x2035},
+	{0x203b, 0x203b}, {0x203e, 0x203e},
+	{0x2074, 0x2074}, {0x207f, 0x207f}, {0x2081, 0x2084},
+	{0x20ac, 0x20ac},
+	{0x2103, 0x2103}, {0x2105, 0x2105}, {0x2109, 0x2109},
+	{0x2113, 0x2113}, {0x2116, 0x2116}, {0x2121, 0x2122},
+	{0x2126, 0x2126}, {0x212b, 0x212b},
+	{0x2153, 0x2154}, {0x215b, 0x215e},
+	{0x2160, 0x216b}, {0x2170, 0x2179}, {0x2189, 0x2189},
+	{0x2190, 0x2199}, {0x21b8, 0x21b9}, {0x21d2, 0x21d2},
+	{0x21d4, 0x21d4}, {0x21e7, 0x21e7},
+	{0x2200, 0x2200}, {0x2202, 0x2203}, {0x2207, 0x2208},
+	{0x220b, 0x220b}, {0x220f, 0x220f}, {0x2211, 0x2211},
+	{0x2215, 0x2215}, {0x221a, 0x221a}, {0x221d, 0x2220},
+	{0x2223, 0x2223}, {0x2225, 0x2225}, {0x2227, 0x222c},
+	{0x222e, 0x222e}, {0x2234, 0x2237}, {0x223c, 0x223d},
+	{0x2248, 0x2248}, {0x224c, 0x224c}, {0x2252, 0x2252},
+	{0x2260, 0x2261}, {0x2264, 0x2267}, {0x226a, 0x226b},
+	{0x226e, 0x226f}, {0x2282, 0x2283}, {0x2286, 0x2287},
+	{0x2295, 0x2295}, {0x2299, 0x2299}, {0x22a5, 0x22a5},
+	{0x22bf, 0x22bf}, {0x2312, 0x2312},
+	{0x2460, 0x24e9}, {0x24eb, 0x254b},		/* enclosed, box drawing */
+	{0x2550, 0x2573}, {0x2580, 0x258f}, {0x2592, 0x2595},
+	{0x25a0, 0x25a1}, {0x25a3, 0x25a9}, {0x25b2, 0x25b3},
+	{0x25b6, 0x25b7}, {0x25bc, 0x25bd}, {0x25c0, 0x25c1},
+	{0x25c6, 0x25c8}, {0x25cb, 0x25cb}, {0x25ce, 0x25d1},
+	{0x25e2, 0x25e5}, {0x25ef, 0x25ef},
+	{0x2605, 0x2606}, {0x2609, 0x2609}, {0x260e, 0x260f},
+	{0x261c, 0x261c}, {0x261e, 0x261e},
+	{0x2640, 0x2640}, {0x2642, 0x2642},
+	{0x2660, 0x2661}, {0x2663, 0x2665}, {0x2667, 0x266a},
+	{0x266c, 0x266d}, {0x266f, 0x266f},
+	{0x269e, 0x269f}, {0x26bf, 0x26bf}, {0x26c6, 0x26cd},
+	{0x26cf, 0x26d3}, {0x26d5, 0x26e1}, {0x26e3, 0x26e3},
+	{0x26e8, 0x26e9}, {0x26eb, 0x26f1}, {0x26f4, 0x26f4},
+	{0x26f6, 0x26f9}, {0x26fb, 0x26fc}, {0x26fe, 0x26ff},
+	{0x273d, 0x273d}, {0x2776, 0x277f},
+	{0x2b56, 0x2b59},
+	{0x3248, 0x324f},
+	{0xe000, 0xf8ff},						/* private use */
+	{0xfffd, 0xfffd},
+	{0xf0000, 0xffffd}, {0x100000, 0x10fffd},	/* private use, planes 15-16 */
+};
+
+/*
+ * Is 'cp' inside one of the sorted ranges of 'tab'?
+ */
+	static int
+utf_inranges(int cp, utf_range *tab, int n)
+{
+	int		lo = 0;
+	int		hi = n - 1;
+	int		mid;
+
+	while (lo <= hi)
+	{
+		mid = (lo + hi) / 2;
+		if (cp < tab[mid].first)
+			hi = mid - 1;
+		else if (cp > tab[mid].last)
+			lo = mid + 1;
+		else
+			return TRUE;
+	}
+	return FALSE;
+}
+
+/*
  * Display width of a code point, in columns.
  */
 	int
 utf_cpwidth(int cp)
 {
-	int		lo, hi, mid;
-
-	if (cp < 0x1100)					/* the common case, no table needed */
+	/*
+	 * The cut used to be at 0x1100, which was quick but stepped in front of
+	 * the zero width check below: every combining mark under that -- the Latin
+	 * diacriticals, Hebrew points, Arabic harakat, the Thai marks -- was given
+	 * a column of its own, which is not what utf_iszerowidth() lists them for.
+	 */
+	if (cp < 0x0300)					/* the common case, no table needed */
 		return 1;
 	if (utf_iszerowidth(cp))
 		return 0;
-	lo = 0;
-	hi = (int)(sizeof(utf_wide) / sizeof(utf_wide[0])) - 1;
-	while (lo <= hi)
-	{
-		mid = (lo + hi) / 2;
-		if (cp < utf_wide[mid].first)
-			hi = mid - 1;
-		else if (cp > utf_wide[mid].last)
-			lo = mid + 1;
-		else
-			return 2;
-	}
+	if (utf_inranges(cp, utf_wide,
+						(int)(sizeof(utf_wide) / sizeof(utf_wide[0]))))
+		return 2;
+	if (utf_inranges(cp, utf_ambig,
+						(int)(sizeof(utf_ambig) / sizeof(utf_ambig[0]))))
+		return 2;
 	return 1;
 }
 

@@ -1667,6 +1667,24 @@ GetColor(char_u mode, int tb)
 }
 #endif
 
+/*
+ * The colour behind a cell whose attribute byte is 'mode'. The same choice the
+ * run loop in PaintWindow() makes when it calls SetBkColor(), kept here so the
+ * background pass over a row can make it too.
+ */
+static DWORD
+run_bkcolor(char_u mode)
+{
+#ifdef KANJI
+	if (mode)
+		return(do_vb ? GetColor(mode, 't') : GetColor(mode, 'b'));
+#else
+	if (mode & 0x80)
+		return(do_vb ? *v_bgcolor : *v_fgcolor);
+#endif
+	return(do_vb ? *v_fgcolor : *v_bgcolor);
+}
+
 static void
 PrintChar(HDC hdc, RECT *rt, HFONT *phOldFont, char_u *p, int size, char_u mode,
 			int row, int col)
@@ -1717,14 +1735,38 @@ PrintChar(HDC hdc, RECT *rt, HFONT *phOldFont, char_u *p, int size, char_u mode,
 #endif
 	{
 		/*
-		 * Draw the run as UTF-16. Each cell contributes one unit (two for a
-		 * character outside the BMP) and v_space carries the advance, so a
-		 * double width character gets both of its cells and everything stays
-		 * on the character grid.
+		 * Glyphs only. PaintWindow() has already laid the background of the
+		 * whole row down, before any of its runs were drawn, so that nothing
+		 * painted here can erase ink that is already on the screen.
 		 */
 		int		i;
-		int		n = 0;
+		int		n = 0;				/* UTF-16 units staged in v_char */
+		int		x = rt->left;		/* where the staged units start */
+		int		adv = 0;			/* and how wide they will come out */
 
+		/*
+		 * A run of cells goes out as few ExtTextOut calls as it can, with
+		 * v_space holding one advance per cell so that a double width
+		 * character gets both of its cells and everything lands on the
+		 * character grid.
+		 *
+		 * A character outside the BMP breaks that and has to go on its own.
+		 * lpDx is documented as one entry per character of the string, but GDI
+		 * applies it per *glyph*, and a surrogate pair is two characters that
+		 * become one glyph. So the entry meant for the character after the
+		 * pair was eaten by the pair itself: that character advanced by the
+		 * zero belonging to the low surrogate, landing on top of its
+		 * neighbour, and every entry after that was off by one place. Mostly
+		 * they hold the same number so it very nearly looked right, but the
+		 * line came out a cell short and its tail sat half a character to the
+		 * left of the grid -- which is why an emoji, and the end of any line
+		 * holding one, appeared to have lost its right half, while a line of
+		 * nothing but kanji was fine.
+		 *
+		 * Drawn by itself at a known x, with no lpDx to misread, the glyph
+		 * gets the advance its own font intends and we go on from where the
+		 * grid says the next cell starts.
+		 */
 		for (i = 0; i < size; i++)
 		{
 			int		cp = CELLCP(row, col + i);
@@ -1737,53 +1779,39 @@ PrintChar(HDC hdc, RECT *rt, HFONT *phOldFont, char_u *p, int size, char_u mode,
 				v_char[n] = (short)(unsigned char)p[i];
 				v_space[n] = v_xchar;
 				n++;
+				adv += v_xchar;
 				continue;
 			}
 			wid = utf_cpwidth(cp);
 			if (wid < 1)
 				wid = 1;
 			if (cp > 0xffff)
-			{							/* surrogate pair */
+			{
+				WCHAR	pair[2];
 				int		v = cp - 0x10000;
 
-				v_char[n] = (short)(0xd800 + (v >> 10));
-				v_space[n] = wid * v_xchar;
-				n++;
-				v_char[n] = (short)(0xdc00 + (v & 0x3ff));
-				v_space[n] = 0;
-				n++;
+				if (n > 0)
+				{
+					ExtTextOutW(hdc, x, rt->top, 0, NULL,
+									(LPCWSTR)v_char, n, v_space);
+					x += adv;
+					n = 0;
+					adv = 0;
+				}
+				pair[0] = (WCHAR)(0xd800 + (v >> 10));
+				pair[1] = (WCHAR)(0xdc00 + (v & 0x3ff));
+				ExtTextOutW(hdc, x, rt->top, 0, NULL, pair, 2, NULL);
+				x += wid * v_xchar;
+				continue;
 			}
-			else
-			{
-				v_char[n] = (short)cp;
-				v_space[n] = wid * v_xchar;
-				n++;
-			}
+			v_char[n] = (short)cp;
+			v_space[n] = wid * v_xchar;
+			n++;
+			adv += wid * v_xchar;
 		}
-		/*
-		 * Background first, then the glyphs over it with nothing of their own
-		 * behind them.
-		 *
-		 * This used to be one call with ETO_OPAQUE and the background mode
-		 * left OPAQUE, which is a cell at a time: ExtTextOut fills each
-		 * glyph's own advance box just before it draws that glyph, working
-		 * left to right. A glyph whose ink is wider than the advance we asked
-		 * for therefore had its overhang painted out by the box of the glyph
-		 * after it -- inside the very same call, so redrawing reproduced it
-		 * exactly. Emoji are where it showed: they come from a fallback font,
-		 * since no fixed pitch text font carries them, and that font's ink
-		 * does not promise to sit inside two of our half widths. Half the
-		 * glyph went missing, and at the end of a line the trailing blanks did
-		 * the same to the last character.
-		 *
-		 * A rectangle filled once cannot do that to its own contents. The
-		 * empty ExtTextOut is just the cheap way to fill it in the current
-		 * background colour without a brush to make and free per run.
-		 */
-		if (!v_bmpon && !issynpaint())
-			ExtTextOutW(hdc, rt->left, rt->top, ETO_OPAQUE, rt, NULL, 0, NULL);
-		ExtTextOutW(hdc, rt->left, rt->top, 0, rt,
-					(LPCWSTR)v_char, n, v_space);
+		if (n > 0)
+			ExtTextOutW(hdc, x, rt->top, 0, NULL,
+							(LPCWSTR)v_char, n, v_space);
 	}
 }
 
@@ -1875,6 +1903,56 @@ PaintWindow(HWND hWnd)
 		rect.left	= nCol * v_xchar;
 
 		p = WinScreen[nRow];
+		/*
+		 * The background of the row goes down first, all of it, before a
+		 * single glyph of the row is drawn.
+		 *
+		 * It used to be part of drawing each run, and that cannot work: the
+		 * loop below starts a new run wherever the attribute changes *or* the
+		 * text crosses between ASCII and a multi-byte character, so a line of
+		 * Japanese is chopped into a good many of them, and the blanks after
+		 * the last word are a run of their own. Ink that leans out of the
+		 * cells a run was given -- the right edge of a kana, an emoji from a
+		 * fallback font -- was painted out by the background of the run after
+		 * it. Which is why the last character of a line lost its right side
+		 * while a line ending in a full stop, whose glyph sits well inside its
+		 * cell, looked perfectly fine.
+		 *
+		 * Spans of one colour are filled together, so this is normally one or
+		 * two FillRect calls for the row.
+		 */
+		if (!v_bmpon && !issynpaint())
+		{
+			int			c0 = nCol;
+			int			c;
+
+			for (c = nCol; c <= nEndCol + 1; c++)
+			{
+#ifdef KANJI
+				if (c <= nEndCol && p[Columns + c] == p[Columns + c0])
+#else
+				if (c <= nEndCol && (p[c] & 0x80) == (p[c0] & 0x80))
+#endif
+					continue;
+				{
+					RECT		fr;
+					HBRUSH		hbrush;
+
+					fr.top		= rect.top;
+					fr.bottom	= rect.bottom;
+					fr.left		= c0 * v_xchar;
+					fr.right	= c * v_xchar;
+#ifdef KANJI
+					hbrush = CreateSolidBrush(run_bkcolor(p[Columns + c0]));
+#else
+					hbrush = CreateSolidBrush(run_bkcolor(p[c0]));
+#endif
+					FillRect(hDC, &fr, hbrush);
+					DeleteObject(hbrush);
+				}
+				c0 = c;
+			}
+		}
 		attr = 0xff;
 #ifdef KANJI
 		kanji = CELLKANA(nRow, nCol);
@@ -5616,6 +5694,28 @@ mch_write(char_u *s, int len)
 					}
 					else
 						InvalidateRect(hVimWnd, &rect, FALSE);
+					/*
+					 * The blanking above goes straight to the screen and
+					 * redraws no text, so ink from the character ending at
+					 * v_col - 1 that leans into v_col is wiped and never comes
+					 * back. That was the right side of the last character of a
+					 * line going missing. Ask for that character again;
+					 * PaintWindow() widens what it is given by a cell, which
+					 * takes in the left half of a double width one.
+					 *
+					 * Afterwards, never before: the UpdateWindow() above would
+					 * otherwise service it and the FillRect() wipe it again.
+					 */
+					if (v_col > 0)
+					{
+						RECT		lr;
+
+						lr.left		= (v_col - 1) * v_xchar;
+						lr.right	= v_col * v_xchar;
+						lr.top		= rect.top;
+						lr.bottom	= rect.bottom;
+						InvalidateRect(hVimWnd, &lr, FALSE);
+					}
 					goto wgot3;
 
 				case 'L':	/* insline */
@@ -5731,9 +5831,29 @@ mch_write(char_u *s, int len)
 					else if (prefix == 0)
 						prefix = 1;
 				}
-				rect.left	= v_col * v_xchar;
-				rect.right	= rect.left + v_xchar * prefix;
-				rect.right	= rect.left + v_xchar * (prefix + italicplus());
+				/*
+				 * The whole row, not the cells this run is thought to touch.
+				 *
+				 * prefix is a count of bytes and v_col a count of columns, and
+				 * the screen holds UTF-8, so the two part company the moment
+				 * anything is not ASCII: three bytes for the two columns of a
+				 * kana, four for the two of an emoji. Everything below treats
+				 * them as the same thing, which leaves v_col running ahead of
+				 * where the text really is.
+				 *
+				 * Reckoning it properly turns out to be the wrong repair. The
+				 * damaged rectangle came out too wide for the same reason, and
+				 * too wide is harmless -- it is what kept the display honest
+				 * while v_col drifted. Made exact, it stopped covering for the
+				 * drift and lines began to end early. So the rectangle is the
+				 * row now: nothing can be left unpainted, ink that leans out
+				 * of its cells is inside the clip region wherever it lands,
+				 * and BeginPaint() is spared the arithmetic. A row is one or
+				 * two FillRects and a handful of ExtTextOuts, which is not
+				 * worth being clever about.
+				 */
+				rect.left	= 0;
+				rect.right	= Columns * v_xchar;
 				rect.top	= v_row * v_ychar;
 				rect.bottom	= rect.top + v_ychar;
 				InvalidateRect(hVimWnd, &rect, FALSE);
