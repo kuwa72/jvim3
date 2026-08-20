@@ -718,11 +718,7 @@ FullName(fname, buf, len)
 		 */
 		if ((p = STRRCHR(fname, '/')) != NULL)
 		{
-#if defined(SYSV_UNIX) || defined(USL) || defined(hpux) || defined(linux)
 			if (getcwd((char *)olddir, MAXPATHL) == NULL)
-#else
-			if (getwd((char *)olddir) == NULL)
-#endif
 			{
 				p = NULL;		/* can't get current dir: don't chdir */
 				retval = FAIL;
@@ -738,11 +734,7 @@ FullName(fname, buf, len)
 				*p = c;
 			}
 		}
-#if defined(SYSV_UNIX) || defined(USL) || defined(hpux) || defined(linux)
 		if (getcwd((char *)buf, len) == NULL)
-#else
-		if (getwd((char *)buf) == NULL)
-#endif
 		{
 			retval = FAIL;
 			*buf = NUL;

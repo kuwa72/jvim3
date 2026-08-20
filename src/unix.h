@@ -82,8 +82,25 @@ int		rename __ARGS((const char *, const char *));
 
 int		stricmp __ARGS((char *, char *));
 
+/*
+ * The declarations below are for machines whose libc predated C89: memmove(),
+ * memset() and the b* functions are worked around or declared here. Every
+ * system still in use declares them itself, with prototypes that do not match
+ * these -- macOS's bcopy() and bzero() take (const void *, void *, size_t) --
+ * and a second declaration is then an error, not a warning. So they are all
+ * skipped on the systems that have grown up, and kept for the old ports.
+ *
+ * This used to be spelled out as a chain of !defined() on every block, which is
+ * where macOS was missing.
+ */
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) \
+		|| defined(__OpenBSD__) || defined(__DragonFly__) || defined(linux) \
+		|| defined(__GNU__) || defined(__CYGWIN__) || defined(__bsdi__)
+# define MODERN_LIBC
+#endif
+
 /* memmove is not present on all systems, use our own version or bcopy */
-#if !defined(SCO) && !defined(SOLARIS) && !defined(AIX) && !defined(UTS4) && !defined(USL) && !defined(MIPS) && !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(__FreeBSD__) && !defined(linux) && !defined(UNISYS) && !defined(__CYGWIN__) && !defined(__bsdi__) && !defined(__GNU__)
+#if !defined(MODERN_LIBC) && !defined(SCO) && !defined(SOLARIS) && !defined(AIX) && !defined(UTS4) && !defined(USL) && !defined(MIPS) && !defined(UNISYS)
 # ifdef SYSV_UNIX
 #   define MEMMOVE
 void *memmove __ARGS((void *, void *, int));
@@ -104,7 +121,7 @@ extern void bcopy __ARGS((char *, char *, int));
 # define strrchr(ptr, c)		rindex((ptr), (c))
 #endif
 
-#if defined(BSD_UNIX) && !defined(__bsdi__) && !defined(linux) && !defined(__GNU__)
+#if defined(BSD_UNIX) && !defined(MODERN_LIBC)
 # define memset(ptr, c, size)	bsdmemset((ptr), (c), (size))
 char *bsdmemset __ARGS((char *, int, long));
 #endif
@@ -113,12 +130,12 @@ char *bsdmemset __ARGS((char *, int, long));
  * Most unixes don't have these in include files.
  * If you get a "redefined" error, delete the offending line.
  */
-#if !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(__FreeBSD__) && !defined(linux) && !defined(__CYGWIN__) && !defined(__bsdi__) && !defined(__GNU__)
+#ifndef MODERN_LIBC
   extern int	ioctl __ARGS((int, int, ...));
 #endif
 extern int	fsync __ARGS((int));
-extern char *getwd __ARGS((char *));
-#if !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(__FreeBSD__) && !defined(linux) && !defined(__CYGWIN__) && !defined(__bsdi__) && !defined(__hpux) && !defined(__GNU__)
+/* getwd() was declared here; nothing calls it any more, see vim_dirname(). */
+#if !defined(MODERN_LIBC) && !defined(__hpux)
   extern void bzero __ARGS((char *, int));
 #endif
 #if defined(system_that_does_not_have_access_in_an_include_file)
