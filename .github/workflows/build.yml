@@ -107,9 +107,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-      # Only the 32 bit C cross compiler. The mingw-w64 metapackage drags in
-      # both architectures, g++ and gfortran, and installing it took over half
-      # an hour on the runner before it was cancelled.
+      # Only the C cross compilers. The mingw-w64 metapackage drags in both
+      # architectures, g++ and gfortran, and installing it took over half an
+      # hour on the runner before it was cancelled.
       - name: Install mingw-w64
         timeout-minutes: 10
         env:
@@ -117,20 +117,19 @@ jobs:
         run: |
           sudo apt-get -o DPkg::Lock::Timeout=300 update
           sudo apt-get -o DPkg::Lock::Timeout=300 install -y --no-install-recommends \
-            gcc-mingw-w64-i686-win32 binutils-mingw-w64-i686
+            gcc-mingw-w64-i686-win32 binutils-mingw-w64-i686 \
+            gcc-mingw-w64-x86-64-win32 binutils-mingw-w64-x86-64
           i686-w64-mingw32-gcc --version | head -1
+      # 64 bit compiles clean of pointer truncation now, and this keeps it that
+      # way. It has never been run, so it is a compile check and the release
+      # stays 32 bit. It goes first because "clean" takes dist/ with it.
+      - name: Compile 64 bit, and refuse a truncated pointer
+        run: |
+          ARCH=x86_64 ./scripts/build-mingw.sh warn 2>&1 | tee /tmp/w64.log | tail -2
+          ! grep -qE 'pointer-to-int-cast|int-to-pointer-cast|error:' /tmp/w64.log
+          ARCH=x86_64 ./scripts/build-mingw.sh clean
       - name: Build the GUI and console executables
         run: ./scripts/build-mingw.sh both
-      # 64 bit compiles clean of pointer truncation now. It has never been run,
-      # so it is a compile check and the release stays 32 bit.
-      - name: Compile 64 bit as well, and refuse a truncated pointer
-        run: |
-          sudo apt-get -o DPkg::Lock::Timeout=300 install -y --no-install-recommends \
-            gcc-mingw-w64-x86-64-win32 binutils-mingw-w64-x86-64
-          ARCH=x86_64 ./scripts/build-mingw.sh clean
-          ARCH=x86_64 ./scripts/build-mingw.sh warn 2>&1 | tee /tmp/w64.log | tail -3
-          ! grep -qE 'pointer-to-int-cast|int-to-pointer-cast|error:' /tmp/w64.log
-          ARCH=i686 ./scripts/build-mingw.sh clean
       - name: Package dist/i686
         run: |
           name=jvim3-${GITHUB_REF_NAME:-snapshot}-win32
