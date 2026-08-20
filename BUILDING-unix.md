@@ -52,14 +52,21 @@ virtual machine booted from the project's own image. It needs `/dev/kvm`, about
 installs the guest far enough to be reachable over ssh and keeps the disk, so
 later runs are up in under a minute.
 
-## Two flags the build now needs
+## The one flag the build still needs
 
-- **`-std=gnu89`** (or `gnu17`). The sources use K&R function definitions
-  throughout, which C23 removed. A compiler that defaults to C23 — gcc 15 and
-  later — fails on every file with "number of arguments doesn't match
-  prototype". The script probes for a dialect that still accepts them.
-- **`-fcommon`**. Several globals are defined in more than one file, which
-  became an error in gcc 10.
+**`-fcommon`**. Several globals are defined in more than one file, which became
+an error in gcc 10.
+
+`-std=gnu89` used to be needed as well, because the sources were full of K&R
+function definitions and C23 removed them. All 775 of them are prototypes now,
+so the compiler's own default is used and gcc 15 and later, which default to
+C23, build this as they are.
+
+Turning the prototypes on had not been done before either: `proto.h` and every
+`proto/*.pro` file declare their functions through `__PARMS()`, which was only
+defined for Aztec, SAS, DICE, Turbo C and Borland — everything else fell through
+to a `()` fallback in `vim.h`, so the declarations were empty parameter lists
+and were never checked against a definition. They are now.
 
 ## What the script detects
 
