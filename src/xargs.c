@@ -56,9 +56,6 @@
 #include <stdlib.h>
 #ifdef	WIN32			/*Tom_W*/
 # include <windows.h>
-#  ifdef USE_EXFILE
-#   include "exfile.h"
-#  endif
 #else
 # include <dos.h>
 #endif

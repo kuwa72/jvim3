@@ -280,8 +280,4 @@ EXTERN int		DoMake		INIT(= FALSE);	/* domake() call */
 EXTERN int		NoResize	INIT(= FALSE);	/* fexrc is doset() call */
 EXTERN long_u	BenchTime	INIT(= 0);		/* bench mark time */
 EXTERN int		NoMap		INIT(= FALSE);	/* no mapping input mode */
-# if defined(USE_EXFILE) && defined(USE_MATOME)
-EXTERN int		NoEFS		INIT(= FALSE);	/* no Extend File System */
-EXTERN int		DoMatome	INIT(= FALSE);	/* mime trans */
-# endif
 #endif

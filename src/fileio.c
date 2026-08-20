@@ -41,19 +41,10 @@ static void do_mlines __ARGS((void));
 #ifdef USE_OPT
 static char_u *opt_delet	__ARGS((char_u *, int, int, int, int, int, int, int));
 #endif
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-static int			do_encode	= FALSE;
-static char_u	*	encode_name	= NULL;
-static BUF		*	encode_buf;
-#endif
 
 	void
 filemess(char_u *name, char_u *s)
 {
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-	if (DoMatome)
-		return;
-#endif
 		/* careful: home_replace calls vimgetenv(), which also uses IObuff! */
 	home_replace(name, IObuff + 1, IOSIZE - 1);
 	IObuff[0] = '"';
@@ -175,11 +166,7 @@ readfile(char_u *fname, char_u *sfname, linenr_t from, int newfile, linenr_t ski
 		curbuf->b_p_ro = FALSE;
 
 #ifdef KANJI
-# if defined(NT) && defined(USE_EXFILE)
-	if (newfile && ef_stat(fileconvsto(fname), &st) != -1)
-# else
 	if (newfile && stat(fileconvsto(fname), &st) != -1)
-# endif
 #else
 	if (newfile && stat((char *)fname, &st) != -1)	/* remember time of file */
 #endif
@@ -244,17 +231,7 @@ readfile(char_u *fname, char_u *sfname, linenr_t from, int newfile, linenr_t ski
 #ifdef UNIX
 				if (perm < 0)
 #endif
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-					if (ef_share_process(fname))
-					{
-						curbuf->b_p_ro = TRUE;
-						filemess(fname, (char_u *)"[Permission Denied]");
-					}
-					else
-						filemess(fname, (char_u *)"[New File]");
-#else
 					filemess(fname, (char_u *)"[New File]");
-#endif
 #ifdef UNIX
 				else
 					filemess(fname, (char_u *)"[Permission Denied]");
@@ -582,19 +559,6 @@ readfile(char_u *fname, char_u *sfname, linenr_t from, int newfile, linenr_t ski
 	screenclear();
 #endif
 
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-	if (strchr(p_dc, 'r'))
-	{
-		static int		oflg = TRUE;
-
-		if (oflg)
-		{
-			oflg = FALSE;
-			decode(TRUE, from + 1, curbuf->b_ml.ml_line_count - linecnt);
-			oflg = TRUE;
-		}
-	}
-#endif
 	linecnt = curbuf->b_ml.ml_line_count - linecnt;
 	if (!newfile)
 		mark_adjust(from + 1, MAXLNUM, (long)linecnt);
@@ -614,11 +578,7 @@ readfile(char_u *fname, char_u *sfname, linenr_t from, int newfile, linenr_t ski
 #else
 					"\" %s%s%s%s%s%ld line%s, %ld character%s",
 #endif
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-			curbuf->b_p_ro ? (ef_share_process(fname) ? "[READONLY] " : "[readonly] ") : "",
-#else
 			curbuf->b_p_ro ? "[readonly] " : "",
-#endif
 			incomplete ? "[Incomplete last line] " : "",
 			split ? "[long lines split] " : "",
 			error ? "[READ ERRORS] " : "",
@@ -1157,14 +1117,6 @@ nexttry:
 	len = 0;
 	s = buffer;
 	nchars = 0;
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-	if (strchr(buf->b_p_ec, 'b') || strchr(buf->b_p_ec, 'u'))
-	{
-		do_encode	= TRUE;
-		encode_name = gettail(fname);
-		encode_buf	= buf;
-	}
-#endif
 #if defined(KANJI) && defined(UCODE)
 	if (toupper(*buf->b_p_jc) == JP_UTF8 && buf->b_p_bom
 									&& !append && !curbuf->b_p_bin)
@@ -1386,12 +1338,6 @@ nexttry:
 		nchars += len;
 	}
 
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-	if (write_buf(fd, NULL, 0) == FAIL)
-		end = 0;				/* write error */
-	do_encode = FALSE;
-#endif
-
 	if (close(fd) != 0)
 	{
 		errmsg = (char_u *)"Close failed";
@@ -1571,44 +1517,14 @@ write_buf(int fd, char_u *buf, int len)
 {
 	int		wlen;
 
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-	int		last = FALSE;
-	char_u	*tmp;
-
-	breakcheck();
-	if (do_encode)
-	{
-		if (buf == NULL && len == 0)
-			last = TRUE;
-		if ((tmp = encode(*encode_buf->b_p_ec, encode_name,
-				(encode_buf->b_p_opt & FOPT_MAC_FILE) ? 2 : (encode_buf->b_p_tx ? 1 : 0),
-				buf, &len, last)) == NULL)
-			return(FAIL);
-		if (!last)
-			return(OK);
-		buf = tmp;
-	}
-#endif
 	while (len)
 	{
 		wlen = write(fd, (char *)buf, (size_t)len);
 		if (wlen <= 0)				/* error! */
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-		{
-			if (do_encode)
-				free(tmp);
 			return FAIL;
-		}
-#else
-			return FAIL;
-#endif
 		len -= wlen;
 		buf += wlen;
 	}
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-	if (do_encode)
-		free(tmp);
-#endif
 	return OK;
 }
 

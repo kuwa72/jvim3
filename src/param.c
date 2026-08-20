@@ -91,9 +91,6 @@ struct param
 #ifdef USE_OPT
 # define PV_OPT		49
 #endif
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-# define PV_EC		51
-#endif
 #if defined(KANJI) && defined(NT) && defined(SYNTAX)
 # define PV_SYT		53
 #endif
@@ -131,17 +128,11 @@ static struct param params[] =
 		{"crchar",		"cc",	P_STRING,			(char_u *)&p_cc},
 		{"crmark",		"cm",	P_BOOL|P_IND,		(char_u *)PV_CR},
 #endif
-#if defined(NT) && defined(USE_MATOME)
-		{"decode",		"dc",	P_STRING,			(char_u *)&p_dc},
-#endif
 #ifdef DIGRAPHS
 		{"digraph",		"dg",	P_BOOL,				(char_u *)&p_dg},
 #endif /* DIGRAPHS */
  		{"directory",	"dir",	P_STRING|P_EXPAND,	(char_u *)&p_dir},
 		{"edcompatible",NULL,	P_BOOL,				(char_u *)&p_ed},
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-		{"encode",		"ec",  	P_STRING|P_IND,		(char_u *)PV_EC},
-#endif
 		{"endofline",	"eol",	P_BOOL|P_IND,		(char_u *)PV_EOL},
 		{"equalalways",	"ea",  	P_BOOL,				(char_u *)&p_ea},
 		{"equalprg",	"ep",  	P_STRING|P_EXPAND,	(char_u *)&p_ep},
@@ -542,9 +533,6 @@ set_init(void)
 #endif
 #ifdef USE_OPT
 	curbuf->b_p_opt = 0;
-#endif
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-	curbuf->b_p_ec = strsave("");
 #endif
 #if defined(KANJI) && defined(NT) && defined(SYNTAX)
 	curbuf->b_syn_ptr		= NULL;
@@ -1068,59 +1056,6 @@ error:
 						*(char_u **)(varp) = s;
 					}
 #endif
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-					/* kanji file code */
-					else if (varp == (char_u *)&curbuf->b_p_ec)
-					{
-						char_u	**	p	= (char_u **)varp;
-
-						if (STRLEN(*p) > 1)
-						{
-							emsg("Base64/Uuencode");
-							s = alloc(2);
-							if (s == NULL)
-								break;
-							free(*(char **)(varp));
-							s[0] = 'b';
-							s[1] = NUL;
-							*(char_u **)(varp) = s;
-							p = (char_u **)varp;
-						}
-						if ('A' <= **p && **p <= 'Z')
-							**p += 'a' - 'A';
-						if (!STRCHR("bu", **p))
-						{
-							emsg("Base64/Uuencode");
-							**p = 'b';
-						}
-					}
-					else if (params[i].var == (char_u *)&p_dc)
-					{
-						char_u	*	cp;
-
-						if (STRLEN(p_dc) > 2)
-						{
-							emsg("Base64/Uuencode/Quoted-printable/Auto and read");
-							s = alloc(2);
-							if (s == NULL)
-								break;
-							free(*(char **)(varp));
-							STRCPY(s, "a");
-							p_dc = s;
-						}
-						for (cp = p_dc; *cp; cp++)
-						{
-							if ('A' <= *cp && *cp <= 'Z')
-								*cp += 'a' - 'A';
-							if (!STRCHR("abuqr+*glczm", *cp))
-							{
-								emsg("Base64/Uuencode/Quoted-printable/Auto and read");
-								STRCPY(p_dc, "a");
-								break;
-							}
-						}
-					}
-#endif
 				}
 			}
 			params[i].flags |= P_CHANGED;
@@ -1635,9 +1570,6 @@ get_varp(struct param *p)
 #ifdef USE_OPT
 		case PV_OPT:	return (char_u *)&(curbuf->b_p_opt);
 #endif
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-		case PV_EC:		return (char_u *)&(curbuf->b_p_ec);
-#endif
 #if defined(KANJI) && defined(NT) && defined(SYNTAX)
 		case PV_SYT:	return (char_u *)&(curwin->w_p_syt);
 #endif
@@ -1704,9 +1636,6 @@ buf_copy_options(BUF *bp_from, BUF *bp_to)
 #endif
 #ifdef USE_OPT
 	bp_to->b_p_opt = bp_from->b_p_opt;
-#endif
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-	bp_to->b_p_ec = strsave("");
 #endif
 }
 

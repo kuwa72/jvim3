@@ -168,16 +168,10 @@ static DWORD			config_h;
 static DWORD			config_sbar		= TRUE;
 static DWORD			config_save		= FALSE;
 static DWORD			config_comb		= FALSE;
-static DWORD			config_unicode	= FALSE;
 static DWORD			config_tray		= FALSE;
 static DWORD			config_mouse	= FALSE;
 #ifdef NT106KEY
 static DWORD			config_nt106	= FALSE;
-#endif
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-static DWORD			config_share	= TRUE;
-static DWORD			config_common	= FALSE;
-static HMENU			hCFile;
 #endif
 static DWORD			config_menu		= TRUE;
 /*
@@ -208,17 +202,6 @@ static DWORD			config_bitsize	= 100;
 static DWORD			config_bitcenter= TRUE;
 static DWORD			config_wave		= FALSE;
 static char				config_wavefile[MAXPATHL];
-#ifdef USE_BDF
-extern void				GetBDFfont(HINSTANCE, int, char *, char *, int *, int *, DWORD *);
-extern int				bdfTextOut(HDC, int, int, UINT, CONST RECT *, char *, UINT, CONST INT *, int, int, DWORD, DWORD, int, int);
-static BOOL				config_bdf		= FALSE;
-static char				config_bdffile[MAXPATHL];
-static char				config_jbdffile[MAXPATHL];
-static DWORD			config_fgbdf	= RGB(  0,   0,   0);
-static DWORD			config_bgbdf	= RGB(255, 255, 255);
-static int				v_bxchar	= 0;
-static int				v_bychar	= 0;
-#endif
 static int				config_overflow = 3; 	/* larger than 2 */
 static DWORD			config_show = 500;
 static DWORD			config_fadeout = TRUE;
@@ -339,17 +322,15 @@ static BOOL		syntax_on();
 
 #if defined(KANJI) && defined(SYNTAX)
 # define istrans()		((config_bitmap || (syntax_on() && !v_ttfont)) ? TRUE : FALSE)
-# ifdef USE_BDF
-#  define italicplus()	((config_bitmap || (syntax_on() && !v_ttfont && !config_bdf)) ? 1 : 0)
-#  define issynpaint()	(syntax_on() && !v_ttfont && !config_bdf && !config_bitmap)
-# else
 #  define italicplus()	((config_bitmap || (syntax_on() && !v_ttfont)) ? 1 : 0)
 #  define issynpaint()	(syntax_on() && !v_ttfont && !config_bitmap)
-# endif
 #else
 # define istrans()		config_bitmap
 # define italicplus()	(0)
+# define issynpaint()	(0)
 #endif
+/* Set by PaintWindow(): a background bitmap is there, so leave the text bare. */
+static BOOL		v_bmpon			= FALSE;
 #ifdef KANJI
 # define iskanakan(c)	(ISkanji(c) ? 1 : 0)
 /*
@@ -518,7 +499,6 @@ LoadConfig(BOOL init)
 		/* get parameter */
 		GetPrivateProfileString(szSecName, "printer", "",
 							config_printer, sizeof(config_printer), szIniFile);
-		config_unicode = GetPrivateProfileInt(szSecName, "unicode", FALSE, szIniFile);
 		Columns = GetPrivateProfileInt(szSecName, "cols", 80, szIniFile);
 		Rows = GetPrivateProfileInt(szSecName, "rows", 25, szIniFile);
 		config_sbar = GetPrivateProfileInt(szSecName, "scrollbar", TRUE, szIniFile);
@@ -551,26 +531,6 @@ LoadConfig(BOOL init)
 		}
 		else if (strcmp("on", color) == 0)
 			config_history	= TRUE;
-#endif
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-		config_share	= FALSE;
-		config_common	= FALSE;
-		GetPrivateProfileString(szSecName, "share", "on",
-										color, sizeof(color), szIniFile);
-		if (strcmp("compatible", color) == 0 || strcmp("common", color) == 0)
-		{
-			config_share	= TRUE;
-			config_common	= TRUE;
-		}
-		else if (strcmp("on", color) == 0)
-			config_share	= TRUE;
-#endif
-#ifdef USE_BDF
-		GetPrivateProfileString(szSecName, "bdffile", "",
-						config_bdffile, sizeof(config_bdffile), szIniFile);
-		GetPrivateProfileString(szSecName, "jbdffile", "",
-						config_jbdffile, sizeof(config_jbdffile), szIniFile);
-		config_bdf = GetPrivateProfileInt(szSecName, "bdf", FALSE, szIniFile);
 #endif
 		config_fgcolor = RGB(0, 0, 0);
 		GetPrivateProfileString(szSecName, "textcolor", "",
@@ -689,11 +649,6 @@ LoadConfig(BOOL init)
 	type = REG_SZ;
 	if (RegGetStringU8(hKey, "printer", (char_u *)config_printer, sizeof(config_printer)) == FALSE)
 		goto error;
-	size = sizeof(config_unicode);
-	type = REG_DWORD;
-	if (RegQueryValueEx(hKey, "unicode", NULL, &type, (BYTE *)&config_unicode, &size)
-															!= ERROR_SUCCESS)
-		goto error;
 	size = sizeof(config_tray);
 	type = REG_DWORD;
 	if (RegQueryValueEx(hKey, "tray", NULL, &type, (BYTE *)&config_tray, &size)
@@ -721,18 +676,6 @@ LoadConfig(BOOL init)
 	if (RegQueryValueEx(hKey, "scrollbar", NULL, &type, (BYTE *)&config_sbar, &size)
 															!= ERROR_SUCCESS)
 		goto error;
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-	size = sizeof(config_share);
-	type = REG_DWORD;
-	if (RegQueryValueEx(hKey, "share", NULL, &type, (BYTE *)&config_share, &size)
-															!= ERROR_SUCCESS)
-		goto error;
-	size = sizeof(config_common);
-	type = REG_DWORD;
-	if (RegQueryValueEx(hKey, "common", NULL, &type, (BYTE *)&config_common, &size)
-															!= ERROR_SUCCESS)
-		goto error;
-#endif
 	size = sizeof(config_fadeout);
 	type = REG_DWORD;
 	if (RegQueryValueEx(hKey, "fadeout", NULL, &type, (BYTE *)&config_fadeout, &size)
@@ -907,31 +850,6 @@ LoadConfig(BOOL init)
 		config_wave = FALSE;
 		config_wavefile[0] = '\0';
 	}
-#ifdef USE_BDF
-	size = sizeof(config_bdf);
-	type = REG_DWORD;
-	if (RegQueryValueEx(hKey, "bdf", NULL, &type, (BYTE *)&config_bdf, &size)
-															!= ERROR_SUCCESS)
-		goto error;
-	size = sizeof(config_bdffile);
-	type = REG_SZ;
-	if (RegGetStringU8(hKey, "bdffile", (char_u *)config_bdffile, sizeof(config_bdffile)) == FALSE)
-		goto error;
-	size = sizeof(config_jbdffile);
-	type = REG_SZ;
-	if (RegGetStringU8(hKey, "bdffilej", (char_u *)config_jbdffile, sizeof(config_jbdffile)) == FALSE)
-		goto error;
-	size = sizeof(config_fgbdf);
-	type = REG_DWORD;
-	if (RegQueryValueEx(hKey, "bdf-fg", NULL, &type, (BYTE *)&config_fgbdf, &size)
-															!= ERROR_SUCCESS)
-		goto error;
-	size = sizeof(config_bgbdf);
-	type = REG_DWORD;
-	if (RegQueryValueEx(hKey, "bdf-bg", NULL, &type, (BYTE *)&config_bgbdf, &size)
-															!= ERROR_SUCCESS)
-		goto error;
-#endif
 	size = sizeof(config_comb);
 	type = REG_DWORD;
 	if (RegQueryValueEx(hKey, "comb", NULL, &type, (BYTE *)&config_comb, &size)
@@ -1015,10 +933,6 @@ error:
 	v_lspace		= 0;
 	v_trans			= 0;
 	config_sbar		= TRUE;
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-	config_share	= TRUE;
-	config_common	= FALSE;
-#endif
 	config_fadeout	= TRUE;
 	config_grepwin	= TRUE;
 #ifdef USE_HISTORY
@@ -1029,7 +943,6 @@ error:
 	config_comb		= FALSE;
 	config_load[0]	= '\0';
 	config_unload[0]= '\0';
-	config_unicode	= FALSE;
 	config_tray		= FALSE;
 	config_mouse	= FALSE;
 #ifdef NT106KEY
@@ -1110,31 +1023,6 @@ error:
 	}
 	config_wave		= FALSE;
 	config_wavefile[0] = '\0';
-#ifdef USE_BDF
-	config_bdf		= FALSE;
-	config_bdffile[0]	= '\0';
-	config_jbdffile[0]	= '\0';
-	config_fgbdf	= RGB(  0,   0,   0);
-	config_bgbdf	= RGB(255, 255, 255);
-	if (BenchTime && GuiConfig)
-	{
-		sprintf(name, "Software\\Vim\\%d", GuiConfig);
-		if (RegOpenKeyEx(HKEY_CURRENT_USER, name, 0,
-										KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS)
-		{
-			size = sizeof(config_bdf);
-			type = REG_DWORD;
-			RegQueryValueEx(hKey, "bdf", NULL, &type, (BYTE *)&config_bdf, &size);
-			size = sizeof(config_bdffile);
-			type = REG_SZ;
-			RegGetStringU8(hKey, "bdffile", (char_u *)config_bdffile, sizeof(config_bdffile));
-			size = sizeof(config_jbdffile);
-			type = REG_SZ;
-			RegGetStringU8(hKey, "bdffilej", (char_u *)config_jbdffile, sizeof(config_jbdffile));
-			RegCloseKey(hKey);
-		}
-	}
-#endif
 	config_overflow	= 3;
 	config_show		= 500;
 	if (BenchTime)
@@ -1195,10 +1083,6 @@ SaveConfig(void)
 	if (RegSetStringU8(hKey, "printer", (char_u *)config_printer)
 															!= ERROR_SUCCESS)
 		goto error;
-	size = sizeof(config_unicode);
-	if (RegSetValueEx(hKey, "unicode", 0, REG_DWORD, (BYTE *)&config_unicode, size)
-															!= ERROR_SUCCESS)
-		goto error;
 	size = sizeof(config_tray);
 	if (RegSetValueEx(hKey, "tray", 0, REG_DWORD, (BYTE *)&config_tray, size)
 															!= ERROR_SUCCESS)
@@ -1221,16 +1105,6 @@ SaveConfig(void)
 	if (RegSetValueEx(hKey, "scrollbar", 0, REG_DWORD, (BYTE *)&config_sbar, size)
 															!= ERROR_SUCCESS)
 		goto error;
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-	size = sizeof(config_share);
-	if (RegSetValueEx(hKey, "share", 0, REG_DWORD, (BYTE *)&config_share, size)
-															!= ERROR_SUCCESS)
-		goto error;
-	size = sizeof(config_common);
-	if (RegSetValueEx(hKey, "common", 0, REG_DWORD, (BYTE *)&config_common, size)
-															!= ERROR_SUCCESS)
-		goto error;
-#endif
 	size = sizeof(config_fadeout);
 	if (RegSetValueEx(hKey, "fadeout", 0, REG_DWORD, (BYTE *)&config_fadeout, size)
 															!= ERROR_SUCCESS)
@@ -1383,28 +1257,6 @@ SaveConfig(void)
 	if (RegSetStringU8(hKey, "wavefile", (char_u *)config_wavefile)
 															!= ERROR_SUCCESS)
 		goto error;
-#ifdef USE_BDF
-	size = sizeof(config_bdf);
-	if (RegSetValueEx(hKey, "bdf", 0, REG_DWORD, (BYTE *)&config_bdf, size)
-															!= ERROR_SUCCESS)
-		goto error;
-	size = strlen(config_bdffile) + 1;
-	if (RegSetStringU8(hKey, "bdffile", (char_u *)config_bdffile)
-															!= ERROR_SUCCESS)
-		goto error;
-	size = strlen(config_jbdffile) + 1;
-	if (RegSetStringU8(hKey, "bdffilej", (char_u *)config_jbdffile)
-															!= ERROR_SUCCESS)
-		goto error;
-	size = sizeof(config_fgbdf);
-	if (RegSetValueEx(hKey, "bdf-fg", 0, REG_DWORD, (BYTE *)&config_fgbdf, size)
-															!= ERROR_SUCCESS)
-		goto error;
-	size = sizeof(config_bgbdf);
-	if (RegSetValueEx(hKey, "bdf-bg", 0, REG_DWORD, (BYTE *)&config_bgbdf, size)
-															!= ERROR_SUCCESS)
-		goto error;
-#endif
 	size = sizeof(config_comb);
 	if (RegSetValueEx(hKey, "comb", 0, REG_DWORD, (BYTE *)&config_comb, size)
 															!= ERROR_SUCCESS)
@@ -1483,13 +1335,6 @@ ResetScreen(HWND hWnd)
 
 		DeleteObject(v_font);
 		v_font = CreateFontIndirectU8(&config_font);
-	}
-#endif
-#ifdef USE_BDF
-	if (config_bdf)
-	{
-		v_xchar = v_bxchar;
-		v_ychar = v_bychar;
 	}
 #endif
 	v_xchar += v_cspace;
@@ -1608,10 +1453,6 @@ SetFontType(char_u *c, char_u mode, HDC hDC, HFONT *phOldFont)
 {
 	LOGFONT			logfont;
 
-# ifdef USE_BDF
-	if (config_bdf)
-		return;
-# endif
 	if (c != NULL && iskanakan(*c))
 		memcpy(&logfont, &config_jfont, sizeof(logfont));
 	else
@@ -1874,14 +1715,6 @@ PrintChar(HDC hdc, RECT *rt, HFONT *phOldFont, char_u *p, int size, char_u mode,
 		*phOldFont = SelectObject(hdc, v_font);
 	}
 #endif
-#ifdef USE_BDF
-	if (config_bdf)
-		bdfTextOut(hdc, rt->left, rt->top,
-					0, rt, p, size, v_space,
-					config_bitmap, GetBkColor(hdc) == *v_bgcolor ? FALSE : TRUE,
-					GetTextColor(hdc), GetBkColor(hdc), v_cspace, v_lspace);
-	else
-#endif
 	{
 		/*
 		 * Draw the run as UTF-16. Each cell contributes one unit (two for a
@@ -1927,7 +1760,29 @@ PrintChar(HDC hdc, RECT *rt, HFONT *phOldFont, char_u *p, int size, char_u mode,
 				n++;
 			}
 		}
-		ExtTextOutW(hdc, rt->left, rt->top, istrans() ? 0 : ETO_OPAQUE, rt,
+		/*
+		 * Background first, then the glyphs over it with nothing of their own
+		 * behind them.
+		 *
+		 * This used to be one call with ETO_OPAQUE and the background mode
+		 * left OPAQUE, which is a cell at a time: ExtTextOut fills each
+		 * glyph's own advance box just before it draws that glyph, working
+		 * left to right. A glyph whose ink is wider than the advance we asked
+		 * for therefore had its overhang painted out by the box of the glyph
+		 * after it -- inside the very same call, so redrawing reproduced it
+		 * exactly. Emoji are where it showed: they come from a fallback font,
+		 * since no fixed pitch text font carries them, and that font's ink
+		 * does not promise to sit inside two of our half widths. Half the
+		 * glyph went missing, and at the end of a line the trailing blanks did
+		 * the same to the last character.
+		 *
+		 * A rectangle filled once cannot do that to its own contents. The
+		 * empty ExtTextOut is just the cheap way to fill it in the current
+		 * background colour without a brush to make and free per run.
+		 */
+		if (!v_bmpon && !issynpaint())
+			ExtTextOutW(hdc, rt->left, rt->top, ETO_OPAQUE, rt, NULL, 0, NULL);
+		ExtTextOutW(hdc, rt->left, rt->top, 0, rt,
 					(LPCWSTR)v_char, n, v_space);
 	}
 }
@@ -1950,14 +1805,15 @@ PaintWindow(HWND hWnd)
 	rect	= ps.rcPaint;
 	hOldFont= SelectObject(hDC, v_font);
 
-	if (config_bitmap && LoadBitmapFromBMPFile(hDC, config_bitmapfile))
-		SetBkMode(hDC, TRANSPARENT);
-#if defined(KANJI) && defined(SYNTAX)
-	else if (issynpaint())
-		SetBkMode(hDC, TRANSPARENT);
-#endif
-	else
-		SetBkMode(hDC, OPAQUE);
+	/*
+	 * TRANSPARENT throughout, because PrintChar() paints the background of a
+	 * run itself as one rectangle. What it needs to know is whether anything
+	 * else has already put something there: a background bitmap that really
+	 * did load, or the fill that issynpaint() does below and per run.
+	 */
+	v_bmpon = config_bitmap
+					&& LoadBitmapFromBMPFile(hDC, config_bitmapfile);
+	SetBkMode(hDC, TRANSPARENT);
 
 	if (!screen_valid())
 		goto no_draw;
@@ -1965,11 +1821,20 @@ PaintWindow(HWND hWnd)
 	nRow	= min(Rows - 1, max(0, rect.top / v_ychar));
 	nEndRow	= min(Rows - 1, ((rect.bottom - 1) / v_ychar));
 #ifdef KANJI
+	/*
+	 * A cell to either side of the damage as well. The left one has always
+	 * been needed, to catch the left half of a double width character whose
+	 * right half is the first dirty cell. The right one is for ink: a glyph
+	 * may reach past the cells it was given, and since the background is no
+	 * longer painted a cell at a time there is nothing to hide the part of a
+	 * neighbour that leans in here.
+	 */
 	nCol	= min(Columns - 1, max(0, (rect.left - v_xchar) / v_xchar));
+	nEndCol	= min(Columns - 1, ((rect.right - 1) / v_xchar) + 1);
 #else
 	nCol	= min(Columns - 1, max(0, rect.left / v_xchar));
-#endif
 	nEndCol	= min(Columns - 1, ((rect.right - 1) / v_xchar));
+#endif
 	if (v_cursor && v_focus)
 	{
 		HideCaret(hWnd);
@@ -1977,9 +1842,6 @@ PaintWindow(HWND hWnd)
 	}
 #if defined(KANJI) && defined(SYNTAX)
 	if (syntax_on() && !v_ttfont
-# ifdef USE_BDF
-			&& !config_bdf
-# endif
 			&& !config_bitmap)
 	{
 		HBRUSH		hbrush;
@@ -2679,21 +2541,6 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		}
 		return(0);
 	case WM_ERASEBKGND:
-#ifdef USE_BDF
-		if (config_bdf)
-		{
-			HBRUSH		hbrush;
-			HBRUSH		holdbrush;
-			RECT		rcWindow;
-
-			GetWindowRect(hWnd, &rcWindow);
-			hbrush	= CreateSolidBrush(*v_bgcolor);
-			holdbrush = SelectObject((HDC)wParam, hbrush);
-			FillRect((HDC)wParam, &rcWindow, hbrush);
-			SelectObject((HDC)wParam, holdbrush);
-			DeleteObject(hbrush);
-		}
-#endif
 		return(1);
 	case WM_DPICHANGED:
 		/*
@@ -2716,14 +2563,6 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_SIZE:
 		return(WindowSize(hWnd, HIWORD(lParam), LOWORD(lParam)));
 	case WM_SETCURSOR:
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-		if (ef_share_busy())
-		{
-			SetCursor(hWaitCurs);
-			lpCurrCurs = IDC_WAIT;
-		}
-		else
-#endif
 		if (LOWORD(lParam) == HTCLIENT && lpCurrCurs != IDC_IBEAM)
 		{
 			SetCursor(hIbeamCurs);
@@ -3309,18 +3148,6 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			int				j;
 
-#ifdef USE_BDF
-			if (config_bdf)
-			{
-				CheckMenuItem(hMenu, IDM_FONT, MF_BYCOMMAND | MF_UNCHECKED);
-				CheckMenuItem(hMenu, IDM_BDF, MF_BYCOMMAND | MF_CHECKED);
-			}
-			else
-			{
-				CheckMenuItem(hMenu, IDM_FONT, MF_BYCOMMAND | MF_CHECKED);
-				CheckMenuItem(hMenu, IDM_BDF, MF_BYCOMMAND | MF_UNCHECKED);
-			}
-#endif
 			for (j = IDM_CONF0; j <= IDM_CONF3; j++)
 				CheckMenuItem(hMenu, j, MF_BYCOMMAND | MF_UNCHECKED);
 			if (GuiConfig <= IDM_CONF3)
@@ -3478,20 +3305,6 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				CheckMenuItem(hMenu, IDM_SBAR, MF_BYCOMMAND | MF_CHECKED);
 			else
 				CheckMenuItem(hMenu, IDM_SBAR, MF_BYCOMMAND | MF_UNCHECKED);
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-			if (config_share || config_common)
-				CheckMenuItem(hMenu, (UINT_PTR)hCFile, MF_BYCOMMAND | MF_CHECKED);
-			else
-				CheckMenuItem(hMenu, (UINT_PTR)hCFile, MF_BYCOMMAND | MF_UNCHECKED);
-			if (config_share)
-				CheckMenuItem(hMenu, IDM_SHARE, MF_BYCOMMAND | MF_CHECKED);
-			else
-				CheckMenuItem(hMenu, IDM_SHARE, MF_BYCOMMAND | MF_UNCHECKED);
-			if (config_common)
-				CheckMenuItem(hMenu, IDM_COMMON,MF_BYCOMMAND | MF_CHECKED);
-			else
-				CheckMenuItem(hMenu, IDM_COMMON,MF_BYCOMMAND | MF_UNCHECKED);
-#endif
 			if (pSetLayeredWindowAttributes)
 			{
 				if (config_fadeout)
@@ -3517,10 +3330,6 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 					CheckMenuItem(hMenu, IDM_HAUTO, MF_BYCOMMAND | MF_CHECKED);
 			}
 #endif
-			if (config_unicode)
-				CheckMenuItem(hMenu, IDM_UNICODE, MF_BYCOMMAND | MF_CHECKED);
-			else
-				CheckMenuItem(hMenu, IDM_UNICODE, MF_BYCOMMAND | MF_UNCHECKED);
 			if (config_tray)
 				CheckMenuItem(hMenu, IDM_TRAY, MF_BYCOMMAND | MF_CHECKED);
 			else
@@ -3665,14 +3474,6 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				if (vimgetenv("HOME") != NULL)
 					sprintf(&msg[strlen(msg)],
 							"\r\n    Home Dir     %s", vimgetenv("HOME"));
-#ifdef USE_EXFILE
-				sprintf(&msg[strlen(msg)],
-						"\r\n    Extend File System Support:\r\n%s", ef_ver());
-# ifdef USE_MATOME
-				sprintf(&msg[strlen(msg)],
-						"\r\n    MIME Decode Support:\r\n%s", decode_ver());
-# endif
-#endif
 				MessageBox(hWnd, msg,
 #ifdef KANJI
 					JpVersion,
@@ -3707,10 +3508,6 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			v_macro = !v_macro;
 			if (v_macro)
 			{
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-				if (config_share || config_common)
-					ef_share_close(curbuf->b_filename);
-#endif
 				SetTimer(hWnd, TAIL_TIME, config_show * 5, NULL);
 				ZeroMemory(&byFile, sizeof(byFile));
 			}
@@ -3774,47 +3571,6 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				DialogBoxParamW(hInst, L"LINESPACE", hWnd, LineSpaceDialog, (LPARAM)NULL);
 			ResetScreen(hWnd);
 			break;
-#ifdef USE_BDF
-		case IDM_BDF:
-			GetBDFfont(hInst, 1, config_bdffile, config_jbdffile, &v_bxchar, &v_bychar, &config_bdf);
-			if (!config_ini && config_bdf && config_bitmap)
-			{
-				v_fgcolor = &config_fgbdf;
-				v_bgcolor = &config_bgbdf;
-			}
-			else
-			{
-				v_fgcolor = &config_fgcolor;
-				v_bgcolor = &config_bgcolor;
-			}
-			ResetScreen(hWnd);
-			break;
-		case IDM_BDFONOFF:
-			config_bdf = !config_bdf;
-			GetBDFfont(hInst, 0, config_bdffile, config_jbdffile, &v_bxchar, &v_bychar, &config_bdf);
-			if (!config_ini && config_bdf && config_bitmap)
-			{
-				v_fgcolor = &config_fgbdf;
-				v_bgcolor = &config_bgbdf;
-			}
-			else
-			{
-				v_fgcolor = &config_fgcolor;
-				v_bgcolor = &config_bgcolor;
-			}
-			ResetScreen(hWnd);
-# if 0
-			if (GuiConfig && GetClientRect(hWnd, &rcWindow))
-			{
-				Columns = (rcWindow.right - rcWindow.left + v_xchar / 2) / v_xchar;
-				Rows = (rcWindow.bottom - rcWindow.top + v_ychar / 2) / v_ychar;
-				nowCols = Columns;
-				nowRows = Rows;
-			}
-# endif
-			mch_set_winsize();
-			break;
-#endif
 		case IDM_FILE:
 			memset(&ofn, 0, sizeof(ofn));
 			NameBuff[0] = '\0';
@@ -4308,11 +4064,6 @@ get_clipdata:
 			config_nt106 = !config_nt106;
 			break;
 #endif
-		case IDM_UNICODE:
-			config_unicode = !config_unicode;
-			for (i = 0; i < v_ssize; i++)
-				v_space[i] = v_xchar;
-			break;
 		case IDM_OPEN:
 			if (!(ver_info.dwPlatformId == VER_PLATFORM_WIN32_NT
 										&& ver_info.dwMajorVersion == 3))
@@ -4457,18 +4208,6 @@ get_clipdata:
 			config_bitmap = !config_bitmap;
 			if (!isbitmap(config_bitmapfile, NULL))
 				config_bitmap = FALSE;
-#ifdef USE_BDF
-			if (!config_ini && config_bdf && config_bitmap)
-			{
-				v_fgcolor = &config_fgbdf;
-				v_bgcolor = &config_bgbdf;
-			}
-			else
-			{
-				v_fgcolor = &config_fgcolor;
-				v_bgcolor = &config_bgcolor;
-			}
-#endif
 			if (!config_ini && config_bitmap)
 			{
 				v_tbcolor = &config_tbbitmap;
@@ -4596,39 +4335,6 @@ get_clipdata:
 			ScrollBar();
 			mch_set_winsize();
 			break;
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-		case IDM_SHARE:
-			if (config_share)
-				config_share = FALSE;
-			else
-			{
-				config_share = TRUE;
-				config_common= FALSE;
-			}
-			goto share;
-		case IDM_COMMON:
-			if (config_common)
-				config_common= FALSE;
-			else
-			{
-				config_share = FALSE;
-				config_common= TRUE;
-			}
-share:
-			if (config_share || config_common)
-			{
-				ef_share_term();
-				ef_share_init(config_common);
-				for (buf = firstbuf; buf != NULL; buf = buf->b_next)
-				{
-					if (buf->b_ml.ml_mfp != NULL)
-						ef_share_open(buf->b_filename);
-				}
-			}
-			else
-				ef_share_term();
-			break;
-#endif
 		case IDM_FADEOUT:
 			config_fadeout = !config_fadeout;
 			break;
@@ -4748,20 +4454,6 @@ share:
 				LoadConfig(FALSE);
 				dpi_scale_to(dpi_of(hWnd));
 				oldmix = 0;
-#ifdef USE_BDF
-				if (config_bdf)
-					GetBDFfont(hInst, 0, config_bdffile, config_jbdffile, &v_bxchar, &v_bychar, &config_bdf);
-				if (!config_ini && config_bdf && config_bitmap)
-				{
-					v_fgcolor = &config_fgbdf;
-					v_bgcolor = &config_bgbdf;
-				}
-				else
-				{
-					v_fgcolor = &config_fgcolor;
-					v_bgcolor = &config_bgcolor;
-				}
-#endif
 				if (!config_ini && config_bitmap)
 				{
 					v_tbcolor = &config_tbbitmap;
@@ -4875,10 +4567,6 @@ share:
 				}
 				beginline(TRUE);
 				cursor_refresh(hWnd);
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-				if (config_share || config_common)
-					ef_share_close(curbuf->b_filename);
-#endif
 				break;
 			}
 			CloseHandle(hFile);
@@ -6493,18 +6181,6 @@ GetChars(char_u *buf, int maxlen, int time)
 		 */
 			if (WaitForChar((int)p_ut) == 0)
 			{
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-				if ((State & NORMAL) && !v_macro && ef_share_replace(curbuf->b_filename))
-				{
-					if (keybuf_chk(5))
-					{
-						cbuf[c_end++] = ':';
-						cbuf[c_end++] = 'e';
-						cbuf[c_end++] = '!';
-						cbuf[c_end++] = '\n';
-					}
-				}
-#endif
 				updatescript(0);
 			}
 		}
@@ -6911,20 +6587,6 @@ mch_windinit(int argc, char **argv, char *command)
 		 * a window to ask about.
 		 */
 		dpi_scale_to(dpi_of(NULL));
-#ifdef USE_BDF
-		if (config_bdf)
-			GetBDFfont(hInst, 0, config_bdffile, config_jbdffile, &v_bxchar, &v_bychar, &config_bdf);
-		if (!config_ini && config_bdf && config_bitmap)
-		{
-			v_fgcolor = &config_fgbdf;
-			v_bgcolor = &config_bgbdf;
-		}
-		else
-		{
-			v_fgcolor = &config_fgcolor;
-			v_bgcolor = &config_bgcolor;
-		}
-#endif
 		if (!config_ini && config_bitmap)
 		{
 			v_tbcolor = &config_tbbitmap;
@@ -6937,10 +6599,6 @@ mch_windinit(int argc, char **argv, char *command)
 			v_socolor = &config_socolor;
 			v_ticolor = &config_ticolor;
 		}
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-		if (config_share || config_common)
-			ef_share_init(config_common);
-#endif
 		v_menu = LoadMenuW(hInst, L"VIMMENU");
 		if (pSetLayeredWindowAttributes == NULL)
 			DeleteMenu(v_menu, IDM_FADEOUT, MF_BYCOMMAND);
@@ -6968,9 +6626,6 @@ mch_windinit(int argc, char **argv, char *command)
 		AppendMenu(hBColor,MF_STRING,    IDM_BCOLOR,   "&Choice");
 		hSetup= CreatePopupMenu();
 		AppendMenu(hSetup, MF_STRING,    IDM_FONT,     "&Font");
-#ifdef USE_BDF
-		AppendMenu(hSetup, MF_STRING,    IDM_BDF,      "B&DF FONT");
-#endif
 		AppendMenu(hSetup, MF_STRING,    IDM_LSPACE,   "&Line Space");
 		AppendMenu(hSetup, MF_POPUP,     (UINT_PTR)hTColor,"&Text Color");
 		AppendMenu(hSetup, MF_POPUP,     (UINT_PTR)hBColor,"Back &Color");
@@ -6980,20 +6635,11 @@ mch_windinit(int argc, char **argv, char *command)
 		hGSetup= CreatePopupMenu();
 		AppendMenu(hGSetup,MF_CHECKED,   IDM_SBAR,     "&Scrollbar\tAlt+S");
 		AppendMenu(hGSetup,MF_UNCHECKED, IDM_MENU,     "&Menu\tAlt+M");
-		AppendMenu(hGSetup,MF_UNCHECKED, IDM_UNICODE,  "&Unicode Font");
 		AppendMenu(hGSetup,MF_UNCHECKED, IDM_TRAY,     "&Task Tray");
 		AppendMenu(hGSetup,MF_UNCHECKED, IDM_ONEWIN,   "One &Window");
 		AppendMenu(hGSetup,MF_UNCHECKED, IDM_MOUSE,    "&Erase Mouse");
 #ifdef NT106KEY
 		AppendMenu(hGSetup,MF_UNCHECKED, IDM_NT106,    "&ZEN/HAN to ESC");
-#endif
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-		{
-			hCFile = CreatePopupMenu();
-			AppendMenu(hCFile, MF_UNCHECKED, IDM_SHARE,    "&Share Files");
-			AppendMenu(hCFile, MF_UNCHECKED, IDM_COMMON,   "&MS Compatible");
-			AppendMenu(hGSetup,MF_POPUP,     (UINT_PTR)hCFile, "Share &Files");
-		}
 #endif
 		if (pSetLayeredWindowAttributes)
 			AppendMenu(hGSetup,MF_UNCHECKED, IDM_FADEOUT,  "Fade&out");
@@ -7067,17 +6713,11 @@ mch_windinit(int argc, char **argv, char *command)
 		SetMenuItemBitmaps(hMenu, IDM_WAVE, MF_BYCOMMAND, NULL, NULL);
 		SetMenuItemBitmaps(hMenu, IDM_SAVE, MF_BYCOMMAND, NULL, NULL);
 		SetMenuItemBitmaps(hMenu, IDM_MENU, MF_BYCOMMAND, NULL, NULL);
-		SetMenuItemBitmaps(hMenu, IDM_UNICODE, MF_BYCOMMAND, NULL, NULL);
 		SetMenuItemBitmaps(hMenu, IDM_TRAY, MF_BYCOMMAND, NULL, NULL);
 		SetMenuItemBitmaps(hMenu, IDM_ONEWIN, MF_BYCOMMAND, NULL, NULL);
 		SetMenuItemBitmaps(hMenu, IDM_MOUSE, MF_BYCOMMAND, NULL, NULL);
 #ifdef NT106KEY
 		SetMenuItemBitmaps(hMenu, IDM_NT106, MF_BYCOMMAND, NULL, NULL);
-#endif
-#if defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-		SetMenuItemBitmaps(hMenu, (UINT_PTR)hCFile, MF_BYCOMMAND, NULL, NULL);
-		SetMenuItemBitmaps(hMenu, IDM_SHARE, MF_BYCOMMAND, NULL, NULL);
-		SetMenuItemBitmaps(hMenu, IDM_COMMON,MF_BYCOMMAND, NULL, NULL);
 #endif
 		if (pSetLayeredWindowAttributes)
 			SetMenuItemBitmaps(hMenu, IDM_FADEOUT, MF_BYCOMMAND, NULL, NULL);
@@ -7314,10 +6954,6 @@ mch_windinit(int argc, char **argv, char *command)
 		putenv("TEMP=.");	putenv("TMP=.");
 		BenchTime = GetTickCount();
 	}
-#ifdef USE_EXFILE
-	else if (!NoEFS)
-		ef_init(hVimWnd);
-#endif
 }
 
 	void
@@ -7783,11 +7419,7 @@ getperm(char_u *name)
 	struct stat statb;
 	long        r;
 
-#ifdef USE_EXFILE
-	if (ef_stat(name, &statb))
-#else
 	if (stat(name, &statb))
-#endif
 		return -1;
 	r = statb.st_mode & 0x7fffffff;
 	return r;
@@ -7887,9 +7519,6 @@ mch_windexit(int r)
 			}
 		}
 	}
-#ifdef USE_EXFILE
-	ef_term();
-#endif
 	if (BenchTime && !ctrlc_pressed)
 	{
 		DWORD		tm = GetTickCount() - BenchTime;
@@ -8699,31 +8328,7 @@ ExpandWildCards(int num_pat, char_u **pat, int *num_file, char_u ***file, int fi
 			buf[0] = '\"';
 			buf[j] = '\"';
 		}
-# ifdef USE_EXFILE
-		if (is_efarc(buf, '\0'))
-		{
-			strcat(buf, ":*");
-			result = ef_globfilename(buf, FALSE);
-		}
-		else if (buf[strlen(buf) - 1] == '\"')
-		{
-			buf[strlen(buf) - 1] = '\0';
-			if (is_efarc(&buf[1], '\0'))
-			{
-				strcat(buf, "\":*");
-				result = ef_globfilename(buf, FALSE);
-			}
-			else
-			{
-				strcat(buf, "\"");
-				result = ef_globfilename(buf, TRUE);
-			}
-		}
-		else
-			result = ef_globfilename(buf, TRUE);
-# else
 		result = glob_filename(buf);
-# endif
 		for (j = 0; result[j] != NULL; j++)
 		{
 			if (!has_wildcard(result[j]))
@@ -9036,11 +8641,7 @@ breakcheck(void)
 			}
 		}
 	}
-#ifdef USE_EXFILE
-	if (ef_breakcheck() || ctrlc_pressed)
-#else
 	if (ctrlc_pressed)
-#endif
 	{
 		ctrlc_pressed = FALSE;
 		got_int = TRUE;

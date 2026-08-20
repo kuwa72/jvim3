@@ -44,22 +44,9 @@ TAGOPT  = -DUSE_TAGEX
 #
 OPTOPT  = -DUSE_OPT
 
-# generic for extend file system function
-#
-EXFOPT  = -DUSE_EXFILE -DUSE_SHARE_CHECK
-EXFOBJ  = exfile.obj lha.obj ftp.obj tar.obj cab.obj zip.obj
-EXFINC	= -Iexfile -Iinc
-
-# generic for BDF font function
-#
-BDFOPT  = -DUSE_BDF
-BDFOBJ  = mw32bdf.obj
-BDFINC	= -Ibdf
-
-# generic for matome function
-#
-MTMOPT  = -DUSE_MATOME
-MTMOBJ  = matome.obj
+# The extend file system (USE_EXFILE: editing an archive or an ftp URL in
+# place), the BDF font renderer (USE_BDF) and the MIME decoder (USE_MATOME) are
+# gone, sources and all. See BUILDING-mingw.md for why.
 
 # generic for syntax highlighting function
 #
@@ -70,12 +57,12 @@ SYNOBJ  = syntax.obj
 #
 HISTOPT = -DUSE_HISTORY
 
-DEFINES	= -DKANJI -DTRACK -DFEPCTRL -DCRMARK -DFEXRC -DNT106KEY -DWEBB_COMPLETE -DWEBB_KEYWORD_COMPL -DNO_FREE_NULL -DXARGS -DTERMCAP -DWIN32 $(GRPOPT) $(TAGOPT) $(OPTOPT) $(EXFOPT) $(BDFOPT) $(MTMOPT) $(SYNOPT) $(HISTOPT)
+DEFINES	= -DKANJI -DTRACK -DFEPCTRL -DCRMARK -DFEXRC -DNT106KEY -DWEBB_COMPLETE -DWEBB_KEYWORD_COMPL -DNO_FREE_NULL -DXARGS -DTERMCAP -DWIN32 $(GRPOPT) $(TAGOPT) $(OPTOPT) $(SYNOPT) $(HISTOPT)
 
 #>>>>> name of the compiler and linker, name of lib directory
 CC	= cl -nologo
 LINK	= cl
-CFLAGS	= -I. $(BDFINC) $(EXFINC) -DMSDOS -DNT -DUCODE $(DEFINES) $(DBG) $(cflags) $(cdebug) $(cvarsdll)
+CFLAGS	= -I. -Iinc -DMSDOS -DNT -DUCODE $(DEFINES) $(DBG) $(cflags) $(cdebug) $(cvarsdll)
 
 #>>>>> end of choices
 ###########################################################################
@@ -86,7 +73,7 @@ OBJ =	alloc.obj winjnt.obj buffer.obj charset.obj cmdcmds.obj cmdline.obj \
 	misccmds.obj normal.obj ops.obj param.obj quickfix.obj regexp.obj \
 	regsub.obj screen.obj search.obj tag.obj term.obj undo.obj window.obj \
 	termlib.obj kanji.obj fepnt.obj track.obj xargs.obj \
-	$(GRPOBJ) $(OPTOBJ) $(EXFOBJ) $(BDFOBJ) $(MTMOBJ) $(SYNOBJ)
+	$(GRPOBJ) $(OPTOBJ) $(SYNOBJ)
 
 ###########################################################################
 vim32.exe: $(OBJ) version.obj vim32.res
@@ -212,7 +199,7 @@ ctags.exe:	ctags/ctags.c xargs.c
 	cl -DWIN32 ctags/ctags.c xargs.c
 
 ###########################################################################
-GREPOBJS = grep.obj alloc.obj charset.obj kanji.obj xargs.obj regexp.obj regsub.obj $(EXFOBJ)
+GREPOBJS = grep.obj alloc.obj charset.obj kanji.obj xargs.obj regexp.obj regsub.obj
 
 grep.exe: $(GREPOBJS) grep.res
 	$(link) $(linkdebug) $(conlflags) -out:grep.exe $(GREPOBJS) grep.res $(guilibsdll)
@@ -263,30 +250,6 @@ syntax.obj:	syntax.c  $(INCL)
 mkcmdtab.exe: 	mkcmdtab.c
 jptab.exe: 	jptab.c
 version.obj:	version.c  $(INCL)
-
-exfile.obj:	exfile\exfile.c
-	$(CC) $(CFLAGS) -c exfile\exfile.c
-
-lha.obj:	exfile\lha.c
-	$(CC) $(CFLAGS) -c exfile\lha.c
-
-ftp.obj:	exfile\ftp.c
-	$(CC) $(CFLAGS) -c exfile\ftp.c
-
-tar.obj:	exfile\tar.c
-	$(CC) $(CFLAGS) -c exfile\tar.c
-
-cab.obj:	exfile\cab.c
-	$(CC) $(CFLAGS) -c exfile\cab.c
-
-zip.obj:	exfile\zip.c
-	$(CC) $(CFLAGS) -c exfile\zip.c
-
-matome.obj:	exfile\matome.c
-	$(CC) $(CFLAGS) -c exfile\matome.c
-
-mw32bdf.obj:	bdf\mw32bdf.c
-	$(CC) $(CFLAGS) -c bdf\mw32bdf.c
 
 jptab.h: jptab.c
 	$(CC) $(CFLAGS) jptab.c

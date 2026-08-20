@@ -18,7 +18,7 @@
 #ifdef KANJI
 # include "kanji.h"
 #endif
-#if !defined(USE_EXFILE) && defined(NT)
+#ifdef NT
 # include <windows.h>
 #endif
 
@@ -74,9 +74,6 @@ usage(int n)
 		pos += wsprintf(&msg[pos], "\t-c command\texecute command first\n");
 		pos += wsprintf(&msg[pos], "\t-s scriptin\t\tread commands from script file\n");
 		pos += wsprintf(&msg[pos], "\t-w scriptout\twrite commands in script file\n");
-# if defined(USE_EXFILE) && defined(USE_MATOME)
-		pos += wsprintf(&msg[pos], "\t-X\t\tno use Extend File System\n");
-# endif
 # ifdef KANJI
 		pos += wsprintf(&msg[pos], "\t-k FileCode\tfile jcode set\n");
 		pos += wsprintf(&msg[pos], "\t-K KanjiCode\tjmask code set\n");
@@ -121,9 +118,6 @@ usage(int n)
 	fprintf(stderr, "\t\t-c command\texecute command first\n");
 	fprintf(stderr, "\t\t-s scriptin\tread commands from script file\n");
 	fprintf(stderr, "\t\t-w scriptout\twrite commands in script file\n");
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-	fprintf(stderr, "\t\t-X\t\tno use Extend File System\n");
-#endif
 #ifdef KANJI
 	fprintf(stderr, "\t\t-k FileCode\tfile jcode set\n");
 	fprintf(stderr, "\t\t-K KanjiCode\tjmask code set\n");
@@ -277,11 +271,6 @@ main(int argc, char **argv)
 #ifdef KANJI
 		case 'h':
 			usage(9);
-			break;
-#endif
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-		case 'X':
-			NoEFS = !NoEFS;
 			break;
 #endif
 

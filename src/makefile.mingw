@@ -14,9 +14,8 @@
 # that. Use "make ... WARN=1" to list those casts.
 #
 # This is the minimal feature set: core editor + Win32 GUI + kanji/UTF-8 I/O.
-# Not built here (see makjnt.mak for the full set): USE_EXFILE (archive and
-# ftp editing), USE_BDF (BDF fonts), USE_MATOME (MIME decode), and the
-# separate grep.exe / clip.exe / vim32s.exe tools.
+# Not built here (see makjnt.mak): the separate grep.exe / clip.exe /
+# vim32s.exe tools.
 
 CROSS	=
 CC	= $(CROSS)gcc

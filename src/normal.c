@@ -1924,34 +1924,6 @@ gotofile:
 error:
 						break;
 #endif
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-						/*
-						 * "gu": gzip+uuencode and other filter
-						 */
-			case 'u':	if (VIsual.lnum)
-						{
-							linenr_t		line1;
-							linenr_t		line2;
-
-							curbuf->b_startop = VIsual;
-							if (lt(curbuf->b_startop, curwin->w_cursor))
-							{
-								curbuf->b_endop = curwin->w_cursor;
-								curwin->w_cursor = curbuf->b_startop;
-							}
-							else
-							{
-								curbuf->b_endop = curbuf->b_startop;
-								curbuf->b_startop = curwin->w_cursor;
-							}
-							line1 = curbuf->b_startop.lnum;
-							line2 = curbuf->b_endop.lnum;
-							decode(FALSE, line1, line2);
-							VIsual.lnum = 0;
-							updateScreen(NOT_VALID);		/* delete the inversion */
-						}
-						break;
-#endif
 #ifndef notdef
 						/*
 						 * "gc": count charactor

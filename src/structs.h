@@ -382,9 +382,6 @@ struct buffer
 	char_u			*b_p_trs;			/* track character set */
 	int				 b_p_tt;			/* transparent track mode */
 #endif
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_MATOME)
-	char			*b_p_ec;			/* encode type nothing */
-#endif
 #ifdef USE_OPT
 	int				 b_p_opt;			/* option mode */
 # define FOPT_MAC_FILE			0x0100		/* macintosh file */

@@ -20,11 +20,6 @@
 #include <locale.h>
 #endif
 
-#if defined(NT) && defined(USE_EXFILE)
-# define	open				ef_open
-# define	close				ef_close
-#endif
-
 /*==============================================================================
  *	option parameter
  *============================================================================*/
@@ -76,9 +71,6 @@ static int					multi = FALSE;
 static char				**	dir_list = NULL;
 static int					dir_cnt = 0;
 static int					DirList(char *);
-# ifdef USE_EXFILE
-static int					do_arcfile(char *, char *);
-# endif
 #endif
 
 /*==============================================================================
@@ -166,16 +158,6 @@ static int			do_grep __ARGS((char *));
 /*==============================================================================
  *	line parameter
  *============================================================================*/
-#if defined(NT) && defined(USE_EXFILE)
-BOOL WINAPI
-handler_routine(DWORD dwCtrlType)
-{
-	if (o_fd > 0)
-		close(o_fd);
-	exit(0);
-	return(0);
-}
-#endif
 
 static void
 usage()
@@ -885,11 +867,7 @@ char			**	argv;
 						char	**	result;
 						int			j;
 
-# ifdef USE_EXFILE
-						result = ef_globfilename(optarg, FALSE);
-# else
 						result = glob_filename(optarg);
-# endif
 						for (j = 0; result[j] != NULL; j++)
 						{
 							DirList(result[j]);
@@ -944,56 +922,6 @@ char			*	fname;
 {
 	int					rtn = 0;
 
-# ifdef USE_EXFILE
-	if (is_efarc(fname, '\0'))
-	{
-		char	**	result;
-		int			j;
-		char		buf[MAXPATHL];
-
-		multi = TRUE;
-		strcpy(buf, fname);
-		strcat(buf, ":*");
-		result = ef_globfilename(buf, FALSE);
-		for (j = 0; result[j] != NULL; j++)
-		{
-			rtn |= do_grep(result[j]);
-			free(result[j]);
-		}
-		free(result);
-	}
-	else if (is_efarc(fname, ':'))
-	{
-		char	**	result;
-		int			j;
-
-		multi = TRUE;
-		result = ef_globfilename(fname, TRUE);
-		for (j = 0; result[j] != NULL; j++)
-		{
-			rtn |= do_grep(result[j]);
-			free(result[j]);
-		}
-		free(result);
-	}
-	else if (is_ef(fname, '\0'))	/* ftp */
-	{
-		char	**	result;
-		int			j;
-		char		buf[MAXPATHL];
-
-		multi = TRUE;
-		strcpy(buf, fname);
-		result = ef_globfilename(buf, FALSE);
-		for (j = 0; result[j] != NULL; j++)
-		{
-			rtn |= do_grep(result[j]);
-			free(result[j]);
-		}
-		free(result);
-	}
-	else
-# endif
 		rtn |= do_grep(fname);
 	return(rtn);
 }
@@ -1024,11 +952,7 @@ char			**	argv;
 				if (buf[strlen(buf) - 1] != '\\' && buf[strlen(buf) - 1] != '/')
 					strcat(buf, "\\");
 				strcat(buf, "*");
-# ifdef USE_EXFILE
-				result = ef_globfilename(buf, FALSE);
-# else
 				result = glob_filename(buf);
-# endif
 				for (j = 0; result[j] != NULL; j++)
 				{
 					rtn |= do_winsearch(result[j]);
@@ -1062,21 +986,13 @@ char			**	argv;
 					if (buf[strlen(buf) - 1] != '\\' && buf[strlen(buf) - 1] != '/')
 						strcat(buf, "\\");
 					strcat(buf, argv[i]);
-# ifdef USE_EXFILE
-					result = ef_globfilename(buf, FALSE);
-# else
 					result = glob_filename(buf);
-# endif
 					for (j = 0; result[j] != NULL; j++)
 					{
 						rtn |= do_winsearch(result[j]);
 						free(result[j]);
 					}
 					free(result);
-# ifdef USE_EXFILE
-					if (vimgetenv("GREP_ARC") != NULL)
-						rtn |= do_arcfile(dir_list[k], argv[i]);
-# endif
 				}
 			}
 			else
@@ -1100,9 +1016,6 @@ char			**	argv;
 {
 	int					rtn;
 
-#if defined(NT) && defined(USE_EXFILE)
-	ef_init(NULL);
-#endif
 #ifdef MSDOS
 	_fmode = O_BINARY;          /* we do our own CR-LF translation */
 #endif
@@ -1156,13 +1069,7 @@ char			**	argv;
 	/*
 	 * execute grep for each file
 	 */
-#if defined(NT) && defined(USE_EXFILE)
-	SetConsoleCtrlHandler(handler_routine, TRUE);
-#endif
 	rtn = do_search(argc, argv);
-#if defined(NT) && defined(USE_EXFILE)
-	ef_term();
-#endif
 	return rtn;
 }
 
@@ -1253,49 +1160,4 @@ char			*	dir;
     return(TRUE);
 }
 
-# ifdef USE_EXFILE
-static int
-do_arcfile(dir, ext)
-char			*	dir;
-char			*	ext;
-{
-	static char		lzh[]	= ".lzh";
-	static char		tar[]	= ".tar";
-	static char		taz[]	= ".taZ";
-	static char		tgz[]	= ".tgz";
-	static char		targz[]	= ".tar.gz";
-	static char		tarz[]	= ".tar.Z";
-	static char		tarbz2[]= ".tar.bz2";
-	static char		gzip[]	= ".gz";
-	static char		cmprs[]	= ".Z";
-	static char		bz2[]	= ".bz2";
-	static char	*	extend[]= {lzh, tar, taz, tgz, targz, tarz, tarbz2, gzip, cmprs, bz2, NULL};
-	char			buf[MAXPATHL];
-	char		**	ep		= extend;
-	int				rtn = 0;
-	char		**	result;
-	int				j;
-
-	while (*ep)
-	{
-		strcpy(buf, dir);
-		if (buf[strlen(buf) - 1] != '\\' && buf[strlen(buf) - 1] != '/')
-			strcat(buf, "\\");
-		strcat(buf, "*");
-		strcat(buf, *ep);
-		strcat(buf, ":");
-		strcat(buf, ext);
-		result = ef_globfilename(buf, FALSE);
-		for (j = 0; result[j] != NULL; j++)
-		{
-			multi = TRUE;
-			rtn |= do_winsearch(result[j]);
-			free(result[j]);
-		}
-		free(result);
-		ep++;
-	}
-	return(rtn);
-}
-# endif
 #endif

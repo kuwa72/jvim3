@@ -17,14 +17,11 @@
 #define IDM_PRINT		0x240
 #define IDM_SAVE		0x300
 #define IDM_SBAR		0x310
-#define IDM_UNICODE		0x320
 #define IDM_TRAY		0x330
 #define IDM_MOUSE		0x340
 #define IDM_PRINTSET	0x350
 #define	IDM_MENU		0x360
 #define	IDM_NT106		0x370
-#define IDM_SHARE		0x380
-#define IDM_COMMON		0x381
 #define IDM_FADEOUT		0x390
 #define IDM_GREPWIN		0x391
 #define IDM_HISTORY		0x392
@@ -36,8 +33,6 @@
 #define IDM_PASTE		0x420
 #define IDM_FONT		0x500
 #define IDM_LSPACE		0x501
-#define IDM_BDF			0x510
-#define IDM_BDFONOFF	0x511
 #define IDM_FWHITE		0x520
 #define IDM_FBLACK		0x521
 #define IDM_FBLUE		0x522

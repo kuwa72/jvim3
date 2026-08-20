@@ -31,9 +31,6 @@
 #ifdef KANJI
 #include "kanji.h"
 #endif
-#if defined(USE_EXFILE) && defined(NT)
-# undef remove
-#endif
 
 static void		enter_buffer __ARGS((BUF *));
 static BUF		*buflist_findname __ARGS((char_u *));

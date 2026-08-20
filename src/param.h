@@ -252,9 +252,6 @@ EXTERN int	p_opt	INIT(= 0);
 # define OPT_NO_JIS				0x0040		/* no JIS code + SJIS/EUC decode */
 # define OPT_ORG_BINMODE		0x0080		/* use original binary mode */
 #endif
-#if defined(NT) && defined(USE_MATOME)
-EXTERN char_u *p_dc	INIT(= "a");			/* decode type auto detect */
-#endif
 #ifdef USE_TAGEX
 EXTERN int	p_tagex	INIT(= TRUE);			/* extend tag jump */
 #endif

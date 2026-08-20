@@ -54,9 +54,6 @@ ACCKEYS ACCELERATORS
 	VK_F1,		IDM_HELP,			VIRTKEY
 #endif
 	VK_F4,		IDM_EXIT,			VIRTKEY, ALT
-#ifdef USE_BDF
-	VK_F10,		IDM_BDFONOFF,		VIRTKEY, ALT
-#endif
 	VK_F11,		IDM_WAVEONOFF,		VIRTKEY, ALT
 	VK_F12,		IDM_BITMAPONOFF,	VIRTKEY, ALT
 	VK_PRIOR,	IDM_BITMAPUP,		VIRTKEY, ALT
@@ -110,19 +107,11 @@ VIMMENU MENU
 	POPUP	"G&lobal"
 	{
 		MENUITEM	"&Scrollbar\tAlt+S",	IDM_SBAR
-		MENUITEM	"&Unicode Font",		IDM_UNICODE
 		MENUITEM	"&Task Tray",			IDM_TRAY
 		MENUITEM	"One &Window",			IDM_ONEWIN
 		MENUITEM	"&Erase Mouse",			IDM_MOUSE
 #ifdef NT106KEY
 		MENUITEM	"&ZEN/HAN to ESC",		IDM_NT106
-#endif
-#ifdef USE_SHARE_CHECK
-		POPUP	"Share &Files"
-		{
-			MENUITEM	"&Share Files",			IDM_SHARE
-			MENUITEM	"&MS Compatible",		IDM_COMMON
-		}
 #endif
 		MENUITEM	"Fade&out",				IDM_FADEOUT
 		MENUITEM	"&Grep Window",			IDM_GREPWIN
@@ -138,9 +127,6 @@ VIMMENU MENU
 	POPUP	"Set&up"
 	{
 		MENUITEM	"&Font",				IDM_FONT
-#ifdef USE_BDF
-		MENUITEM	"B&DF Font",			IDM_BDF
-#endif
 		MENUITEM	"&Line Space",			IDM_LSPACE
 		POPUP	"&Text Color"
 		{
@@ -190,7 +176,7 @@ VIMMENU MENU
  * n characters is n * tmAveCharWidth wide and a box of 4n dialog units is the
  * same, whatever size the font ends up at. Several of these layouts are cut
  * that fine -- LTEXT "ASCII" in 20 units is exactly five characters -- and a
- * proportional font would be a relayout of all fourteen of them.
+ * proportional font would be a relayout of all twelve of them.
  *
  * 12 point holds the width the layouts were drawn at (an 8 pixel cell at 96
  * DPI), so what changes is the height: MS Gothic is square where Terminal 8x12
@@ -279,40 +265,6 @@ BEGIN
     PUSHBUTTON      "R&eference",3001,150,21,40,12
 END
 
-BDF DIALOGEX 0, 0, 187, 83
-STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_3DLOOK | DS_CENTER | WS_POPUP | 
-    WS_VISIBLE | WS_CAPTION
-CAPTION "BDF FONT Setup"
-FONT 12, "MS Gothic"
-BEGIN
-    LTEXT           "ASCII",IDC_STATIC,14,7,20,9
-    EDITTEXT        2000,55,5,81,12,ES_AUTOHSCROLL | ES_READONLY | NOT 
-                    WS_BORDER | NOT WS_TABSTOP
-    EDITTEXT        2001,142,5,12,12,ES_READONLY | NOT WS_BORDER | NOT 
-                    WS_TABSTOP,WS_EX_RIGHT
-    LTEXT           "X",IDC_STATIC,156,6,8,8
-    EDITTEXT        2002,164,5,11,12,ES_AUTOHSCROLL | ES_READONLY | NOT 
-                    WS_BORDER | NOT WS_TABSTOP
-    LTEXT           "pt",IDC_STATIC,177,6,9,10
-    EDITTEXT        1000,14,21,126,12,ES_AUTOHSCROLL
-    PUSHBUTTON      "&Reference",1001,144,21,40,12
-    LTEXT           "Japanese",IDC_STATIC,14,37,36,9
-    EDITTEXT        4000,55,37,81,12,ES_AUTOHSCROLL | ES_READONLY | NOT 
-                    WS_BORDER | NOT WS_TABSTOP
-    EDITTEXT        4001,142,37,12,12,ES_READONLY | NOT WS_BORDER | NOT 
-                    WS_TABSTOP,WS_EX_RIGHT
-    LTEXT           "X",IDC_STATIC,156,38,8,8
-    EDITTEXT        4002,164,37,11,12,ES_AUTOHSCROLL | ES_READONLY | NOT 
-                    WS_BORDER | NOT WS_TABSTOP
-    LTEXT           "pt",IDC_STATIC,177,40,9,10
-    EDITTEXT        3000,14,51,126,12,ES_AUTOHSCROLL
-    PUSHBUTTON      "R&eference",3001,144,53,40,12
-    DEFPUSHBUTTON   "OK",IDOK,15,65,50,14
-    PUSHBUTTON      "CANCEL",IDCANCEL,75,65,50,14
-    LTEXT           "USE",IDC_STATIC,145,68,15,8
-    CONTROL         "&USE",1002,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,164,66,
-                    10,10
-END
 
 LOAD DIALOG DISCARDABLE  0, 0, 100, 25
 STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_3DLOOK | DS_CENTER | WS_POPUP | 
@@ -425,15 +377,6 @@ BEGIN
     CONTROL         "",1010,"Static",SS_BLACKFRAME,4,44,70,44
 END
 
-BDFDLGEXP DIALOG DISCARDABLE  0, 0, 280, 70
-STYLE DS_3DLOOK | DS_CONTROL | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | 
-    WS_CAPTION
-CAPTION "BDF Font Selection"
-FONT 12, "MS Gothic"
-BEGIN
-    LTEXT           "",stc32,0,0,280,40
-    LTEXT           "",1010,5,47,270,20,NOT WS_GROUP
-END
 
 LINESPACE DIALOG DISCARDABLE  0, 0, 152, 42
 STYLE DS_MODALFRAME | DS_SETFOREGROUND | DS_3DLOOK | DS_CENTER | WS_POPUP | 

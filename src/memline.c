@@ -288,9 +288,6 @@ ml_open(void)
 	mf_put(mfp, hp, TRUE, FALSE);
 	curbuf->b_ml.ml_flags = ML_EMPTY;
 
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-	ef_share_open(curbuf->b_filename);
-#endif
 	return OK;
 
 error:
@@ -372,9 +369,6 @@ ml_close(BUF *buf)
 		free(buf->b_ml.ml_line_ptr);
 	free(buf->b_ml.ml_stack);
 	buf->b_ml.ml_mfp = NULL;
-#if defined(NT) && defined(USE_EXFILE) && defined(USE_SHARE_CHECK)
-	ef_share_close(buf->b_filename);
-#endif
 #if defined(NT) && defined(USE_HISTORY)
 	win_history_append(buf);
 #endif

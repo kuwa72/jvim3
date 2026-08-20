@@ -434,7 +434,3 @@ typedef unsigned		colnr_t;	/* column number type */
 # undef   DELETE
 #endif
 
-#if defined(USE_EXFILE) && defined(NT)
-# include "exfile.h"
-# undef   DELETE
-#endif

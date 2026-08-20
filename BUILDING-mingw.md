@@ -72,17 +72,32 @@ Included: `KANJI` `UCODE` (UTF-8 / UCS-2 file I/O) `FEPCTRL` (IME control)
 `USE_HISTORY` `WEBB_COMPLETE` `WEBB_KEYWORD_COMPL` `TERMCAP` `XARGS`, and the
 full Win32 GUI (`winjnt.c`).
 
-Left out, all re-enablable from `src/makjnt.mak`:
+Left out, re-enablable from `src/makjnt.mak`: `grep.exe`, `clip.exe` and
+`vim32s.exe` (`src/grep/`, `src/clip/`, `src/vim32s/`). The in-editor search
+extensions (`USE_GREP`, in `search.c`) *are* included; only the standalone
+`grep.exe` is not.
 
-| Feature | Flag / files |
-| --- | --- |
-| Editing inside LHA/ZIP/CAB/TAR archives and over ftp | `USE_EXFILE`, `src/exfile/` (needs UNLHA32.DLL etc.) |
-| MIME / uuencode / base64 decode (the `gu` command) | `USE_MATOME`, `src/exfile/matome.c` |
-| BDF font rendering (GPL) | `USE_BDF`, `src/bdf/` |
-| `grep.exe`, `clip.exe`, `vim32s.exe` | `src/grep/`, `src/clip/`, `src/vim32s/` |
+### Gone, not just switched off
 
-The in-editor search extensions (`USE_GREP`, in `search.c`) *are* included; only
-the standalone `grep.exe` is not.
+Three features were removed outright, sources and all, because their terms make
+the tree awkward to redistribute — a packager for a ports tree or a distro has
+to ship the source, whether or not the build compiles it. `doc.j/readme.doc`
+§12 states them: `src/bdf/` "requires distribution under the GPL" with no
+licence header in the files themselves, and for `src/exfile/` "please contact
+Tsuchida if you use these sources", which is a request for permission and so
+not a free licence at all. Everything else here is Vim 3.0's public domain plus
+a Japanization whose author explicitly abandoned copyright.
+
+| Feature | Was | Note |
+| --- | --- | --- |
+| BDF font rendering | `USE_BDF`, `src/bdf/` | A bitmap font cannot scale, and the point of it was showing Japanese before outline fonts were everywhere. Any modern font covers more characters than a BDF ever did. |
+| Editing inside LHA/ZIP/CAB/TAR archives and over ftp | `USE_EXFILE`, `src/exfile/` | Also needed UNLHA32.DLL and friends at run time. To come back one day as an implementation with a licence behind it. |
+| MIME / uuencode / base64 decode (`gu`) | `USE_MATOME`, `src/exfile/matome.c` | Part of the same directory. |
+
+The menu items and settings that drove them are gone too, along with `Global >
+Unicode Font`, which had stopped doing anything: it used to choose between the
+ANSI and the Unicode drawing API, and the drawing path has been unconditionally
+Unicode since the UTF-8 rewrite.
 
 ## Changes the mingw build needed
 
@@ -205,8 +220,7 @@ The manifest declares the process DPI aware (`dpiAwareness` = PerMonitorV2, with
 the older `dpiAware` = `true/pm` for systems that predate it). A process that
 does not is drawn at 96 DPI and stretched to the display scale, which resamples
 glyphs that were already rendered: at 125% or 150% the text goes soft and
-uneven, and so does the menu bar, and even a BDF font — which GDI never
-antialiases — comes out blurred.
+uneven, and so does the menu bar.
 
 Being aware means the font has to be asked for in the pixels the display really
 has, and the pixel sizes in the registry (`font`, `jfont`, `width`, `height`)
@@ -219,11 +233,9 @@ character grid comes out of that unchanged: the font and the window that holds
 Settings from a JVim before this have no `dpi` value, and 96 is the right
 reading of them — that is what Windows was virtualising the DPI to.
 
-Two things stay in raw pixels on purpose. `linespace`/`charspace` are nudges of
-a pixel or two typed into a dialog that offers 0 to 10, and scaling them would
-make the dialog disagree with itself. A BDF font cannot scale at all, being a
-bitmap; at a high DPI it is crisp and small, and an outline font is the way to
-get it larger.
+`linespace`/`charspace` stay in raw pixels on purpose: they are nudges of a
+pixel or two typed into a dialog that offers 0 to 10, and scaling them would
+make the dialog disagree with itself.
 
 The dialog font in `vim32.rc` had to go the same way. It was Terminal, a raster
 font with a strike at a few fixed sizes, so at 125% GDI stretched the nearest
@@ -232,12 +244,45 @@ now sharp. It is `MS Gothic` at 12 point instead. Fixed pitch was the thing to
 keep: a caption of n characters is n × `tmAveCharWidth` wide and a box of 4n
 dialog units is exactly the same, at any size, and several of these layouts are
 cut that fine — `LTEXT "ASCII"` in 20 units is five characters and not a pixel
-more — so a proportional font would mean relaying out all fourteen dialogs. 12
+more — so a proportional font would mean relaying out all twelve dialogs. 12
 point holds the 8 pixel cell the layouts were drawn against; MS Gothic is square
 where Terminal 8x12 was tall, so the dialogs come out about a third taller.
 
 To go back to the stretched-but-larger rendering, the exe's Properties >
 Compatibility > Change high DPI settings can override the manifest per user.
+
+### Background first, then the glyphs
+
+`PrintChar()` draws a run of cells in two calls: one `ExtTextOut` with
+`ETO_OPAQUE` and no string to fill the run's rectangle in the background
+colour, then the glyphs over it with the background mode `TRANSPARENT`.
+
+It used to be one call, `ETO_OPAQUE` with the string and the background mode
+left `OPAQUE`, and that is a cell at a time: `ExtTextOut` fills each glyph's own
+advance box immediately before drawing that glyph, left to right. A glyph whose
+ink is wider than the advance it was given therefore had the overhang painted
+out by the box of the glyph after it — in the same call, so redrawing reproduced
+it exactly rather than repairing it.
+
+Emoji are where that showed. No fixed pitch text font carries them, so they
+arrive from whatever GDI links to, and a fallback font's ink does not promise to
+sit inside two of the base font's half widths. Half the glyph went missing, and
+at the end of a line the trailing blanks did the same to the last character. A
+rectangle filled once cannot do that to its own contents.
+
+The repainted span also reaches one cell to the right now, as it already did to
+the left: ink can lean out of the cells it was given, and with the background no
+longer painted per cell there is nothing to hide a neighbour that leans in.
+
+Two limits worth knowing. GDI draws no colour emoji at all — `COLR`/`CBDT`
+layers need DirectWrite — so what appears is the fallback font's monochrome
+outline. And an emoji presentation sequence still gets the width of its base
+character: `utf_cpwidth()` in `utf8.c` reads one code point, and `⚠️` is U+26A0,
+which East Asian Width calls Neutral, followed by a variation selector that
+`utf_iszerowidth()` correctly gives no cell of its own. So it is allotted one
+column where a font draws two. Getting that right means a cell holding a
+sequence rather than a single code point, which the screen planes in `screen.c`
+do not do yet.
 
 ### The GUI's own strings
 
