@@ -175,6 +175,10 @@ echo "built $src/jvim3"
 "$src/jvim3" -h 2>&1 | head -2 || true
 
 if [ "$target" = test ]; then
+	rc=0
 	echo
-	"$root/scripts/test-encoding.sh" "$src/jvim3"
+	"$root/scripts/test-encoding.sh" "$src/jvim3" || rc=1
+	echo
+	"$root/scripts/test-editing.sh" "$src/jvim3" || rc=1
+	exit $rc
 fi

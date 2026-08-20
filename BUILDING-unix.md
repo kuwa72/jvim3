@@ -19,14 +19,21 @@ CC=clang OPT="-O0 -g" EXTRA_CFLAGS=-I/usr/local/include \
 It is POSIX `sh` and avoids `make -C`, so it works with the BSDs' `/bin/sh` and
 `bmake` as well as with bash and GNU make.
 
-The test suite needs bash and a C compiler: it builds `scripts/ptyrun.c` to give
-jvim a terminal. It used to call `script(1)` for that, which is a different
-program on Linux, NetBSD and the other BSDs, and NetBSD's quits before the
-command has run when its own standard input is a file.
+`test` runs both suites: `scripts/test-encoding.sh` (42 cases -- kanji, UTF-8,
+multi-byte editing) and `scripts/test-editing.sh` (58 cases -- motions,
+operators, registers, marks, undo, ex ranges, `:g`, `:s`, searching, the `:!`
+filter and wildcard expansion). 100 in all.
+
+They need bash and a C compiler: they build `scripts/ptyrun.c` to give jvim a
+terminal. That used to be `script(1)`, which is a different program on Linux,
+NetBSD and the other BSDs, and NetBSD's quits before the command has run when
+its own standard input is a file. `ptyrun` also gives each case 20 seconds
+(`PTYRUN_TIMEOUT`) before it kills it, so a case that leaves the editor waiting
+for a key fails instead of hanging the suite.
 
 ## What CI covers
 
-Every push and pull request builds and runs the whole suite on **Linux**,
+Every push and pull request builds and runs both suites on **Linux**,
 **macOS**, **FreeBSD**, **NetBSD** and **OpenBSD**, and cross builds the Windows
 executables with mingw-w64. A tag matching `v*` does the same and then publishes
 the Windows build to the release page, so a broken build cannot become a
@@ -73,7 +80,7 @@ and were never checked against a definition. They are now.
 `-Wall` leaves 251 warnings, of which 236 are `-Wpointer-sign`: JVim keeps its
 text in `char_u` (`unsigned char`) and hands it to the C library and to its own
 `char *` interfaces all over the place. Those are type noise, not bugs, and
-changing 236 sites by hand would be a big diff over code the 42 tests only
+changing 236 sites by hand would be a big diff over code the tests only
 partly reach, so they stay.
 
 The classes that do break things are errors in CI instead: an implicit
@@ -118,7 +125,7 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 - Distribution hardening: `-D_FORTIFY_SOURCE=2 -Werror=format-security
   -fstack-protector-strong`
 - `/bin/sh` being dash
-- All 42 encoding and editing tests, and the same again under AddressSanitizer
+- All 42 encoding tests, and the same again under AddressSanitizer
 - 64 bit: no `-Wpointer-to-int-cast` anywhere in the portable sources. The three
   `-Wint-to-pointer-cast` left are `long` values passed to `emsg2()` for a `%ld`,
   which keep their value on LP64. (The Windows build is a different story, see
@@ -127,29 +134,29 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 Verified on FreeBSD 14.3-RELEASE-p16, clang 19.1.7, amd64, in the QEMU guest
 `scripts/test-bsd-docker.sh` builds:
 
-- All 42 tests
+- All 100 tests
 - `-DTERMCAP` against base ncurses, found as `-ltinfo`
 - `jmask` following `LANG`: `ja_JP.UTF-8` gives `TTTT`, `ja_JP.eucJP` gives
   `EEEE`, `C` gives `EEET`
 - Both tty paths: `-DBSD4_4` (`<termios.h>`, what the script picks now) and the
-  `<sgtty.h>` branch it used to take. Each passes all 42 tests. The `BSD4_4`
+  `<sgtty.h>` branch it used to take. Each passes all 100 tests. The `BSD4_4`
   branch had never been compiled before — it cannot be, against Linux headers.
 
 Verified on NetBSD 10.1, gcc 10.5.0, amd64, the same way:
 
-- All 42 tests
+- All 100 tests
 - `-DTERMCAP` against base curses, found as `-lcurses`
 - Three warnings for the whole build, all `-Wint-to-pointer-cast` in
   `buffer.c`, which are the `%ld` ones described above.
 
 Verified on macOS (Darwin 25.5, Apple clang, arm64) in CI:
 
-- All 42 tests
+- All 100 tests
 - `-DTERMCAP` against the system ncurses
 - `-DBSD4_4`, i.e. `<termios.h>`; nothing here relies on `<sgtty.h>` any more
 
 Verified in CI, on whatever release the VM images carry — FreeBSD 15.1,
-NetBSD 11.0 and OpenBSD 7.9 at the time of writing. All 42 tests on each.
+NetBSD 11.0 and OpenBSD 7.9 at the time of writing. All 100 tests on each.
 OpenBSD had never been built at all before that; `-lncursesw` is what it finds.
 
 **Not** verified:

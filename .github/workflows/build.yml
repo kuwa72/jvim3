@@ -1,6 +1,6 @@
 name: build
 
-# Every push and pull request builds and runs the 42 encoding tests, so a break
+# Every push and pull request builds and runs both test suites, so a break
 # shows up when it is made rather than at release time. A tag matching v* does
 # the same and then publishes the Windows build to the release page, which means
 # a broken build can never become a release.
@@ -35,7 +35,7 @@ jobs:
           sudo apt-get -o DPkg::Lock::Timeout=300 update
           sudo apt-get -o DPkg::Lock::Timeout=300 install -y --no-install-recommends \
             libncurses-dev
-      - name: Build and run the 42 encoding tests
+      - name: Build and run both test suites
         run: ./scripts/build-unix.sh test
       # The classes of warning that actually break things: an implicit
       # declaration truncates a returned pointer on 64 bit, a mismatched
@@ -59,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       # Nothing to install: clang, curses and bash 3.2 all come with the system.
-      - name: Build and run the 42 encoding tests
+      - name: Build and run both test suites
         run: ./scripts/build-unix.sh test
 
   # The BSDs run in a VM on the Linux runner, the same idea as

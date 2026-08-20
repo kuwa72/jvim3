@@ -35,8 +35,27 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
+
+/*
+ * A test that leaves the editor waiting for a key would otherwise hang forever:
+ * when its script file runs out, it reads the terminal, and nothing is coming.
+ * PTYRUN_TIMEOUT seconds (20 by default, 0 to wait for ever) and the child is
+ * killed and 124 returned, the way timeout(1) does it -- which macOS does not
+ * have.
+ */
+static pid_t	child = 0;
+
+	static void
+on_alarm(int sig)
+{
+	if (child > 0)
+		kill(child, SIGKILL);
+	_exit(124);
+}
 
 int
 main(int argc, char **argv)
@@ -121,6 +140,20 @@ main(int argc, char **argv)
 	/* Only the command may hold the slave open, or the pty never reports the
 	 * end of its output and the loop below would not know when to stop. */
 	close(slave);
+
+	child = pid;
+	{
+		const char	*t = getenv("PTYRUN_TIMEOUT");
+		unsigned	secs = 20;
+
+		if (t != NULL)
+			secs = (unsigned)strtoul(t, NULL, 10);
+		if (secs > 0)
+		{
+			signal(SIGALRM, on_alarm);
+			alarm(secs);
+		}
+	}
 
 	/* Keystrokes go out in whatever size the pty will take right now. Writing
 	 * the lot in one blocking call deadlocks on a small tty buffer: we would be
