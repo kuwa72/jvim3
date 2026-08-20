@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   unix:
-    name: Linux build and encoding tests
+    name: Linux build and tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -53,7 +53,7 @@ jobs:
             -Werror=return-type -Werror=uninitialized" ./scripts/build-unix.sh
 
   macos:
-    name: macOS build and encoding tests
+    name: macOS build and tests
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
@@ -66,7 +66,7 @@ jobs:
   # scripts/test-bsd-docker.sh but with somebody else's prebuilt guest, which
   # boots in a couple of minutes instead of being installed from scratch.
   freebsd:
-    name: FreeBSD build and encoding tests
+    name: FreeBSD build and tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -78,7 +78,7 @@ jobs:
           run: ./scripts/build-unix.sh test
 
   netbsd:
-    name: NetBSD build and encoding tests
+    name: NetBSD build and tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -90,7 +90,7 @@ jobs:
           run: PATH=$PATH:/usr/pkg/bin ./scripts/build-unix.sh test
 
   openbsd:
-    name: OpenBSD build and encoding tests
+    name: OpenBSD build and tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -99,6 +99,18 @@ jobs:
         with:
           usesh: true
           prepare: pkg_add -I bash
+          run: ./scripts/build-unix.sh test
+
+  dragonfly:
+    name: DragonFly build and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: vmactions/dragonflybsd-vm@v1
+        with:
+          usesh: true
+          prepare: pkg install -y bash
           run: ./scripts/build-unix.sh test
 
   windows:
@@ -145,7 +157,7 @@ jobs:
 
   release:
     name: Publish the release
-    needs: [unix, macos, freebsd, netbsd, openbsd, windows]
+    needs: [unix, macos, freebsd, netbsd, openbsd, dragonfly, windows]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
