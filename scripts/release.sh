@@ -90,7 +90,11 @@ git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1 &&
 # Only this tree's own semantic versions are comparable. The nine
 # v3.0-j2.1b-utf8.* tags sort above everything by version order and would make
 # this check nonsense; see RELEASING.md.
-newest=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -1)
+#
+# A glob will not do the filtering: 'v[0-9]*.[0-9]*.[0-9]*' happily matches
+# v3.0-j2.1b-utf8.9, because * spans the "-j2" and the "b-utf8" too. It has to
+# be anchored, which means a regexp.
+newest=$(git tag -l | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
 if [ -z "$newest" ]; then
 	echo "  free. No semantic version tag yet, so this is the first: the nine
   v3.0-j2.1b-utf8.* tags are excluded from the comparison by pattern, and
