@@ -12,9 +12,14 @@ For Linux, the BSDs and macOS see [BUILDING-unix.md](BUILDING-unix.md).
 Cross compile from Linux/WSL:
 
 ```sh
-sudo apt install mingw-w64          # or: brew install mingw-w64
+sudo apt install gcc-mingw-w64-i686-win32 gcc-mingw-w64-x86-64-win32
 ./scripts/build-mingw.sh both       # jvim32w.exe (GUI) + jvim32.exe (console)
 ```
+
+Those package names, and not the `mingw-w64` metapackage or a Homebrew
+toolchain, because **the C runtime has to be msvcrt** -- see [Which C
+runtime](#which-c-runtime) below. `build-mingw.sh` says which one it is on every
+build and refuses to package the wrong one.
 
 Or natively, in the MSYS2 **MINGW32** shell:
 
@@ -74,6 +79,40 @@ Both are built in CI. What is left in either is 22 `%d` against a `long` or a
 **The 64 bit build has never been run.** It compiles and nothing truncates a
 pointer any more, which is not the same thing as working; there is no Windows
 runtime test here at all. The release stays 32 bit until somebody runs it.
+
+## Which C runtime
+
+msvcrt, not UCRT. `msvcrt.dll` is on every Windows, so the release zips need no
+redistributable and import nothing but it and the OS DLLs, and the UTF-8 file
+name support rides on it: msvcrt's `open()` and `stat()` go through the `...A`
+entry points, which the manifest's `activeCodePage=UTF-8` redirects. UCRT would
+buy better `printf` and locale behaviour and cost the Windows 7 story.
+
+Which one a mingw-w64 targets is decided when the toolchain itself is built --
+the headers define `_UCRT` or they do not, and `libmingwex` is compiled to match
+-- so **no compiler flag here can change it.** The only lever is which toolchain
+is on `PATH`, and the two obvious ways to install one do not agree: Debian's
+`gcc-mingw-w64-*-win32` packages are msvcrt, Homebrew's `mingw-w64` is UCRT.
+
+This is not a detail that stays in the printf corners. msvcrt's `tmpnam()`
+returns a name under `P_tmpdir`, which is `"\\"`, so the file it names is in the
+root of the current drive and cannot be written by an ordinary process; UCRT's
+consults `TEMP` and returns a real path. `:r !cmd` redirects the command's
+output into that file, so it worked in every local build made with a Homebrew
+toolchain and failed in every release, through two releases, until the sources
+stopped using `tmpnam()` at all.
+
+So `scripts/build-mingw.sh` prints the runtime it found on every build, warns
+when it is not msvcrt, and refuses `release` outright -- including when it
+cannot ask the compiler at all. To pick a toolchain without reordering `PATH`:
+
+```sh
+CROSS=/usr/bin/i686-w64-mingw32- ./scripts/build-mingw.sh both
+```
+
+There is no Windows runtime test in CI, so testing on Windows by hand is the
+only Windows testing there is, and a build with the other runtime does not
+count as it.
 
 ## What is and is not in this build
 
