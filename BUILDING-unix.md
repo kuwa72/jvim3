@@ -21,10 +21,10 @@ CC=clang OPT="-O0 -g" EXTRA_CFLAGS=-I/usr/local/include \
 It is POSIX `sh` and avoids `make -C`, so it works with the BSDs' `/bin/sh` and
 `bmake` as well as with bash and GNU make.
 
-`test` runs both suites: `scripts/test-encoding.sh` (42 cases -- kanji, UTF-8,
-multi-byte editing) and `scripts/test-editing.sh` (58 cases -- motions,
+`test` runs both suites: `scripts/test-encoding.sh` (46 cases -- kanji, UTF-8,
+multi-byte editing) and `scripts/test-editing.sh` (64 cases -- motions,
 operators, registers, marks, undo, ex ranges, `:g`, `:s`, searching, the `:!`
-filter and wildcard expansion). 100 in all.
+filter and wildcard expansion). 110 in all.
 
 They need bash and a C compiler: they build `scripts/ptyrun.c` to give jvim a
 terminal. That used to be `script(1)`, which is a different program on Linux,
@@ -128,7 +128,7 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 - Distribution hardening: `-D_FORTIFY_SOURCE=2 -Werror=format-security
   -fstack-protector-strong`
 - `/bin/sh` being dash
-- All 42 encoding tests, and the same again under AddressSanitizer
+- All 46 encoding tests, and the same again under AddressSanitizer
 - 64 bit: no `-Wpointer-to-int-cast` anywhere in the portable sources. The three
   `-Wint-to-pointer-cast` left are `long` values passed to `emsg2()` for a `%ld`,
   which keep their value on LP64. (The Windows build is a different story, see

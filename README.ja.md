@@ -15,13 +15,16 @@ Shift-JIS ではなく UTF-8 を保持する**ようになりました。CP932 �
 カラー、そしてコマンドモードを理解している IME 制御。それが欲しいエディタなら、
 これは今のマシンで動きます。
 
+[![最新リリース](https://img.shields.io/github/v/release/kuwa72/jvim3?label=%E6%9C%80%E6%96%B0%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9)](https://github.com/kuwa72/jvim3/releases/latest)
+JVim 3.0-j2.1b (2002 Dec 24) 由来
+
 ```
-最新リリース   v3.0-j2.1b-utf8.9
 対応環境       Windows 10/11 (Win32 GUI + コンソール)、Linux、
                FreeBSD、NetBSD、OpenBSD、DragonFly
 テスト         110 ケース。上記すべてで CI が実行。Windows のキー入力は
                scripts/test-winkeys.sh の 14 ケース (WSL から実機で実行)
-ライセンス     パブリックドメイン / charityware — uganda.txt 参照
+ライセンス     パブリックドメイン — LICENSE を参照。付随する寄付のお願いは
+               uganda.txt にあります
 ```
 
 ## このリポジトリで変わったこと
@@ -33,7 +36,7 @@ Shift-JIS ではなく UTF-8 を保持する**ようになりました。CP932 �
 | CP932 外のファイル名 | マニフェストでプロセスのコードページを UTF-8 に指定しているので、`...A` 系のファイル API が UTF-8 を受け取り、`🍣.txt` が開けます。 |
 | 画面スケーリング | プロセスをモニタ単位 DPI 対応にし、保存済みのフォントサイズ・ウィンドウサイズを目の前の DPI に読み替えます。125%・150% でも文字がぼやけず、別倍率のモニタへ移動しても保たれます。 |
 | Unix 系ならビルドできる | `scripts/build-unix.sh` が、makefile の 3 行をコメントアウトさせる代わりに、コンパイラに環境を問い合わせます。`scripts/build-mingw.sh` は mingw-w64 で Windows 版をクロスビルドします。 |
-| 100 個のテスト | エンコーディング 42 ケースと編集 58 ケース。実際の pty 越しに動かします。push ごとに 6 つの OS で実行されます。 |
+| 110 個のテスト | エンコーディング 46 ケースと編集 64 ケース。実際の pty 越しに動かします。push ごとに 5 つの OS で実行されます。 |
 | 長年のバグを修正 | 15 件。一覧は [BUILDING-mingw.md](BUILDING-mingw.md#bugs-found-along-the-way) にあります。正規表現の `[あ]` が `い` にもマッチする、コマンドラインが `buff[-1]` を読む、絵文字 1 個でファイル全体が Shift-JIS と誤判定される、端末入力で 2 回の読み込みにまたがった文字が化ける、など。 |
 | 削除した機能 2 つ | BDF フォント描画と、書庫 (LHA/ZIP/TAR) 内のファイル編集をソースごと削除しました。再配布の条件が扱いにくかったためです。[後述](#ライセンス)。 |
 
@@ -171,8 +174,8 @@ Vim 3.0 のマニュアル (`doc/`、1994 年、英語):
 
 ```sh
 ./scripts/build-unix.sh test           # ビルドして両方のスイートを実行
-./scripts/test-encoding.sh src/jvim3   # 42 ケース: 文字コード、マルチバイト編集
-./scripts/test-editing.sh  src/jvim3   # 58 ケース: 移動、オペレータ、レジスタ、
+./scripts/test-encoding.sh src/jvim3   # 46 ケース: 文字コード、マルチバイト編集
+./scripts/test-editing.sh  src/jvim3   # 64 ケース: 移動、オペレータ、レジスタ、
                                        #   マーク、undo、ex の範囲指定、:g、:s、:!
 ```
 
@@ -188,15 +191,17 @@ push と pull request のたびに、Linux・FreeBSD・NetBSD・OpenBSD・Dragon
 
 ## 開発に参加する
 
-Issue と pull request は <https://github.com/kuwa72/jvim3> へ。
+Issue と pull request は <https://github.com/kuwa72/jvim3> へ。日本語で構いません。
 
 取り込みやすい変更の条件は 2 つです。`./scripts/build-unix.sh test` が通ること、
-そして CI がエラー扱いにしている警告 (暗黙の宣言、ポインタ型の不一致、プロトタイプ
-なし、return なし) を増やさないこと。`-Wpointer-sign` の警告は想定内で残していま
-す。理由は [BUILDING-unix.md](BUILDING-unix.md#warnings) に書いてあります。
+そして CI がエラー扱いにしている警告を増やさないこと。
 
 特に助かるのは、64 ビット Windows 版を実際に動かしてみること、実機の IME で使って
 みて壊れたところを報告してくれることです。
+
+残りは [CONTRIBUTING.ja.md](CONTRIBUTING.ja.md)
+([English](CONTRIBUTING.md)) にあります。警告の一覧、テストケースの追加方法、
+コミットの書き方、そして非公開のセキュリティ窓口を置いていない理由です。
 
 ## ライセンス
 
@@ -211,11 +216,18 @@ Vim 3.0 は**パブリックドメイン**です。そのうえで Bram Moolenaa
 一切の保証はしないと明記されています。ここでも同じです。**このソフトウェアには
 いかなる保証もありません。**
 
-上記の条件に含まれていなかった 2 つのディレクトリは、このリポジトリから完全に削除
-しました。`src/bdf/` (GPL での配布が必要だが、ファイル自身にライセンス表記がない)
-と `src/exfile/` (使用時に著者への連絡が必要、つまり自由なライセンスではない) です。
+上記の条件に含まれていなかった 2 つのディレクトリは、このリポジトリから削除しま
+した。`src/bdf/` (GPL での配布が必要だが、ファイル自身にライセンス表記がない) と
+`src/exfile/` (使用時に著者への連絡が必要、つまり自由なライセンスではない) です。
 残っているのは、Vim 3.0 のパブリックドメインと、著者が権利を放棄した日本語化部分
-だけです。
+だけです。ただし「削除」は作業ツリーからの削除 (`8807bbc`) であって、clone すれば
+履歴経由でそれらのファイルには到達できます。履歴を書き換えると既に公開したタグと
+リリースが壊れるため、そのままにしています。
+
+[LICENSE](LICENSE) が以上を機械可読にしたものです。Moolenaar と土田さんが実際に
+書いたことに最も近い標準テキストであり、かつ GitHub が認識できるものとして
+Unlicense を置いています。上に書いた寄付の呼びかけはお願いであって、利用条件では
+ありません。
 
 ## クレジット
 

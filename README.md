@@ -16,14 +16,17 @@ windows, command line history and completion, syntax colouring, IME control
 that knows about command mode. If that is the editor you want, this one runs on
 a machine from this decade.
 
+[![Latest release](https://img.shields.io/github/v/release/kuwa72/jvim3?label=latest%20release)](https://github.com/kuwa72/jvim3/releases/latest)
+derived from JVim 3.0-j2.1b (2002 Dec 24)
+
 ```
-Latest release   v3.0-j2.1b-utf8.4
 Platforms        Windows 10/11 (Win32 GUI + console), Linux,
                  FreeBSD, NetBSD, OpenBSD, DragonFly
 Tests            110 cases, run on all of the above in CI. The Windows
                  keyboard has 14 more in scripts/test-winkeys.sh, typed on
                  the real thing from WSL
-Licence          Public domain / charityware — see uganda.txt
+Licence          Public domain — see LICENSE, and uganda.txt for the
+                 charity request that comes with it
 ```
 
 ## What this tree changed
@@ -175,8 +178,8 @@ Honest about the edges:
 
 ```sh
 ./scripts/build-unix.sh test           # build and run both suites
-./scripts/test-encoding.sh src/jvim3   # 42 cases: encodings, multi-byte editing
-./scripts/test-editing.sh  src/jvim3   # 58 cases: motions, operators, registers,
+./scripts/test-encoding.sh src/jvim3   # 46 cases: encodings, multi-byte editing
+./scripts/test-editing.sh  src/jvim3   # 64 cases: motions, operators, registers,
                                        #   marks, undo, ex ranges, :g, :s, :!
 ```
 
@@ -193,16 +196,18 @@ build cannot become a release. See
 
 ## Contributing
 
-Issues and pull requests: <https://github.com/kuwa72/jvim3>.
+Issues and pull requests: <https://github.com/kuwa72/jvim3>. Japanese is as
+welcome as English.
 
 Two things make a change easy to take: `./scripts/build-unix.sh test` passes,
-and the build stays clean of the warnings CI treats as errors — an implicit
-declaration, a mismatched pointer type, a missing prototype, a missing return.
-`-Wpointer-sign` warnings are expected and stay; [BUILDING-unix.md](BUILDING-unix.md#warnings)
-says why.
+and the build stays clean of the warnings CI treats as errors.
 
 Especially useful: running the 64 bit Windows build, or using any of this with a
 real IME on real hardware, and saying what broke.
+
+[CONTRIBUTING.md](CONTRIBUTING.md) ([日本語](CONTRIBUTING.ja.md)) has the rest —
+the warning list, how to add a test case, commit style, and why there is no
+private security channel.
 
 ## Licence
 
@@ -218,11 +223,18 @@ Tsuchida Ken'ichi **abandoned copyright** in the Japanization
 and disclaiming all warranty. Both of those apply here as well: this comes with
 no warranty of any kind.
 
-Two directories that were *not* under those terms are gone from this tree
-entirely — `src/bdf/` (required GPL distribution, with no licence header in the
-files) and `src/exfile/` (needed the author's permission, which is not a free
-licence). What is left is Vim 3.0's public domain plus a Japanization whose
-author gave up his claim.
+Two directories that were *not* under those terms are gone from this tree —
+`src/bdf/` (required GPL distribution, with no licence header in the files) and
+`src/exfile/` (needed the author's permission, which is not a free licence).
+What is left is Vim 3.0's public domain plus a Japanization whose author gave up
+his claim. Note that "gone" means gone from the working tree, as of
+`8807bbc`: a `git clone` still reaches those files through the history, and
+rewriting it would break the tags and releases already published.
+
+[LICENSE](LICENSE) is the machine-readable form of all this — the Unlicense,
+which is the closest standard text to what Moolenaar and Tsuchida each actually
+said, and one GitHub can recognise. The charity request above is a request, not
+a condition of use.
 
 ## Credits
 
