@@ -22,6 +22,34 @@ concurrency:
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
+  # Cheap, and it fails in seconds while the BSD virtual machines are still
+  # booting, which is the right place to lose. It exists because the numbers
+  # written in the documentation drifted away from the tree without anybody
+  # noticing: two READMEs disagreed about the latest release, the test count
+  # appeared as both 100 and 110, and the release notes -- pasted into every
+  # release -- claimed the tests passed on macOS after it had been dropped.
+  docs:
+    name: Docs and version agree with reality
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - run: ./scripts/check-docs.sh
+      # On a tag, the number in VERSION is what the binary, the exe properties
+      # and the package names all report, so a tag that disagrees with it would
+      # publish a release whose contents name a different version. Checked here,
+      # where the tag can still be deleted and redone before anything is public.
+      - name: The tag matches VERSION
+        if: github.ref_type == 'tag'
+        run: |
+          want="v$(tr -d ' \t\r\n' < VERSION)"
+          if [ "$want" != "$GITHUB_REF_NAME" ]; then
+            echo "tag is $GITHUB_REF_NAME but VERSION says $want" >&2
+            exit 1
+          fi
+
   unix:
     name: Linux build and tests
     runs-on: ubuntu-latest
@@ -135,10 +163,14 @@ jobs:
           ARCH=x86_64 ./scripts/build-mingw.sh warn 2>&1 | tee /tmp/w64.log | tail -2
           ! grep -qE 'pointer-to-int-cast|int-to-pointer-cast|error:' /tmp/w64.log
       # The same command anybody can run at home.
+      # On a tag the packages are named after it, with the leading v dropped, so
+      # they read jvim3-1.0.0-win32.zip. Otherwise the script names them after
+      # VERSION plus the commit, which is self-describing and needs no tags
+      # fetched -- the checkout here is shallow and has none.
       - name: Build and package both architectures
         run: |
           if [ "$GITHUB_REF_TYPE" = tag ]; then
-            VERSION=$GITHUB_REF_NAME ./scripts/build-mingw.sh release
+            VERSION=${GITHUB_REF_NAME#v} ./scripts/build-mingw.sh release
           else
             ./scripts/build-mingw.sh release
           fi
@@ -150,43 +182,31 @@ jobs:
 
   release:
     name: Publish the release
-    needs: [unix, freebsd, netbsd, openbsd, dragonfly, windows]
+    needs: [docs, unix, freebsd, netbsd, openbsd, dragonfly, windows]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
+      # Full history: the notes name the previous tag and link a comparison
+      # against it, which a shallow clone cannot answer.
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v5
         with:
           name: windows
           path: release
+      # The notes are this tag's section of CHANGELOG.md plus the standing part
+      # from .github/release-body.md, which holds no counts or platform names of
+      # its own -- those are computed, so they cannot go stale the way the
+      # heredoc that used to live here did. --latest is explicit because the
+      # default is "by date and version", and this tree's versions restarted at
+      # 1.0.0, which sorts below the old v3.0-j2.1b-utf8.* tags.
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          ./scripts/release-notes.sh "$GITHUB_REF_NAME" > /tmp/notes.md
           gh release create "$GITHUB_REF_NAME" release/*.zip \
-            --title "JVim 3 $GITHUB_REF_NAME" \
-            --notes "$(cat <<'EOF'
-          JVim 3.0-j2.1b with UTF-8 support.
-
-          Two Windows builds, each with a GUI and a console executable, the
-          help file and a sample `_jvimrc`. Unpack one and run it: nothing
-          needs setting, and `:help` finds `vim.hlp` beside the exe.
-
-          What it is and how to drive it: [README](https://github.com/kuwa72/jvim3#readme)
-          ([日本語](https://github.com/kuwa72/jvim3/blob/master/README.ja.md)),
-          [USAGE](https://github.com/kuwa72/jvim3/blob/master/USAGE.md)
-          ([日本語](https://github.com/kuwa72/jvim3/blob/master/USAGE.ja.md)).
-
-          | | |
-          | --- | --- |
-          | `jvim3-*-win32.zip` | `jvim32w.exe`, `jvim32.exe`. The one that has been used; runs on 64 bit Windows under WoW64. |
-          | `jvim3-*-win64.zip` | `jvim64w.exe`, `jvim64.exe`. Native 64 bit. It compiles with nothing truncating a pointer any more, but it has never been run: there is no Windows runtime test here. Try it and say what happens. |
-
-          Both are built by CI from this tag, after the build and 100 tests
-          pass on Linux, macOS, FreeBSD, NetBSD, OpenBSD and DragonFly.
-
-          Build it yourself with `scripts/build-mingw.sh both`
-          (`ARCH=x86_64` for 64 bit), or `scripts/build-unix.sh test` on
-          Linux, the BSDs and macOS.
-          EOF
-          )"
+            --latest \
+            --title "JVim 3 ${GITHUB_REF_NAME#v}" \
+            --notes-file /tmp/notes.md
