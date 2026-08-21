@@ -96,6 +96,10 @@ run_make() {
 # release: both architectures, packaged, ready to upload. Everything lands in
 # release/ because "clean" takes dist/ with it between the two builds.
 if [ "$TARGET" = release ]; then
+	# On the console, not only in the per-architecture logs below, which are not
+	# kept: this is the line that shows a CI image having quietly changed the
+	# runtime its mingw-w64 defaults to.
+	echo "packaging with the $crt runtime ($(${CROSS}gcc -dumpversion 2>/dev/null || echo \?))"
 	version=${VERSION:-$(git -C "$root" describe --tags --always 2>/dev/null || echo snapshot)}
 	rel=$root/release
 	rm -rf "$rel"
