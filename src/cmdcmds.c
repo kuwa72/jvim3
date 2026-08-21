@@ -410,6 +410,7 @@ dofilter(linenr_t line1, linenr_t line2, char_u *buff, int do_in, int do_out)
 	char_u		otmp[TMPNAMELEN];
 #endif
 	linenr_t 	linecount;
+	int			group;			/* brace the command for redirection */
 #ifdef KANJI
 	char_u		code;
 #endif
@@ -476,41 +477,42 @@ dofilter(linenr_t line1, linenr_t line2, char_u *buff, int do_in, int do_out)
 	if (!do_out)
 		outchar('\n');
 
+/*
+ * Put braces around the command, so that a redirection covers all of it and not
+ * just the last command in the line: without them "a && b" hands b's output to
+ * the file and lets a's go to the shell's own screen, which under the Win32 GUI
+ * is a console nobody is looking at.
+ *
+ * cmd.exe groups this way too. It finds the closing brace by counting, minding
+ * quotes but nothing else, so an unquoted brace in the command itself -- ":r
+ * !echo (x)", ":r !echo :-)" -- ends the group early and the whole line fails.
+ * Those work ungrouped, and a quoted one like "findstr \"a)b\"" is safe either
+ * way, so the ones that would break keep the old treatment and lose only what
+ * they were already losing.
+ */
 #if defined(UNIX) && !defined(ARCHIE)
-/*
- * put braces around the command (for concatenated commands)
- */
- 	sprintf((char *)IObuff, "(%s)", (char *)buff);
-	if (do_in)
-	{
-		STRCAT(IObuff, " < ");
-		STRCAT(IObuff, itmp);
-	}
-	if (do_out)
-	{
-		STRCAT(IObuff, " > ");
-		STRCAT(IObuff, otmp);
-	}
+	group = TRUE;
 #else
-/*
- * for shells that don't understand braces around commands, at least allow
- * the use of commands in a pipe.
- */
-	STRCPY(IObuff, buff);
+	group = (STRCHR(buff, '(') == NULL && STRCHR(buff, ')') == NULL);
+#endif
+	if (group)
+		sprintf((char *)IObuff, "(%s)", (char *)buff);
+	else
+		STRCPY(IObuff, buff);
 	if (do_in)
 	{
 		char_u		*p;
+
 	/*
-	 * If there is a pipe, we have to put the '<' in front of it
+	 * Ungrouped, and there is a pipe: the '<' has to go in front of it, or it
+	 * feeds the last command of the pipeline instead of the first.
 	 */
-		p = STRCHR(IObuff, '|');
-		if (p)
+		if (!group && (p = STRCHR(IObuff, '|')) != NULL)
 			*p = NUL;
 		STRCAT(IObuff, REDIR_IN);
 		STRCAT(IObuff, itmp);
 		STRCAT(IObuff, REDIR_QUOTE);
-		p = STRCHR(buff, '|');
-		if (p)
+		if (!group && (p = STRCHR(buff, '|')) != NULL)
 			STRCAT(IObuff, p);
 	}
 	if (do_out)
@@ -520,7 +522,6 @@ dofilter(linenr_t line1, linenr_t line2, char_u *buff, int do_in, int do_out)
 		STRCAT(IObuff, REDIR_QUOTE);
 		STRCAT(IObuff, REDIR_ERR);
 	}
-#endif
 
 	windgoto((int)Rows - 1, 0);
 	cursor_on();

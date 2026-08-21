@@ -8000,13 +8000,59 @@ mch_set_winsize(void)
  */
 #define SHCMDLEN	(MAXPATHL + IOSIZE)
 
+/*
+ * cmd.exe will not start in a UNC directory. It says so -- on its own console,
+ * which under the GUI is a minimized window -- and runs in C:\Windows instead,
+ * so ":r !dir" quietly listed the Windows directory. Editing a file over a
+ * share, or through \\wsl.localhost when the exe is started from a WSL shell,
+ * is enough to be there.
+ *
+ * There is nothing to be done about cmd's refusal, but where it lands instead
+ * can at least be somewhere that belongs to the person running it. Move to it
+ * for the duration of the shell command and say so, rather than leaving them to
+ * wonder why the listing is of C:\Windows.
+ *
+ * Returns TRUE if it moved, having put the old directory in 'saved'.
+ */
+	static int
+shell_cwd_enter(char *saved, int len)
+{
+	static int	told = FALSE;
+	char		here[MAXPATHL];
+	char		to[MAXPATHL];
+
+	if (GetCurrentDirectory(sizeof(here), here) == 0)
+		return FALSE;
+	if (!(here[0] == '\\' && here[1] == '\\'))	/* not a UNC path */
+		return FALSE;
+	if (GetEnvironmentVariable("USERPROFILE", to, sizeof(to)) == 0
+			&& GetTempPath(sizeof(to), to) == 0)
+		return FALSE;
+	if (STRLEN(here) >= (size_t)len || !SetCurrentDirectory(to))
+		return FALSE;
+	STRCPY(saved, here);
+	/* Once per session. Every shell command run while editing over a share
+	 * would otherwise say it, and after the first time it is noise. */
+	if (!told)
+	{
+		told = TRUE;
+		smsg((char_u *)"cmd.exe cannot run in %s; using %s", here, to);
+		outchar('\n');
+	}
+	return TRUE;
+}
+
 	int
 call_shell(char_u *cmd, int filter, int cooked)
 {
 	int             x = 0;
 	char            newcmd[SHCMDLEN];
+	char            oldcwd[MAXPATHL];
+	int             moved;
 
 	flushbuf();
+
+	moved = shell_cwd_enter(oldcwd, sizeof(oldcwd));
 
 #ifdef FEPCTRL
 	if (FepInit && !GuiWin)
@@ -8212,6 +8258,8 @@ call_shell(char_u *cmd, int filter, int cooked)
 		}
 		outchar('\n');
 	}
+	if (moved)					/* back to the directory being edited */
+		SetCurrentDirectory(oldcwd);
 	if (cooked)
 		settmode(1);            /* set to raw mode */
 
