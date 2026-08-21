@@ -819,13 +819,24 @@ retry:
 	 * The Win32 GUI is a Unicode window and hands us UTF-8 (see WM_CHAR in
 	 * winjnt.c), whatever 'jmask' says the key code is; that setting still
 	 * describes the console.
+	 *
+	 * keyconvsfrom() rather than kanjiconvsfrom(): what arrives here is not
+	 * all text. A special key is reported by the machine-dependent input code
+	 * as K_NUL followed by a key code byte (those pairs are the termcap key
+	 * entries in term.h) and CTRL-@ as K_ZERO, and check_termcode() matches
+	 * them further up. Neither byte is a character, so plain conversion
+	 * replaced each with '?' -- which is what the cursor keys inserted instead
+	 * of moving, in every mode. "-s" script input returns above without being
+	 * converted at all, which is why the test suites never saw it.
 	 */
 #if defined(NT)
-	tmplen = kanjiconvsfrom(top, len, tmp, IOSIZE, round,
+	tmplen = keyconvsfrom(top, len, tmp, IOSIZE, round,
 							GuiWin ? JP_UTF8 : JP_KEY, &kanji);
 #else
-	tmplen = kanjiconvsfrom(top, len, tmp, IOSIZE, round, JP_KEY, &kanji);
+	tmplen = keyconvsfrom(top, len, tmp, IOSIZE, round, JP_KEY, &kanji);
 #endif
+	if (tmplen < 0)						/* no room: drop what was typed */
+		tmplen = 0;
 
 	if (tmplen > maxlen)
 	{

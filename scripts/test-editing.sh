@@ -53,6 +53,38 @@ run() {
 	printf "$keys:w! %s/out\r:q!\r" "$tmp" > "$tmp/keys"
 	pty "TERM=xterm $jvim -T xterm -s $tmp/keys $tmp/in" >/dev/null 2>&1
 
+	verdict "$name" "$expect"
+}
+
+# runtyped <name> <expect> <keys> <input> <wanted output>
+#
+# The same, except that the keys are *typed*: they go down the pty rather than
+# through "-s". That is a different road into the editor. Script input is taken
+# as it stands, while typed bytes are first converted from the code the keyboard
+# speaks (keyconvsfrom() in src/term.c), so this is the only way to test the
+# terminal key codes -- the cursor keys and CTRL-@ -- at all.
+#
+# "-T builtin_xterm" pins the key strings to the built in xterm entry, so what
+# has to be typed for a cursor key does not depend on the system's termcap.
+runtyped() {
+	local name=$1 expect=$2 keys=$3 data=$4 want=$5
+
+	keys=${keys//%/%%}
+	data=${data//%/%%}
+	want=${want//%/%%}
+
+	printf "$data" > "$tmp/in"
+	printf "$want" > "$tmp/want"
+	rm -f "$tmp/out"
+	printf "$keys:w! %s/out\r:q!\r" "$tmp" \
+		| pty "TERM=xterm $jvim -T builtin_xterm $tmp/in" >/dev/null 2>&1
+
+	verdict "$name" "$expect"
+}
+
+verdict() {
+	local name=$1 expect=$2
+
 	local got
 	if cmp -s "$tmp/want" "$tmp/out"; then got=ok; else got=bad; fi
 
@@ -148,6 +180,19 @@ run ":%!sort"               ok ':%!sort\r' 'c\na\nb\n'         'a\nb\nc\n'
 run ":1,2!tr a-z A-Z"       ok ':1,2!tr a-z A-Z\r' 'a\nb\nc\n' 'A\nB\nc\n'
 run ":r !echo"              ok ':r !echo hello\r' 'a\n'        'a\nhello\n'
 run ":w! then :e"           ok ":w! $tmp/side\r:e! $tmp/si*\rdd" 'a\nb\n' 'b\n'
+
+echo
+echo "keys as typed, which go through the code conversion \"-s\" skips:"
+# The cursor keys arrive as a terminal key code -- an escape sequence here, and
+# a K_NUL pair on Windows -- and CTRL-@ as K_ZERO. None of those are characters,
+# and converting them as if they were turned each into a '?' that got inserted
+# instead of moving the cursor.
+runtyped "typed cursor right"   ok '\033OC\033OC\033OCx'  'abcdef\n'  'abcef\n'
+runtyped "typed cursor down"    ok '\033OBdd'             "$ABC"      'a\nc\nd\ne\n'
+runtyped "typed cursor in insert" ok 'i\033OC\033'        'abc\n'     'abc\n'
+runtyped "typed shift-right"    ok '\033Ovx'              'one two\n' 'one wo\n'
+runtyped "typed up on the : line" ok ':1d\r:\033OA\r'     "$ABC"      'c\nd\ne\n'
+runtyped "typed CTRL-@"         ok 'iabc\033i\000'        'X\n'       'ababccX\n'
 
 echo
 printf 'pass %d  fail %d  known-fail %d  newly-passing %d\n' \

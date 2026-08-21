@@ -74,7 +74,7 @@ HANGUL='\xed\x95\x9c\n'								# 한      BMP, not in CP932
 EMOJI='\xf0\x9f\x98\x80\n'							# 😀      non-BMP
 ACCENT='\xc3\xa9\n'									# é       Latin-1
 EUC_NIHONGO='\xc6\xfc\xcb\xdc\xb8\xec\n'
-SJIS_NIHONGO='\x93\xfa\x96\x7b\x8c\xec\n'
+SJIS_NIHONGO='\x93\xfa\x96\x7b\x8c\xea\n'			# 日本語 again; 8c ea, not ec
 
 echo "jvim: $jvim"
 echo
@@ -160,21 +160,23 @@ edit "5| picks 3rd char"      ok "5|x"  "$NIHON$GO\n"      "$NIHON\n"
 edit "2| snaps to 1st char"   ok "2|x"  "$NIHON$GO\n"      "$HON$GO\n"
 edit "7| stays on last char"  ok "7|x"  "$NIHON$GO\n"      "$NIHON\n"
 
-# typed <name> <expect: ok|knownfail> <keys as raw bytes> <expected bytes>
+# typed <name> <expect: ok|knownfail> <keys as raw bytes> <expected bytes> [opts]
 #
 # The keys go to jvim's terminal instead of through -s, because a script file is
 # read straight by vgetorpeek() while terminal input goes through inchar(), which
 # reads at most MAXMAPLEN (50) bytes at a time. A character landing across one of
 # those boundaries is what mangled pasted text: kanjiconvsfrom() has to carry the
 # split bytes over in its "tail", or every byte of that character becomes '?'.
+#
+# 'opts' overrides the codes; the default is UTF-8 throughout.
 typed() {
-	local name=$1 expect=$2 keys=$3 want=$4
+	local name=$1 expect=$2 keys=$3 want=$4 opts=${5:--K TTTT -k t}
 
 	: > "$tmp/in"
 	printf "$want" > "$tmp/want"
 	rm -f "$tmp/out"
 	printf "$keys:w! %s/out\r:q!\r" "$tmp" > "$tmp/keys"
-	pty "TERM=xterm $jvim -T xterm -K TTTT -k t $tmp/in" \
+	pty "TERM=xterm $jvim -T xterm $opts $tmp/in" \
 		< "$tmp/keys" >/dev/null 2>&1
 	local got
 	if cmp -s "$tmp/want" "$tmp/out"; then got=ok; else got=bad; fi
@@ -209,6 +211,20 @@ echo "input read in chunks (a character across a 50 byte boundary):"
 typed "char across boundary"   ok "i$BOUNDARY\033"        "$BOUNDARY\n"
 typed "600 byte kana run"      ok "i$LONG\033"            "$LONG\n"
 typed "run with emoji"         ok "i$EM$LONG$EM\033"      "$EM$LONG$EM\n"
+
+echo
+echo "typed characters holding a byte that is also a key code:"
+# 0xa0 is K_ZERO and 0xfd is K_NUL, the two bytes inchar() has to keep out of
+# the conversion for a special key to survive (see keyconvsfrom() in term.c).
+# Both are also perfectly ordinary bytes inside a character -- 0x82 0xa0 is
+# HIRAGANA A in Shift-JIS -- so the key codes may only be recognised where a
+# character starts, never by scanning the bytes.
+typed "0xa0 as the last byte"  ok "i\xe3\x82\xa0\033"     "\xe3\x82\xa0\n"
+typed "0xa0 in the middle"     ok "i\xe2\xa0\x80\033"     "\xe2\xa0\x80\n"
+typed "Shift-JIS 0x82 0xa0"    ok "i\x82\xa0\033"         "\xe3\x81\x82\n"  "-K SSST -k t"
+typed "Shift-JIS kanji run"    ok "i\x93\xfa\x96\x7b\x8c\xea\033" \
+															"\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e\n" \
+															"-K SSST -k t"
 
 echo
 echo "yank, put, replace, search, join:"

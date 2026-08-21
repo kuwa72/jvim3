@@ -53,6 +53,7 @@ static int		cp2sjis __ARGS((int, char_u *));
 static int		sjis2utf8_n __ARGS((char_u *, int, char_u *, int));
 static char_u  *utf82sjis __ARGS((char_u *));
 static char_u  *utf82ucs2 __ARGS((char_u *, int));
+static int		iskeycode __ARGS((char_u *, int, int *));
 
 static char_u	kanji_map_sjis[]= {
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -1904,6 +1905,15 @@ sjis2utf8_n(char_u *src, int srclen, char_u *dst, int dstlen)
 			*d++ = src[i++];
 			continue;
 		}
+		if (iskeycode(&src[i], srclen - i, &n))
+		{
+			if ((int)(d - dst) + n > dstlen)
+				return -1;
+			memmove(d, &src[i], (size_t)n);
+			d += n;
+			i += n;
+			continue;
+		}
 		n = (sjis_islead(src[i]) && i + 1 < srclen) ? 2 : 1;
 		cp = sjis2cp(&src[i], n);
 		if (cp == UTF8_ERROR)
@@ -2076,6 +2086,59 @@ ucs22utf8_n(char_u *src, int srclen, char_u *dst, int dstlen, int ubig)
 }
 
 /*
+ * Set while converting what was typed rather than text, by keyconvsfrom().
+ *
+ * A special key does not arrive as a character: the machine-dependent input
+ * code reports it as K_NUL followed by a key code byte, and CTRL-@ as K_ZERO,
+ * for check_termcode() to match. Those bytes are not characters in any code
+ * 'jmask' can name, so conversion turned each of them into '?'.
+ *
+ * They cannot be picked out by scanning the bytes: K_NUL (0xfd) and K_ZERO
+ * (0xa0) are both perfectly good second bytes of a Shift-JIS character -- 0x82
+ * 0xa0 is HIRAGANA A -- and 0xa0 is a UTF-8 continuation byte. So the tests sit
+ * where the converters already are at the start of a character, and only there.
+ */
+static int		keycodes = FALSE;
+
+/*
+ * kanjiconvsfrom() for a chunk of typed bytes: convert the characters in it,
+ * and let the key codes through untouched.
+ */
+	int				/* return the length of dst */
+keyconvsfrom(char_u *ptr, int ptrlen, char_u *dst, int dstlen, char *tail, char code, int *charsetp)
+{
+	int		n;
+
+	keycodes = TRUE;
+	n = kanjiconvsfrom(ptr, ptrlen, dst, dstlen, tail, code, charsetp);
+	keycodes = FALSE;
+	return n;
+}
+
+/*
+ * True for a byte that is a key code rather than the start of a character.
+ * 'n' is set to how many bytes of it there are.
+ */
+	static int
+iskeycode(char_u *ptr, int ptrlen, int *n)
+{
+	if (!keycodes || ptrlen <= 0)
+		return FALSE;
+	if (ptr[0] == K_NUL)
+	{
+			/* the key code byte after K_NUL is not a character either */
+		*n = (ptrlen > 1) ? 2 : 1;
+		return TRUE;
+	}
+	if (ptr[0] == K_ZERO)
+	{
+		*n = 1;
+		return TRUE;
+	}
+	return FALSE;
+}
+
+/*
  * Convert 'ptrlen' bytes at 'ptr' from encoding 'code' into the internal UTF-8,
  * writing at most 'dstlen' bytes to 'dst'. Returns the length written, or -1
  * when it does not fit.
@@ -2108,6 +2171,15 @@ kanjiconvsfrom(char_u *ptr, int ptrlen, char_u *dst, int dstlen, char *tail, cha
 				if (d - dst >= dstlen)
 					return -1;
 				*d++ = ptr[i++];
+				continue;
+			}
+			if (iskeycode(&ptr[i], ptrlen - i, &len))
+			{
+				if ((int)(d - dst) + len > dstlen)
+					return -1;
+				memmove(d, &ptr[i], (size_t)len);
+				d += len;
+				i += len;
 				continue;
 			}
 			/*
@@ -2214,8 +2286,20 @@ sjis_convsfrom(char_u *ptr, int ptrlen, char_u *dst, int dstlen, char *tail, cha
 		else
 			charset = JP_ASCII;
 		while (ptrlen) {
+			int		keylen;
+
 			if (dst - dtop >= dstlen)
 				return -1;
+			if (iskeycode(ptr, ptrlen, &keylen))
+			{
+				if ((dst - dtop) + keylen > dstlen)
+					return -1;
+				memmove(dst, ptr, (size_t)keylen);
+				dst += keylen;
+				ptr += keylen;
+				ptrlen -= keylen;
+				continue;
+			}
 			ptrlen --;
 
 			if (*ptr & 0x80)

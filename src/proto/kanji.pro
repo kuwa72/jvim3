@@ -26,6 +26,7 @@ void	jptocase		__ARGS((char_u *, char_u *, int));
 int		isjpspace		__ARGS((char_u *));
 int		judge_jcode		__ARGS((char_u *, int *, char_u *, long));
 int		kanjiconvsfrom	__ARGS((char_u*, int, char_u*, int, char*, char, int*));
+int		keyconvsfrom	__ARGS((char_u*, int, char_u*, int, char*, char, int*));
 char_u *kanjiconvsto	__ARGS((char_u *, int, int));
 char   *fileconvsfrom	__ARGS((char_u *));
 char   *fileconvsto		__ARGS((char_u *));
