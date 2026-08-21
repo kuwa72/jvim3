@@ -355,6 +355,37 @@ doshell(char_u *cmd)
 #endif /* AMIGA */
 }
 
+#ifdef NT
+/*
+ * How dofilter() hands the temp files to the shell on Windows.
+ *
+ * The names come from tmpnam(), which returns a path under TEMP, and that path
+ * holds a space on any machine whose account name does ("C:\Users\First
+ * Last\AppData\Local\Temp\s1.0"). cmd.exe given an unquoted one redirects to
+ * the first word and passes the rest to the command as an argument, so the
+ * output file the read is waiting for is never written. Quote them.
+ *
+ * stderr goes into the same file. The shell runs in a console of its own -- a
+ * minimized one under the GUI -- so what it says when the command does not
+ * work is written to a window nobody looks at: "'ls' is not recognized", or
+ * cmd's own refusal to start in a UNC directory. The read then comes back
+ * empty and nothing is inserted, with no hint as to why. Vim's 'shellredir' is
+ * ">%s 2>&1" on Windows for this reason. In the buffer the message is at least
+ * visible, and 'u' takes it back out.
+ */
+# define REDIR_IN		" < \""
+# define REDIR_OUT		" > \""
+# define REDIR_QUOTE	"\""
+# define REDIR_ERR		" 2>&1"
+#else
+/* command.com takes no quotes around a redirection, and a terminal shell's
+ * stderr already lands where the user can see it. */
+# define REDIR_IN		" < "
+# define REDIR_OUT		" > "
+# define REDIR_QUOTE	""
+# define REDIR_ERR		""
+#endif
+
 /*
  * dofilter: filter lines through a command given by the user
  *
@@ -475,16 +506,19 @@ dofilter(linenr_t line1, linenr_t line2, char_u *buff, int do_in, int do_out)
 		p = STRCHR(IObuff, '|');
 		if (p)
 			*p = NUL;
-		STRCAT(IObuff, " < ");
+		STRCAT(IObuff, REDIR_IN);
 		STRCAT(IObuff, itmp);
+		STRCAT(IObuff, REDIR_QUOTE);
 		p = STRCHR(buff, '|');
 		if (p)
 			STRCAT(IObuff, p);
 	}
 	if (do_out)
 	{
-		STRCAT(IObuff, " > ");
+		STRCAT(IObuff, REDIR_OUT);
 		STRCAT(IObuff, otmp);
+		STRCAT(IObuff, REDIR_QUOTE);
+		STRCAT(IObuff, REDIR_ERR);
 	}
 #endif
 

@@ -7991,11 +7991,20 @@ mch_set_winsize(void)
 	}
 }
 
+/*
+ * Room for the shell, its switch and the whole command line. MAXPATHL is 260
+ * on Windows, which these buffers used to be: dodos() arrives with up to
+ * CMDBUFFSIZE (1024) of command, and dofilter() builds its command in IObuff
+ * with two temp file paths appended, so sprintf() into 260 bytes was writing
+ * off the end of the stack for any command that was not short.
+ */
+#define SHCMDLEN	(MAXPATHL + IOSIZE)
+
 	int
 call_shell(char_u *cmd, int filter, int cooked)
 {
 	int             x = 0;
-	char            newcmd[MAXPATHL];
+	char            newcmd[SHCMDLEN];
 
 	flushbuf();
 
@@ -8030,7 +8039,7 @@ call_shell(char_u *cmd, int filter, int cooked)
 		{
 			si.dwFlags = STARTF_USESHOWWINDOW;
 			si.wShowWindow = /*SW_HIDE*/SW_MINIMIZE;
-			sprintf(newcmd, "%s /c %s", p_sh, cmd);
+			snprintf(newcmd, sizeof(newcmd), "%s /c %s", p_sh, cmd);
 			if (CreateProcess(NULL, newcmd, NULL, NULL, TRUE,
 					CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi) == TRUE)
 			{
@@ -8038,6 +8047,14 @@ call_shell(char_u *cmd, int filter, int cooked)
 				{
 					if (WaitForSingleObject(pi.hProcess, 100) == WAIT_OBJECT_0)
 					{
+						DWORD	status;
+
+						/* the shell's own exit status, which this branch used
+						 * to drop: it is the only sign the user gets that the
+						 * command failed when cmd.exe wrote the reason to its
+						 * own console rather than to the redirected output */
+						if (GetExitCodeProcess(pi.hProcess, &status))
+							x = (int)status;
 						CloseHandle(pi.hProcess);
 						CloseHandle(pi.hThread);
 						break;
@@ -8053,8 +8070,10 @@ call_shell(char_u *cmd, int filter, int cooked)
 		{
 			static	char	*	ext[]	= {".com", ".exe", ".bat", NULL};
 			char			**	ep		= ext;
-			char				exe[MAXPATHL];
-			char				arg[MAXPATHL];
+			/* the whole command is copied in here and then split at the
+			 * first blank, so these hold a command line, not a path */
+			char				exe[SHCMDLEN];
+			char				arg[SHCMDLEN];
 			char			*	p		= exe;
 			char			*	last	= NULL;
 			BOOL				bShell	= FALSE;
@@ -8123,7 +8142,7 @@ call_shell(char_u *cmd, int filter, int cooked)
 			else
 			{
 				if (v_nt)
-					sprintf(newcmd, "%s /c %s && pause", p_sh, cmd);
+					snprintf(newcmd, sizeof(newcmd), "%s /c %s && pause", p_sh, cmd);
 				else
 				{
 					FILE	*	fp;
@@ -8151,7 +8170,7 @@ call_shell(char_u *cmd, int filter, int cooked)
 								fprintf(fp, "pause\r\n");
 								fprintf(fp, "del \"%s\"\r\n", batbuf);
 								fclose(fp);
-								sprintf(newcmd, "%s /c %s", p_sh, batbuf);
+								snprintf(newcmd, sizeof(newcmd), "%s /c %s", p_sh, batbuf);
 								break;		/* for loop */
 							}
 						}
@@ -8188,7 +8207,7 @@ call_shell(char_u *cmd, int filter, int cooked)
 			x = system(p_sh);
 		else
 		{
-			sprintf(newcmd, "%s /c %s", p_sh, cmd);
+			snprintf(newcmd, sizeof(newcmd), "%s /c %s", p_sh, cmd);
 			x = system(newcmd);
 		}
 		outchar('\n');
