@@ -135,11 +135,47 @@ fi
 
 libs="$termlib $x11 $EXTRA_LIBS"
 
+# The release number this tree calls itself, from VERSION at the top of it.
+# Read with "read" rather than sed or cut: this script is POSIX sh and assumes
+# no tools, and read strips the newline by itself.
+jvim_version=
+[ -f "$root/VERSION" ] && read jvim_version < "$root/VERSION"
+case $jvim_version in
+''|*[!0-9.]*)
+	echo "$root/VERSION should hold one line like 1.0.0, not '$jvim_version'" >&2
+	exit 2
+	;;
+esac
+
+# Which commit this is, when there is one to ask. A release tarball has no git
+# and then says nothing, which is honest. Not "git describe --tags": the CI
+# checkout is shallow and has no tags, so describe fails there and anything
+# built on it misfires quietly.
+jvim_build=
+if command -v git >/dev/null 2>&1 &&
+   git -C "$root" rev-parse --git-dir >/dev/null 2>&1; then
+	# No brackets or other shell metacharacters in here: this value travels
+	# through DEFS= into the make recipe's own /bin/sh, which would try to
+	# interpret them. version.c puts the brackets round it instead.
+	jvim_build=$(git -C "$root" rev-parse --short=8 HEAD 2>/dev/null) || jvim_build=
+	if [ -n "$jvim_build" ] &&
+	   [ -n "$(git -C "$root" status --porcelain 2>/dev/null)" ]; then
+		jvim_build=$jvim_build-dirty
+	fi
+fi
+say "version" "$jvim_version${jvim_build:+ $jvim_build}"
+
 defs="-DDIGRAPHS $tcaps -DNO_FREE_NULL -DVIM_ISSPACE \
  -DWEBB_COMPLETE -DWEBB_KEYWORD_COMPL \
  -DVIM_HLP=\\\"$PREFIX/lib/jvim3.hlp\\\" \
  -DDEFVIMRC_FILE=\\\"$PREFIX/etc/jvim3rc\\\" \
  -DKANJI -DUCODE -DTRACK -DCRMARK -DFEXRC -DUSE_GREP -DUSE_TAGEX -DUSE_OPT"
+
+# The \\\" is the same form VIM_HLP above uses: it collapses to \" inside these
+# double quotes, survives DEFS= through make into the recipe's own shell, and
+# reaches the compiler as -DJVIM_VERSION="1.0.0".
+defs="$defs -DJVIM_VERSION=\\\"$jvim_version\\\""
+[ -z "$jvim_build" ] || defs="$defs -DJVIM_BUILDID=\\\"$jvim_build\\\""
 
 OPT=${OPT:--O2 -g}
 cflags="$OPT $std $fcommon $EXTRA_CFLAGS"

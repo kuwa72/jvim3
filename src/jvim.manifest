@@ -32,6 +32,15 @@
       winjnt.c still branch on.
 -->
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <!--
+    The version below is deliberately fixed, and is not this tree's release
+    number. Two reasons. vim32.rc pulls this file in as a raw resource
+    (1 24 "jvim.manifest"), so it never passes through the preprocessor and
+    cannot be handed a -D the way the VERSIONINFO block can. And for an
+    application manifest nothing ever resolves this assembly by identity, so
+    Windows does not read the value at all. The release number the exe reports
+    lives in the VERSIONINFO block in vim32.rc, taken from ../VERSION.
+  -->
   <assemblyIdentity
       type="win32"
       name="JVim.JVim"

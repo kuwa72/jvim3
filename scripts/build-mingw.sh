@@ -115,12 +115,34 @@ if [ -z "$crt" ]; then
 	exit 1
 fi
 
+# The release number this tree calls itself, and which commit this is. Worked
+# out here rather than left to makefile.mingw because "env -i" below wipes the
+# environment, so these have to travel as command line assignments. No brackets
+# in jvim_build: version.c puts those round it.
+jvim_version=$(tr -d ' \t\r\n' < "$root/VERSION")
+case $jvim_version in
+''|*[!0-9.]*)
+	echo "$root/VERSION should hold one line like 1.0.0, not '$jvim_version'" >&2
+	exit 2
+	;;
+esac
+jvim_build=
+if command -v git >/dev/null 2>&1 &&
+   git -C "$root" rev-parse --git-dir >/dev/null 2>&1; then
+	jvim_build=$(git -C "$root" rev-parse --short=8 HEAD 2>/dev/null) || jvim_build=
+	if [ -n "$jvim_build" ] &&
+	   [ -n "$(git -C "$root" status --porcelain 2>/dev/null)" ]; then
+		jvim_build=$jvim_build-dirty
+	fi
+fi
+
 # A linuxbrew toolchain picks up LIBRARY_PATH/LD_* from the host and then hands
 # the cross linker host libraries. Build in a clean environment.
 run_make() {
 	env -i \
 		PATH="$PATH" HOME="$HOME" TERM="${TERM:-dumb}" \
-		make -C "$src" -f makefile.mingw CROSS="$CROSS" "$@"
+		make -C "$src" -f makefile.mingw CROSS="$CROSS" \
+			JVIMVER="$jvim_version" JVIMBUILD="$jvim_build" "$@"
 }
 
 # release: both architectures, packaged, ready to upload. Everything lands in
@@ -130,7 +152,13 @@ if [ "$TARGET" = release ]; then
 	# kept: this is the line that shows a CI image having quietly changed the
 	# runtime its mingw-w64 defaults to.
 	echo "packaging with the $crt runtime ($(${CROSS}gcc -dumpversion 2>/dev/null || echo \?))"
-	version=${VERSION:-$(git -C "$root" describe --tags --always 2>/dev/null || echo snapshot)}
+	# The package name. VERSION= from the environment still wins, which is how
+	# CI names a tagged package; a leading "v" is stripped so the file reads
+	# jvim3-1.0.0-win32.zip rather than jvim3-v1.0.0-win32.zip. Left alone, an
+	# untagged build names itself after the release it came after plus the
+	# commit, which is self-describing and needs no tags fetched.
+	version=${VERSION:-$jvim_version${jvim_build:+-$jvim_build}}
+	version=${version#v}
 	rel=$root/release
 	rm -rf "$rel"
 	mkdir -p "$rel"

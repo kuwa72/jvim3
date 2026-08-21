@@ -90,6 +90,12 @@ usage(int n)
 		mch_windexit(1);
 	}
 #endif
+#ifdef KANJI
+	/* So that a binary can be identified without starting the editor:
+	 * "jvim3 -h" is the only way in from a shell, and scripts/build-unix.sh
+	 * already prints its first two lines after a build. */
+	fprintf(stderr, "%s\n", (char *)longTreeVersion);
+#endif
 #ifndef notdef
 	if (n <= 2)
 #endif

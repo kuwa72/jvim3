@@ -17,9 +17,37 @@ vim       ICON      "vim.ico"
 LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
 #pragma code_page(932)
 
+/*
+ * The version comes from ../VERSION by way of makefile.mingw, which hands it to
+ * windres as -D; windres runs this file through the C preprocessor, so nothing
+ * here is edited for a release. The fallbacks below keep a bare
+ * "windres vim32.rc" working, and say out loud that it was not configured.
+ *
+ * FILEVERSION is this tree's own release number. The JVim it descends from is
+ * not a version here: it stays in Comments and FileDescription, which are the
+ * strings a person actually reads in the file properties.
+ */
+#ifndef JVIM_VER_MAJOR
+# define JVIM_VER_MAJOR	0
+# define JVIM_VER_MINOR	0
+# define JVIM_VER_PATCH	0
+#endif
+
+/*
+ * The strings are built here from those three numbers rather than handed in
+ * ready-made: windres strips the quotes off a -D, so a -DX='"1.0.0"' arrives as
+ * bare 1.0.0 and "VALUE ... X" is then a syntax error. Stringifying and
+ * pasting, which its preprocessor does support, avoids the whole question.
+ */
+#define JVIM_STR_(x)	#x
+#define JVIM_STR(x)		JVIM_STR_(x)
+#define JVIM_VERSION	JVIM_STR(JVIM_VER_MAJOR) "." JVIM_STR(JVIM_VER_MINOR) \
+						"." JVIM_STR(JVIM_VER_PATCH)
+#define JVIM_VERSION4	JVIM_VERSION ".0"
+
 VS_VERSION_INFO		VERSIONINFO
-	FILEVERSION		2,1,2,0
-	PRODUCTVERSION	2,1,2,0
+	FILEVERSION		JVIM_VER_MAJOR,JVIM_VER_MINOR,JVIM_VER_PATCH,0
+	PRODUCTVERSION	JVIM_VER_MAJOR,JVIM_VER_MINOR,JVIM_VER_PATCH,0
 	FILEFLAGSMASK	VS_FFI_FILEFLAGSMASK
 	FILEFLAGS		0L
 	FILEOS          VOS__WINDOWS32
@@ -32,10 +60,10 @@ BEGIN
 		BEGIN
 			VALUE "Comments",			"JVim 3.0-j2.1b"
 			VALUE "CompanyName",		"B.Moolenaar / K.Tsuchida"
-			VALUE "FileVersion",        "2.1.2.0"
+			VALUE "FileVersion",        JVIM_VERSION4
 			VALUE "FileDescription",    "Vi IMproved 3.0 / JVim 3.0-j2.1b"
-			VALUE "ProductName",        "ken_t@st.rim.or.jp (Ken'ichi Tsuchida)"
-			VALUE "ProductVersion",     "2.1.2.0"
+			VALUE "ProductName",        "JVim 3"
+			VALUE "ProductVersion",     JVIM_VERSION
 			VALUE "InternalName",       "JVim"
 			VALUE "OriginalFilename",   "Vim"
 			VALUE "LegalCopyright",     "Bram Moolenaar / Ken'ichi Tsuchida"

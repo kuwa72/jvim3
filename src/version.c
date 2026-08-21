@@ -286,5 +286,38 @@ char		   *longVersion = "Vi IMproved 3.0 by Bram Moolenaar (1994 Aug 12, compile
 char		   *JpVersion = "JVim 3.0-j2.1b";
 char		   *longJpVersion
 					= "JVim 3.0-j2.1b by Ken'ichi Tsuchida (2002 Dec 24)";
+
+/*
+ * This tree's own release number, which is a different thing from the two
+ * versions above. Those are fixed points in history: Vim 3.0 as Moolenaar left
+ * it in 1994, and JVim 3.0-j2.1b as Tsuchida left it in 2002. Neither ever
+ * changes again. This one moves with every release made here.
+ *
+ * It comes from the VERSION file at the top of the tree, handed in as
+ * -DJVIM_VERSION by scripts/build-unix.sh and by src/makefile.mingw, so a
+ * release needs no source edit. JVIM_BUILDID is the commit, and only exists
+ * when the tree was built from a checkout: a release tarball has no git to ask,
+ * and then the build says nothing rather than guessing.
+ *
+ * Written as string concatenation on purpose. If the quoting in a build script
+ * ever comes apart, JVIM_VERSION arrives as 1.0.0 rather than as "1.0.0" and
+ * this file fails to compile -- which is much better than quietly shipping a
+ * binary that cannot say which release it is.
+ *
+ * Version, just above, is deliberately not touched: memline.c writes it into
+ * the swap file header, where the field is ten bytes wide.
+ */
+# ifndef JVIM_VERSION
+#  define JVIM_VERSION	"0.0.0-unconfigured"
+# endif
+# ifdef JVIM_BUILDID
+#  define JVIM_REL		JVIM_VERSION " (" JVIM_BUILDID ")"
+# else
+#  define JVIM_REL		JVIM_VERSION
+# endif
+
+char		   *TreeVersion = "JVim 3 " JVIM_VERSION;
+char		   *longTreeVersion
+					= "JVim 3 " JVIM_REL " -- github.com/kuwa72/jvim3";
 #endif
 

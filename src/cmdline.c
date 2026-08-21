@@ -2074,13 +2074,20 @@ doabbr:
 				msg(longVersion);
 #else
 				{
-					char			buf[256];
+					/* Three version strings now, so 256 is no longer enough:
+					 * this tree's release comes first, because "which build am
+					 * I running" is the question :version could not answer at
+					 * all before. sprintf, not strcpy, so it is snprintf here
+					 * -- nothing in the -Werror set would catch an overrun. */
+					char			buf[512];
 # ifdef ONEW
 					extern char *Onew_version();
-					sprintf(buf, "%s / %s + %s",
-								longVersion, longJpVersion, Onew_version());
+					snprintf(buf, sizeof(buf), "%s / %s / %s + %s",
+								longTreeVersion, longVersion, longJpVersion,
+								Onew_version());
 # else
-					sprintf(buf, "%s / %s", longVersion, longJpVersion);
+					snprintf(buf, sizeof(buf), "%s / %s / %s",
+								longTreeVersion, longVersion, longJpVersion);
 # endif
 					msg(buf);
 				}

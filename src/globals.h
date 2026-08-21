@@ -196,6 +196,8 @@ extern char_u *longVersion;		/* this is in version.c */
 #ifdef KANJI
 extern char_u *JpVersion;		/* this is in version.c */
 extern char_u *longJpVersion;	/* this is in version.c */
+extern char_u *TreeVersion;		/* this is in version.c */
+extern char_u *longTreeVersion;	/* this is in version.c */
 #endif
 
 /*

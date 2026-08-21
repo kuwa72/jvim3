@@ -41,7 +41,26 @@ ifdef WARN
 WARNFLAGS = -Wall -Wno-parentheses -Wno-unused -Wno-pointer-sign \
 			-Wno-sign-compare
 endif
-CFLAGS	= $(STD) $(OPT) $(WARNFLAGS) -I. -DMSDOS -DNT -DWIN32 $(DEFINES)
+# The release number this tree calls itself, from ../VERSION. Worked out here as
+# well as in scripts/build-mingw.sh so that a plain "make -f makefile.mingw" is
+# versioned too; the script passes the same names on the command line, and a
+# command line assignment wins over these.
+#
+# This file is GNU make only (it already uses $(shell), ifdef and order-only
+# prerequisites), so it can compute. makjunix.mak cannot: that one is read by
+# BSD make on four of the CI platforms, which is why the Unix side gets its
+# version as a -D from the shell script instead.
+JVIMVER		?= $(shell tr -d ' \t\r\n' < ../VERSION)
+JVIMBUILD	?=
+V_MAJOR		:= $(word 1,$(subst ., ,$(JVIMVER)))
+V_MINOR		:= $(word 2,$(subst ., ,$(JVIMVER)))
+V_PATCH		:= $(word 3,$(subst ., ,$(JVIMVER)))
+# Single quotes so the recipe's shell hands gcc the double quotes rather than
+# eating them. No brackets in JVIMBUILD: version.c adds those round it.
+VERDEFS		 = -DJVIM_VERSION='"$(JVIMVER)"' \
+		   $(if $(JVIMBUILD),-DJVIM_BUILDID='"$(JVIMBUILD)"',)
+
+CFLAGS	= $(STD) $(OPT) $(WARNFLAGS) -I. -DMSDOS -DNT -DWIN32 $(DEFINES) $(VERDEFS)
 LDFLAGS = -g
 LIBS	= -luser32 -lshell32 -lgdi32 -lcomdlg32 -lcomctl32 -ladvapi32 \
 	  -lwinmm -lole32 -loleaut32 -luuid
@@ -102,10 +121,30 @@ jvim32.exe: $(OBJ) $(RES)
 
 # jvim.manifest is pulled in by vim32.rc, so a change to it has to rebuild the
 # resource too -- otherwise the exe keeps the manifest it was first built with.
-$(RES): vim32.rc vim.ico jvim.manifest $(STAMP) | $(OBJDIR)
-	$(RC) $(DEFINES) -DNT -DWIN32 -I. vim32.rc -O coff -o $@
+# windres runs the file through the C preprocessor, so the version reaches the
+# VERSIONINFO block as -D and nothing in vim32.rc is edited for a release. The
+# three numbers stay separate rather than arriving as one "1,0,0,0" macro, so no
+# comma has to survive make and the shell.
+$(RES): vim32.rc vim.ico jvim.manifest $(STAMP) $(VSTAMP) | $(OBJDIR)
+	$(RC) $(DEFINES) -DNT -DWIN32 -I. \
+		-DJVIM_VER_MAJOR=$(V_MAJOR) \
+		-DJVIM_VER_MINOR=$(V_MINOR) \
+		-DJVIM_VER_PATCH=$(V_PATCH) \
+		vim32.rc -O coff -o $@
 
 $(OBJ): $(INCL) $(STAMP)
+
+# version.o has the release number and the commit baked into it, and neither of
+# those is a file it depends on, so name them in a stamp the way $(STAMP) names
+# the toolchain. Scoped to version.o and the resource on purpose: a new commit
+# should not rebuild the other forty objects.
+VSTAMP	= $(OBJDIR)/.version-$(JVIMVER)$(if $(JVIMBUILD),-$(JVIMBUILD),)
+
+$(VSTAMP): | $(OBJDIR)
+	rm -f $(OBJDIR)/.version-*
+	touch $@
+
+$(OBJDIR)/version.o: $(VSTAMP)
 
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
