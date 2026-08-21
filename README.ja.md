@@ -95,12 +95,14 @@ sudo install -m 644 doc/vim.1           /usr/local/man/man1/jvim3.1
 ### Windows 版を自分でビルドする
 
 ```sh
-sudo apt install mingw-w64                  # Linux または WSL からクロスビルド
+sudo apt install gcc-mingw-w64-i686-win32   # Linux または WSL からクロスビルド
 ./scripts/build-mingw.sh both               # dist/i686/jvim32w.exe + jvim32.exe
 ```
 
 MSYS2 の **MINGW32** シェルなら `pacman -S mingw-w64-i686-gcc make` を入れて同じ
-スクリプトを実行します。詳細は [BUILDING.ja.md](BUILDING.ja.md) と
+スクリプトを実行します。`mingw-w64` メタパッケージではなくこのパッケージなのは、
+ビルドが msvcrt に対して行われる必要があるためです。スクリプトはそうでない
+ツールチェインを拒否します。詳細は [BUILDING.ja.md](BUILDING.ja.md) と
 [BUILDING-mingw.md](BUILDING-mingw.md)。
 
 ## ドキュメント

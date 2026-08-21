@@ -62,7 +62,18 @@ OBJDIR	= obj-mingw
 # resource depend on it. Changing toolchain, or turning WARN on or off, replaces
 # the stamp and rebuilds and relinks everything; building the same way twice
 # touches nothing.
-ARCHTAG := $(shell $(CC) -dumpmachine)
+#
+# The target triple is not enough to name a toolchain. An apt mingw-w64 and a
+# Homebrew one both call themselves i686-w64-mingw32 and target different C
+# runtimes, so building with one after the other reused every object and linked
+# an exe against the runtime of the first while scripts/build-mingw.sh, asking
+# the compiler rather than the objects, truthfully reported the second. That is
+# worse than the mixed-architecture case it was already guarding: the check
+# meant to catch a wrong-runtime build was the thing being fooled. The runtime
+# and the compiler version go in the tag as well.
+ARCHTAG := $(shell $(CC) -dumpmachine)-$(shell $(CC) -dumpversion)-$(shell \
+	echo | $(CC) -dM -E -include stdio.h - 2>/dev/null \
+	| grep -q '^#define _UCRT' && echo ucrt || echo msvcrt)
 STAMP	= $(OBJDIR)/.built-for-$(ARCHTAG)$(if $(WARN),-warn,)
 
 SRC =	alloc.c buffer.c charset.c cmdcmds.c cmdline.c csearch.c digraph.c \

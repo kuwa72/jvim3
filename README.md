@@ -96,12 +96,14 @@ distribution yet; if you make one, say so and it will be linked here.
 ### Windows, built yourself
 
 ```sh
-sudo apt install mingw-w64                  # cross build from Linux or WSL
+sudo apt install gcc-mingw-w64-i686-win32   # cross build from Linux or WSL
 ./scripts/build-mingw.sh both               # dist/i686/jvim32w.exe + jvim32.exe
 ```
 
 or `pacman -S mingw-w64-i686-gcc make` in the MSYS2 **MINGW32** shell, and the
-same script. [BUILDING-mingw.md](BUILDING-mingw.md) has the rest.
+same script. That package and not the `mingw-w64` metapackage: the build has to
+be against msvcrt, and the script refuses a toolchain that is not.
+[BUILDING-mingw.md](BUILDING-mingw.md) has the rest.
 
 ## Documentation
 

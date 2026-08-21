@@ -102,16 +102,40 @@ output into that file, so it worked in every local build made with a Homebrew
 toolchain and failed in every release, through two releases, until the sources
 stopped using `tmpnam()` at all.
 
-So `scripts/build-mingw.sh` prints the runtime it found on every build, warns
-when it is not msvcrt, and refuses `release` outright -- including when it
-cannot ask the compiler at all.
+**Nothing is built against UCRT here, and nothing is in CI.** There is no such
+configuration to choose: `scripts/build-mingw.sh` refuses to build at all unless
+the toolchain it is about to use targets msvcrt, and it refuses a toolchain it
+cannot ask as well, so a compiler that will not answer never passes for the
+right one.
+
+It finds one itself. With neither `MINGW_BIN` nor `CROSS` set it tries the
+`PATH`, then `/usr/bin`, then a native MSYS2 `gcc`, and takes the first msvcrt
+one -- so a UCRT toolchain earlier in `PATH` does not get to decide, and a
+machine that also does UCRT work elsewhere needs no special handling. To name one
+anyway:
+
+```sh
+MINGW_BIN=/usr/bin ./scripts/build-mingw.sh both       # a directory
+CROSS=/usr/bin/i686-w64-mingw32- ./scripts/build-mingw.sh both   # exact prefix
+```
+
+`MINGW_BIN` is the one to use for `release`, which builds both architectures: a
+`CROSS` names one of them, is inherited by the builds `release` spawns, and would
+hand the 64 bit build a 32 bit compiler. That is refused rather than packaged.
+
+The object stamp carries the runtime and the compiler version, not just the
+target triple, because an apt mingw-w64 and a Homebrew one both call themselves
+`i686-w64-mingw32`. Without that, building with one after the other reused every
+object and linked an exe against the first one's runtime while the script,
+asking the compiler rather than the objects, truthfully reported the second --
+the check being fooled instead of doing its job.
+
+### Testing the release artifact itself
 
 There is no Windows runtime test in CI, so testing on Windows by hand is the
-only Windows testing there is, and a build with the other runtime does not count
-as it. Two ways to have one that does.
-
-**Take the binary CI built.** Nothing to install, and it is the same executable
-the release page serves:
+only Windows testing there is. A local build is now the same runtime as the
+release, so it counts; to test the exact executable the release page serves,
+take the one CI built:
 
 ```sh
 scripts/fetch-ci-build.sh                 # the newest good run for HEAD
@@ -125,16 +149,6 @@ checked rather than assumed. The destination matters: started from a WSL
 directory the editor's cwd reaches `cmd.exe` as a UNC path, which it refuses, so
 `:r !cmd` would run in `C:\Windows` and the test would not be testing the
 editor. `DEST=` overrides it.
-
-**Or install the msvcrt toolchain beside the other one.** They coexist -- apt's
-lands in `/usr/bin`, Homebrew's in `/home/linuxbrew/.linuxbrew/bin` -- and
-`CROSS` picks one per build without touching `PATH`, so a machine that also does
-UCRT work does not have to choose:
-
-```sh
-sudo apt install gcc-mingw-w64-i686-win32 gcc-mingw-w64-x86-64-win32
-CROSS=/usr/bin/i686-w64-mingw32- ./scripts/build-mingw.sh both
-```
 
 ## What is and is not in this build
 

@@ -65,9 +65,35 @@ sudo install -m 644 doc/vim.1           /usr/local/man/man1/jvim3.1
 Linux / WSL からクロスビルドする場合:
 
 ```sh
-sudo apt install mingw-w64          # または brew install mingw-w64
+sudo apt install gcc-mingw-w64-i686-win32 gcc-mingw-w64-x86-64-win32
 ./scripts/build-mingw.sh both       # jvim32w.exe (GUI) + jvim32.exe (コンソール)
 ```
+
+`mingw-w64` メタパッケージや Homebrew の `mingw-w64` ではなくこのパッケージ名です。
+**ビルドは msvcrt に対して行う必要があり**、UCRT のビルドはローカルでも CI でも
+行いません。mingw-w64 がどちらの C ランタイムを対象にするかはツールチェイン自体を
+ビルドした時点で決まる (ヘッダが `_UCRT` を定義するかどうか、`libmingwex` もそれに
+合わせてコンパイル済み) ため、コンパイラのフラグでは変更できません。Debian の
+`gcc-mingw-w64-*-win32` は msvcrt、Homebrew の `mingw-w64` は UCRT です。
+
+`scripts/build-mingw.sh` は使おうとしているツールチェインが msvcrt かどうかを
+確認し、そうでなければ (問い合わせに失敗した場合も) ビルドを拒否します。
+`MINGW_BIN` も `CROSS` も未設定なら、`PATH` → `/usr/bin` → MSYS2 のネイティブ
+`gcc` の順に試して最初に見つかった msvcrt のものを使うので、`PATH` の先頭に UCRT の
+ツールチェインがあっても影響しません。明示する場合:
+
+```sh
+MINGW_BIN=/usr/bin ./scripts/build-mingw.sh both                  # ディレクトリ
+CROSS=/usr/bin/i686-w64-mingw32- ./scripts/build-mingw.sh both    # 正確な接頭辞
+```
+
+両アーキテクチャをビルドする `release` では `MINGW_BIN` を使ってください。`CROSS`
+は片方のアーキテクチャを指すもので、`release` が起動する子ビルドにも引き継がれ、
+64bit のビルドに 32bit のコンパイラを渡してしまいます。これはパッケージ化せずに
+拒否されます。
+
+なぜ msvcrt なのか、`tmpnam()` で実際に何が起きたかは
+[BUILDING-mingw.md](BUILDING-mingw.md) の "Which C runtime" にあります。
 
 MSYS2 の **MINGW32** シェルでネイティブにビルドする場合:
 
