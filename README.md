@@ -18,9 +18,11 @@ a machine from this decade.
 
 ```
 Latest release   v3.0-j2.1b-utf8.4
-Platforms        Windows 10/11 (Win32 GUI + console), Linux, macOS,
+Platforms        Windows 10/11 (Win32 GUI + console), Linux,
                  FreeBSD, NetBSD, OpenBSD, DragonFly
-Tests            100 cases, run on all of the above in CI
+Tests            110 cases, run on all of the above in CI. The Windows
+                 keyboard has 14 more in scripts/test-winkeys.sh, typed on
+                 the real thing from WSL
 Licence          Public domain / charityware — see uganda.txt
 ```
 
@@ -33,7 +35,7 @@ Licence          Public domain / charityware — see uganda.txt
 | File names outside CP932 | The manifest asks for UTF-8 as the process code page, so the `...A` file APIs take UTF-8 and a file called `🍣.txt` opens. |
 | Display scaling | The process is per-monitor DPI aware, and the stored font and window sizes are restated for the DPI in front of them, so text is sharp at 125% and 150% and stays that way when the window is dragged between monitors. |
 | Builds anywhere Unix-ish | `scripts/build-unix.sh` asks the compiler what the machine has instead of asking you to uncomment three lines in a makefile. `scripts/build-mingw.sh` cross builds the Windows executables with mingw-w64. |
-| 100 tests | 42 encoding cases and 58 editing cases, driven through a real pty. Every push runs them on six operating systems. |
+| 110 tests | 46 encoding cases and 64 editing cases, driven through a real pty. Every push runs them on five operating systems. |
 | Long standing bugs fixed | Fifteen of them, listed in [BUILDING-mingw.md](BUILDING-mingw.md#bugs-found-along-the-way) — `[あ]` in a regexp also matching `い`, a command line reading `buff[-1]`, encoding detection tipping a whole file over to Shift-JIS because of one emoji, terminal input mangling a character split across two reads. |
 | Two features removed | BDF font rendering and editing inside LHA/ZIP/TAR archives are gone, sources and all, because their terms made the tree awkward to redistribute. See [below](#licence). |
 
@@ -59,17 +61,17 @@ where it is, and `_jvimrc.sample` to read before writing your own.
 [USAGE.md](USAGE.md#first-run-on-windows) has the ten minutes of setup worth
 doing.
 
-### Linux, macOS, FreeBSD, NetBSD, OpenBSD, DragonFly
+### Linux, FreeBSD, NetBSD, OpenBSD, DragonFly
 
 ```sh
 git clone https://github.com/kuwa72/jvim3
 cd jvim3
-./scripts/build-unix.sh test        # build src/jvim3, then run the 100 tests
+./scripts/build-unix.sh test        # build src/jvim3, then run the 110 tests
 ```
 
 You need a C compiler and, for the real terminal database rather than the
 entries compiled in, a curses or termcap library (`libncurses-dev` on Debian and
-Ubuntu; already there on macOS and the BSDs). The script prints what it found:
+Ubuntu; already there on the BSDs). The script prints what it found:
 
 ```
 configuring for Linux 6.18.33, cc
@@ -81,6 +83,10 @@ configuring for Linux 6.18.33, cc
   terminal               -DTERMCAP -DSOME_BUILTIN_TCAPS -ltinfo
   X11 title              yes
 ```
+
+macOS builds too, but it is not a target here: nobody has one to try, so it is
+not in CI and not verified. See the unverified list in
+[BUILDING-unix.md](BUILDING-unix.md).
 
 To install it by hand:
 
@@ -112,7 +118,7 @@ This tree's own docs:
 | | |
 | --- | --- |
 | [USAGE.md](USAGE.md) / [USAGE.ja.md](USAGE.ja.md) | Running it, where settings live, the encoding model, IME, display, troubleshooting. **Start here.** |
-| [BUILDING-unix.md](BUILDING-unix.md) | Building on Linux, macOS and the BSDs; what the script detects; what CI covers; what is verified and what is not. |
+| [BUILDING-unix.md](BUILDING-unix.md) | Building on Linux and the BSDs; what the script detects; what CI covers; what is verified and what is not. |
 | [BUILDING-mingw.md](BUILDING-mingw.md) | Building for Windows; and the long version of how UTF-8, the Unicode GUI, DPI awareness and the drawing of a row of text actually work. |
 | [BUILDING.ja.md](BUILDING.ja.md) | ビルド手順の日本語版 (both platforms). |
 
@@ -179,8 +185,8 @@ so they exercise the same input path a person does. Each case is given 20
 seconds before it is killed, so a case that leaves the editor waiting for a key
 fails rather than hanging the suite.
 
-Every push and pull request builds and runs all 100 on Linux, macOS, FreeBSD,
-NetBSD, OpenBSD and DragonFly, and cross builds both Windows architectures. A
+Every push and pull request builds and runs all 110 on Linux, FreeBSD, NetBSD,
+OpenBSD and DragonFly, and cross builds both Windows architectures. A
 tag matching `v*` does the same and then publishes the Windows zips, so a broken
 build cannot become a release. See
 [.github/workflows/build.yml](.github/workflows/build.yml).

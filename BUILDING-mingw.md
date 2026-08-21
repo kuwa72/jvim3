@@ -132,8 +132,18 @@ the check being fooled instead of doing its job.
 
 ### Testing the release artifact itself
 
-There is no Windows runtime test in CI, so testing on Windows by hand is the
-only Windows testing there is. A local build is now the same runtime as the
+There is no Windows runtime test in CI, but there is one to run by hand:
+`scripts/test-winkeys.sh` types into both builds for real -- console key events
+for one, window messages for the other -- and covers the cursor keys, the
+function keys, CTRL-@ and the file name cases that only Windows has. It needs
+WSL on Windows and takes a couple of minutes:
+
+```sh
+scripts/test-winkeys.sh                          # src/jvim32.exe, src/jvim32w.exe
+scripts/test-winkeys.sh <console.exe> <gui.exe>  # or a pair from a release
+```
+
+Beyond that, testing on Windows by hand is the only Windows testing there is. A local build is now the same runtime as the
 release, so it counts; to test the exact executable the release page serves,
 take the one CI built:
 

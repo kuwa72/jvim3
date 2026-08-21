@@ -16,10 +16,11 @@ Shift-JIS ではなく UTF-8 を保持する**ようになりました。CP932 �
 これは今のマシンで動きます。
 
 ```
-最新リリース   v3.0-j2.1b-utf8.4
-対応環境       Windows 10/11 (Win32 GUI + コンソール)、Linux、macOS、
+最新リリース   v3.0-j2.1b-utf8.9
+対応環境       Windows 10/11 (Win32 GUI + コンソール)、Linux、
                FreeBSD、NetBSD、OpenBSD、DragonFly
-テスト         100 ケース。上記すべてで CI が実行
+テスト         110 ケース。上記すべてで CI が実行。Windows のキー入力は
+               scripts/test-winkeys.sh の 14 ケース (WSL から実機で実行)
 ライセンス     パブリックドメイン / charityware — uganda.txt 参照
 ```
 
@@ -57,18 +58,21 @@ Shift-JIS ではなく UTF-8 を保持する**ようになりました。CP932 �
 ます) と、自分の設定を書く前に読むための `_jvimrc.sample` も入っています。初期
 設定は [USAGE.ja.md](USAGE.ja.md#windows-での最初の設定) にあります。
 
-### Linux、macOS、FreeBSD、NetBSD、OpenBSD、DragonFly
+### Linux、FreeBSD、NetBSD、OpenBSD、DragonFly
 
 ```sh
 git clone https://github.com/kuwa72/jvim3
 cd jvim3
-./scripts/build-unix.sh test        # src/jvim3 をビルドして 100 個のテストを実行
+./scripts/build-unix.sh test        # src/jvim3 をビルドして 110 個のテストを実行
 ```
 
 必要なのは C コンパイラと、組み込みの端末定義ではなく本物の端末データベースを
 使うための curses / termcap ライブラリです (Debian・Ubuntu なら
-`libncurses-dev`、macOS と BSD には最初から入っています)。スクリプトは何を見つけ
+`libncurses-dev`、BSD には最初から入っています)。スクリプトは何を見つけ
 たかを表示します。
+
+macOS でもビルドは通りますが、手元で確認できないため対象外です
+([BUILDING-unix.md](BUILDING-unix.md) の未検証の項を参照)。
 
 ```
 configuring for Linux 6.18.33, cc
@@ -113,7 +117,7 @@ MSYS2 の **MINGW32** シェルなら `pacman -S mingw-w64-i686-gcc make` を入
 | --- | --- |
 | [USAGE.ja.md](USAGE.ja.md) / [USAGE.md](USAGE.md) | 起動方法、設定ファイルの場所、文字コードの扱い、IME、画面表示、トラブルシューティング。**まずここから。** |
 | [BUILDING.ja.md](BUILDING.ja.md) | Unix / Windows 両方のビルド手順 (日本語)。 |
-| [BUILDING-unix.md](BUILDING-unix.md) | Linux・macOS・BSD でのビルド。スクリプトが何を検出するか、CI が何を見ているか、何が検証済みで何がそうでないか (英語)。 |
+| [BUILDING-unix.md](BUILDING-unix.md) | Linux・BSD でのビルド。スクリプトが何を検出するか、CI が何を見ているか、何が検証済みで何がそうでないか (英語)。 |
 | [BUILDING-mingw.md](BUILDING-mingw.md) | Windows 版のビルドと、UTF-8 化・Unicode GUI・DPI 対応・1 行の描画が実際にどう動いているかの詳しい話 (英語)。 |
 
 JVim 自身のマニュアル (`doc.j/`、ISO-2022-JP):
@@ -176,8 +180,8 @@ Vim 3.0 のマニュアル (`doc/`、1994 年、英語):
 するので、人が打つのと同じ入力経路を通ります。各ケースには 20 秒の制限があり、
 キー入力待ちで止まったケースはスイートを固めずに失敗します。
 
-push と pull request のたびに、Linux・macOS・FreeBSD・NetBSD・OpenBSD・DragonFly
-の 6 環境で 100 ケースすべてを実行し、Windows 版を両アーキテクチャでクロスビルド
+push と pull request のたびに、Linux・FreeBSD・NetBSD・OpenBSD・DragonFly の 5
+環境で 110 ケースすべてを実行し、Windows 版を両アーキテクチャでクロスビルド
 します。`v*` のタグはそれに加えて Windows の zip を公開するので、壊れたビルドが
 リリースになることはありません
 ([.github/workflows/build.yml](.github/workflows/build.yml))。

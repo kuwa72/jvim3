@@ -36,7 +36,7 @@ for a key fails instead of hanging the suite.
 ## What CI covers
 
 Every push and pull request builds and runs both suites on **Linux**,
-**macOS**, **FreeBSD**, **NetBSD**, **OpenBSD** and **DragonFly**, and cross
+**FreeBSD**, **NetBSD**, **OpenBSD** and **DragonFly**, and cross
 builds the Windows executables with mingw-w64, 32 and 64 bit. A tag matching
 `v*` does the same and then publishes the Windows build to the release page, so
 a broken build cannot become a release. See
@@ -137,26 +137,20 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 Verified on FreeBSD 14.3-RELEASE-p16, clang 19.1.7, amd64, in the QEMU guest
 `scripts/test-bsd-docker.sh` builds:
 
-- All 100 tests
+- All 110 tests
 - `-DTERMCAP` against base ncurses, found as `-ltinfo`
 - `jmask` following `LANG`: `ja_JP.UTF-8` gives `TTTT`, `ja_JP.eucJP` gives
   `EEEE`, `C` gives `EEET`
 - Both tty paths: `-DBSD4_4` (`<termios.h>`, what the script picks now) and the
-  `<sgtty.h>` branch it used to take. Each passes all 100 tests. The `BSD4_4`
+  `<sgtty.h>` branch it used to take. Each passes all 110 tests. The `BSD4_4`
   branch had never been compiled before — it cannot be, against Linux headers.
 
 Verified on NetBSD 10.1, gcc 10.5.0, amd64, the same way:
 
-- All 100 tests
+- All 110 tests
 - `-DTERMCAP` against base curses, found as `-lcurses`
 - Three warnings for the whole build, all `-Wint-to-pointer-cast` in
   `buffer.c`, which are the `%ld` ones described above.
-
-Verified on macOS (Darwin 25.5, Apple clang, arm64) in CI:
-
-- All 100 tests
-- `-DTERMCAP` against the system ncurses
-- `-DBSD4_4`, i.e. `<termios.h>`; nothing here relies on `<sgtty.h>` any more
 
 Verified in CI, on whatever release the VM images carry — FreeBSD 15.1,
 NetBSD 11.0 and OpenBSD 7.9 at the time of writing, plus DragonFly. All 100
@@ -166,6 +160,11 @@ for it, so it has never been looked at interactively.
 
 **Not** verified:
 
+- macOS. It was in CI until 2026-08 and passed, but it is not a target anybody
+  here can try by hand, and a failure there is a puzzle nobody is in a position
+  to solve. One had turned up by then: an escape sequence arriving as the very
+  first thing typed was not recognised, which no other system does. The
+  `__APPLE__` paths in `unix.h` and `unix.c` stay, because the BSDs share them.
 - Real hardware, a real terminal and a real IME. Everything above is a serial
   console, a pty or a CI runner.
 - X11 title saving anywhere but Linux: no BSD guest and no CI runner has the X
