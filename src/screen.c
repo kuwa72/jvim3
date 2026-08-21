@@ -566,15 +566,31 @@ win_redr_status(WIN *wp)
 			home_replace(p, NameBuff, MAXPATHL);
 			p = NameBuff;
 		}
-		len = STRLEN(p);
+		/*
+		 * Screen columns, not bytes. A file name three bytes a character was
+		 * treated as three times as wide as it is, so it was cut short long
+		 * before it had to be, and the cut was made by byte arithmetic -- which
+		 * landed inside a character and left the first one on the status line
+		 * as junk.
+		 */
+		len = strsize(p);
 		if (wp->w_buffer->b_changed)
-			len += 4;
+			len += 4;					/* " [+]" */
 		if (len > ru_col - 1)
 		{
 			screen_outchar('<', row, 0);
-			p += len - (ru_col - 1) + 1;
-			len = (ru_col - 1);
 			col = 1;
+			/* drop whole characters off the front until the rest fits */
+			while (*p != NUL && len > ru_col - 1 - col)
+			{
+				len -= charsize(p);
+#ifdef KANJI
+				p += utf_lenat(p, 0);
+#else
+				++p;
+#endif
+			}
+			len += col;					/* the '<' takes a column as well */
 		}
 		screen_msg(p, row, col);
 		if (wp->w_buffer->b_changed)
@@ -1084,6 +1100,14 @@ screen_msg(char_u *msg, int row, int col)
 {
 	char_u	*screenp;
 
+	/*
+	 * LinePointers has Rows entries and nothing here bounds 'row' against it,
+	 * so a caller that has walked off the bottom of the screen used to write
+	 * through whatever followed the array. Drawing nothing loses a message;
+	 * the alternative lost the session.
+	 */
+	if (row < 0 || row >= Rows || col < 0 || col >= Columns)
+		return;
 	screenp = LinePointers[row] + col;
 	while (*msg && col < Columns)
 	{

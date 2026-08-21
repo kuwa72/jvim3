@@ -46,7 +46,7 @@ static char_u *opt_delet	__ARGS((char_u *, int, int, int, int, int, int, int));
 filemess(char_u *name, char_u *s)
 {
 		/* careful: home_replace calls vimgetenv(), which also uses IObuff! */
-	home_replace(name, IObuff + 1, IOSIZE - 1);
+	home_replace(name, IObuff + 1, MSGNAMELEN);
 	IObuff[0] = '"';
 	STRCAT(IObuff, "\" ");
 	STRCAT(IObuff, s);
@@ -570,7 +570,7 @@ readfile(char_u *fname, char_u *sfname, linenr_t from, int newfile, linenr_t ski
 	}
 
 		/* careful: home_replace calls vimgetenv(), which also uses IObuff! */
-	home_replace(fname, IObuff + 1, IOSIZE - 1);
+	home_replace(fname, IObuff + 1, MSGNAMELEN);
 	IObuff[0] = '"';
 	sprintf((char *)IObuff + STRLEN(IObuff),
 #ifdef KANJI
@@ -1377,7 +1377,7 @@ nexttry:
 	if (!did_cd)
 		fname = sfname;
 #endif
-	home_replace(fname, IObuff + 1, IOSIZE - 1);
+	home_replace(fname, IObuff + 1, MSGNAMELEN);
 	IObuff[0] = '"';
 	sprintf((char *)IObuff + STRLEN(IObuff),
 #ifdef KANJI

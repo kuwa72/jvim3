@@ -152,12 +152,21 @@ help(void)
 		fnamep = searchpath("vim.hlp");
 #  else
 		{
-			static char buf[MAXPATHL];
-			char	*	p = &buf[MAXPATHL - (strlen("vim.hlp") + 1)];
-			int			len;
+			/*
+			 * SearchPathW, not SearchPathA: the ANSI one stops at 260
+			 * characters (see FullName() in winjnt.c). The name comes back as
+			 * UTF-8, which is what the rest of this build hands to kopen().
+			 */
+			static char		buf[MAXPATHL];
+			WCHAR			w[MAXPATHL];
+			WCHAR		*	tail;
+			DWORD			len;
 
-			len = SearchPath(NULL, "vim.hlp", NULL, MAXPATHL, buf, &p);
-			if ((len == 0) || ( len > MAXPATHL))
+			len = SearchPathW(NULL, L"vim.hlp", NULL,
+								(DWORD)(sizeof(w) / sizeof(w[0])), w, &tail);
+			if (len == 0 || len >= (DWORD)(sizeof(w) / sizeof(w[0]))
+					|| WideCharToMultiByte(CP_UTF8, 0, w, -1, buf,
+											sizeof(buf), NULL, NULL) <= 0)
 				fnamep = NULL;
 			else
 				fnamep = buf;

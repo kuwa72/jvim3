@@ -111,11 +111,23 @@
 #endif
 
 #ifdef	WIN32		/*Tom_W*/
+/*
+ * The directory scan is find_first_name()/find_next_name() in winjnt.c rather
+ * than FindFirstFileA/FindNextFileA: the ANSI API cannot hand back the name of a
+ * file with Japanese in it once the process code page is UTF-8, and reports that
+ * as FALSE, which read as the end of the directory. Declared here rather than
+ * included, so that this file keeps needing nothing but windows.h.
+ */
+#define	FIND_NAMELEN	(MAX_PATH * 3 + 1)
+extern HANDLE	find_first_name(char *pat, char *name, int namelen, DWORD *attr);
+extern int		find_next_name(HANDLE hFind, char *name, int namelen, DWORD *attr);
+
 typedef	struct {
 	HANDLE 			hFind;
-	WIN32_FIND_DATA 	data;
+	DWORD			attr;
+	char			name[FIND_NAMELEN];
 } DTA_BUF;
-#define	d_attribute	data.dwFileAttributes
+#define	d_attribute	attr
 #undef	ArgsAttr
 #define ArgsAttr	FILE_ATTRIBUTE_NORMAL
 #undef	DirAttr
@@ -365,16 +377,18 @@ static char *find_file(char *dir, int attr, DTA_BUF *dtabuf)
 {
 
 	if (dir != (char *) 0) {	/* get first entry */
-		if ((dtabuf->hFind = FindFirstFile(dir, &dtabuf->data))
+		if ((dtabuf->hFind = find_first_name(dir, dtabuf->name,
+						sizeof(dtabuf->name), &dtabuf->attr))
 						 == INVALID_HANDLE_VALUE)
 			return (char *)0;
 	} else {			/* get next entry */
-		if (!FindNextFile(dtabuf->hFind, &dtabuf->data)) {
+		if (!find_next_name(dtabuf->hFind, dtabuf->name,
+						sizeof(dtabuf->name), &dtabuf->attr)) {
 			FindClose(dtabuf->hFind);
 			return (char *)0;
 		}
 	}
-	return dtabuf->data.cFileName;
+	return dtabuf->name;
 }
 #else	/*!WIN32*/
 static void set_dta(DTA_BUF *dtabuf)
@@ -557,7 +571,10 @@ expand_arg(char *arg, char *wld,
 	static char *work;
 
 	if (wld == NULL) {
-		work = xalloc(strlen(arg) + 128 + 1);
+		/* the prefix, plus room for the longest name that can be pasted onto
+		 * it -- a UTF-8 name needs far more than the 128 bytes this used to
+		 * reserve */
+		work = xalloc(strlen(arg) + FIND_NAMELEN + 1);
 		work[0] = '\0';
 		wld = work;
 	}

@@ -3400,11 +3400,15 @@ showmatches(char_u *file, int len)
 # endif
 #endif /* WEBB_COMPLETE */
 
-	/* find the maximum length of the file names */
+	/*
+	 * Find the widest of the file names. strsize(), not STRLEN(): this lays the
+	 * names out in columns, and a name three bytes a character is not three
+	 * times as wide as one that is one.
+	 */
 	maxlen = 0;
 	for (i = 0; i < num_files; ++i)
 	{
-		j = STRLEN(files_found[i]);
+		j = strsize(files_found[i]);
 		if (j > maxlen)
 			maxlen = j;
 	}
@@ -3424,7 +3428,7 @@ showmatches(char_u *file, int len)
 		for (k = i; k < num_files; k += lines)
 		{
 			if (k > i)
-				for (j = maxlen - STRLEN(files_found[k - lines]); --j >= 0; )
+				for (j = maxlen - strsize(files_found[k - lines]); --j >= 0; )
 					msg_outchar(' ');
 #ifdef WEBB_COMPLETE
 			if (expand_context == EXPAND_FILES)
@@ -4331,24 +4335,20 @@ ExpandFromContext(char_u *pat, int *num_file, char_u ***file, int files_only, in
 		if (ExpandWildCards(1, &fname, num_file, file, files_only, list_notfound)
 																	== FAIL)
 			return FAIL;
-		for (i = 0; i < *num_file; i++)
-		{
-			fname = fileconvsfrom((*file)[i]);
-			free((*file)[i]);
-			(*file)[i] = strsave(fname);
-		}
 #else
 		if (ExpandWildCards(1, &pat, num_file, file, files_only, list_notfound)
 																	== FAIL)
 			return FAIL;
 #endif
+		/*
+		 * Throw out what is not a directory first, and convert what is left
+		 * after. The names arrive in the code the file system speaks, which is
+		 * what isdir() wants; converting them all to the internal code and then
+		 * each one straight back again to ask was a round trip per name.
+		 */
 		count = 0;
 		for (i = 0; i < *num_file; i++)
-#ifdef KANJI
-			if (isdir(fileconvsto((*file)[i])))
-#else
 			if (isdir((*file)[i]))
-#endif
 				(*file)[count++] = (*file)[i];
 			else
 				free((*file)[i]);
@@ -4360,6 +4360,14 @@ ExpandFromContext(char_u *pat, int *num_file, char_u ***file, int files_only, in
 			return FAIL;
 		}
 		*num_file = count;
+#ifdef KANJI
+		for (i = 0; i < *num_file; i++)
+		{
+			fname = fileconvsfrom((*file)[i]);
+			free((*file)[i]);
+			(*file)[i] = strsave(fname);
+		}
+#endif
 		return OK;
 	}
 	*file = (char_u **)"";

@@ -1670,9 +1670,16 @@ show_special(char_u *keys, int len)
 	char_u			buf[CMDBUFFSIZE + 1];
 	char_u		*	p;
 	char_u		*	w;
+	char_u		*	end;
 
+	/*
+	 * Each special key grows from the two bytes it is held in to a name of up to
+	 * nine ("#[SRIGHT]"), so what comes out is longer than what went in and can
+	 * be several times as long. Nothing bounded it against 'buf'.
+	 */
+	end = buf + sizeof(buf) - 1;
 	p = buf;
-	while (*keys)
+	while (*keys && p < end)
 	{
 		if (*keys == K_SPECIAL)
 		{
@@ -1681,16 +1688,19 @@ show_special(char_u *keys, int len)
 				if ((special_keys[i].key & 0xff) == keys[1])
 				{
 					w = special_keys[i].name;
-					while (*w)
-						*p++ = *w++;
 					break;
 				}
 			}
 			if (w != NULL)
 			{
+				if (p + STRLEN(w) >= end)
+					break;				/* no room for the name */
+				while (*w)
+					*p++ = *w++;
 				keys += 2;
 				continue;
 			}
+			/* not a key we have a name for: fall through and show the byte */
 		}
 		*p++ = *keys++;
 	}

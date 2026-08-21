@@ -356,7 +356,10 @@ main(int argc, char **argv)
 				}
 				break;
 			case 'I':
-				STRCPY(GuiIni, argv[0]);
+				/* whatever is on the command line, and GuiIni is a fixed
+				 * MAXPATHL array */
+				STRNCPY(GuiIni, argv[0], (size_t)(MAXPATHL - 1));
+				GuiIni[MAXPATHL - 1] = NUL;
 				break;
 #endif
 

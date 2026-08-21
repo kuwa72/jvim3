@@ -6,6 +6,18 @@
   reached through fileconvsto(), and with 'jmask' asking for UTF-8 as the system
   code the name now goes to them unchanged.
 
+  longPathAware lifts the 260 character limit on a path. It needs Windows 10 1607
+  or later with LongPathsEnabled in
+  HKLM\SYSTEM\CurrentControlSet\Control\FileSystem, which is off by default, so
+  this changes nothing on a machine that has not turned it on. Where it is on,
+  the ...A file APIs (open, stat, CreateFile) start accepting the long ones;
+  GetFullPathName does not, whatever the manifest says, which is why FullName()
+  in winjnt.c goes through the wide call instead.
+
+  Note for the next person editing this file: it is XML, so a comment may not
+  contain a double hyphen. One here made the manifest invalid, and Windows then
+  refused to start the exe at all with a side-by-side configuration error.
+
   dpiAware/dpiAwareness say the process places its own pixels. Without them
   Windows draws the whole window at 96 DPI and then stretches the result to the
   display scale, which resamples finished glyphs. Text comes out soft and
@@ -28,6 +40,7 @@
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>
       <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
       <!--
         Per monitor from Windows 10 1703, per monitor on 8.1, system DPI before
         that. Windows reads the first level in the list it understands, so the

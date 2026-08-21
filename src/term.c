@@ -500,8 +500,21 @@ flushbuf(void)
 		/*
 		 * The screen is written in the internal encoding, which is UTF-8, so a
 		 * terminal that wants anything else needs a conversion here.
+		 *
+		 * The Win32 GUI is not a terminal and 'jmask's display code has nothing
+		 * to say about it: mch_write() reads this stream as UTF-8 -- see what it
+		 * says about v_col and byte counts in winjnt.c -- and the text itself is
+		 * drawn from the screen array with ExtTextOutW, not from these bytes.
+		 * Folding them into the display code first cost a conversion on every
+		 * flush and turned everything outside the code page into '?', which is
+		 * what left mch_write() counting bytes for columns of characters that
+		 * were no longer there.
 		 */
-		if (JP_DISP != JP_UTF8)
+		if (JP_DISP != JP_UTF8
+#ifdef NT
+				&& !GuiWin
+#endif
+									)
 		{
 			char_u *tmpptr;
 

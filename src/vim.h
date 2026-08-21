@@ -326,6 +326,15 @@ typedef unsigned long	long_u;
 #define LSIZE		512			/* max. size of a line in the tags file */
 
 #define IOSIZE	   (1024+1) 	/* file i/o and sprintf buffer size */
+/*
+ * How much of IObuff a file name may take when it goes into a message. The rest
+ * of the message -- "[readonly] [long lines split] N lines, N characters" and
+ * the like -- is sprintf()ed on after the name, and home_replace() filling the
+ * buffer to its last byte first left that writing past the end. Names are longer
+ * than they were: MAXPATHL counts bytes, and a UTF-8 name is three of them a
+ * character.
+ */
+#define MSGNAMELEN (IOSIZE - 200)	/* file name in a message, with room after */
 
 #define	TERMBUFSIZE	1024
 
@@ -341,10 +350,27 @@ typedef unsigned long	long_u;
 #ifdef UNIX
 # define MAXPATHL	1024		/* Unix has long paths and plenty of memory */
 #else
-# if 0
-# define MAXPATHL	128			/* not too long to put name on stack */
+# ifdef NT
+/*
+ * A count of bytes, and a name is held in UTF-8 -- three bytes a character for
+ * Japanese. MAX_PATH (260) is a count of *characters*, so 260 bytes would not
+ * even fit a name Windows itself considers legal: a file whose name ran past it
+ * could not be opened, because the completion offered the name and ":e" then
+ * truncated it to a path that did not exist.
+ *
+ * 4096 rather than 3 * 260: jvim.manifest asks for longPathAware, so where
+ * Windows has long paths turned on there is no 260 character limit to scale
+ * from. 4096 bytes is 1365 Japanese characters, past anything a real tree
+ * produces, and FullName() reports a path that does not fit rather than
+ * shortening it into a name that means something else.
+ */
+#  define MAXPATHL	4096
 # else
-# define MAXPATHL	260			/* WIN-NT or WIN-95 later max 260 char */
+#  if 0
+#  define MAXPATHL	128			/* not too long to put name on stack */
+#  else
+#  define MAXPATHL	260			/* MS-DOS names are short and stacks small */
+#  endif
 # endif
 #endif
 

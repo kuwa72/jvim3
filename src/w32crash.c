@@ -16,9 +16,18 @@
  *      <dir>/jvim-crash-<pid>-<time>.dmp   minidump (if dbghelp.dll is there)
  * where <dir> is $JVIM_CRASHDIR, else %LOCALAPPDATA%\jvim3, else %TEMP%.
  *
- * Addresses are logged twice: as loaded, and relocated back to the address the
- * image was linked at ("static"). Feed the static one to addr2line to get
- * file:line, see ../scripts/resolve-crash.sh.
+ * Each address is logged as loaded and as an offset in its module. The offset is
+ * the part to use: ../scripts/resolve-crash.sh adds the exe's ImageBase to it
+ * and asks addr2line.
+ *
+ * There is deliberately no attempt to print the address the image was linked at.
+ * ASLR relocates the exe, and the loader rewrites OptionalHeader.ImageBase in
+ * the mapped image to wherever it actually put it -- so the header a running
+ * process can read reports the runtime base, and the link time base is not
+ * recoverable from inside. This did print a "static=" field computed that way,
+ * which therefore came out equal to the running address and resolved every frame
+ * to "??". The base pair goes in the header of the report so that this stays
+ * visible rather than being inferred again.
  *
  * Set $JVIM_CRASH_QUIET to suppress the message box.
  */
@@ -90,15 +99,44 @@ crash_excname(DWORD code)
  * Describe an address: owning module, offset in it, and the address the module
  * was linked at (what addr2line wants, ASLR undone).
  */
+/*
+ * The address 'base' was linked at, out of its own PE header; 'base' itself when
+ * the header cannot be read (see the note at the top of this file).
+ */
+	static DWORD_PTR
+crash_linkedbase(HMODULE base)
+{
+	PIMAGE_DOS_HEADER	dos;
+	PIMAGE_NT_HEADERS	nth;
+
+	dos = (PIMAGE_DOS_HEADER)base;
+	if (dos->e_magic == IMAGE_DOS_SIGNATURE)
+	{
+		nth = (PIMAGE_NT_HEADERS)((char *)base + dos->e_lfanew);
+		if (nth->Signature == IMAGE_NT_SIGNATURE)
+			return (DWORD_PTR)nth->OptionalHeader.ImageBase;
+	}
+	return (DWORD_PTR)base;
+}
+
+/*
+ * The two bases for the running image, for the header of the report.
+ */
+	static void
+crash_bases(DWORD_PTR *run, DWORD_PTR *linked)
+{
+	HMODULE		self = GetModuleHandleA(NULL);
+
+	*run = (DWORD_PTR)self;
+	*linked = crash_linkedbase(self);
+}
+
 	static void
 crash_where(FILE *fp, const char *what, void *addr)
 {
 	MEMORY_BASIC_INFORMATION	mbi;
-	char						name[MAXPATHL];
+	static char					name[MAXPATHL];	/* see crash_filter() */
 	HMODULE						base;
-	PIMAGE_DOS_HEADER			dos;
-	PIMAGE_NT_HEADERS			nth;
-	DWORD_PTR					linked;
 
 	if (VirtualQuery(addr, &mbi, sizeof(mbi)) != sizeof(mbi)
 			|| mbi.AllocationBase == NULL)
@@ -110,19 +148,9 @@ crash_where(FILE *fp, const char *what, void *addr)
 	if (GetModuleFileNameA(base, name, sizeof(name)) == 0)
 		lstrcpynA(name, "<unknown module>", sizeof(name));
 
-	linked = (DWORD_PTR)base;
-	dos = (PIMAGE_DOS_HEADER)base;
-	if (dos->e_magic == IMAGE_DOS_SIGNATURE)
-	{
-		nth = (PIMAGE_NT_HEADERS)((char *)base + dos->e_lfanew);
-		if (nth->Signature == IMAGE_NT_SIGNATURE)
-			linked = (DWORD_PTR)nth->OptionalHeader.ImageBase;
-	}
-
-	fprintf(fp, "%s %p  %s+0x%lx  static=0x%lx\n",
+	fprintf(fp, "%s %p  %s+0x%lx\n",
 			what, addr, gettail((char_u *)name),
-			(unsigned long)((DWORD_PTR)addr - (DWORD_PTR)base),
-			(unsigned long)((DWORD_PTR)addr - (DWORD_PTR)base + linked));
+			(unsigned long)((DWORD_PTR)addr - (DWORD_PTR)base));
 }
 
 /*
@@ -232,8 +260,14 @@ crash_filter(EXCEPTION_POINTERS *ep)
 {
 	FILE			*fp;
 	SYSTEMTIME		st;
-	char			dir[MAXPATHL];
-	char			exe[MAXPATHL];
+	/*
+	 * static: this runs on the stack of a process that has just faulted, and one
+	 * of the ways to get here is having run out of it. MAXPATHL is 4096, so two
+	 * of these as locals is 8K of stack asked for at the worst possible moment,
+	 * and there is only ever one of this frame (crash_busy sees to that).
+	 */
+	static char		dir[MAXPATHL];
+	static char		exe[MAXPATHL];
 	DWORD			code;
 
 	/* A fault while reporting must not loop. */
@@ -264,6 +298,20 @@ crash_filter(EXCEPTION_POINTERS *ep)
 		fprintf(fp, "            %s\n", (char *)longJpVersion);
 #endif
 		fprintf(fp, "  exe       %s\n", exe);
+		{
+			/*
+			 * Which base the addresses below were undone with: the linked one
+			 * from the PE header, or the runtime one because that could not be
+			 * read. If the two are the same, "static=" is a running address.
+			 */
+			DWORD_PTR	run = 0, linked = 0;
+
+			crash_bases(&run, &linked);
+			fprintf(fp, "  base      run=0x%lx header=0x%lx%s\n",
+					(unsigned long)run, (unsigned long)linked,
+					(run == linked)
+						? "  (relocated: use module+offset, not these)" : "");
+		}
 		fprintf(fp, "  cmdline   %s\n", GetCommandLineA());
 		fprintf(fp, "  pid       %lu\n",
 				(unsigned long)GetCurrentProcessId());

@@ -2921,8 +2921,24 @@ fileconvsfrom(char_u *org)
 		return(NULL);
 	p_jkc = FALSE;
 	fname = &fnamebuf[++cnt & 1][0];
-	fname[kanjiconvsfrom(org, strlen(org),
-					fname, MAXPATHL, NULL, FILECODE, NULL)] = NUL;
+	{
+		/*
+		 * kanjiconvsfrom() returns -1 when the name does not fit, and using
+		 * that as an index wrote a NUL in front of the buffer and handed back
+		 * whatever the last call had left in it. Give the name back unconverted
+		 * instead: it is too long for anything downstream either way, and a
+		 * caller that cannot open it says so.
+		 */
+		int		len = kanjiconvsfrom(org, strlen(org),
+								fname, MAXPATHL - 1, NULL, FILECODE, NULL);
+
+		if (len < 0)
+		{
+			STRNCPY(fname, org, (size_t)(MAXPATHL - 1));
+			len = STRLEN(org) < (MAXPATHL - 1) ? (int)STRLEN(org) : MAXPATHL - 1;
+		}
+		fname[len] = NUL;
+	}
 #ifdef MSDOS
 	t = p = (char_u *)fname;
 	if (p[0] == '/' && p[1] == '/' && isalpha(p[2]) && p[3] == '/')
@@ -2979,7 +2995,10 @@ fileconvsto(char_u *org)
 		return(NULL);
 	fname = &fnamebuf[++cnt & 1][0];
 #ifdef MSDOS
-	strcpy(fname, org);
+	/* a name longer than the buffer is not a name any of this can use, but it
+	 * must not be written past the end of it either */
+	STRNCPY(fname, org, (size_t)(MAXPATHL - 1));
+	fname[MAXPATHL - 1] = NUL;
 	t = p = (char_u *)fname;
 	if (p[0] == '/' && p[1] == '/' && isalpha(p[2]) && p[3] == '/')
 	{
@@ -3008,8 +3027,28 @@ fileconvsto(char_u *org)
 	*t = '\0';
 	org = fname;
 #endif
+#ifdef UCODE
+	if (FILECODE == JP_UTF8)
+	{
+		/*
+		 * Already the internal code, so there is nothing to convert:
+		 * kanjiconvsto() would allocate a copy, copy into it, and then be copied
+		 * out of and freed again for nothing. Every file name in the Windows
+		 * build comes through here.
+		 */
+		if (org != (char_u *)fname)		/* the MSDOS block above copies it */
+		{
+			STRNCPY(fname, org, (size_t)(MAXPATHL - 1));
+			fname[MAXPATHL - 1] = NUL;
+		}
+		return(fname);
+	}
+#endif
 	p = kanjiconvsto(org, FILECODE, TRUE);
-	strcpy(fname, p);
+	if (p == NULL)
+		return(NULL);
+	STRNCPY(fname, p, (size_t)(MAXPATHL - 1));
+	fname[MAXPATHL - 1] = NUL;
 	free(p);
 	return(fname);
 }

@@ -180,9 +180,18 @@ static DWORD			config_menu		= TRUE;
  * since Windows virtualised the DPI to 96 for the process that stored them.
  */
 static int				config_dpi		= 96;
-static LOGFONT			config_font;
+/*
+ * LOGFONTW, not LOGFONTA. LF_FACESIZE is 32 and Windows counts it in
+ * *characters*: the wide struct holds 32 of them, the ANSI one 32 bytes, which
+ * is ten Japanese characters in UTF-8. A face name longer than that was cut --
+ * mid character, so what came back was not a font name and the font silently
+ * fell back to the default. Windows is UTF-16 at its own API anyway, so the
+ * wide form is both the roomier and the more direct one: nothing has to be
+ * converted to create the font.
+ */
+static LOGFONTW			config_font;
 #ifdef KANJI
-static LOGFONT			config_jfont;
+static LOGFONTW			config_jfont;
 static BOOL				v_difffont		= FALSE;
 static INT_PTR CALLBACK	FontDialogProc(HWND, UINT, WPARAM, LPARAM);
 #endif
@@ -351,9 +360,11 @@ static void	SetDlgItemTextU8 __ARGS((HWND, int, char_u *));
 static int	GetDlgItemTextU8 __ARGS((HWND, int, char_u *, int));
 static BOOL	AppendMenuU8 __ARGS((HMENU, UINT, UINT_PTR, char_u *));
 static BOOL	ModifyMenuU8 __ARGS((HMENU, UINT, UINT, UINT_PTR, char_u *));
-static void	face_normalise __ARGS((LOGFONT *));
-static HFONT	CreateFontIndirectU8 __ARGS((LOGFONT *));
-static BOOL	ChooseFontU8 __ARGS((HWND, LOGFONT *));
+static void	font_widen __ARGS((LOGFONTW *, LOGFONTA *));
+static int	font_load __ARGS((HKEY, char *, char *, LOGFONTW *));
+static int	font_save __ARGS((HKEY, char *, char *, LOGFONTW *));
+static void	font_narrow __ARGS((LOGFONTA *, LOGFONTW *));
+static BOOL	ChooseFontJ __ARGS((HWND, LOGFONTW *));
 static BOOL	RegGetStringU8 __ARGS((HKEY, char *, char_u *, int));
 static LONG	RegSetStringU8 __ARGS((HKEY, char *, char_u *));
 static int	cell_head __ARGS((int, int));
@@ -459,8 +470,11 @@ LoadConfig(BOOL init)
 		goto error;
 	while (init)		/* ini file */
 	{
-		char			szIniFile[_MAX_PATH];	/* private profile file name  */
+		/* MAXPATHL, not _MAX_PATH: this holds the exe's own path, and that is
+		 * counted in bytes here (see vim.h) */
+		char			szIniFile[MAXPATHL];	/* private profile file name  */
 		char			szSecName[32];		/* private profile section name  */
+		char			facebuf[LF_FACESIZE * 4];	/* a face name as ini bytes */
 		char			color[128];
 		char		*	p;
 		char		*	last;
@@ -471,14 +485,20 @@ LoadConfig(BOOL init)
 			break;
 		if ((p = STRCHR(GuiIni, ':')) != NULL && getperm(p + 1) != (-1))
 		{
+			size_t	seclen = (size_t)(p - (char *)GuiIni);
+
+			/* 'GuiIni' is whatever "-I" was given, up to MAXPATHL of it, and
+			 * these two are far shorter than that */
+			if (seclen > sizeof(szSecName) - 1)
+				seclen = sizeof(szSecName) - 1;
 			ZeroMemory(szSecName, sizeof(szSecName));
-			strncpy(szSecName, (char *)GuiIni, p - (char *)GuiIni);
-			strcpy(szIniFile, p + 1);
+			strncpy(szSecName, (char *)GuiIni, seclen);
+			lstrcpynA(szIniFile, p + 1, sizeof(szIniFile));
 		}
 		else
 		{
-			strcpy(szSecName, GuiIni);
-			if (GetModuleFileName(NULL, szIniFile, _MAX_PATH) == 0)
+			lstrcpynA(szSecName, GuiIni, sizeof(szSecName));
+			if (GetModuleFileName(NULL, szIniFile, sizeof(szIniFile)) == 0)
 				break;
 			last = p = szIniFile + 3;	/* drive + : + \ */
 			while (*p)
@@ -584,12 +604,22 @@ LoadConfig(BOOL init)
 		config_font.lfClipPrecision = CLIP_DEFAULT_PRECIS;
 		config_font.lfQuality		= DEFAULT_QUALITY;
 		config_font.lfPitchAndFamily= FIXED_PITCH | FF_MODERN;
+		/*
+		 * The ini is bytes, the face name is characters. GetPrivateProfileStringW
+		 * would need the section, key and path in wide form too, so read the
+		 * bytes and widen -- with a buffer that can hold 32 characters of them,
+		 * rather than the 32 bytes the face name used to be.
+		 */
 		GetPrivateProfileString(szSecName, "fontname", "FixedSys",
-			config_font.lfFaceName, sizeof(config_font.lfFaceName), szIniFile);
+							facebuf, sizeof(facebuf), szIniFile);
+		MultiByteToWideChar(p_cpage, 0, facebuf, -1,
+							config_font.lfFaceName, LF_FACESIZE);
 #ifdef KANJI
 		GetPrivateProfileString(szSecName, "jfontname", "",
-			config_jfont.lfFaceName, sizeof(config_jfont.lfFaceName), szIniFile);
-		if (config_jfont.lfFaceName[0] == '\0')
+							facebuf, sizeof(facebuf), szIniFile);
+		MultiByteToWideChar(p_cpage, 0, facebuf, -1,
+							config_jfont.lfFaceName, LF_FACESIZE);
+		if (config_jfont.lfFaceName[0] == L'\0')
 			memcpy(&config_jfont, &config_font, sizeof(config_jfont));
 		else
 		{
@@ -783,19 +813,16 @@ LoadConfig(BOOL init)
 	if (RegQueryValueEx(hKey, "bitmap-ti", NULL, &type, (BYTE *)&config_tibitmap, &size)
 															!= ERROR_SUCCESS)
 		goto error;
-	size = sizeof(config_font);
-	type = REG_BINARY;
-	if (RegQueryValueEx(hKey, "font", NULL, &type, (BYTE *)&config_font, &size)
-															!= ERROR_SUCCESS)
+	/*
+	 * "fontw" is the LOGFONTW; "font" is the LOGFONTA an older build wrote and
+	 * still reads. Prefer the wide one and fall back, so a config from either
+	 * works and a face name of more than ten Japanese characters survives.
+	 */
+	if (!font_load(hKey, "fontw", "font", &config_font))
 		goto error;
-	face_normalise(&config_font);
 #ifdef KANJI
-	size = sizeof(config_jfont);
-	type = REG_BINARY;
-	if (RegQueryValueEx(hKey, "jfont", NULL, &type, (BYTE *)&config_jfont, &size)
-															!= ERROR_SUCCESS)
+	if (!font_load(hKey, "jfontw", "jfont", &config_jfont))
 		goto error;
-	face_normalise(&config_jfont);
 #endif
 	size = sizeof(v_lspace);
 	type = REG_DWORD;
@@ -964,7 +991,7 @@ error:
 	config_font.lfClipPrecision = CLIP_DEFAULT_PRECIS;
 	config_font.lfQuality		= DEFAULT_QUALITY;
 	config_font.lfPitchAndFamily= FIXED_PITCH | FF_MODERN;
-	strcpy(config_font.lfFaceName, "FixedSys");
+	lstrcpyW(config_font.lfFaceName, L"FixedSys");
 #ifdef KANJI
 	config_jfont.lfHeight		= 14;
 	config_jfont.lfWidth		= 0;
@@ -980,7 +1007,7 @@ error:
 	config_jfont.lfClipPrecision = CLIP_DEFAULT_PRECIS;
 	config_jfont.lfQuality		= DEFAULT_QUALITY;
 	config_jfont.lfPitchAndFamily= FIXED_PITCH | FF_MODERN;
-	strcpy(config_jfont.lfFaceName, "FixedSys");
+	lstrcpyW(config_jfont.lfFaceName, L"FixedSys");
 #endif
 	config_fgcolor	= RGB(  0,   0,   0);
 	config_bgcolor	= RGB(255, 255, 255);
@@ -1035,10 +1062,16 @@ error:
 							0x4e, 0x00, 0x00, 0x00, 0x54, 0x67, 0x02, 0x00,
 							0xdb, 0x0f, 0x78, 0x7b, 0x2f, 0x13, 0x97, 0x27,
 							0x00, 0xa0, 0x00, 0x00};
-		memcpy(&config_font, font, sizeof(config_font));
+		{
+			/* the blob is a LOGFONTA, with its face name in CP932 */
+			LOGFONTA	narrow;
+
+			memcpy(&narrow, font, sizeof(narrow));
+			font_widen(&config_font, &narrow);
 #ifdef KANJI
-		memcpy(&config_jfont, font, sizeof(config_jfont));
+			font_widen(&config_jfont, &narrow);
 #endif
+		}
 	}
 }
 
@@ -1211,14 +1244,12 @@ SaveConfig(void)
 	if (RegSetValueEx(hKey, "bitmap-ti", 0, REG_DWORD, (BYTE *)&config_tibitmap, size)
 															!= ERROR_SUCCESS)
 		goto error;
-	size = sizeof(config_font);
-	if (RegSetValueEx(hKey, "font", 0, REG_BINARY, (BYTE *)&config_font, size)
-															!= ERROR_SUCCESS)
+	/* both forms: the wide one is what this build reads back, the narrow one is
+	 * for an older build that only knows "font" */
+	if (!font_save(hKey, "fontw", "font", &config_font))
 		goto error;
 #ifdef KANJI
-	size = sizeof(config_jfont);
-	if (RegSetValueEx(hKey, "jfont", 0, REG_BINARY, (BYTE *)&config_jfont, size)
-															!= ERROR_SUCCESS)
+	if (!font_save(hKey, "jfontw", "jfont", &config_jfont))
 		goto error;
 #endif
 	size = sizeof(v_lspace);
@@ -1297,7 +1328,7 @@ ResetScreen(HWND hWnd)
 	if (NULL != v_font)
 		DeleteObject(v_font);
 
-	v_font = CreateFontIndirectU8(&config_font);
+	v_font = CreateFontIndirectW(&config_font);
 
 	hDC = GetDC(hWnd);
 	SelectObject(hDC, v_font);
@@ -1316,7 +1347,7 @@ ResetScreen(HWND hWnd)
 #ifdef KANJI
 	{
 		DeleteObject(v_font);
-		v_font = CreateFontIndirectU8(&config_jfont);
+		v_font = CreateFontIndirectW(&config_jfont);
 
 		hDC = GetDC(hWnd);
 		SelectObject(hDC, v_font);
@@ -1334,7 +1365,7 @@ ResetScreen(HWND hWnd)
 		v_ychar = tm.tmHeight + tm.tmExternalLeading > v_ychar ? tm.tmHeight + tm.tmExternalLeading : v_ychar;
 
 		DeleteObject(v_font);
-		v_font = CreateFontIndirectU8(&config_font);
+		v_font = CreateFontIndirectW(&config_font);
 	}
 #endif
 	v_xchar += v_cspace;
@@ -1451,7 +1482,7 @@ WindowSize(HWND hWnd, WORD wVertSize, WORD wHorzSize)
 static void
 SetFontType(char_u *c, char_u mode, HDC hDC, HFONT *phOldFont)
 {
-	LOGFONT			logfont;
+	LOGFONTW		logfont;
 
 	if (c != NULL && iskanakan(*c))
 		memcpy(&logfont, &config_jfont, sizeof(logfont));
@@ -1495,7 +1526,7 @@ SetFontType(char_u *c, char_u mode, HDC hDC, HFONT *phOldFont)
 		logfont.lfWeight		= FW_NORMAL;
 		break;
 	}
-	v_font = CreateFontIndirectU8(&logfont);
+	v_font = CreateFontIndirectW(&logfont);
 	*phOldFont = SelectObject(hDC, v_font);
 }
 
@@ -1727,9 +1758,9 @@ PrintChar(HDC hdc, RECT *rt, HFONT *phOldFont, char_u *p, int size, char_u mode,
 		if (NULL != v_font)
 			DeleteObject(v_font);
 		if (p != NULL && CELLKANA(row, col))
-			v_font = CreateFontIndirectU8(&config_jfont);
+			v_font = CreateFontIndirectW(&config_jfont);
 		else
-			v_font = CreateFontIndirectU8(&config_font);
+			v_font = CreateFontIndirectW(&config_font);
 		*phOldFont = SelectObject(hdc, v_font);
 	}
 #endif
@@ -4305,7 +4336,7 @@ get_clipdata:
 			if (config_bitmap)
 			{
 				char_u		*	q;
-				WIN32_FIND_DATA fb;
+				char			fname[FIND_NAMELEN];
 				HANDLE          hFind;
 				char			buf[MAXPATHL];
 				char			first[MAXPATHL];
@@ -4322,13 +4353,20 @@ get_clipdata:
 					q = buf + STRLEN(buf) - 1;
 				*q = NUL;
 				strcat(buf, "\\*.*");
-				if ((hFind = FindFirstFile(buf, &fb)) != INVALID_HANDLE_VALUE)
+				if ((hFind = find_first_name(buf, fname, sizeof(fname), NULL))
+													!= INVALID_HANDLE_VALUE)
 				{
 					while (bFlg)
 					{
 						*q = NUL;
+						if (STRLEN(buf) + STRLEN(fname) + 2 > sizeof(buf))
+						{
+							bFlg = find_next_name(hFind, fname,
+													sizeof(fname), NULL);
+							continue;
+						}
 						strcat(buf, "\\");
-						strcat(buf, fb.cFileName);
+						strcat(buf, fname);
 						if (isbitmap(buf, NULL))
 						{
 							if (bFind && wParam == IDM_BITMAPUP)
@@ -4352,7 +4390,8 @@ get_clipdata:
 								strcpy(before, buf);
 							cnt++;
 						}
-						bFlg = FindNextFile(hFind, &fb);
+						bFlg = find_next_name(hFind, fname,
+													sizeof(fname), NULL);
 					}
 					FindClose(hFind);
 					if (bFind)
@@ -5822,15 +5861,49 @@ mch_write(char_u *s, int len)
 			else
 			{
 				int           prefix = 1;
+				int           width = 1;
 
 				if (len >= 2)
 				{
+					int		i;
+					int		w = 0;
+
 					prefix = strcspn(s, "\n\r\a\b\033\007");
-					if (prefix > (Columns - v_col))
-						prefix = Columns - v_col;
-					else if (prefix == 0)
+					/*
+					 * Take the run up to the end of the row, counting the
+					 * columns the characters occupy and not the bytes they are
+					 * made of. charsize() is 0 for a trailing byte, so summing
+					 * it over the bytes gives the width and the run can only be
+					 * cut where a character starts.
+					 *
+					 * This used to advance v_col by the byte count. The screen
+					 * holds UTF-8, so that ran ahead by a byte for every kana
+					 * -- which is how v_col came to be described as drifting and
+					 * why the damaged rectangle is a whole row. It was hidden
+					 * while flushbuf() folded the stream into Shift-JIS on the
+					 * way here, where a kana happens to be two bytes for its two
+					 * columns; nothing outside the code page ever added up.
+					 */
+					for (i = 0; i < prefix; i++)
+					{
+						int		cw = charsize(s + i);
+
+						if (w + cw > (int)Columns - v_col)
+						{
+							prefix = i;
+							break;
+						}
+						w += cw;
+					}
+					if (prefix <= 0)
+					{
 						prefix = 1;
+						w = charsize(s);
+					}
+					width = w;
 				}
+				else
+					width = charsize(s);
 				/*
 				 * The whole row, not the cells this run is thought to touch.
 				 *
@@ -5857,7 +5930,7 @@ mch_write(char_u *s, int len)
 				rect.top	= v_row * v_ychar;
 				rect.bottom	= rect.top + v_ychar;
 				InvalidateRect(hVimWnd, &rect, FALSE);
-				v_col += prefix;
+				v_col += width;
 				s += prefix;
 				len -= prefix - 1;
 				if (v_col >= Columns)
@@ -7102,18 +7175,21 @@ check_win(int argc, char **argv)
 fname_case(char_u *name)
 {
 #ifndef notdef
-	WIN32_FIND_DATA fb;
 	HANDLE          hFind;
 	char_u		*	tname;
 	char_u			buf[MAXPATHL];
+	char_u			found[FIND_NAMELEN];
 
 	if (GetFullPathName(name, sizeof(buf), buf, (LPSTR *)&tname) == 0)
 		return;
-	if ((hFind = FindFirstFile(buf, &fb)) != INVALID_HANDLE_VALUE)
+	if ((hFind = find_first_name(buf, found, sizeof(found), NULL))
+													!= INVALID_HANDLE_VALUE)
 	{
-		if (strlen(name) == strlen(buf))
+		/* only the case may change, so the name has to be the same length --
+		 * that also keeps a name too long for 'buf' from being cut short here */
+		if (strlen(name) == strlen(buf) && strlen(found) == strlen(tname))
 		{
-			strcpy(tname, fb.cFileName);
+			strcpy(tname, found);
 			strcpy(name, buf);
 		}
 		FindClose(hFind);
@@ -7164,30 +7240,160 @@ wide_to_utf8(WCHAR *w)
 }
 
 /*
- * Normalise a stored font face name to UTF-8. The LOGFONT goes into the registry
- * as a binary blob, so a config written by an older build holds the name in the
- * code page; convert it once, on the way in, and everything after this can
- * assume UTF-8.
+ * Reading a directory: find_first_name() and find_next_name() hand back one
+ * entry's name in UTF-8, and its attributes in 'attr' when that is not NULL.
+ *
+ * Not FindFirstFileA/FindNextFileA. Those fill a WIN32_FIND_DATAA, whose
+ * cAlternateFileName is 14 bytes, and with the process code page set to UTF-8
+ * (see jvim.manifest) the 8.3 name of a file with Japanese in it no longer fits
+ * there -- "1_ああ~1.MP3" is 14 bytes before the NUL. The call then returns
+ * FALSE with ERROR_MORE_DATA, and every caller of a find loop reads FALSE as
+ * "no more files": a ":e" completion stopped at the first such name and nothing
+ * after it was ever listed. A name whose UTF-8 form does not fit cFileName's
+ * 260 bytes comes back truncated as well, which is worse than stopping.
+ *
+ * The wide API has neither limit, so the scan goes through it and the name is
+ * converted here.
+ */
+	static int
+find_name_out(WIN32_FIND_DATAW *fw, char_u *name, int namelen, DWORD *attr)
+{
+	if (WideCharToMultiByte(CP_UTF8, 0, fw->cFileName, -1, (LPSTR)name,
+											namelen, NULL, NULL) <= 0)
+		return FALSE;			/* no room for this one: skip it */
+	if (attr != NULL)
+		*attr = fw->dwFileAttributes;
+	return TRUE;
+}
+
+	int
+find_next_name(HANDLE hFind, char_u *name, int namelen, DWORD *attr)
+{
+	WIN32_FIND_DATAW	fw;
+
+	while (FindNextFileW(hFind, &fw))
+		if (find_name_out(&fw, name, namelen, attr))
+			return TRUE;
+	return FALSE;
+}
+
+	HANDLE
+find_first_name(char_u *pat, char_u *name, int namelen, DWORD *attr)
+{
+	WIN32_FIND_DATAW	fw;
+	HANDLE				hFind;
+	WCHAR			*	wpat;
+
+	if ((wpat = utf8_to_wide(pat)) == NULL)
+		return INVALID_HANDLE_VALUE;
+	hFind = FindFirstFileW(wpat, &fw);
+	free(wpat);
+	if (hFind == INVALID_HANDLE_VALUE)
+		return hFind;
+	if (find_name_out(&fw, name, namelen, attr))
+		return hFind;
+	if (find_next_name(hFind, name, namelen, attr))	/* first one did not fit */
+		return hFind;
+	FindClose(hFind);
+	return INVALID_HANDLE_VALUE;
+}
+
+/*
+ * The font in the registry. Two values: the LOGFONTW this build uses, and a
+ * LOGFONTA beside it so that an older build still finds a font it understands.
+ */
+	static int
+font_load(HKEY hKey, char *wname, char *aname, LOGFONTW *lf)
+{
+	DWORD		size;
+	DWORD		type;
+	LOGFONTA	narrow;
+
+	size = sizeof(*lf);
+	type = REG_BINARY;
+	if (RegQueryValueEx(hKey, wname, NULL, &type, (BYTE *)lf, &size)
+										== ERROR_SUCCESS && size == sizeof(*lf))
+		return TRUE;
+	size = sizeof(narrow);
+	type = REG_BINARY;
+	if (RegQueryValueEx(hKey, aname, NULL, &type, (BYTE *)&narrow, &size)
+														!= ERROR_SUCCESS)
+		return FALSE;
+	font_widen(lf, &narrow);
+	return TRUE;
+}
+
+	static int
+font_save(HKEY hKey, char *wname, char *aname, LOGFONTW *lf)
+{
+	LOGFONTA	narrow;
+
+	if (RegSetValueEx(hKey, wname, 0, REG_BINARY, (BYTE *)lf, sizeof(*lf))
+														!= ERROR_SUCCESS)
+		return FALSE;
+	font_narrow(&narrow, lf);
+	return (RegSetValueEx(hKey, aname, 0, REG_BINARY, (BYTE *)&narrow,
+								sizeof(narrow)) == ERROR_SUCCESS);
+}
+
+/*
+ * A LOGFONTA from an older config, widened. Everything but the face name copies
+ * across; the name may have been written in the code page or, by the builds in
+ * between, in UTF-8, so try UTF-8 first and fall back to the code page.
  */
 	static void
-face_normalise(LOGFONT *lf)
+font_widen(LOGFONTW *w, LOGFONTA *a)
 {
-	WCHAR		w[LF_FACESIZE * 2];
-	char_u	*	text;
+	memset(w, 0, sizeof(*w));
+	w->lfHeight			= a->lfHeight;
+	w->lfWidth			= a->lfWidth;
+	w->lfEscapement		= a->lfEscapement;
+	w->lfOrientation	= a->lfOrientation;
+	w->lfWeight			= a->lfWeight;
+	w->lfItalic			= a->lfItalic;
+	w->lfUnderline		= a->lfUnderline;
+	w->lfStrikeOut		= a->lfStrikeOut;
+	w->lfCharSet		= a->lfCharSet;
+	w->lfOutPrecision	= a->lfOutPrecision;
+	w->lfClipPrecision	= a->lfClipPrecision;
+	w->lfQuality		= a->lfQuality;
+	w->lfPitchAndFamily	= a->lfPitchAndFamily;
+	if (a->lfFaceName[0] == NUL)
+		return;
+	if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, a->lfFaceName, -1,
+										w->lfFaceName, LF_FACESIZE) > 0)
+		return;
+	if (MultiByteToWideChar(p_cpage, 0, a->lfFaceName, -1,
+										w->lfFaceName, LF_FACESIZE) <= 0)
+		w->lfFaceName[0] = L'\0';
+}
 
-	if (lf->lfFaceName[0] == NUL)
-		return;
-	if (MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
-							lf->lfFaceName, -1, NULL, 0) > 0)
-		return;							/* already valid UTF-8 */
-	if (MultiByteToWideChar(p_cpage, 0, lf->lfFaceName, -1, w,
-							(int)(sizeof(w) / sizeof(w[0]))) <= 0)
-		return;
-	if ((text = wide_to_utf8(w)) != NULL)
-	{
-		lstrcpynA(lf->lfFaceName, (LPCSTR)text, LF_FACESIZE);
-		free(text);
-	}
+/*
+ * The other way, for the two places that still want a LOGFONTA: the copy of the
+ * font kept in the registry for older builds to read, and the IME conversion
+ * font. The face name goes out in the code page and can be cut short there --
+ * which is the limit those two have always had.
+ */
+	static void
+font_narrow(LOGFONTA *a, LOGFONTW *w)
+{
+	memset(a, 0, sizeof(*a));
+	a->lfHeight			= w->lfHeight;
+	a->lfWidth			= w->lfWidth;
+	a->lfEscapement		= w->lfEscapement;
+	a->lfOrientation	= w->lfOrientation;
+	a->lfWeight			= w->lfWeight;
+	a->lfItalic			= w->lfItalic;
+	a->lfUnderline		= w->lfUnderline;
+	a->lfStrikeOut		= w->lfStrikeOut;
+	a->lfCharSet		= w->lfCharSet;
+	a->lfOutPrecision	= w->lfOutPrecision;
+	a->lfClipPrecision	= w->lfClipPrecision;
+	a->lfQuality		= w->lfQuality;
+	a->lfPitchAndFamily	= w->lfPitchAndFamily;
+	WideCharToMultiByte(p_cpage, 0, w->lfFaceName, -1, a->lfFaceName,
+										LF_FACESIZE, NULL, NULL);
+	a->lfFaceName[LF_FACESIZE - 1] = NUL;
 }
 
 	static void
@@ -7250,71 +7456,19 @@ ModifyMenuU8(HMENU hMenu, UINT pos, UINT flags, UINT_PTR id, char_u *text)
 	return r;
 }
 
-/*
- * config_font/config_jfont keep a LOGFONTA whose lfFaceName is UTF-8, so that
- * the stored form does not change. GDI gets the wide struct.
- */
-	static HFONT
-CreateFontIndirectU8(LOGFONT *lf)
-{
-	LOGFONTW	w;
-	WCHAR	*	face;
-
-	memset(&w, 0, sizeof(w));
-	w.lfHeight			= lf->lfHeight;
-	w.lfWidth			= lf->lfWidth;
-	w.lfEscapement		= lf->lfEscapement;
-	w.lfOrientation		= lf->lfOrientation;
-	w.lfWeight			= lf->lfWeight;
-	w.lfItalic			= lf->lfItalic;
-	w.lfUnderline		= lf->lfUnderline;
-	w.lfStrikeOut		= lf->lfStrikeOut;
-	w.lfCharSet			= lf->lfCharSet;
-	w.lfOutPrecision	= lf->lfOutPrecision;
-	w.lfClipPrecision	= lf->lfClipPrecision;
-	w.lfQuality			= lf->lfQuality;
-	w.lfPitchAndFamily	= lf->lfPitchAndFamily;
-	if ((face = utf8_to_wide((char_u *)lf->lfFaceName)) != NULL)
-	{
-		lstrcpynW(w.lfFaceName, face, LF_FACESIZE);
-		free(face);
-	}
-	return CreateFontIndirectW(&w);
-}
 
 /*
- * Show the font chooser and, if the user picks one, put the result back into the
- * LOGFONTA with its face name in UTF-8. Going through ChooseFontW means the name
- * comes back as itself whatever the ANSI code page is.
+ * Show the font chooser and put what the user picked back into 'lf'. ChooseFontW
+ * and a LOGFONTW throughout, so the face name is never converted and never has
+ * to fit anything narrower than the 32 characters Windows allows.
  */
 	static BOOL
-ChooseFontU8(HWND hWnd, LOGFONT *lf)
+ChooseFontJ(HWND hWnd, LOGFONTW *lf)
 {
 	CHOOSEFONTW	cf;
 	LOGFONTW	w;
-	WCHAR	*	face;
-	char_u	*	text;
 
-	memset(&w, 0, sizeof(w));
-	w.lfHeight			= lf->lfHeight;
-	w.lfWidth			= lf->lfWidth;
-	w.lfEscapement		= lf->lfEscapement;
-	w.lfOrientation		= lf->lfOrientation;
-	w.lfWeight			= lf->lfWeight;
-	w.lfItalic			= lf->lfItalic;
-	w.lfUnderline		= lf->lfUnderline;
-	w.lfStrikeOut		= lf->lfStrikeOut;
-	w.lfCharSet			= lf->lfCharSet;
-	w.lfOutPrecision	= lf->lfOutPrecision;
-	w.lfClipPrecision	= lf->lfClipPrecision;
-	w.lfQuality			= lf->lfQuality;
-	w.lfPitchAndFamily	= lf->lfPitchAndFamily;
-	if ((face = utf8_to_wide((char_u *)lf->lfFaceName)) != NULL)
-	{
-		lstrcpynW(w.lfFaceName, face, LF_FACESIZE);
-		free(face);
-	}
-
+	w = *lf;
 	memset(&cf, 0, sizeof(cf));
 	cf.lStructSize	= sizeof(cf);
 	cf.hwndOwner	= hWnd;
@@ -7333,25 +7487,7 @@ ChooseFontU8(HWND hWnd, LOGFONT *lf)
 	if (!ChooseFontW(&cf))
 		return FALSE;
 
-	lf->lfHeight		= w.lfHeight;
-	lf->lfWidth			= w.lfWidth;
-	lf->lfEscapement	= w.lfEscapement;
-	lf->lfOrientation	= w.lfOrientation;
-	lf->lfWeight		= w.lfWeight;
-	lf->lfItalic		= w.lfItalic;
-	lf->lfUnderline		= w.lfUnderline;
-	lf->lfStrikeOut		= w.lfStrikeOut;
-	lf->lfCharSet		= w.lfCharSet;
-	lf->lfOutPrecision	= w.lfOutPrecision;
-	lf->lfClipPrecision	= w.lfClipPrecision;
-	lf->lfQuality		= w.lfQuality;
-	lf->lfPitchAndFamily = w.lfPitchAndFamily;
-	memset(lf->lfFaceName, 0, sizeof(lf->lfFaceName));
-	if ((text = wide_to_utf8(w.lfFaceName)) != NULL)
-	{
-		lstrcpynA(lf->lfFaceName, (LPCSTR)text, LF_FACESIZE);
-		free(text);
-	}
+	*lf = w;
 	return TRUE;
 }
 
@@ -7501,14 +7637,45 @@ vim_dirname(char_u *buf, int len)
 	int
 FullName(char_u *fname, char_u *buf, int len)
 {
+	WCHAR	*	wname;
+	WCHAR	*	wfull = NULL;
+	DWORD		need;
+	int			ok = FALSE;
+
 	if (fname == NULL)          /* always fail */
 		return FAIL;
 
-	if (_fullpath(buf, fname, len) == NULL) {
-		strncpy(buf, fname, len);       /* failed, use the relative path name */
-		return FAIL;
+	/*
+	 * GetFullPathNameW, not _fullpath(): the ANSI call behind _fullpath() stops
+	 * at 260 *characters* and returns ERROR_FILENAME_EXCED_RANGE, whatever
+	 * longPathAware in the manifest says -- while open() and CreateFile() honour
+	 * it and will happily use a longer name. So this is the one place that has
+	 * to go through the wide call to get the long path the rest of the process
+	 * can then act on.
+	 *
+	 * A result that does not fit 'buf' is a failure, not something to truncate:
+	 * a shortened path names a different file, or none.
+	 */
+	if ((wname = utf8_to_wide(fname)) != NULL)
+	{
+		need = GetFullPathNameW(wname, 0, NULL, NULL);
+		if (need != 0
+				&& (wfull = (WCHAR *)alloc((unsigned)(need * sizeof(WCHAR))))
+																	!= NULL
+				&& GetFullPathNameW(wname, need, wfull, NULL) != 0)
+		{
+			if (WideCharToMultiByte(CP_UTF8, 0, wfull, -1, (LPSTR)buf, len,
+													NULL, NULL) > 0)
+				ok = TRUE;
+		}
+		free(wfull);
+		free(wname);
 	}
-	return OK;
+	if (ok)
+		return OK;
+	strncpy(buf, fname, len);       /* failed, use the relative path name */
+	buf[len - 1] = NUL;             /* strncpy() does not when it fills up */
+	return FAIL;
 }
 
 /*
@@ -7792,14 +7959,17 @@ mch_get_winsize(void)
 #ifdef FEPCTRL
 		if (FepInit)
 		{
-			LOGFONT			logfont;
+			LOGFONTW		wide;
+			LOGFONTA		logfont;
 
-			memcpy(&logfont, &config_jfont, sizeof(logfont));
-			logfont.lfHeight		= -v_ychar;
-			logfont.lfWidth			= v_xchar;
-			logfont.lfItalic		= 0;
-			logfont.lfUnderline		= 0;
-			logfont.lfWeight		= FW_NORMAL;
+			wide = config_jfont;
+			wide.lfHeight			= -v_ychar;
+			wide.lfWidth			= v_xchar;
+			wide.lfItalic			= 0;
+			wide.lfUnderline		= 0;
+			wide.lfWeight			= FW_NORMAL;
+			/* the IME call takes the narrow struct */
+			font_narrow(&logfont, &wide);
 			fep_win_font(hVimWnd, &logfont);
 		}
 #endif
@@ -7992,8 +8162,8 @@ mch_set_winsize(void)
 }
 
 /*
- * Room for the shell, its switch and the whole command line. MAXPATHL is 260
- * on Windows, which these buffers used to be: dodos() arrives with up to
+ * Room for the shell, its switch and the whole command line. These buffers used
+ * to be MAXPATHL, which was 260 on Windows: dodos() arrives with up to
  * CMDBUFFSIZE (1024) of command, and dofilter() builds its command in IObuff
  * with two temp file paths appended, so sprintf() into 260 bytes was writing
  * off the end of the stack for any command that was not short.
@@ -8403,16 +8573,35 @@ strlowcpy(char *d, char *s)
 	static int
 expandpath(FileList *fl, char *path, int fonly, int donly, int notf)
 {
-	char            buf[MAX_PATH];
+	/*
+	 * Room for the whole path: a UTF-8 name is up to three bytes a character,
+	 * so MAX_PATH bytes will not hold one, let alone one with a directory in
+	 * front of it.
+	 *
+	 * Allocated rather than on the stack. This recurses once per wildcard
+	 * component of the pattern and the pattern comes off the command line, which
+	 * is what decides how deep it goes; two buffers this size per frame is a
+	 * stack to be run out of.
+	 */
+	int             buflen = MAXPATHL + FIND_NAMELEN;
+	char           *buf;
+	char           *name;
 	char           *p,
 				   *s,
 				   *e;
 	int             lastn,
 					c = 1,
-					r;
-	WIN32_FIND_DATA fb;
+					r,
+					retval;
 	HANDLE          hFind;
 
+	if ((buf = (char *)alloc((unsigned)buflen)) == NULL)
+		return 0;
+	if ((name = (char *)alloc((unsigned)FIND_NAMELEN)) == NULL)
+	{
+		free(buf);
+		return 0;
+	}
 	lastn = fl->nfiles;
 
 /*
@@ -8423,7 +8612,7 @@ expandpath(FileList *fl, char *path, int fonly, int donly, int notf)
 	s = NULL;
 	e = NULL;
 #ifndef notdef
-	memset(buf, NUL, sizeof(buf));
+	memset(buf, NUL, (size_t)buflen);
 #endif
 	while (*path) {
 		if (*path == '\\' || *path == ':' || *path == '/') {
@@ -8450,34 +8639,45 @@ expandpath(FileList *fl, char *path, int fonly, int donly, int notf)
 	*e = '\0';
 	r = 0;
 	/* If we are expanding wildcards we try both files and directories */
-	if ((hFind = FindFirstFile(buf, &fb)) == INVALID_HANDLE_VALUE) {
+	if ((hFind = find_first_name(buf, name, FIND_NAMELEN, NULL))
+													== INVALID_HANDLE_VALUE) {
 		/* not found */
 #ifndef notdef
 		if (has_wildcard(buf))
-			return 0;
+			retval = 0;
+		else
 #endif
-		strcpy(e, path);
-		if (notf)
-			addfile(fl, buf, FALSE);
-		return 1;               /* unexpanded or empty */
+		{
+			strcpy(e, path);
+			if (notf)
+				addfile(fl, buf, FALSE);
+			retval = 1;         /* unexpanded or empty */
+		}
+		free(name);
+		free(buf);
+		return retval;
 	}
 	while (c) {
+		if ((int)((s - buf) + strlen(name) + strlen(path)) < buflen) {
 #ifdef notdef
-		strlowcpy(s, fb.cFileName);
+			strlowcpy(s, name);
 #else
-		strcpy(s, fb.cFileName);
+			strcpy(s, name);
 #endif
-		if (*s != '.' || (s[1] != '\0' && (s[1] != '.' || s[2] != '\0'))) {
-			strcat(buf, path);
-			if (!has_wildcard(path))
-				addfile(fl, buf, (isdir(buf) > 0));
-			else
-				r |= expandpath(fl, buf, fonly, donly, notf);
+			if (*s != '.' || (s[1] != '\0' && (s[1] != '.' || s[2] != '\0'))) {
+				strcat(buf, path);
+				if (!has_wildcard(path))
+					addfile(fl, buf, (isdir(buf) > 0));
+				else
+					r |= expandpath(fl, buf, fonly, donly, notf);
+			}
 		}
-		c = FindNextFile(hFind, &fb);
+		c = find_next_name(hFind, name, FIND_NAMELEN, NULL);
 	}
 	qsort(fl->file + lastn, fl->nfiles - lastn, sizeof(char *), pstrcmp);
 	FindClose(hFind);
+	free(name);
+	free(buf);
 	return r;
 }
 
@@ -10358,16 +10558,16 @@ static INT_PTR CALLBACK
 FontDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	int					wmId;
-	static LOGFONT		logfont;
-	static LOGFONT		jlogfont;
-	LOGFONT				work;
+	static LOGFONTW		logfont;
+	static LOGFONTW		jlogfont;
+	LOGFONTW			work;
 
 	switch (uMsg) {
 	case WM_INITDIALOG:
 		memcpy(&logfont, &config_font, sizeof(logfont));
 		memcpy(&jlogfont, &config_jfont, sizeof(jlogfont));
-		SetDlgItemTextU8(hWnd, 2000, (char_u *)config_font.lfFaceName);
-		SetDlgItemTextU8(hWnd, 4000, (char_u *)config_jfont.lfFaceName);
+		SetDlgItemTextW(hWnd, 2000, config_font.lfFaceName);
+		SetDlgItemTextW(hWnd, 4000, config_jfont.lfFaceName);
 		return(TRUE);
 	case WM_DESTROY:
 		break;
@@ -10388,14 +10588,14 @@ FontDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				memcpy(&work, &logfont, sizeof(work));
 			else
 				memcpy(&work, &jlogfont, sizeof(work));
-			if (ChooseFontU8(hWnd, &work))
+			if (ChooseFontJ(hWnd, &work))
 			{
 				if (wmId == 1001)
 					memcpy(&logfont, &work, sizeof(work));
 				else
 					memcpy(&jlogfont, &work, sizeof(work));
-				SetDlgItemTextU8(hWnd, 2000, (char_u *)logfont.lfFaceName);
-				SetDlgItemTextU8(hWnd, 4000, (char_u *)jlogfont.lfFaceName);
+				SetDlgItemTextW(hWnd, 2000, logfont.lfFaceName);
+				SetDlgItemTextW(hWnd, 4000, jlogfont.lfFaceName);
 			}
 			break;
 		}

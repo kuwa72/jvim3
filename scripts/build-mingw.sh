@@ -164,6 +164,21 @@ if [ "$TARGET" = release ]; then
 	exit 0
 fi
 
+# The manifest is XML and goes into the exe as a resource, where nothing checks
+# it. Windows does, at load time: a malformed one and the exe does not start at
+# all, with "the side-by-side configuration is incorrect" and no hint as to why.
+# A comment holding a double hyphen was enough to do it, so check it here where
+# the answer is cheap.
+if [ "$TARGET" != clean ] && command -v python3 >/dev/null 2>&1; then
+	python3 - "$src/jvim.manifest" <<'EOF' || exit 2
+import sys, xml.dom.minidom
+try:
+    xml.dom.minidom.parse(sys.argv[1])
+except Exception as e:
+    sys.exit("%s is not valid XML: %s" % (sys.argv[1], e))
+EOF
+fi
+
 case $TARGET in
 clean)
 	run_make clean

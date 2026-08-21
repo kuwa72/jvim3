@@ -692,6 +692,7 @@ buflist_list(void)
 {
 	BUF			*buf;
 	int			len;
+	int			col;
 
 	gotocmdline(TRUE, NUL);
 	for (buf = firstbuf; buf != NULL && !got_int; buf = buf->b_next)
@@ -714,16 +715,23 @@ buflist_list(void)
 
 		len = STRLEN(IObuff);
 		STRNCPY(IObuff + len, NameBuff, (size_t)IOSIZE - 20 - len);
+		IObuff[IOSIZE - 20] = NUL;		/* STRNCPY does not when it fills up */
 
 		len = STRLEN(IObuff);
 		IObuff[len++] = '"';
+		IObuff[len] = NUL;
 		/*
-		 * try to put the "line" strings in column 40
+		 * Try to put the "line" strings in column 40. The column and the byte
+		 * count are not the same number once the name holds anything that is
+		 * more than one byte, which used to push "line" along by the byte count
+		 * and leave the listing ragged.
 		 */
+		col = strsize(IObuff);
 		do
 		{
 			IObuff[len++] = ' ';
-		} while (len < 40 && len < IOSIZE - 18);
+			++col;
+		} while (col < 40 && len < IOSIZE - 18);
 		sprintf((char *)IObuff + len, "line %ld",
 				buf == curbuf ? curwin->w_cursor.lnum :
 								(long)buflist_findlnum(buf));
@@ -890,7 +898,7 @@ fileinfo(int fullname)
 		else
 			name = curbuf->b_filename;
 			/* careful: home_replace cals vimgetenv(), which also uses IObuff! */
-		home_replace(name, IObuff + 1, IOSIZE - 1);
+		home_replace(name, IObuff + 1, MSGNAMELEN);
 		IObuff[0] = '"';
 	}
 
@@ -989,7 +997,7 @@ maketitle(void)
 	}
 	else
 	{
-		home_replace(curbuf->b_filename, IObuff, IOSIZE);
+		home_replace(curbuf->b_filename, IObuff, MSGNAMELEN);
 		if (arg_count > 1)
 			sprintf((char *)IObuff + STRLEN(IObuff), " (%d of %d)", curwin->w_arg_idx + 1, arg_count);
 		t = IObuff;

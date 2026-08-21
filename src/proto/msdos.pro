@@ -70,4 +70,8 @@ char *	win_history_line __ARGS((BUF *));
 #ifdef NT
 int		clip_put		__ARGS((char_u *, int));
 char_u *clip_get		__ARGS((void));
+/* reading a directory without the ANSI API's field limits; also used by xargs.c */
+HANDLE	find_first_name	__ARGS((char_u *, char_u *, int, DWORD *));
+int		find_next_name	__ARGS((HANDLE, char_u *, int, DWORD *));
+#define FIND_NAMELEN	(MAX_PATH * 3 + 1)		/* a name in UTF-8, at most */
 #endif

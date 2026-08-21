@@ -414,11 +414,21 @@ msg_outstr(char_u *s)
 		 * - when outputting a character in the last column of the last row
 		 *   (some terminals scroll automatically, some don't. To avoid problems
 		 *   we scroll ourselves)
+		 *
+		 * ">= Columns" for a wide character, not "> Columns": one that ends
+		 * exactly at the right edge fills the line just as an ASCII character
+		 * in the last column does, and the row is stepped on for the next one
+		 * either way. Asking only whether it would be split left msg_row one
+		 * past the last row, and screen_msg() indexes LinePointers with it, so
+		 * a message long enough to reach the bottom of the screen with a
+		 * Japanese character landing on the edge wrote through a pointer from
+		 * off the end of that array. A long enough file name in the "reading"
+		 * message was enough to do it.
 		 */
 #ifdef KANJI
 		if ((msg_row >= Rows - 1 && (*s == '\n' || msg_col >= Columns - 1))
 			|| (msg_row >= Rows - 1 && ISkanji(*s)
-					&& msg_col + utf_width(s) > (int)Columns))
+					&& msg_col + utf_width(s) >= (int)Columns))
 #else
 		if (msg_row >= Rows - 1 && (*s == '\n' || msg_col >= Columns - 1))
 #endif
