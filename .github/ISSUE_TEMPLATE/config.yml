@@ -1,0 +1,12 @@
+# A 1994 editor attracts reports that do not fit a form. Keep the blank one.
+blank_issues_enabled: true
+contact_links:
+  - name: Using it — settings, encodings, IME, troubleshooting
+    url: https://github.com/kuwa72/jvim3/blob/master/USAGE.md
+    about: USAGE.md has the ten minutes of setup worth doing, and a troubleshooting table. 日本語は USAGE.ja.md にあります。
+  - name: Known limits
+    url: https://github.com/kuwa72/jvim3#where-it-stands
+    about: Colour emoji, UCS-2 input, console IME on Windows, and the 64 bit build are known. Please check before reporting.
+  - name: Bugs already found and fixed along the way
+    url: https://github.com/kuwa72/jvim3/blob/master/BUILDING-mingw.md#bugs-found-along-the-way
+    about: The fifteen long-standing bugs this tree fixed, with what each one looked like.

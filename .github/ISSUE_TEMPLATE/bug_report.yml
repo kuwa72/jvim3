@@ -1,0 +1,85 @@
+name: Bug report / バグ報告
+description: Something the editor got wrong. 日本語で書いてください。English is also fine.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        日本語で書いてください。English is also fine — both are equally welcome.
+
+        Keystrokes matter more than descriptions here: "what you typed" below is
+        the most useful field on this form.
+
+  - type: dropdown
+    id: build
+    attributes:
+      label: Which build / どのビルド
+      options:
+        - win32 GUI (jvim32w.exe)
+        - win32 console (jvim32.exe)
+        - win64 GUI (jvim64w.exe)
+        - win64 console (jvim64.exe)
+        - Unix, built from source (src/jvim3)
+        - other / その他
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / バージョン
+      description: >
+        The first line of `jvim3 -h`, or what `:version` prints. On Windows, the
+        Details tab of the exe's properties also has it.
+        `jvim3 -h` の 1 行目、または `:version` の出力。
+      placeholder: JVim 3 1.0.0 -- github.com/kuwa72/jvim3
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system / OS
+      placeholder: Windows 11 24H2 / Ubuntu 24.04 / FreeBSD 14.3
+    validations:
+      required: true
+
+  - type: textarea
+    id: keys
+    attributes:
+      label: What you typed / 打ったキー
+      description: >
+        The actual keystrokes, from starting the editor. Escape as `<Esc>`, a
+        newline as `<CR>`. 起動してから打ったキーをそのまま書いてください。
+      placeholder: |
+        jvim3 test.txt
+        i あいう <Esc> 0 x
+    validations:
+      required: true
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected / 何が起きて、何を期待したか
+    validations:
+      required: true
+
+  - type: textarea
+    id: encoding
+    attributes:
+      label: If Japanese text or file contents are involved / 日本語や文字コードが関わる場合
+      description: >
+        The output of `:set jm? jc?`, and the file's encoding if you know it.
+        `:set jm? jc?` の出力と、分かればファイルの文字コード。
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: known
+    attributes:
+      label: Checked the known limits
+      options:
+        - label: >
+            I read the "Where it stands" list in the README, and this is not one
+            of the limits already recorded there.
+          required: false

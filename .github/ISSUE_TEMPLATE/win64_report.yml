@@ -1,0 +1,60 @@
+name: Did the 64 bit build run? / 64 ビット版は動きましたか
+description: >
+  The 64 bit Windows build compiles but has never been run by anyone. Say what
+  happened, whether it worked or not. 動いても動かなくても報告してください。
+labels: [win64]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is the single most useful thing anybody can report here. The 64 bit
+        Windows build compiles with nothing truncating a pointer, which is not
+        the same as working: **nobody has run it.** There is no Windows runtime
+        test in CI at all.
+
+        A report of "it started and I edited a file" is as valuable as a crash.
+
+        64 ビット Windows 版は、ポインタを切り詰めずコンパイルは通りますが、まだ
+        誰も実行していません。CI に Windows の実行時テストはありません。
+        「起動して編集できた」という報告も、クラッシュの報告と同じくらい助かります。
+
+  - type: input
+    id: os
+    attributes:
+      label: Windows version / Windows のバージョン
+      placeholder: Windows 11 24H2 (26100.2314)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: started
+    attributes:
+      label: Did it start? / 起動しましたか
+      options:
+        - Yes, and I could edit a file / 起動して編集もできた
+        - It started but something was wrong / 起動したが何かおかしい
+        - It would not start at all / 起動しなかった
+    validations:
+      required: true
+
+  - type: dropdown
+    id: which
+    attributes:
+      label: Which one / どちら
+      options:
+        - jvim64w.exe (GUI)
+        - jvim64.exe (console)
+        - both / 両方
+    validations:
+      required: true
+
+  - type: textarea
+    id: detail
+    attributes:
+      label: What happened / 何が起きたか
+      description: >
+        If it crashed, `%LOCALAPPDATA%\jvim3\report.log` has a report — please
+        attach it. クラッシュした場合は
+        `%LOCALAPPDATA%\jvim3\report.log` を添付してください。
+    validations:
+      required: false
