@@ -29,13 +29,27 @@ root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 con=${1:-$root/src/jvim32.exe}
 gui=${2:-$root/src/jvim32w.exe}
 
+# COUNT_ONLY=1 prints "cases N" and stops, without needing Windows, a build or
+# the cross compiler. scripts/check-docs.sh asks that, from wherever it runs, so
+# the case count quoted in the documentation is checked against this file.
+count_only=${COUNT_ONLY:-}
+
+if [ -z "$count_only" ]; then
 for exe in "$con" "$gui"; do
 	if [ ! -f "$exe" ]; then
 		echo "no Windows build at $exe" >&2
-		echo "build one with: cd src && make -f makefile.mingw CROSS=i686-w64-mingw32- both" >&2
+		echo "build one with: ./scripts/build-mingw.sh both" >&2
 		exit 2
 	fi
 done
+fi
+
+if [ -n "$count_only" ]; then
+	# Count the cases without any of the Windows preflight below.
+	cases=$(grep -cE '^(run|expand_lists|opens_long_name|opens_past_max_path) ' "$0")
+	printf 'cases %d\n' "$cases"
+	exit 0
+fi
 
 # The drivers and the editor have to run from a real Windows directory: a WSL
 # path reaches a Win32 child as a UNC name, which cmd.exe refuses to start in.

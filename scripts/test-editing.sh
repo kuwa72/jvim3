@@ -17,7 +17,11 @@ set -uo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 jvim=${1:-$root/src/jvim3}
 
-if [ ! -x "$jvim" ]; then
+# COUNT_ONLY=1 prints "cases N" and stops: how many cases this file holds, with
+# no binary, no compiler and no run. See the same comment in test-encoding.sh.
+count_only=${COUNT_ONLY:-}
+
+if [ -z "$count_only" ] && [ ! -x "$jvim" ]; then
 	echo "no jvim binary at $jvim" >&2
 	exit 2
 fi
@@ -25,20 +29,30 @@ fi
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-${CC:-cc} -o "$tmp/ptyrun" "$root/scripts/ptyrun.c" 2>"$tmp/cc.err" || {
-	echo "cannot build $root/scripts/ptyrun.c, which gives jvim a pty:" >&2
-	cat "$tmp/cc.err" >&2
-	exit 2
-}
+if [ -z "$count_only" ]; then
+	${CC:-cc} -o "$tmp/ptyrun" "$root/scripts/ptyrun.c" 2>"$tmp/cc.err" || {
+		echo "cannot build $root/scripts/ptyrun.c, which gives jvim a pty:" >&2
+		cat "$tmp/cc.err" >&2
+		exit 2
+	}
+fi
 pty() { "$tmp/ptyrun" /bin/sh -c "$1"; }
 hex() { od -An -tx1 -v "$1" 2>/dev/null | tr -d ' \n'; }
 
-pass=0; fail=0; xfail=0; xpass=0
+pass=0; fail=0; xfail=0; xpass=0; cases=0
+
+# Counted in both modes, so "cases" is the number of cases in this file whether
+# or not they were run, and stays right when a KNOWN-FAIL is added back.
+counted() {
+	cases=$((cases+1))
+	[ -n "$count_only" ]
+}
 
 # run <name> <expect: ok|knownfail> <keys> <input> <wanted output>
 #
 # The keys are fed through "-s", so \r ends an ex command and \033 is escape.
 run() {
+	counted && return
 	local name=$1 expect=$2 keys=$3 data=$4 want=$5
 
 	# printf eats a "%" as the start of a conversion, and ":%d" is a perfectly
@@ -67,6 +81,7 @@ run() {
 # "-T builtin_xterm" pins the key strings to the built in xterm entry, so what
 # has to be typed for a cursor key does not depend on the system's termcap.
 runtyped() {
+	counted && return
 	local name=$1 expect=$2 keys=$3 data=$4 want=$5
 
 	keys=${keys//%/%%}
@@ -199,7 +214,13 @@ runtyped "typed shift-right"    ok '0\033Ovx'             'one two\n' 'one wo\n'
 runtyped "typed up on the : line" ok ':1d\r:\033OA\r'     "$ABC"      'c\nd\ne\n'
 runtyped "typed CTRL-@"         ok 'iabc\033i\000'        'X\n'       'ababccX\n'
 
+if [ -n "$count_only" ]; then
+	printf 'cases %d\n' "$cases"
+	exit 0
+fi
+
 echo
+printf 'cases %d\n' "$cases"
 printf 'pass %d  fail %d  known-fail %d  newly-passing %d\n' \
 		"$pass" "$fail" "$xfail" "$xpass"
 [ "$fail" -eq 0 ] || exit 1

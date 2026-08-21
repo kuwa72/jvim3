@@ -18,9 +18,15 @@ set -uo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 jvim=${1:-$root/src/jvim3}
 
-if [ ! -x "$jvim" ]; then
+# COUNT_ONLY=1 prints "cases N" and stops: how many cases this file holds, with
+# no binary, no compiler and no run. scripts/check-docs.sh asks that so the
+# counts quoted in the documentation are checked against the suites themselves
+# rather than against a number somebody typed.
+count_only=${COUNT_ONLY:-}
+
+if [ -z "$count_only" ] && [ ! -x "$jvim" ]; then
 	echo "no jvim binary at $jvim" >&2
-	echo "build one with: cd src && cp makjunix.mak makefile && make" >&2
+	echo "build one with: ./scripts/build-unix.sh" >&2
 	exit 2
 fi
 
@@ -31,20 +37,30 @@ printf ':w! %s/out\r:q!\r' "$tmp" > "$tmp/cmds"
 # jvim needs a terminal. script(1) was used for that, but it is a different
 # program on every system and NetBSD's quits before the command has run when
 # its own standard input is a file, so scripts/ptyrun.c does it instead.
-${CC:-cc} -o "$tmp/ptyrun" "$root/scripts/ptyrun.c" 2>"$tmp/cc.err" || {
-	echo "cannot build $root/scripts/ptyrun.c, which gives jvim a pty:" >&2
-	cat "$tmp/cc.err" >&2
-	exit 2
-}
+if [ -z "$count_only" ]; then
+	${CC:-cc} -o "$tmp/ptyrun" "$root/scripts/ptyrun.c" 2>"$tmp/cc.err" || {
+		echo "cannot build $root/scripts/ptyrun.c, which gives jvim a pty:" >&2
+		cat "$tmp/cc.err" >&2
+		exit 2
+	}
+fi
 pty() { "$tmp/ptyrun" /bin/sh -c "$1"; }
 
 # xxd is vim's own, so it is not on a machine that has no vim yet; od is POSIX.
 hex() { od -An -tx1 -v "$1" 2>/dev/null | tr -d ' \n'; }
 
-pass=0; fail=0; xfail=0; xpass=0
+pass=0; fail=0; xfail=0; xpass=0; cases=0
+
+# Counted in both modes, so "cases" is the number of cases in this file whether
+# or not they were run, and stays right when a KNOWN-FAIL is added back.
+counted() {
+	cases=$((cases+1))
+	[ -n "$count_only" ]
+}
 
 # roundtrip <name> <expect: ok|knownfail> <jvim options> <printf-escaped bytes>
 roundtrip() {
+	counted && return
 	local name=$1 expect=$2 opts=$3 data=$4
 	printf "$data" > "$tmp/in"
 	rm -f "$tmp/out"
@@ -99,6 +115,7 @@ roundtrip "UTF-8 emoji, BOM"         ok        ""     "\xef\xbb\xbf$ASCII$NIHONG
 # edit <name> <expect: ok|knownfail> <keys> <input bytes> <expected bytes>
 # Keys and text are fed as a script, so the key code is forced to UTF-8 too.
 edit() {
+	counted && return
 	local name=$1 expect=$2 keys=$3 data=$4 want=$5
 
 	printf "$data" > "$tmp/in"
@@ -170,6 +187,7 @@ edit "7| stays on last char"  ok "7|x"  "$NIHON$GO\n"      "$NIHON\n"
 #
 # 'opts' overrides the codes; the default is UTF-8 throughout.
 typed() {
+	counted && return
 	local name=$1 expect=$2 keys=$3 want=$4 opts=${5:--K TTTT -k t}
 
 	: > "$tmp/in"
@@ -255,7 +273,13 @@ edit "[a-n] range by code pt"  ok ":s/[$AA-$NN]//g\r"   "$AA$II$UU""abc\n" "abc\
 edit "[a-c] leaves kana"       ok ":s/[a-c]//g\r"       "$AA""abc$II\n"    "$AA$II\n"
 edit "search a not i"          ok "/$AA\rx"             "$II$AA$UU\n"      "$II$UU\n"
 
+if [ -n "$count_only" ]; then
+	printf 'cases %d\n' "$cases"
+	exit 0
+fi
+
 echo
+printf 'cases %d\n' "$cases"
 printf 'pass %d  fail %d  known-fail %d  newly-passing %d\n' \
 		"$pass" "$fail" "$xfail" "$xpass"
 [ "$fail" -eq 0 ] || exit 1
