@@ -1174,11 +1174,41 @@ vim_mktemp(char_u *name)
 	close(fd);
 	return OK;
 #else
-# if defined(LATTICE) || defined(NT)
-	/* No mktemp() in these libraries, and tmpnam() makes up its own name. */
-	return (*tmpnam((char *)name) == NUL ? FAIL : OK);
+# ifdef NT
+	/*
+	 * Not tmpnam(). Linked against msvcrt it returns P_tmpdir with a name after
+	 * it, and P_tmpdir is "\\", so the file it names is in the root of the
+	 * current drive -- "\s144k." -- which no process that is not elevated may
+	 * write to on any Windows since Vista. The shell's redirection failed, and
+	 * the filter read reported "Can't read file \s144k." with nothing to show
+	 * that the command itself had been fine. (The UCRT tmpnam does use TEMP,
+	 * which is why a UCRT build of this same source did not show it.)
+	 *
+	 * GetTempFileName() puts the file where TMP or TEMP says, and creates it,
+	 * so it behaves like the mkstemp() branch above.
+	 */
+	{
+		char	dir[MAXPATHL];
+		char	prefix[4];
+		int		i;
+
+		if (GetTempPath(sizeof(dir), dir) == 0)
+			return FAIL;
+		/* The letters in front of the X's tell the input temp file from the
+		 * output one; GetTempFileName() takes three of them at most. */
+		for (i = 0; i < 3 && name[i] != NUL && name[i] != 'X'; i++)
+			prefix[i] = name[i];
+		prefix[i] = NUL;
+		/* 'name' is TMPNAMELEN, which is MAXPATHL, the buffer size this wants */
+		return (GetTempFileName(dir, prefix, 0, (char *)name) == 0 ? FAIL : OK);
+	}
 # else
+#  ifdef LATTICE
+	/* No mktemp() in this library, and tmpnam() makes up its own name. */
+	return (*tmpnam((char *)name) == NUL ? FAIL : OK);
+#  else
 	return (*mktemp((char *)name) == NUL ? FAIL : OK);
+#  endif
 # endif
 #endif
 }

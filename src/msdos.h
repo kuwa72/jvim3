@@ -64,7 +64,10 @@
 #define TMPNAME1		"viXXXXXX"		/* put it in current dir */
 #define TMPNAME2		"voXXXXXX"		/*  is there a better place? */
 #ifdef NT
-# define TMPNAMELEN		L_tmpnam
+/* Room for a full path: vim_mktemp() puts the file where GetTempPath() says,
+ * not in the current directory. L_tmpnam, which this used to be, is 14 with
+ * msvcrt -- P_tmpdir plus twelve -- and would not hold one. */
+# define TMPNAMELEN		MAXPATHL
 #else
 # define TMPNAMELEN		10
 #endif
