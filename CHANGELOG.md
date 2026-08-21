@@ -10,7 +10,7 @@ repository and would drift within three releases.
 
 ## Unreleased
 
-## 1.0.0 — unreleased
+## 1.0.0 — 2026-08-22
 
 The tree starts numbering itself. Everything in this section already shipped,
 across the nine tags `v3.0-j2.1b-utf8.1` … `.9`, between 2026-08-19 and
