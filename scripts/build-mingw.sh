@@ -80,8 +80,9 @@ fi
 if [ "$crt" != msvcrt ] && [ -n "${REQUIRE_MSVCRT-}" ]; then
 	echo "this toolchain targets $crt; release packages are msvcrt." >&2
 	echo "  ${CROSS}gcc is $(command -v "${CROSS}gcc" || echo "not on PATH")" >&2
-	echo "  apt install gcc-mingw-w64-i686-win32 gcc-mingw-w64-x86-64-win32," >&2
-	echo "  then CROSS=/usr/bin/${ARCH}-w64-mingw32- $0 $TARGET" >&2
+	echo "  CI builds the real packages; scripts/fetch-ci-build.sh downloads one." >&2
+	echo "  To build them here: apt install gcc-mingw-w64-i686-win32" >&2
+	echo "  gcc-mingw-w64-x86-64-win32, then CROSS=/usr/bin/${ARCH}-w64-mingw32- $0 $TARGET" >&2
 	exit 1
 fi
 
@@ -169,14 +170,14 @@ echo
 echo "built for $ARCH (${CROSS:-native}, $crt) -> $dist"
 ls -la "$dist"
 if [ "$crt" != msvcrt ]; then
+	# Short, because on a machine whose toolchain is UCRT this prints on every
+	# build. The reasoning is in BUILDING-mingw.md, and the way out no longer
+	# involves installing anything.
 	cat >&2 <<EOF
 
-WARNING: this toolchain targets $crt, and the releases are msvcrt. The exe runs,
-but it is not the editor anybody else has, so testing it on Windows proves
-nothing about the release. Build with an msvcrt toolchain before believing a
-Windows result:
-  apt install gcc-mingw-w64-i686-win32 gcc-mingw-w64-x86-64-win32
-  CROSS=/usr/bin/${ARCH}-w64-mingw32- $0 $TARGET
+NOTE: $crt, and the releases are msvcrt -- fine to build and debug with, but a
+Windows result from it says nothing about the release (BUILDING-mingw.md, "Which
+C runtime"). For one that does: scripts/fetch-ci-build.sh
 EOF
 fi
 cat <<'EOF'

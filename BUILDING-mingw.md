@@ -104,15 +104,37 @@ stopped using `tmpnam()` at all.
 
 So `scripts/build-mingw.sh` prints the runtime it found on every build, warns
 when it is not msvcrt, and refuses `release` outright -- including when it
-cannot ask the compiler at all. To pick a toolchain without reordering `PATH`:
-
-```sh
-CROSS=/usr/bin/i686-w64-mingw32- ./scripts/build-mingw.sh both
-```
+cannot ask the compiler at all.
 
 There is no Windows runtime test in CI, so testing on Windows by hand is the
-only Windows testing there is, and a build with the other runtime does not
-count as it.
+only Windows testing there is, and a build with the other runtime does not count
+as it. Two ways to have one that does.
+
+**Take the binary CI built.** Nothing to install, and it is the same executable
+the release page serves:
+
+```sh
+scripts/fetch-ci-build.sh                 # the newest good run for HEAD
+scripts/fetch-ci-build.sh <sha|run-id>    # or a particular one
+ARCH=x86_64 scripts/fetch-ci-build.sh     # the 64 bit package
+```
+
+It unpacks under the Windows user profile -- `%USERPROFILE%\jvim3-ci\win32` --
+and reports which runtime the exe actually links, so the thing being tested is
+checked rather than assumed. The destination matters: started from a WSL
+directory the editor's cwd reaches `cmd.exe` as a UNC path, which it refuses, so
+`:r !cmd` would run in `C:\Windows` and the test would not be testing the
+editor. `DEST=` overrides it.
+
+**Or install the msvcrt toolchain beside the other one.** They coexist -- apt's
+lands in `/usr/bin`, Homebrew's in `/home/linuxbrew/.linuxbrew/bin` -- and
+`CROSS` picks one per build without touching `PATH`, so a machine that also does
+UCRT work does not have to choose:
+
+```sh
+sudo apt install gcc-mingw-w64-i686-win32 gcc-mingw-w64-x86-64-win32
+CROSS=/usr/bin/i686-w64-mingw32- ./scripts/build-mingw.sh both
+```
 
 ## What is and is not in this build
 
