@@ -169,7 +169,9 @@ defs="-DDIGRAPHS $tcaps -DNO_FREE_NULL -DVIM_ISSPACE \
  -DWEBB_COMPLETE -DWEBB_KEYWORD_COMPL \
  -DVIM_HLP=\\\"$PREFIX/lib/jvim3.hlp\\\" \
  -DDEFVIMRC_FILE=\\\"$PREFIX/etc/jvim3rc\\\" \
- -DKANJI -DUCODE -DTRACK -DCRMARK -DFEXRC -DUSE_GREP -DUSE_TAGEX -DUSE_OPT"
+ -DVIMDIR=\\\"$PREFIX/lib/jvim3\\\" \
+ -DKANJI -DUCODE -DTRACK -DCRMARK -DFEXRC -DUSE_GREP -DUSE_TAGEX -DUSE_OPT \
+ -DSYNTAX"
 
 # The \\\" is the same form VIM_HLP above uses: it collapses to \" inside these
 # double quotes, survives DEFS= through make into the recipe's own shell, and

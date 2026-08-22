@@ -393,7 +393,7 @@ struct buffer
 # define FOPT_C_COMMENT			0x0040		/* C Comment Skip showmatch */
 # define FOPT_GAIJI				0x0080		/* Gaiji */
 #endif
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 	char_u		   *b_syn_ptr;
 	char_u		   *b_syn_tag;
 	char_u		   *b_syn_match;
@@ -518,7 +518,7 @@ struct window
 	int				w_tagstackidx;				/* index just below active entry */
 	int				w_tagstacklen;				/* number of tags on the stack */
 
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 	int				 w_p_syt;				/* syntax mode */
 #endif
 };

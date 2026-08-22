@@ -426,8 +426,8 @@ inschar(int c)
 
 	old = ml_get(lnum);
 	oldlen = STRLEN(old) + 1;
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
-	if (curwin->w_p_syt && GuiWin)
+#ifdef USE_SYNTAX
+	if (SYN_ON(curwin))
 		syn_inschar(old, col);
 #endif
 
@@ -537,8 +537,8 @@ inschar(int c)
 	else if (State == REPLACE && !rir0)	/* reverse replace mode: cursor left */
 		--curwin->w_cursor.col;
 #endif
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
-	if (curwin->w_p_syt && GuiWin)
+#ifdef USE_SYNTAX
+	if (SYN_ON(curwin))
 		syn_inschar(new, col);
 #endif
 	CHANGED;
@@ -600,8 +600,8 @@ delchar(int fixpos)
 
 	old = ml_get(lnum);
 	oldlen = STRLEN(old);
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
-	if (curwin->w_p_syt && GuiWin)
+#ifdef USE_SYNTAX
+	if (SYN_ON(curwin))
 		syn_delchar(old, col);
 #endif
 

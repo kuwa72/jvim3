@@ -177,7 +177,9 @@ DEFS = -DDIGRAPHS -DTERMCAP -DSOME_BUILTIN_TCAPS -DNO_FREE_NULL -DVIM_ISSPACE \
 		-DWEBB_COMPLETE -DWEBB_KEYWORD_COMPL \
 		-DVIM_HLP=\"$(HELPLOC)/jvim3.hlp\" \
 		-DDEFVIMRC_FILE=\"$(PREFIX)/etc/jvim3rc\" \
-		-DKANJI -DUCODE -DTRACK -DCRMARK -DFEXRC -DUSE_GREP -DUSE_TAGEX -DUSE_OPT $(FEPOPT)
+		-DVIMDIR=\"$(HELPLOC)/jvim3\" \
+		-DKANJI -DUCODE -DTRACK -DCRMARK -DFEXRC -DSYNTAX \
+		-DUSE_GREP -DUSE_TAGEX -DUSE_OPT $(FEPOPT)
 
 #
 # PART 3: hardware dependend
@@ -440,7 +442,7 @@ OBJ =	alloc.o unix.o buffer.o charset.o cmdcmds.o cmdline.o \
 	linefunc.o main.o mark.o memfile.o memline.o message.o misccmds.o \
 	normal.o ops.o param.o quickfix.o regexp.o \
 	regsub.o screen.o search.o \
-	tag.o term.o undo.o window.o $(TERMLIB) kanji.o track.o utf8.o \
+	syntax.o tag.o term.o undo.o window.o $(TERMLIB) kanji.o track.o utf8.o \
 	u2s.o s2u.o $(FEPOBJS)
 
 GOBJ = grep.o alloc.o charset.o kanji.o regexp.o regsub.o u2s.o s2u.o utf8.o

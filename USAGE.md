@@ -62,7 +62,7 @@ Environment:
 
 | | |
 | --- | --- |
-| `VIM` | Where the help file and the system `vimrc` are looked for. On Windows, if it is unset the editor sets it to the directory holding the exe. |
+| `VIM` | Where the help file, the system `vimrc` and the syntax rules are looked for. Unset, the editor fills it in: the directory holding the exe on Windows, `$PREFIX/lib/jvim3` on a Unix. |
 | `HOME` | Where your `.vimrc` / `_vimrc` is. On Windows, if unset, `%HOMEDRIVE%%HOMEPATH%`, or the exe's directory. |
 | `VIMINIT`, `EXINIT` | Ex commands to run at startup, instead of an rc file. |
 | `TERM` | Unix: which terminal entry to use. |
@@ -138,8 +138,7 @@ actually in.
 
 ## A `_vimrc` to start from
 
-Cut this down rather than up. Everything here exists in this build; the
-`syntax` lines are the Win32 GUI only.
+Cut this down rather than up. Everything here exists in this build.
 
 ```vim
 " ---- editing
@@ -166,9 +165,11 @@ set fepkey=\\           " CTRL-\ toggles the IME
 set jinsertmode=a       " insert mode starts in ASCII
 " set jmask=TTTT        " only if the locale is not telling the truth
 
-" ---- Windows GUI
+" ---- colour, on the GUI and on a terminal alike
 set syntax
 set syntype=cfp
+
+" ---- Windows GUI
 set crmark              " show line ends
 ```
 
@@ -303,9 +304,15 @@ Two known limits, both in the drawing:
 you wanted. `trackset` (`trs`) picks the character set used for ruled lines:
 `as` ASCII, `jp` the Japanese box drawing characters.
 
-Syntax colouring is the Win32 GUI only, and is its own small language — colours,
-`syntax link`, regexp rules per file type. `doc.j/readme.doc` §6.26 documents it
-in full, and `doc.j/_jvimrc` is a complete worked example for C.
+Syntax colouring is its own small language — colours, `syntax link`, regexp
+rules per file type. `doc.j/readme.doc` §6.26 documents it in full, and
+`doc.j/_jvimrc` is a complete worked example for C.
+
+It used to be the Win32 GUI only. It now works on a terminal as well: the same
+colour goes out as an SGR escape. Whether it can be asked for exactly depends on
+the terminal, and `$COLORTERM` decides — `truecolor` or `24bit` gets the colour
+itself, anything else the nearest of the sixteen a terminal has always had.
+`set nosyntax` if the terminal you are in cannot colour at all.
 
 One thing there is out of date. A multi-line region — the `p` search mode, which
 is how a C comment is coloured — used to be found by searching `synlines` lines

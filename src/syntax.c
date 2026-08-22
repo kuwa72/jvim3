@@ -10,9 +10,14 @@
  * syntax.c: code for syntax highlighting
  */
 
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
-
+/*
+ * vim.h comes first: USE_SYNTAX is decided there, so the guard cannot be put
+ * in front of it the way it used to be when the condition was spelled out.
+ */
 #include "vim.h"
+
+#ifdef USE_SYNTAX
+
 #include "globals.h"
 #include "proto.h"
 #include "param.h"
@@ -500,9 +505,6 @@ syn_color(BUF *buf, char_u *name)
 	char_u			*	p;
 	int					no;
 	int					rgb = 0;
-	int					r = 0;
-	int					g = 0;
-	int					b = 0;
 
 	p = name;
 	while (*p && !iswhite(*p))
@@ -539,15 +541,11 @@ syn_color(BUF *buf, char_u *name)
 			return(1);
 		p++;
 	}
-	r = (rgb & 0x00ff0000) >> 16;
-	g = (rgb & 0x0000ff00) >>  8;
-	b =  rgb & 0x000000ff;
-	rgb = (b << 16) | (g << 8) | r;
-	usercolor[no].rgb = rgb;
+	usercolor[no].rgb = rgb;		/* 0xRRGGBB, the way it was written */
 	return(0);
 }
 
-int
+static int
 syn_user_color(char_u id)
 {
 	int					no;
@@ -558,6 +556,67 @@ syn_user_color(char_u id)
 			return(usercolor[no].rgb);
 	}
 	return(0);
+}
+
+/*
+ * What a colour id asks for, for whoever is painting it -- the Win32 GUI with
+ * a brush, a terminal with an SGR escape. Both ask here so that the two cannot
+ * drift apart, which is the whole reason the palette is not written out twice.
+ *
+ * Returns the attributes and one of SYN_TEXT, SYN_REVERSE or SYN_RGB (with the
+ * colour left in *rgb as 0xRRGGBB), or 0 when the id names no colour at all --
+ * 'b' and 's', which are the bold and standout contexts of the 'highlight'
+ * option rather than anything from a syntax rule, come back that way.
+ */
+	int
+syn_decode(int id, int *rgb)
+{
+	int					attr = 0;
+
+	/*
+	 * A type is folded into the id by adding to it, so an id above the letters
+	 * is a letter plus one of the four; syn_get_color() is where that is done.
+	 */
+	if (id >= 0x80)
+	{
+			 if (id <= 0x9f) { attr = SYN_BOLD;					id -= 0x40; }
+		else if (id <= 0xbf) { attr = SYN_ITALIC;				id -= 0x60; }
+		else if (id <= 0xdf) { attr = SYN_ULINE;				id -= 0x80; }
+		else				 { attr = SYN_BOLD | SYN_ITALIC;	id -= 0xa0; }
+	}
+	switch (id) {
+	case '@':	return(attr | SYN_REVERSE);
+	case 'A':	return(attr | SYN_TEXT);				/* the text colour */
+	case 'B':	*rgb = 0xffffff;	break;				/* white */
+	case 'C':	*rgb = 0x000000;	break;				/* black */
+	case 'D':	*rgb = 0xff0000;	break;				/* red */
+	case 'E':	*rgb = 0x008000;	break;				/* green */
+	case 'F':	*rgb = 0x0000ff;	break;				/* blue */
+	case 'G':	*rgb = 0xffff00;	break;				/* yellow */
+	case 'H':	*rgb = 0xff00ff;	break;				/* fuchsia */
+	case 'I':	*rgb = 0xc0c0c0;	break;				/* silver */
+	/*
+	 * Not the gold of HTML, which is #ffd700 and unreadable on white. This is
+	 * the colour the shipped rules have been drawn in since 2002 and the "+a"
+	 * the manual means by "the sixteen HTML 3.2 colours and a bit".
+	 */
+	case 'J':	*rgb = 0x808000;	break;				/* gold */
+	case 'K':	*rgb = 0x00ff00;	break;				/* lime */
+	case 'L':	*rgb = 0x000080;	break;				/* navy */
+	case 'M':	*rgb = 0x00ffff;	break;				/* aqua */
+	case 'N':	*rgb = 0x808080;	break;				/* gray */
+	case 'O':	*rgb = 0x800000;	break;				/* maroon */
+	case 'P':	*rgb = 0x808000;	break;				/* olive */
+	case 'Q':	*rgb = 0x800080;	break;				/* purple */
+	case 'R':	*rgb = 0x008080;	break;				/* teal */
+	case '[': case '\\': case ']': case '^': case '_':
+	case 'V': case 'W': case 'X': case 'Y': case 'Z':
+		*rgb = syn_user_color((char_u)id);
+		break;
+	default:
+		return(0);							/* not a colour: 'b', 's', ... */
+	}
+	return(attr | SYN_RGB);
 }
 
 static int

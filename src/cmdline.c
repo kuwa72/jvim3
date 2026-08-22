@@ -2048,7 +2048,7 @@ doabbr:
 				}
 				break;
 		case CMD_syntax:
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 				++RedrawingDisabled;
 				switch (syn_add(curwin->w_buffer, arg))
 				{

@@ -54,6 +54,33 @@ typedef unsigned long	long_u;
 #include "term.h"
 #include "macros.h"
 
+/*
+ * Syntax colouring. It needs the KANJI screen, which keeps an attribute for
+ * every cell and so has somewhere to put a colour, and it needs somewhere to
+ * send that colour: the Win32 GUI paints it, a terminal is sent SGR escapes.
+ * -DSYNTAX asks for it; this is the name the rest of the tree tests, so that
+ * "which platforms" is answered in one place rather than in twenty #ifs.
+ */
+#if defined(KANJI) && defined(SYNTAX)
+# define USE_SYNTAX
+/*
+ * Is this window being coloured? On Windows only the GUI can: the console
+ * build draws through the same screen array but has no way to paint it.
+ */
+# ifdef NT
+#  define SYN_ON(wp)	((wp)->w_p_syt && GuiWin)
+# else
+#  define SYN_ON(wp)	((wp)->w_p_syt)
+# endif
+/* What syn_decode() answers with. One of TEXT, REVERSE or RGB, plus a type. */
+# define SYN_BOLD		0x01
+# define SYN_ITALIC		0x02
+# define SYN_ULINE		0x04
+# define SYN_TEXT		0x08	/* whatever the ordinary text colour is */
+# define SYN_REVERSE	0x10	/* text and background the other way round */
+# define SYN_RGB		0x20	/* a colour, left in the int passed by address */
+#endif
+
 #ifdef LATTICE
 # include <sys/types.h>
 # include <sys/stat.h>

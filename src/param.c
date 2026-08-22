@@ -91,7 +91,7 @@ struct param
 #ifdef USE_OPT
 # define PV_OPT		49
 #endif
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 # define PV_SYT		53
 #endif
 
@@ -246,7 +246,7 @@ static struct param params[] =
 		{"sourceany",	NULL,	P_BOOL,				(char_u *)NULL},
 		{"splitbelow",	"sb",	P_BOOL,				(char_u *)&p_sb},
 		{"suffixes",	"su",	P_STRING,			(char_u *)&p_su},
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 		{"syntax",		"syn",	P_BOOL|P_IND,		(char_u *)PV_SYT},
 		{"syntype",		"syt",	P_STRING,			(char_u *)&p_synt},
 		{"synlines",	"syl",	P_NUM,				(char_u *)&p_synl},
@@ -486,7 +486,7 @@ set_init(void)
 #else
 	curbuf->b_p_ml = FALSE;
 #endif
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 	curwin->w_p_syt = TRUE;
 #endif
 	curbuf->b_p_sw = 8;
@@ -534,7 +534,7 @@ set_init(void)
 #ifdef USE_OPT
 	curbuf->b_p_opt = 0;
 #endif
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 	curbuf->b_syn_ptr		= NULL;
 	curbuf->b_syn_tag		= NULL;
 	curbuf->b_syn_match		= NULL;
@@ -1573,7 +1573,7 @@ get_varp(struct param *p)
 #ifdef USE_OPT
 		case PV_OPT:	return (char_u *)&(curbuf->b_p_opt);
 #endif
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 		case PV_SYT:	return (char_u *)&(curwin->w_p_syt);
 #endif
 		default:		EMSG("get_varp ERROR");
@@ -1596,7 +1596,7 @@ win_copy_options(WIN *wp_from, WIN *wp_to)
 #ifdef CRMARK
 	wp_to->w_p_cr = wp_from->w_p_cr;
 #endif
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 	wp_to->w_p_syt = wp_from->w_p_syt;
 #endif
 }
