@@ -317,6 +317,33 @@ file, and the lines below the one you are typing on recolour as soon as you type
 the token that opens or closes a region. §6.28's `synlines` now only reaches the
 tag search (`t` mode).
 
+Which file types have rules is a question about `_jvimrc`, not about the editor.
+What it came with in 2002 was C/C++, Java, VBScript, HTML, `.bat`, `.ini`,
+`.def`, `.rc` and `_vimrc` itself. This tree adds Python, JavaScript/TypeScript,
+Go, Rust, Ruby, shell, Markdown, JSON, YAML, TOML, SQL, CSS/SCSS, C#, PHP, Lua,
+XML, diff, Makefile and Dockerfile, and lets the C rules cover `.cc`, `.cxx`,
+`.hpp`, `.hxx`, `.hh` and `.inl` as well.
+
+Adding one more is a block in `_jvimrc` and no code:
+
+```
+"begin suffixes=.zig
+"syntax Comment			n/\/\/.*$
+"syntax String			m/\".*[^\\]\"
+"syntax Statement		w/fn/return/defer/comptime
+"end   suffixes
+```
+
+The leading `"` is not a typo: the whole block is a comment until the file name
+being opened matches, and `fexrc` — which the sample sets — is what strips it.
+`"begin files=Name;Other` matches by name instead, for the Makefiles and
+Dockerfiles of the world. Two things to know before writing rules: the leftmost
+match on the line wins and, where two rules start in the same column, the one
+earlier in the file does — so comments and strings go at the top of a block. And
+`:syntax` is an ex command, so `|` ends it and `"` starts a trailing comment
+before the rule is ever seen; write `"` as `\"`, and do without `\|`, which
+leaves a literal `|` behind rather than an alternation.
+
 ## What you get beyond vi
 
 Vim 3.0 is vi plus a short list, and the short list is why anyone used it:

@@ -10,6 +10,14 @@ repository and would drift within three releases.
 
 ## Unreleased
 
+### Added
+
+- Syntax colouring for Python, JavaScript/TypeScript, Go, Rust, Ruby, shell,
+  Markdown, JSON, YAML, TOML, SQL, CSS/SCSS, C#, PHP, Lua, XML, diff, Makefile
+  and Dockerfile, in `doc.j/_jvimrc` — which ships as `_jvimrc.sample`. Nothing
+  newer than 1998 had rules before. The C rules now also cover `.cc`, `.cxx`,
+  `.hpp`, `.hxx`, `.hh` and `.inl`.
+
 ### Changed
 
 - Syntax colouring remembers, per line, which multi-line region was open when
@@ -36,6 +44,11 @@ repository and would drift within three releases.
 
 ### 日本語
 
+- Python、JavaScript/TypeScript、Go、Rust、Ruby、シェル、Markdown、JSON、YAML、
+  TOML、SQL、CSS/SCSS、C#、PHP、Lua、XML、diff、Makefile、Dockerfile のシンタックス
+  カラー定義を `doc.j/_jvimrc` (配布物の `_jvimrc.sample`) に追加しました。これまで
+  1998 年より新しい言語の定義はひとつもありませんでした。C の定義は `.cc` `.cxx`
+  `.hpp` `.hxx` `.hh` `.inl` にも効くようになりました。
 - シンタックスカラーが、行をまたぐ領域の状態を行ごとに覚えるようになりました。
   これまでは 1 行描くたびに前後 `synlines` 行を探していたため、コメントや文字列
   がその範囲を超えると色が落ちていました。長さに関わらず色が保たれ、閉じていない

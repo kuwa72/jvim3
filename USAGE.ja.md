@@ -309,6 +309,32 @@ Unix で IME を制御するには、入力メソッドのプロトコルを話�
 開く・閉じる記号を打った時点で下の行の色がすぐ変わります。§6.28 の `synlines` は
 タグ検索 (`t` モード) にのみ効くようになりました。
 
+どのファイル種別に色が付くかは、エディタ本体ではなく `_jvimrc` の問題です。2002 年
+の時点で入っていたのは C/C++、Java、VBScript、HTML、`.bat`、`.ini`、`.def`、`.rc`、
+そして `_vimrc` 自身でした。このツリーでは Python、JavaScript/TypeScript、Go、Rust、
+Ruby、シェル、Markdown、JSON、YAML、TOML、SQL、CSS/SCSS、C#、PHP、Lua、XML、diff、
+Makefile、Dockerfile を追加し、C のルールが `.cc` `.cxx` `.hpp` `.hxx` `.hh` `.inl`
+にも効くようにしました。
+
+さらに増やすのは `_jvimrc` にブロックを足すだけで、コードは触りません。
+
+```
+"begin suffixes=.zig
+"syntax Comment			n/\/\/.*$
+"syntax String			m/\".*[^\\]\"
+"syntax Statement		w/fn/return/defer/comptime
+"end   suffixes
+```
+
+先頭の `"` は書き間違いではありません。開いたファイルが一致するまでブロック全体が
+ただのコメントで、それを外すのが `fexrc` (サンプルが設定しています) です。名前で
+一致させたい Makefile や Dockerfile には `"begin files=Name;Other` を使います。
+ルールを書く前に 2 点。行内で最も左の一致が勝ち、同じ桁から始まる場合はファイルの
+前にあるルールが勝ちます — なのでコメントと文字列はブロックの先頭に置きます。
+また `:syntax` は ex コマンドなので、ルールが読まれる前に `|` はコマンドを区切り、
+`"` は行末コメントを始めてしまいます。`"` は `\"` と書き、`\|` は諦めてください
+(選択にはならず、リテラルの `|` が残るだけです)。
+
 ## vi に対して増えているもの
 
 Vim 3.0 は vi にわずかな機能を足したもので、その「わずか」が使われた理由でした。
