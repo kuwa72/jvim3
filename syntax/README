@@ -1,0 +1,104 @@
+Syntax colouring rules
+======================
+
+One file per file type, plus common.jvsyn and filetype.jvsyn. They are ordinary
+ex commands, so ":source" is all that reads them.
+
+    an rc                    source $VIM/syntax/filetype.jvsyn
+      filetype.jvsyn         source $VIM/syntax/common.jvsyn     always
+        "begin suffixes=.go  source $VIM/syntax/go.jvsyn         for a .go file
+        "end   suffixes
+
+$VIM is the directory these live in. On Windows the editor sets it to the one
+holding the exe, which is where the package unpacks to, so it is already right.
+On a Unix it is the directory the build was installed to -- /usr/local/lib/jvim3
+unless PREFIX said otherwise -- and running the editor out of a build tree needs
+VIM set by hand.
+
+common.jvsyn first
+------------------
+
+It clears whatever the last buffer left behind, defines the ten user colours and
+gives every group name -- Comment, String, Statement and the rest -- a colour.
+The per-type files use those names and nothing else, so a rule set is one file
+and re-colouring the whole editor is one line in common.jvsyn. A file sourced
+without common.jvsyn having run first reports "Invalid argument" for every rule
+in it, because the names mean nothing yet.
+
+Adding a file type
+------------------
+
+Write syntax/zig.jvsyn:
+
+    syntax Comment			n/\/\/.*$
+    syntax String			m/\".*[^\\]\"
+    syntax Statement		w/fn/return/defer/comptime
+
+and add the block to filetype.jvsyn that reaches it:
+
+    "begin suffixes=.zig
+    "source $VIM/syntax/zig.jvsyn
+    "end   suffixes
+
+The leading " is not a typo: the block is a comment until the name of the file
+being opened matches, and 'fexrc' is what takes the quote off. Match by name
+rather than by suffix with "begin files=Makefile;GNUmakefile.
+
+Checking what a rule did
+------------------------
+
+A rule that matches the wrong thing says so in no other way: the screen comes
+out a colour short, and which of two hundred rules is responsible is anyone's
+guess. So ask it.
+
+    :syntax dump /tmp/out
+
+writes one line per coloured run of the buffer:
+
+    3:4-6 Conditional w/if
+    3:11-15 Number w/0x\x\+
+
+The line, the byte offsets (the second one past the end), the group, and the
+rule as the editor received it. Text no rule claimed is not listed, so an empty
+dump means nothing matched at all. It walks the buffer through the same code the
+screen draws from, so what it says is what would be drawn, and it needs no GUI:
+
+    jvim3 -s cmds file.py
+
+with cmds holding  :syntax dump /tmp/out<CR>:q!<CR>  -- one command, no
+screenshots, and the answer is text.
+
+The pattern comes back the way the editor got it, after the ex command line has
+eaten a backslash: a rule written  m/\".*\"  prints as  m/".*"  . That is the
+level the regexp actually sees, and a quick way to check an escape.
+
+../scripts/test-syntax.sh is that loop written down -- a few lines of a language
+and the dump they should produce. Change a rule, run it, read the diff. Add a
+case for anything you fix: three lines, and it is the only thing that will
+notice when the rule stops working.
+
+Writing rules
+-------------
+
+../doc.j/readme.doc section 6.26 is the reference. Five things it does not say:
+
+  o The leftmost match on the line wins, and where two rules match at the same
+    column the one earlier in the file does. Put comments and strings at the
+    top, and a narrower rule before the wider one it would otherwise lose to.
+
+  o ":syntax" is an ex command, so '"' starts a trailing comment and '|' ends
+    the command before the rule is ever looked at. Write '"' as \" -- the
+    backslash is eaten on the way in. \| does not survive as an alternation
+    either, only as a literal pipe: a rule cannot hold one.
+
+  o The regexp is vim's "magic": . * [ ^ $ bare, and \+ \= \< \> \( \) with a
+    backslash, plus the classes \i \k \f \p \s \d \x \o \w \h \a \l \u and
+    their upper case complements. There is no \{n,m} and nothing non-greedy.
+
+  o The mode letters before the "/" are i (ignore case), j (fuzzy Japanese),
+    w (whole words), m (shortest match), p (a region, two patterns), t (inside
+    a tag), - and + (shrink or grow the match by a character). Anything else is
+    ignored, which is why the older rules all say n/ -- n means nothing, and
+    "no mode" is what they want.
+
+  o Only p reaches past the end of a line. Everything else matches within one.

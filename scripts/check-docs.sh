@@ -50,18 +50,19 @@ done
 enc=$(COUNT_ONLY=1 ./scripts/test-encoding.sh 2>/dev/null | sed -n 's/^cases //p')
 edt=$(COUNT_ONLY=1 ./scripts/test-editing.sh  2>/dev/null | sed -n 's/^cases //p')
 win=$(COUNT_ONLY=1 ./scripts/test-winkeys.sh  2>/dev/null | sed -n 's/^cases //p')
+syn=$(COUNT_ONLY=1 ./scripts/test-syntax.sh   2>/dev/null | sed -n 's/^cases //p')
 case ${enc:-x}${edt:-x} in
 *x*)	bad "cannot get the case counts from the test suites (enc='$enc' edt='$edt')"
 		enc=0; edt=0 ;;
 esac
 total=$((enc + edt))
 
-echo "suites say: encoding $enc, editing $edt, total $total${win:+, winkeys $win}"
+echo "suites say: encoding $enc, editing $edt, total $total${syn:+, syntax $syn}${win:+, winkeys $win}"
 
 # Every "<n> cases" / "<n> tests" / "<n> ケース" / "<n> 個のテスト" in the prose
 # has to be one of those numbers, and where the line names a particular suite it
 # has to be that suite's number.
-allowed=" $enc $edt $total ${win:-} "
+allowed=" $enc $edt $total ${syn:-} ${win:-} "
 while IFS=: read -r file line text; do
 	[ -n "${file:-}" ] || continue
 	n=$(printf '%s\n' "$text" |
@@ -78,6 +79,9 @@ while IFS=: read -r file line text; do
 	*test-winkeys*)
 		[ -z "$win" ] || [ "$n" = "$win" ] ||
 			bad "$file:$line: says $n, should be $win (the Windows key suite)" ;;
+	*test-syntax*)
+		[ -z "$syn" ] || [ "$n" = "$syn" ] ||
+			bad "$file:$line: says $n, should be $syn (the syntax suite)" ;;
 	*)
 		case $allowed in
 		*" $n "*)	;;

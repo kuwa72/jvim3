@@ -346,8 +346,20 @@ source $VIM/syntax/filetype.jvsyn
 
 `filetype.jvsyn` がディスパッチャで、色とグループ名の `common.jvsyn` を読んでから、
 開いたファイルに対応する 1 ファイルを読みます。種別を足すのは `syntax/zig.jvsyn` と
-`filetype.jvsyn` の 3 行です。ルール言語で先に知っておかないと午後を無駄にする 2 点
-を含め、詳細は `syntax/README` にあります。
+`filetype.jvsyn` の 3 行です。ルール言語で先に知っておかないと午後を無駄にする点も
+含め、詳細は `syntax/README` にあります。
+
+ルールが違うものに色を付けても、それ以外に知らせる手段はありません。訊いてください。
+
+```vim
+:syntax dump /tmp/out
+```
+
+色の付いた範囲ごとに 1 行出ます。`3:4-6 Conditional w/if` は 3 行目のバイト 4〜6、
+グループ名、該当ルールです。画面が描画するのと同じコードを通るので、実際に描かれる
+ものと一致します。ウィンドウは不要で、`jvim3 -s cmds file.py` のスクリプトに
+`:syntax dump` を入れるだけで一巡します。`scripts/test-syntax.sh` はこれをスイートに
+したものです。
 
 `$VIM` がこれらを探す場所です。Windows ではエディタが exe のあるディレクトリを設定
 するので、展開したパッケージなら何もいりません。Unix では `PREFIX` を変えていなければ

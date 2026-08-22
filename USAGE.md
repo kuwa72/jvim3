@@ -354,8 +354,19 @@ source $VIM/syntax/filetype.jvsyn
 `filetype.jvsyn` is the dispatcher: it reads `common.jvsyn` for the colours and
 group names, then the one file that goes with what you are opening. Adding a
 type is `syntax/zig.jvsyn` plus three lines in `filetype.jvsyn`; `syntax/README`
-has the details, including the two things about the rule language that will
+has the details, including the things about the rule language that will
 otherwise waste your afternoon.
+
+A rule that colours the wrong thing has no other way of telling you, so ask:
+
+```vim
+:syntax dump /tmp/out
+```
+
+writes one line per coloured run — `3:4-6 Conditional w/if` is line 3, bytes 4
+to 6, the group, and the rule. It comes from the same code the screen draws
+from, and needs no window: `jvim3 -s cmds file.py` with `:syntax dump` in the
+script is the whole loop. `scripts/test-syntax.sh` is that loop as a suite.
 
 `$VIM` is where all this is looked for. On Windows the editor sets it to the
 directory the exe is in, so an unpacked package needs nothing. On a Unix it is

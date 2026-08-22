@@ -37,6 +37,13 @@
 typedef struct _syntax {
 	struct _syntax	*	next;
 	char_u			*	name;
+	/*
+	 * What the rule was written as, kept only so that "syntax dump" can say
+	 * which line of which rule file put a colour where. A rule that matches
+	 * the wrong thing is otherwise silent -- it colours something, or nothing,
+	 * and there is no way to ask which of two hundred rules did it.
+	 */
+	char_u			*	pat;
 	int					color;
 	int					ic;
 	int					jic;
@@ -92,6 +99,13 @@ static syncolor			usercolor[] = {
 	{'W',	0x00000000,},	{'V',	0x00000000,},
 } ;
 
+/*
+ * The rule the last is_syntax() answered with. Only "syntax dump" reads it:
+ * is_syntax() returns a colour, and several rules can share one, so this is the
+ * only way to say which rule to go and look at.
+ */
+static syntax		*	syn_hit = NULL;
+
 #if SYNTAX_CACHE
 typedef struct {
 	char_u			*	idx;
@@ -119,6 +133,8 @@ syn_clr(BUF *buf)
 	while (twp)
 	{
 		tnp = twp->next;
+		if (twp->pat)
+			free(twp->pat);
 		if (twp->str)
 			free(twp->str);
 		if (twp->prog)
@@ -765,11 +781,13 @@ syn_link(BUF *buf, char_u *name)
 		return(1);
 	}
 
-	/* check */
+	/* An alias may not be named after a sub-command of ":syntax" */
 		 if (stricmp("load",   name) == 0) return(1);
 	else if (stricmp("clear",  name) == 0) return(1);
 	else if (stricmp("color",  name) == 0) return(1);
 	else if (stricmp("link",   name) == 0) return(1);
+	else if (stricmp("dump",   name) == 0) return(1);
+	else if (stricmp("crchar", name) == 0) return(1);
 	else ;
 
 	lp = malloc(sizeof(synlink));
@@ -1065,6 +1083,115 @@ syn_crchar(BUF *buf, char_u *name)
 	return(0);
 }
 
+/*
+ * One line of "syntax dump": the run of text from 'start' to 'end' and the rule
+ * that coloured it, as
+ *
+ *     12:4-6 Conditional w/if
+ *
+ * Byte offsets into the line, the second one past the end. The rule is named by
+ * its group and by the pattern as it was written, which between them say which
+ * line of which file in syntax/ to go and change.
+ */
+static void
+syn_dumprun(FILE *fp, linenr_t lnum, int start, int end, syntax *r)
+{
+	char_u			flags[16];
+	char_u		*	f = flags;
+	int				i;
+
+	if (r == NULL || start >= end)
+		return;
+	if (r->ic)								*f++ = 'i';
+	if (r->jic)								*f++ = 'j';
+	if (r->word)							*f++ = 'w';
+	if (r->min)								*f++ = 'm';
+	if (r->type == TYPE_PAIR)				*f++ = 'p';
+	if (r->type == TYPE_TAG
+			|| r->type == TYPE_TAGP)		*f++ = 't';
+	if (r->type == TYPE_CRCH)				*f++ = 'c';
+	for (i = 0; i < r->last && f < flags + 10; i++)
+		*f++ = '-';
+	for (i = 0; i > r->last && f < flags + 10; i--)
+		*f++ = '+';
+	if (f == flags)							*f++ = 'n';		/* no mode at all */
+	*f = NUL;
+	fprintf(fp, "%ld:%d-%d %s %s/%s\n", (long)lnum, start, end,
+			r->name != NULL ? (char *)r->name : "-",
+			(char *)flags, r->pat != NULL ? (char *)r->pat : "");
+}
+
+/*
+ * "syntax dump <file>": what the rules did to this buffer, as text.
+ *
+ * A rule that matches the wrong thing, or nothing, says so in no other way --
+ * the screen simply comes out a colour short, and finding out which of two
+ * hundred rules is responsible means reading pixels. This walks the buffer the
+ * way the screen does, through is_syntax(), so what it reports is what would be
+ * drawn, and writes one line per coloured run. Text no rule claimed is left
+ * out: the lines that are there are the answers, and the rest is the question.
+ */
+static int
+syn_dump(WIN *wp, char_u *fname)
+{
+	BUF				*	buf = wp->w_buffer;
+	FILE			*	fp;
+	linenr_t			lnum;
+	char_u			*	top;
+	char_u			*	ptr;
+	int					clr;
+	int					last;			/* colour of the run being collected */
+	syntax			*	rule;
+	int					start;
+	int					off;
+
+	if (fname == NULL || *fname == NUL)
+		return(1);
+	if (!wp->w_p_syt)
+	{
+		emsg((char_u *)"'syntax' is off, so nothing would be coloured");
+		return(0);
+	}
+	if ((fp = fopen((char *)fileconvsto(fname), "w")) == NULL)
+	{
+		emsg2((char_u *)"Cannot open \"%s\" for writing", fname);
+		return(0);
+	}
+	for (lnum = 1; lnum <= buf->b_ml.ml_line_count && !got_int; lnum++)
+	{
+		top = ptr = ml_get_buf(buf, lnum, FALSE);
+		last  = 0;
+		rule  = NULL;
+		start = 0;
+		while (*ptr != NUL)
+		{
+			syn_hit = NULL;
+			clr = is_syntax(wp, lnum, &top, &ptr);
+			off = (int)(ptr - top);		/* is_syntax() may fetch the line again */
+			if (clr != last || syn_hit != rule)
+			{
+				syn_dumprun(fp, lnum, start, off, rule);
+				start = off;
+				last  = clr;
+				rule  = clr ? syn_hit : NULL;
+			}
+			ptr += ISkanji(*ptr) ? utf_lenat(ptr, 0) : 1;
+		}
+		syn_dumprun(fp, lnum, start, (int)(ptr - top), rule);
+		breakcheck();
+	}
+	fclose(fp);
+	/*
+	 * The walk above left the per-line cache pointing at the last line looked
+	 * at, which is not where the screen is.
+	 */
+	buf->b_syn_line		= -1;
+	buf->b_syn_match	= NULL;
+	buf->b_syn_matchend	= NULL;
+	buf->b_syn_curp		= NULL;
+	return(0);
+}
+
 	int
 syn_add(BUF *buf, char_u *reg)
 {
@@ -1100,6 +1227,8 @@ syn_add(BUF *buf, char_u *reg)
 		updateScreen(CLEAR);
 		return(0);
 	}
+	if (stricmp("dump", reg) == 0)
+		return(syn_dump(curwin, p));
 	if (stricmp("load", reg) == 0)
 	{
 		syn_load(buf, p);
@@ -1167,6 +1296,7 @@ syn_add(BUF *buf, char_u *reg)
 		nextp = skip_regexp(p, '/');
 		if (*nextp == '/')
 			*nextp++ = '\0';
+		r->pat = strsave(p);	/* as written, for "syntax dump" to name it */
 		if (l_type || l_jic || syn_isregstr(p))
 		{
 			if (l_type != TYPE_TAG || tagfirst)
@@ -1180,6 +1310,7 @@ syn_add(BUF *buf, char_u *reg)
 				}
 				if ((r->prog = syn_regcomp(l_ic, l_jic, pattern)) == NULL)
 				{
+					free(r->pat);
 					free(r);
 					p_magic = magic;
 					return(2);
@@ -1196,6 +1327,7 @@ syn_add(BUF *buf, char_u *reg)
 						if (l_type == TYPE_TAG)
 							free(tagprog);
 						free(r->prog);
+						free(r->pat);
 						free(r);
 						p_magic = magic;
 						return(2);
@@ -1215,6 +1347,7 @@ syn_add(BUF *buf, char_u *reg)
 						if (l_type == TYPE_TAG)
 							free(tagprog);
 						free(r->prog);
+						free(r->pat);
 						free(r);
 						p_magic = magic;
 						return(2);
@@ -1233,6 +1366,7 @@ syn_add(BUF *buf, char_u *reg)
 					{
 						free(tagprog);
 						free(tagprogend);
+						free(r->pat);
 						free(r);
 						p_magic = magic;
 						return(2);
@@ -1242,6 +1376,7 @@ syn_add(BUF *buf, char_u *reg)
 						free(tagprog);
 						free(tagprogend);
 						free(r->prog);
+						free(r->pat);
 						free(r);
 						p_magic = magic;
 						return(2);
@@ -1256,6 +1391,7 @@ syn_add(BUF *buf, char_u *reg)
 					}
 					free(r->progend);
 					free(r->prog);
+					free(r->pat);
 					free(r);
 					p_magic = magic;
 					return(2);
@@ -1968,6 +2104,7 @@ is_syntax(WIN *wp, linenr_t lnum, char_u **top, char_u **ptr)
 				buf->b_syn_matchend	= NULL;
 				buf->b_syn_curp		= NULL;
 			}
+			syn_hit = synp;
 			return(synp->color);
 		}
 		return(0);
@@ -2004,6 +2141,7 @@ is_syntax(WIN *wp, linenr_t lnum, char_u **top, char_u **ptr)
 				buf->b_syn_matchend	= NULL;
 				buf->b_syn_curp		= NULL;
 			}
+			syn_hit = openp;
 			return(openp->color);
 		}
 	}
@@ -2057,6 +2195,7 @@ is_syntax(WIN *wp, linenr_t lnum, char_u **top, char_u **ptr)
 				buf->b_syn_matchend	= NULL;
 				buf->b_syn_curp		= NULL;
 			}
+			syn_hit = synp;
 			return(synp->color);
 		}
 	}

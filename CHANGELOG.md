@@ -12,6 +12,11 @@ repository and would drift within three releases.
 
 ### Added
 
+- `:syntax dump <file>` writes what the rules did to the buffer, as text: one
+  line per coloured run, with the group and the rule that made it. A rule that
+  matches the wrong thing had no other way of saying so — the screen came out a
+  colour short and finding the rule meant reading pixels. `scripts/test-syntax.sh`
+  is that turned into a suite, so a rule that stops matching fails a test.
 - Syntax colouring works on a terminal, not only in the Win32 GUI. The colour a
   rule asks for goes out as an SGR escape — the exact one where `$COLORTERM`
   says the terminal can take it, the nearest of the sixteen otherwise. The
@@ -71,6 +76,11 @@ repository and would drift within three releases.
 
 ### 日本語
 
+- `:syntax dump <file>` を追加しました。ルールがバッファに何をしたかをテキストで
+  書き出します (色の付いた範囲ごとに1行、グループ名と該当ルール付き)。これまで
+  ルールの間違いは「画面の色が足りない」以外に現れず、原因のルールを特定するには
+  ピクセルを読むしかありませんでした。`scripts/test-syntax.sh` はこれをスイートに
+  したもので、ルールが一致しなくなればテストが落ちます。
 - シンタックスカラーが Win32 GUI だけでなく端末でも動くようになりました。ルールが
   指定した色を SGR エスケープとして出します。`$COLORTERM` が対応を示していれば
   その色そのもの、そうでなければ 16 色のうち最も近いものです。パレットを 1 箇所に
