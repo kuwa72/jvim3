@@ -97,8 +97,11 @@ Writing rules
 
   o The mode letters before the "/" are i (ignore case), j (fuzzy Japanese),
     w (whole words), m (shortest match), p (a region, two patterns), t (inside
-    a tag), - and + (shrink or grow the match by a character). Anything else is
-    ignored, which is why the older rules all say n/ -- n means nothing, and
-    "no mode" is what they want.
+    a tag), - and + (shrink or grow the match by a character), and n, which
+    means nothing at all and is what the rules that want no mode are written
+    with. Any other letter is refused, with a message naming it. The 2002
+    manual says the rest are ignored, and they were: a rule with a typo in its
+    mode went in, matched something other than what was meant, and the only
+    sign of it was a colour in the wrong place.
 
   o Only p reaches past the end of a line. Everything else matches within one.

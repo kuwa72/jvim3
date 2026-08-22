@@ -1270,7 +1270,25 @@ syn_add(BUF *buf, char_u *reg)
 		case '+': l_last--;					break;
 		case 'M': l_min		= TRUE;			break;
 		case 'T': l_type	= TYPE_TAG;		break;
-		default:							break;
+		case 'N':							break;	/* no mode, spelled out */
+		default:
+			{
+				/*
+				 * A letter nobody handles is a typo. The manual says the rest
+				 * are ignored, and they were -- so a rule with one in it was
+				 * added, matched something other than what was meant, and said
+				 * nothing about why. "n" has to stay, because it is what every
+				 * rule that wants no mode at all has been written with since
+				 * 1998, and it too was landing here.
+				 */
+				char_u		bad[2];
+
+				bad[0] = *p;
+				bad[1] = NUL;
+				emsg2((char_u *)"Unknown syntax mode \"%s\": the modes are i j w p t m n - +",
+						bad);
+				return(0);			/* said so already */
+			}
 		}
 		p++;
 	}

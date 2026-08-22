@@ -41,6 +41,11 @@ repository and would drift within three releases.
 
 ### Changed
 
+- An unknown mode letter in a syntax rule is refused, with a message naming it,
+  instead of being ignored. The 2002 manual says the rest are ignored and they
+  were, so a typo in a mode went in as a rule and matched the wrong thing in
+  silence. `n`, which is what every rule wanting no mode is written with, is
+  now a mode of its own rather than one of the ignored letters.
 - Syntax colouring remembers, per line, which multi-line region was open when
   the line above ended, instead of searching `synlines` lines in each direction
   every time a line is drawn. A comment or a string now keeps its colour however
@@ -103,6 +108,11 @@ repository and would drift within three releases.
   カラー定義を `doc.j/_jvimrc` (配布物の `_jvimrc.sample`) に追加しました。これまで
   1998 年より新しい言語の定義はひとつもありませんでした。C の定義は `.cc` `.cxx`
   `.hpp` `.hxx` `.hh` `.inl` にも効くようになりました。
+- シンタックスルールの未知のモード文字を、無視せずエラーにするようになりました
+  (どの文字かをメッセージに出します)。2002 年の説明書は「その他は無視します」と
+  していて実際そうだったため、モードの打ち間違いがそのままルールとして登録され、
+  黙って違うものに一致していました。モードなしを表す `n` は、無視される文字では
+  なく正式なモードにしました。
 - シンタックスカラーが、行をまたぐ領域の状態を行ごとに覚えるようになりました。
   これまでは 1 行描くたびに前後 `synlines` 行を探していたため、コメントや文字列
   がその範囲を超えると色が落ちていました。長さに関わらず色が保たれ、閉じていない

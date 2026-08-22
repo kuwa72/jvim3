@@ -52,17 +52,24 @@ counted() {
 	[ -n "$count_only" ]
 }
 
-# case <name> <file name> <source> <wanted dump>
+# case <name> <file name> <source> <wanted dump> [ex commands first]
 #
 # The file name decides which rules are read, so it carries the real suffix.
+# The last argument is for cases about the rule language itself: whatever it
+# holds is typed before the dump, so a rule added by hand shows up in it.
+#
+# printf's "%b" rather than using the string as the format: a source that
+# starts with "--" is not then read as an option, and a "%" in a pattern is
+# just a "%".
 case_() {
 	counted && return
-	local name=$1 file=$2 src=$3 want=$4
+	local name=$1 file=$2 src=$3 want=$4 pre=${5:-}
 
-	printf "$src" > "$tmp/$file"
-	printf "$want" > "$tmp/want"
+	printf '%b' "$src" > "$tmp/$file"
+	printf '%b' "$want" > "$tmp/want"
 	rm -f "$tmp/out"
-	printf ':syntax dump %s/out\r:q!\r' "$tmp" > "$tmp/keys"
+	printf '%b' "$pre" > "$tmp/keys"
+	printf ':syntax dump %s/out\r:q!\r' "$tmp" >> "$tmp/keys"
 	"$tmp/ptyrun" /bin/sh -c \
 		"HOME=$tmp VIM=$root TERM=xterm $jvim -T xterm -s $tmp/keys $tmp/$file" \
 		>/dev/null 2>&1
@@ -129,6 +136,59 @@ case_ 'a file type with no rules is left alone' t.unknown \
 case_ 'Japanese in a rule matches' t.py \
 'x = "\343\201\202"  # \343\201\202\n' \
 '1:4-9 String m/".*[^\\\\]"\n1:11-16 Comment n/#.*$\n'
+
+case_ 'JavaScript: template literal, keywords' t.js \
+'const x = 42;  // c\nclass A { async run() { return `t${x}`; } }\n' \
+'1:0-5 StorageClass w/const\n1:10-12 Number w/\\d\\+\n1:15-19 Comment n/\\/\\/.*$\n2:0-5 Structure w/class\n2:10-15 Statement w/async\n2:24-30 Statement w/return\n2:31-38 String p/`\n'
+
+case_ 'Ruby: instance variable, keywords' t.rb \
+'# c\nrequire "json"\nclass Foo\n  def run\n    @n = nil\n  end\nend\n' \
+'1:0-3 Comment n/#.*$\n2:0-7 Include w/require\n2:8-14 String m/".*[^\\\\]"\n3:0-5 Structure w/class\n4:2-5 Statement w/def\n5:4-6 Identifier n/@@\\=\\i\\+\n5:9-12 Constant w/nil\n6:2-5 Statement w/end\n7:0-3 Statement w/end\n'
+
+case_ 'CSS: selector, colour, unit' t.css \
+'/* c */\n.a, #b {\n  color: #ff8800;\n  margin: 1.5em;\n}\n' \
+'1:0-7 Comment p/\\/\\*\n2:0-2 Tag n/[.#]\\i[-_a-zA-Z0-9]*\n2:4-6 Tag n/[.#]\\i[-_a-zA-Z0-9]*\n3:9-16 Constant n/#\\x\\x\\x\\x\\x\\x\n4:10-15 Float n/\\d*\\.\\d\\+[a-z%]*\n'
+
+case_ 'SQL: keywords are matched either case' t.sql \
+'-- c\nSELECT id FROM t WHERE n > 10;\n' \
+'1:0-4 Comment n/--.*$\n2:0-6 Statement iw/select\n2:10-14 Statement iw/from\n2:17-22 Statement iw/where\n2:27-29 Number w/\\d\\+\n'
+
+case_ 'Lua: a comment is two dashes' t.lua \
+'-- c\nlocal M = {}\nfunction M.f() return nil end\n' \
+'1:0-4 Comment n/--.*$\n2:0-5 Statement w/local\n3:0-8 Statement w/function\n3:15-21 Statement w/return\n3:22-25 Constant w/nil\n3:26-29 Statement w/end\n'
+
+case_ 'PHP: variables and types' t.php \
+'<?php\n$x = "a";\nfunction f(int $n): string { return null; }\n' \
+'1:0-5 PreProc n/<?php\n2:0-2 Identifier n/\\$\\i\\+\n2:5-8 String m/".*[^\\\\]"\n3:0-8 Statement iw/function\n3:11-14 Type iw/int\n3:15-17 Identifier n/\\$\\i\\+\n3:20-26 Type iw/string\n3:29-35 Statement iw/return\n3:36-40 Constant iw/null\n'
+
+case_ 'diff: the added and removed lines' t.diff \
+'diff --git a/x b/x\n@@ -1 +1 @@\n-old\n+new\n' \
+'1:0-18 Statement n/^diff .*$\n2:0-11 Special n/^@@.*$\n3:0-4 DiffDel n/^-.*$\n4:0-4 DiffAdd n/^+.*$\n'
+
+case_ 'TOML: table, key, value' t.toml \
+'# c\nname = "jvim"\n\n[deps]\nok = true\n' \
+'1:0-3 Comment n/#.*$\n2:0-5 Identifier m-/^\\s*[^ #=]\\+\\s*=\n2:7-13 String m/".*[^\\\\]"\n4:0-6 Tag n/^\\s*\\[.*\\]\n5:0-3 Identifier m-/^\\s*[^ #=]\\+\\s*=\n5:5-9 Boolean w/true\n'
+
+case_ 'Makefile: assignment, target, variable' t.mk \
+'CC = gcc\nall: prog\n\t$(CC) -o prog\n' \
+'1:0-3 Type m-/^[A-Za-z_][A-Za-z0-9_]*\\s*=\n2:0-3 PreProc m-/^[A-Za-z0-9_.%$][^ #=:]*:\n3:1-6 Identifier n/\\$[({][^)}]*[)}]\n'
+
+case_ 'Dockerfile: matched by name, not by suffix' Dockerfile \
+'# c\nFROM debian:12 AS build\nRUN echo "hi"\n' \
+'1:0-3 Comment n/#.*$\n2:0-4 Statement iw/FROM\n2:15-17 Operator iw/AS\n3:0-3 Statement iw/RUN\n3:9-13 String m/".*[^\\\\]"\n'
+
+# The rule language itself. A mode letter nobody handles used to be dropped in
+# silence, so the rule went in and matched the wrong thing; now it is refused,
+# and the dump is the way to see which of the two happened.
+case_ 'a known mode letter adds the rule' t.unknown \
+'def x\n' \
+'1:0-3 - w/def\n' \
+':syntax red w/def\r'
+
+case_ 'an unknown mode letter is refused' t.unknown \
+'def x\n' \
+'' \
+':syntax red q/def\r'
 
 if [ -n "$count_only" ]; then
 	printf 'cases %d\n' "$cases"
