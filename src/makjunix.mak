@@ -449,6 +449,12 @@ GOBJ = grep.o alloc.o charset.o kanji.o regexp.o regsub.o u2s.o s2u.o utf8.o
 
 all: $(TARGET) grep
 
+# Every object depends on every header. Without this a header edit -- or a
+# changed -D, which usually comes with one -- left objects behind that were
+# compiled against the old one, and the link failed somewhere unrelated or,
+# worse, succeeded with half the tree disagreeing about a definition.
+$(OBJ): $(INCL)
+
 $(TARGET): $(OBJ) version.c
 	$(CC) $(CFLAGS) version.c
 	$(CC) -o $(TARGET) $(OBJ) version.o $(LIBS) $(FEPLIBS)
@@ -463,21 +469,23 @@ debug: $(OBJ) version.c
 ctags:
 	ctags *.c *.h
 
+# "mkdir -p": a PREFIX whose parents do not exist yet is the ordinary case for
+# anything but /usr/local -- "make install PREFIX=$HOME/.local" stopped at the
+# man directory, because plain mkdir will not make man1 without man.
 install: $(TARGET)
-	-mkdir $(BINLOC)
+	-mkdir -p $(BINLOC)
 	cp $(TARGET) $(BINLOC)
 	chmod $(BINMOD) $(BINLOC)/$(TARGET)
 	$(STRIP) $(BINLOC)/$(TARGET)
-	-mkdir $(MANLOC)
+	-mkdir -p $(MANLOC)
 	cp $(MANFILE) $(MANLOC)/jvim3.1
 	chmod $(MANMOD) $(MANLOC)/jvim3.1
-	-mkdir $(HELPLOC)
+	-mkdir -p $(HELPLOC)
 	cp $(HELPFILE) $(HELPLOC)/jvim3.hlp
 	chmod $(HELPMOD) $(HELPLOC)/jvim3.hlp
 # The syntax rules, where $VIM points: an rc reaches them by that name, and the
 # build compiled the same path in as the default for $VIM.
-	-mkdir $(HELPLOC)/jvim3
-	-mkdir $(HELPLOC)/jvim3/syntax
+	-mkdir -p $(HELPLOC)/jvim3/syntax
 	cp ../syntax/* $(HELPLOC)/jvim3/syntax/
 	chmod $(HELPMOD) $(HELPLOC)/jvim3/syntax/*
 
