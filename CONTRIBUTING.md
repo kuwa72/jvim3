@@ -9,7 +9,7 @@ welcome as English, in issues, pull requests and commit messages.
 
 Two things:
 
-1. `./scripts/build-unix.sh test` passes — 110 cases, and they run in about a
+1. `./scripts/build-unix.sh test` passes — 136 cases, and they run in about a
    minute.
 2. The build stays clean of the warnings CI treats as errors: an implicit
    declaration, a mismatched pointer type, a missing prototype, a missing

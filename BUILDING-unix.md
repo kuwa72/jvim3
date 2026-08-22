@@ -21,10 +21,12 @@ CC=clang OPT="-O0 -g" EXTRA_CFLAGS=-I/usr/local/include \
 It is POSIX `sh` and avoids `make -C`, so it works with the BSDs' `/bin/sh` and
 `bmake` as well as with bash and GNU make.
 
-`test` runs both suites: `scripts/test-encoding.sh` (46 cases -- kanji, UTF-8,
-multi-byte editing) and `scripts/test-editing.sh` (64 cases -- motions,
-operators, registers, marks, undo, ex ranges, `:g`, `:s`, searching, the `:!`
-filter and wildcard expansion). 110 in all.
+`test` runs all three suites: `scripts/test-encoding.sh` (48 cases — kanji,
+UTF-8, multi-byte editing, file names), `scripts/test-editing.sh` (64 cases —
+motions, operators, registers, marks, undo, ex ranges, `:g`, `:s`, searching,
+the `:!` filter and wildcard expansion) and `scripts/test-syntax.sh` (24 cases
+— what the rules in `syntax/` actually colour, read back with `:syntax dump`).
+136 cases in all.
 
 They need bash and a C compiler: they build `scripts/ptyrun.c` to give jvim a
 terminal. That used to be `script(1)`, which is a different program on Linux,
@@ -137,17 +139,17 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 Verified on FreeBSD 14.3-RELEASE-p16, clang 19.1.7, amd64, in the QEMU guest
 `scripts/test-bsd-docker.sh` builds:
 
-- All 110 tests
+- All 136 tests
 - `-DTERMCAP` against base ncurses, found as `-ltinfo`
 - `jmask` following `LANG`: `ja_JP.UTF-8` gives `TTTT`, `ja_JP.eucJP` gives
   `EEEE`, `C` gives `EEET`
 - Both tty paths: `-DBSD4_4` (`<termios.h>`, what the script picks now) and the
-  `<sgtty.h>` branch it used to take. Each passes all 110 tests. The `BSD4_4`
+  `<sgtty.h>` branch it used to take. Each passes all 136 tests. The `BSD4_4`
   branch had never been compiled before — it cannot be, against Linux headers.
 
 Verified on NetBSD 10.1, gcc 10.5.0, amd64, the same way:
 
-- All 110 tests
+- All 136 tests
 - `-DTERMCAP` against base curses, found as `-lcurses`
 - Three warnings for the whole build, all `-Wint-to-pointer-cast` in
   `buffer.c`, which are the `%ld` ones described above.

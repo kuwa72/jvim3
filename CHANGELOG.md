@@ -17,6 +17,10 @@ repository and would drift within three releases.
   matches the wrong thing had no other way of saying so — the screen came out a
   colour short and finding the rule meant reading pixels. `scripts/test-syntax.sh`
   is that turned into a suite, so a rule that stops matching fails a test.
+- Two encoding cases for a file name of three-byte characters — opening it by
+  name and finding it by a wildcard. The Windows suite has had them since
+  1.0.0; the part of them that is not about Windows was untested anywhere a CI
+  runs, because the Windows suite needs Windows and never does.
 - Syntax colouring works on a terminal, not only in the Win32 GUI. The colour a
   rule asks for goes out as an SGR escape — the exact one where `$COLORTERM`
   says the terminal can take it, the nearest of the sixteen otherwise. The
@@ -86,6 +90,10 @@ repository and would drift within three releases.
   ルールの間違いは「画面の色が足りない」以外に現れず、原因のルールを特定するには
   ピクセルを読むしかありませんでした。`scripts/test-syntax.sh` はこれをスイートに
   したもので、ルールが一致しなくなればテストが落ちます。
+- 3 バイト文字のファイル名を扱う文字コードのケースを 2 つ追加しました (名前で開く、
+  ワイルドカードで見つける)。Windows 側には 1.0.0 からありましたが、Windows 固有
+  でない部分は CI の走る環境でまったくテストされていませんでした。Windows スイートは
+  Windows を必要とし、CI では動かないためです。
 - シンタックスカラーが Win32 GUI だけでなく端末でも動くようになりました。ルールが
   指定した色を SGR エスケープとして出します。`$COLORTERM` が対応を示していれば
   その色そのもの、そうでなければ 16 色のうち最も近いものです。パレットを 1 箇所に

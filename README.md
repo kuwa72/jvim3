@@ -22,7 +22,7 @@ derived from JVim 3.0-j2.1b (2002 Dec 24)
 ```
 Platforms        Windows 10/11 (Win32 GUI + console), Linux,
                  FreeBSD, NetBSD, OpenBSD, DragonFly
-Tests            110 cases, run on all of the above in CI. The Windows
+Tests            136 cases, run on all of the above in CI. The Windows
                  keyboard has 14 more in scripts/test-winkeys.sh, typed on
                  the real thing from WSL
 Licence          Public domain — see LICENSE, and uganda.txt for the
@@ -38,7 +38,7 @@ Licence          Public domain — see LICENSE, and uganda.txt for the
 | File names outside CP932 | The manifest asks for UTF-8 as the process code page, so the `...A` file APIs take UTF-8 and a file called `🍣.txt` opens. |
 | Display scaling | The process is per-monitor DPI aware, and the stored font and window sizes are restated for the DPI in front of them, so text is sharp at 125% and 150% and stays that way when the window is dragged between monitors. |
 | Builds anywhere Unix-ish | `scripts/build-unix.sh` asks the compiler what the machine has instead of asking you to uncomment three lines in a makefile. `scripts/build-mingw.sh` cross builds the Windows executables with mingw-w64. |
-| 110 tests | 46 encoding cases and 64 editing cases, driven through a real pty. Every push runs them on five operating systems. |
+| 136 tests | 48 encoding cases, 64 editing cases and 24 syntax colouring cases, driven through a real pty. Every push runs them on five operating systems. |
 | Long standing bugs fixed | Fifteen of them, listed in [BUILDING-mingw.md](BUILDING-mingw.md#bugs-found-along-the-way) — `[あ]` in a regexp also matching `い`, a command line reading `buff[-1]`, encoding detection tipping a whole file over to Shift-JIS because of one emoji, terminal input mangling a character split across two reads. |
 | Two features removed | BDF font rendering and editing inside LHA/ZIP/TAR archives are gone, sources and all, because their terms made the tree awkward to redistribute. See [below](#licence). |
 
@@ -71,7 +71,7 @@ doing.
 ```sh
 git clone https://github.com/kuwa72/jvim3
 cd jvim3
-./scripts/build-unix.sh test        # build src/jvim3, then run the 110 tests
+./scripts/build-unix.sh test        # build src/jvim3, then run the 136 tests
 ```
 
 You need a C compiler and, for the real terminal database rather than the
@@ -179,10 +179,11 @@ Honest about the edges:
 ## Tests
 
 ```sh
-./scripts/build-unix.sh test           # build and run both suites
-./scripts/test-encoding.sh src/jvim3   # 46 cases: encodings, multi-byte editing
+./scripts/build-unix.sh test           # build and run all three suites
+./scripts/test-encoding.sh src/jvim3   # 48 cases: encodings, multi-byte editing
 ./scripts/test-editing.sh  src/jvim3   # 64 cases: motions, operators, registers,
                                        #   marks, undo, ex ranges, :g, :s, :!
+./scripts/test-syntax.sh   src/jvim3   # 24 cases: what syntax/ actually colours
 ```
 
 Both drive the editor through a real pty (`scripts/ptyrun.c`) and compare bytes,

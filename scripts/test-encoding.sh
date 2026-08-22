@@ -267,6 +267,20 @@ UU='\xe3\x81\x86'								# う
 NN='\xe3\x82\x93'								# ん
 
 echo
+echo "file names, which are three bytes a character here too:"
+# The Windows suite has these as well, where they are about the manifest making
+# the ...A file APIs take UTF-8. This is the part of it that is not Windows:
+# the name goes out through fileconvsto() and comes back through the directory
+# scan, and both have to agree about how long a character is. "-K TTT" pins the
+# codes, so what the machine's locale happens to be does not decide the answer.
+edit "a name of 3 byte characters" ok \
+	":w! $tmp/$NIHON$GO.txt\r:e! $tmp/$NIHON$GO.txt\rdd" 'a\nb\n' 'b\n'
+# expansion hands the name to the shell and reads the answer back, so the name
+# makes a second round trip through the code conversion on the way
+edit "a name found by a wildcard" ok \
+	":w! $tmp/$NIHON$GO.txt\r:e! $tmp/$NIHON*\rdd" 'a\nb\n' 'b\n'
+
+echo
 echo "regexp character classes over multi-byte characters:"
 # [あ] must not match い: they share their first two bytes (e3 81), which is what
 # the old two-byte comparison keyed on.

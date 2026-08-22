@@ -51,20 +51,31 @@ enc=$(COUNT_ONLY=1 ./scripts/test-encoding.sh 2>/dev/null | sed -n 's/^cases //p
 edt=$(COUNT_ONLY=1 ./scripts/test-editing.sh  2>/dev/null | sed -n 's/^cases //p')
 win=$(COUNT_ONLY=1 ./scripts/test-winkeys.sh  2>/dev/null | sed -n 's/^cases //p')
 syn=$(COUNT_ONLY=1 ./scripts/test-syntax.sh   2>/dev/null | sed -n 's/^cases //p')
-case ${enc:-x}${edt:-x} in
-*x*)	bad "cannot get the case counts from the test suites (enc='$enc' edt='$edt')"
-		enc=0; edt=0 ;;
+case ${enc:-x}${edt:-x}${syn:-x} in
+*x*)	bad "cannot get the case counts from the test suites (enc='$enc' edt='$edt' syn='$syn')"
+		enc=0; edt=0; syn=0 ;;
 esac
-total=$((enc + edt))
+# What "build-unix.sh test" runs, which is what a document saying "the tests"
+# means. The Windows suite is not in it: it needs Windows.
+total=$((enc + edt + syn))
 
-echo "suites say: encoding $enc, editing $edt, total $total${syn:+, syntax $syn}${win:+, winkeys $win}"
+echo "suites say: encoding $enc, editing $edt, syntax $syn, total $total${win:+, winkeys $win}"
 
 # Every "<n> cases" / "<n> tests" / "<n> ケース" / "<n> 個のテスト" in the prose
 # has to be one of those numbers, and where the line names a particular suite it
 # has to be that suite's number.
-allowed=" $enc $edt $total ${syn:-} ${win:-} "
+allowed=" $enc $edt $syn $total ${win:-} "
+# The first released heading in the CHANGELOG. Anything at or below it is a
+# record of what that release shipped, and stays true by not being touched --
+# adding a test today does not change how many 1.0.0 had.
+chlog_history=$(sed -n '/^## [0-9]/{=;q;}' CHANGELOG.md 2>/dev/null)
+
 while IFS=: read -r file line text; do
 	[ -n "${file:-}" ] || continue
+	if [ "$file" = CHANGELOG.md ] && [ -n "${chlog_history:-}" ] &&
+	   [ "$line" -ge "$chlog_history" ]; then
+		continue
+	fi
 	n=$(printf '%s\n' "$text" |
 		sed -n 's/.*[^0-9]\([0-9][0-9]*\) *\(cases\|tests\|ケース\|個のテスト\).*/\1/p' |
 		head -1)
@@ -197,8 +208,17 @@ elif [ -n "$want_version" ]; then
 fi
 
 # -------------------------------------------------------------- relative links
+# The first released heading in the CHANGELOG. Anything at or below it is a
+# record of what that release shipped, and stays true by not being touched --
+# adding a test today does not change how many 1.0.0 had.
+chlog_history=$(sed -n '/^## [0-9]/{=;q;}' CHANGELOG.md 2>/dev/null)
+
 while IFS=: read -r file line text; do
 	[ -n "${file:-}" ] || continue
+	if [ "$file" = CHANGELOG.md ] && [ -n "${chlog_history:-}" ] &&
+	   [ "$line" -ge "$chlog_history" ]; then
+		continue
+	fi
 	printf '%s\n' "$text" | grep -oE '\]\([^)#][^)]*\)' | tr -d '])(' |
 	while read -r target; do
 		case $target in

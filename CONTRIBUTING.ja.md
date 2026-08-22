@@ -10,7 +10,7 @@ request、コミットメッセージ、いずれも日本語で構いません�
 
 2 つあります。
 
-1. `./scripts/build-unix.sh test` が通ること。110 ケースで、1 分ほどで終わります。
+1. `./scripts/build-unix.sh test` が通ること。136 ケースで、1 分ほどで終わります。
 2. CI がエラー扱いにしている警告を増やさないこと。暗黙の宣言、ポインタ型の不一致、
    プロトタイプなし、return なし、暗黙の `int`、未初期化変数の使用です。正確な
    一覧は [.github/workflows/build.yml](.github/workflows/build.yml) の
