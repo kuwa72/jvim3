@@ -1,0 +1,10 @@
+syntax Comment			n/;.*
+syntax Tag				n/\[.*\]
+syntax	Keyword			iw/LIBRARY/STUB/EXETYPE/DESCRIPTION/CODE/WINDOWS/DOS
+syntax	Keyword			iw/RESIDENTNAME/PRIVATE/EXPORTS/IMPORTS/SEGMENTS
+syntax	Keyword			iw/HEAPSIZE/DATA
+syntax	Keyword			iw/LOADONCALL/MOVEABLE/DISCARDABLE/SINGLE
+syntax	Keyword			iw/FIXED/PRELOAD
+syntax Number			n/@[0-9]d\+
+syntax Number			i/\d\+
+syntax Number			n/0x\x\+

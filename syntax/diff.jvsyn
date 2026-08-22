@@ -1,0 +1,9 @@
+syntax link			DiffAdd				green
+syntax link			DiffDel				red
+syntax Statement		n/^diff .*$
+syntax PreProc			n/^index .*$
+syntax Type			n/^--- .*$
+syntax Type			n/^+++ .*$
+syntax Special			n/^@@.*$
+syntax DiffDel			n/^-.*$
+syntax DiffAdd			n/^+.*$

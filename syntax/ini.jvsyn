@@ -1,0 +1,2 @@
+syntax Comment			n/^;.*
+syntax Tag				n/\[.*\]

@@ -17,8 +17,11 @@ repository and would drift within three releases.
   says the terminal can take it, the nearest of the sixteen otherwise. The
   palette is now in one place, so a terminal and the GUI cannot disagree about
   what "navy" is.
-- `$VIM` has a default on a Unix — `$PREFIX/lib/jvim3`. Windows already set it
-  to the directory of the exe.
+- The rules live in `syntax/`, one file per file type, instead of 1200 lines
+  inside `_jvimrc`. An rc reaches all of them with one line, `source
+  $VIM/syntax/filetype.jvsyn`, and `syntax/README` says how to add a type.
+- `$VIM` has a default on a Unix — `$PREFIX/lib/jvim3`, where `make install`
+  puts the rule files. Windows already set it to the directory of the exe.
 - Syntax colouring for Python, JavaScript/TypeScript, Go, Rust, Ruby, shell,
   Markdown, JSON, YAML, TOML, SQL, CSS/SCSS, C#, PHP, Lua, XML, diff, Makefile
   and Dockerfile, in `doc.j/_jvimrc` — which ships as `_jvimrc.sample`. Nothing
@@ -52,6 +55,10 @@ repository and would drift within three releases.
   at their own temporary directory, so a `_vimrc` — the shipped sample sets
   `textmode`, mappings and a rule set — cannot decide what the editor under test
   does. Installing the sample used to turn 14 passes into 3.
+- A `:source` inside an rc no longer stops the per-file-type blocks from
+  matching. The suffix and name being matched were pointers into `NameBuff`,
+  which the nested `:source` reuses for the name it is expanding, so after the
+  first one every `"begin suffixes=` was compared against the wrong string.
 - `purple` is `#800080` rather than a second `maroon`.
 - `stricmp` links outside the Windows build. It was replaced by `vim_stricmp`
   only where it already happened to be a macro, which is nowhere on glibc.
@@ -62,8 +69,12 @@ repository and would drift within three releases.
   指定した色を SGR エスケープとして出します。`$COLORTERM` が対応を示していれば
   その色そのもの、そうでなければ 16 色のうち最も近いものです。パレットを 1 箇所に
   まとめたので、端末と GUI で「navy」の意味が食い違うことはありません。
-- Unix でも `$VIM` に既定値 (`$PREFIX/lib/jvim3`) が入るようになりました。Windows
-  では以前から exe のディレクトリが入っていました。
+- ルールを `_jvimrc` の中の 1200 行から、種別ごと 1 ファイルの `syntax/` に移しました。
+  rc からは `source $VIM/syntax/filetype.jvsyn` の 1 行で全部に届きます。種別の
+  足し方は `syntax/README` にあります。
+- Unix でも `$VIM` に既定値が入るようになりました (`$PREFIX/lib/jvim3`、
+  `make install` がルールファイルを置く場所)。Windows では以前から exe の
+  ディレクトリが入っていました。
 - Python、JavaScript/TypeScript、Go、Rust、Ruby、シェル、Markdown、JSON、YAML、
   TOML、SQL、CSS/SCSS、C#、PHP、Lua、XML、diff、Makefile、Dockerfile のシンタックス
   カラー定義を `doc.j/_jvimrc` (配布物の `_jvimrc.sample`) に追加しました。これまで
@@ -87,6 +98,10 @@ repository and would drift within three releases.
   一時ディレクトリに向けているので、`_vimrc` (同梱サンプルは textmode・マッピング・
   ルール定義を設定します) がテスト対象の挙動を変えることはありません。サンプルを
   導入すると 14 pass が 3 pass になっていました。
+- rc の中で `:source` すると、以降ファイル種別ごとのブロックが一致しなくなる問題を
+  修正しました。判定に使う拡張子とファイル名が `NameBuff` へのポインタで、入れ子の
+  `:source` が同じバッファを展開に使うため、1 回目以降はすべて誤った文字列と比較して
+  いました。
 - `purple` が maroon と同じ色だったのを `#800080` にしました。
 - Windows 以外のビルドで `stricmp` がリンクできない問題を修正しました。`vim_stricmp`
   への置き換えが「すでにマクロだった場合」にしか効かず、glibc では効きませんでした。

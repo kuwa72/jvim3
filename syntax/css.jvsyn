@@ -1,0 +1,14 @@
+syntax Comment			p/\/\*/\*\/
+syntax Comment			n/\/\/.*$
+syntax String			m/\".*[^\\]\"
+syntax String			m/'.*'
+syntax Constant		n/#\x\x\x\x\x\x
+syntax Constant		n/#\x\x\x
+syntax PreProc			n/@\i\+
+syntax Identifier		n/\$\i[-_a-zA-Z0-9]*
+syntax Tag				n/[.#]\i[-_a-zA-Z0-9]*
+" the unit belongs to the number: "10px" is one word to the word matcher, so
+" a rule for "px" on its own would never fire
+syntax Float			n/\d*\.\d\+[a-z%]*
+syntax Number			n/\d\+[a-z%]*
+syntax Statement		w/important/inherit/initial/unset/auto/none

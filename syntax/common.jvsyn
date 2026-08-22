@@ -1,0 +1,62 @@
+syntax	clear
+syntax	crchar	silver
+syntax	color	user0					#009900
+syntax	color	user1					#339900
+syntax	color	user2					#669900
+syntax	color	user3					#999900
+syntax	color	user4					#cc9900
+syntax	color	user5					#6a5acd		" SlateBlue
+syntax	color	user6					#008080		" DarkCyan
+syntax	color	user7					#804040		" Brown
+syntax	color	user8					#a020f0		" Purple
+syntax	color	user9					#2e8b57		" SeaGreen
+""============================================================================
+syntax	link	Comment					blue		" Blue
+syntax	link	Constant				fuchsia		" Magenta
+syntax	link	Special					user5		" SlateBlue		#6a5acd
+syntax	link	Identifier				user6		" DarkCyan		#008080
+syntax	link	Statement				user7		" Brown			#804040
+syntax	link	PreProc					user8		" Purple		#a020f0
+syntax	link	Type			bold	user9		" SeaGreen		#2e8b57
+syntax	link	Ignore					text		" guifg=bg
+syntax	link	Error			bolic	red			" guifg=White guibg=Red
+syntax	link	Todo			bold	reverse		" guifg=Blue  guibg=Yellow
+syntax	link	String					Constant
+syntax	link	Character				Constant
+syntax	link	Number					Constant
+syntax	link	Boolean					Constant
+syntax	link	Float					Number
+syntax	link	Function				Identifier
+syntax	link	Conditional				Statement
+syntax	link	Repeat					Statement
+syntax	link	Label					Statement
+syntax	link	Operator				Statement
+syntax	link	Keyword					Statement
+syntax	link	Exception				Statement
+syntax	link	Include					PreProc
+syntax	link	Define					PreProc
+syntax	link	Macro					PreProc
+syntax	link	PreCondit				PreProc
+syntax	link	StorageClass			Type
+syntax	link	Structure				Type
+syntax	link	Typedef					Type
+syntax	link	Tag						Special
+syntax	link	SpecialChar				Special
+syntax	link	Delimiter				Special
+syntax	link	SpecialComment			Special
+syntax	link	Debug					Special
+syntax	link	tagsClass		bolic	navy
+syntax	link	tagsDefine		italic	navy
+syntax	link	tagsValue		bold	gold
+syntax	link	tagsFunction	bold	navy
+syntax	link	tagsEnum				tagsClass
+syntax	link	tagsMember				tagsValue
+syntax	link	tagsNames		italic	silver
+syntax	link	tagsProto				tagsFunction
+syntax	link	tagsStruct				tagsClass
+syntax	link	tagsTypedef				tagsClass
+syntax	link	tagsUnion				tagsClass
+syntax	link	tagsVariable			tagsValue
+syntax	link	tagsExternal			tagsValue
+""============================================================================
+""============================================================================

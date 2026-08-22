@@ -474,6 +474,12 @@ install: $(TARGET)
 	-mkdir $(HELPLOC)
 	cp $(HELPFILE) $(HELPLOC)/jvim3.hlp
 	chmod $(HELPMOD) $(HELPLOC)/jvim3.hlp
+# The syntax rules, where $VIM points: an rc reaches them by that name, and the
+# build compiled the same path in as the default for $VIM.
+	-mkdir $(HELPLOC)/jvim3
+	-mkdir $(HELPLOC)/jvim3/syntax
+	cp ../syntax/* $(HELPLOC)/jvim3/syntax/
+	chmod $(HELPMOD) $(HELPLOC)/jvim3/syntax/*
 
 clean:
 	-rm -f $(OBJ) mkcmdtab.o version.o core $(TARGET) mkcmdtab cmdtab.h

@@ -166,8 +166,10 @@ set jinsertmode=a       " insert mode starts in ASCII
 " set jmask=TTTT        " only if the locale is not telling the truth
 
 " ---- colour, on the GUI and on a terminal alike
+set fexrc               " read the rules for the type of file being opened
 set syntax
 set syntype=cfp
+source $VIM/syntax/filetype.jvsyn
 
 " ---- Windows GUI
 set crmark              " show line ends
@@ -306,7 +308,7 @@ you wanted. `trackset` (`trs`) picks the character set used for ruled lines:
 
 Syntax colouring is its own small language — colours, `syntax link`, regexp
 rules per file type. `doc.j/readme.doc` §6.26 documents it in full, and
-`doc.j/_jvimrc` is a complete worked example for C.
+`syntax/README` says how this tree lays the rules out.
 
 It used to be the Win32 GUI only. It now works on a terminal as well: the same
 colour goes out as an SGR escape. Whether it can be asked for exactly depends on
@@ -324,32 +326,32 @@ file, and the lines below the one you are typing on recolour as soon as you type
 the token that opens or closes a region. §6.28's `synlines` now only reaches the
 tag search (`t` mode).
 
-Which file types have rules is a question about `_jvimrc`, not about the editor.
-What it came with in 2002 was C/C++, Java, VBScript, HTML, `.bat`, `.ini`,
-`.def`, `.rc` and `_vimrc` itself. This tree adds Python, JavaScript/TypeScript,
-Go, Rust, Ruby, shell, Markdown, JSON, YAML, TOML, SQL, CSS/SCSS, C#, PHP, Lua,
-XML, diff, Makefile and Dockerfile, and lets the C rules cover `.cc`, `.cxx`,
-`.hpp`, `.hxx`, `.hh` and `.inl` as well.
+Which file types have rules is a question about the rule files, not about the
+editor. What came with JVim in 2002 was C/C++, Java, VBScript, HTML, `.bat`,
+`.ini`, `.def`, `.rc` and `_vimrc` itself. This tree adds Python,
+JavaScript/TypeScript, Go, Rust, Ruby, shell, Markdown, JSON, YAML, TOML, SQL,
+CSS/SCSS, C#, PHP, Lua, XML, diff, Makefile and Dockerfile, and lets the C rules
+cover `.cc`, `.cxx`, `.hpp`, `.hxx`, `.hh` and `.inl` as well.
 
-Adding one more is a block in `_jvimrc` and no code:
+They live one file per type in `syntax/`, which the package ships beside the exe
+and `make install` puts in `$VIM`. One line in an rc reaches all of them:
 
+```vim
+set fexrc
+set syntax
+source $VIM/syntax/filetype.jvsyn
 ```
-"begin suffixes=.zig
-"syntax Comment			n/\/\/.*$
-"syntax String			m/\".*[^\\]\"
-"syntax Statement		w/fn/return/defer/comptime
-"end   suffixes
-```
 
-The leading `"` is not a typo: the whole block is a comment until the file name
-being opened matches, and `fexrc` — which the sample sets — is what strips it.
-`"begin files=Name;Other` matches by name instead, for the Makefiles and
-Dockerfiles of the world. Two things to know before writing rules: the leftmost
-match on the line wins and, where two rules start in the same column, the one
-earlier in the file does — so comments and strings go at the top of a block. And
-`:syntax` is an ex command, so `|` ends it and `"` starts a trailing comment
-before the rule is ever seen; write `"` as `\"`, and do without `\|`, which
-leaves a literal `|` behind rather than an alternation.
+`filetype.jvsyn` is the dispatcher: it reads `common.jvsyn` for the colours and
+group names, then the one file that goes with what you are opening. Adding a
+type is `syntax/zig.jvsyn` plus three lines in `filetype.jvsyn`; `syntax/README`
+has the details, including the two things about the rule language that will
+otherwise waste your afternoon.
+
+`$VIM` is where all this is looked for. On Windows the editor sets it to the
+directory the exe is in, so an unpacked package needs nothing. On a Unix it is
+`/usr/local/lib/jvim3` unless `PREFIX` said otherwise; running out of a build
+tree, set it by hand.
 
 ## What you get beyond vi
 

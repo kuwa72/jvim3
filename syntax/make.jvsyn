@@ -1,0 +1,18 @@
+syntax Comment			n/#.*$
+syntax Identifier		n/\$[({][^)}]*[)}]
+syntax Identifier		n/\$[A-Za-z@<^?*]
+syntax PreProc			-m/^[A-Za-z0-9_.%$][^ #=:]*:
+syntax Type			-m/^[A-Za-z_][A-Za-z0-9_]*\s*=
+syntax Statement		w/include/sinclude/ifeq/ifneq/ifdef/ifndef/else
+syntax Statement		w/endif/define/endef/export/unexport/override/vpath
+syntax String			m/\".*[^\\]\"
+syntax String			m/'.*'
+syntax Comment			n/#.*$
+syntax Identifier		n/\$[({][^)}]*[)}]
+syntax Identifier		n/\$[A-Za-z@<^?*]
+syntax PreProc			-m/^[A-Za-z0-9_.%$][^ #=:]*:
+syntax Type			-m/^[A-Za-z_][A-Za-z0-9_]*\s*=
+syntax Statement		w/include/sinclude/ifeq/ifneq/ifdef/ifndef/else
+syntax Statement		w/endif/define/endef/export/unexport/override/vpath
+syntax String			m/\".*[^\\]\"
+syntax String			m/'.*'

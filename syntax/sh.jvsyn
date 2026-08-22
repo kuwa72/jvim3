@@ -1,0 +1,13 @@
+syntax PreProc			n/^#!.*$
+syntax Comment			n/#.*$
+syntax String			m/\".*[^\\]\"
+syntax String			m/'.*'
+syntax Identifier		n/\${\=\i\+
+syntax Identifier		n/\$[0-9*@#?!]
+syntax Conditional		w/if/then/elif/else/fi/case/esac/in
+syntax Repeat			w/for/while/until/do/done/select/break/continue
+syntax Statement		w/function/return/exit/shift/eval/exec/trap
+syntax StorageClass	w/local/export/readonly/declare/typeset/unset
+syntax Include			w/source
+syntax Function		w/echo/printf/read/test/cd/set/shopt/getopts
+syntax Todo			w/TODO/FIXME/XXX/NOTE

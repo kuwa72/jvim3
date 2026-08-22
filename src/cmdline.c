@@ -3603,6 +3603,16 @@ dosource(register char_u *fname)
 	int				do_fexrc = FALSE;
 	char_u		*	dotp = NULL;
 	char_u		*	q;
+	/*
+	 * The suffix and the last part of the name of the file being edited, which
+	 * is what "begin suffixes=" and "begin files=" are matched against. Copies,
+	 * not pointers into NameBuff: a ":source" on one of the lines below uses
+	 * NameBuff for the name it is expanding, so anything still pointing into it
+	 * afterwards is looking at the wrong file -- and then no block matched any
+	 * more, which is the whole of the mechanism.
+	 */
+	char_u			dotbuf[MAXPATHL];
+	char_u			tailbuf[MAXPATHL];
 #endif
 
 	expand_env(fname, NameBuff, MAXPATHL);		/* use NameBuff for expanded name */
@@ -3675,7 +3685,17 @@ dosource(register char_u *fname)
 # endif
 			q++;
 		}
+		if (dotp != NULL)
+		{
+			STRNCPY(dotbuf, dotp, (size_t)MAXPATHL - 1);
+			dotbuf[MAXPATHL - 1] = NUL;
+			dotp = dotbuf;
+		}
+		STRNCPY(tailbuf, gettail(NameBuff), (size_t)MAXPATHL - 1);
+		tailbuf[MAXPATHL - 1] = NUL;
 	}
+	else
+		tailbuf[0] = NUL;
 #endif
 
 	++dont_sleep;			/* don't call sleep() in emsg() */
@@ -3763,13 +3783,13 @@ dosource(register char_u *fname)
 				while (*q && (q = STRCHR(q, fc)) != NULL)
 				{
 					q++;
-					c = q[STRLEN(gettail(NameBuff))];
+					c = q[STRLEN(tailbuf)];
 # ifdef MSDOS
 					if ((c == NUL || c == ';' || c == ' ' || c == '\t')
-							&& vim_strnicmp(gettail(NameBuff), q, (size_t)STRLEN(gettail(NameBuff))) == 0)
+							&& vim_strnicmp(tailbuf, q, (size_t)STRLEN(tailbuf)) == 0)
 # else
 					if ((c == NUL || c == ';' || c == ' ' || c == '\t')
-										&& STRNCMP(gettail(NameBuff), q, STRLEN(gettail(NameBuff))) == 0)
+										&& STRNCMP(tailbuf, q, STRLEN(tailbuf)) == 0)
 # endif
 					{
 						do_fexrc = TRUE;

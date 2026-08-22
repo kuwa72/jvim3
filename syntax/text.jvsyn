@@ -1,0 +1,15 @@
+syntax	link			Url			 		Identifier
+syntax	link			E-Mail		 		Special
+syntax	Delimiter		n/^#* From .* [1-2][0-9][0-9][0-9]$
+syntax Type			i/^[-a-z]*Date: .*$
+syntax Type			i/^[-a-z]*From: .*$
+syntax String			i/^Subject: .*$
+syntax Statement		i/^[-a-z]\+: .*$
+syntax	Comment			n/^\s*[\|>]\s*[\|>]\s*[\|>]\s*[\|>]\s*[\|>].*
+syntax	Identifier		n/^\s*[\|>]\s*[\|>]\s*[\|>]\s*[\|>].*
+syntax	Comment			n/^\s*[\|>]\s*[\|>]\s*[\|>].*
+syntax	Identifier		n/^\s*[\|>]\s*[\|>].*
+syntax	Comment			n/^\s*[\|>].*
+syntax	Url				n/http:\/\/[-:&\~\%_?=/\.a-zA-Z0-9]*
+syntax	E-Mail 			n/[-+\._a-zA-Z0-9]\+@[-\._a-zA-Z0-9]\+
+syntax	Todo 			iw/TODO

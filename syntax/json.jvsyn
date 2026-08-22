@@ -1,0 +1,6 @@
+syntax Identifier		-m/\".*[^\\]\":
+syntax String			m/\".*[^\\]\"
+syntax Float			n/-\=\d*\.\d\+
+syntax Number			n/-\=\d\+
+syntax Boolean			w/true/false
+syntax Constant		w/null

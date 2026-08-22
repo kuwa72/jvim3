@@ -164,8 +164,10 @@ set jinsertmode=a       " 挿入モードは ASCII で始まる
 " set jmask=TTTT        " ロケールが当てにならないときだけ
 
 " ---- 色付け (GUI でも端末でも)
+set fexrc               " 開いたファイルの種別に応じたルールを読む
 set syntax
 set syntype=cfp
+source $VIM/syntax/filetype.jvsyn
 
 " ---- Windows GUI
 set crmark              " 行末を表示する
@@ -300,7 +302,7 @@ Unix で IME を制御するには、入力メソッドのプロトコルを話�
 
 シンタックスカラーはそれ自体が小さな設定言語 (色の定義、`syntax link`、ファイル
 種別ごとの正規表現ルール) になっています。`doc.j/readme.doc` §6.26 に全仕様があり、
-`doc.j/_jvimrc` が C 用の完全な実例です。
+このツリーでのルールの置き方は `syntax/README` にあります。
 
 以前は Win32 GUI 専用でしたが、端末でも動くようになりました。同じ色を SGR
 エスケープとして出します。その色をそのまま出せるかは端末次第で、判断には
@@ -316,31 +318,30 @@ Unix で IME を制御するには、入力メソッドのプロトコルを話�
 開く・閉じる記号を打った時点で下の行の色がすぐ変わります。§6.28 の `synlines` は
 タグ検索 (`t` モード) にのみ効くようになりました。
 
-どのファイル種別に色が付くかは、エディタ本体ではなく `_jvimrc` の問題です。2002 年
-の時点で入っていたのは C/C++、Java、VBScript、HTML、`.bat`、`.ini`、`.def`、`.rc`、
-そして `_vimrc` 自身でした。このツリーでは Python、JavaScript/TypeScript、Go、Rust、
-Ruby、シェル、Markdown、JSON、YAML、TOML、SQL、CSS/SCSS、C#、PHP、Lua、XML、diff、
-Makefile、Dockerfile を追加し、C のルールが `.cc` `.cxx` `.hpp` `.hxx` `.hh` `.inl`
-にも効くようにしました。
+どのファイル種別に色が付くかは、エディタ本体ではなくルールファイルの問題です。
+2002 年の JVim にあったのは C/C++、Java、VBScript、HTML、`.bat`、`.ini`、`.def`、
+`.rc`、そして `_vimrc` 自身でした。このツリーでは Python、JavaScript/TypeScript、
+Go、Rust、Ruby、シェル、Markdown、JSON、YAML、TOML、SQL、CSS/SCSS、C#、PHP、Lua、
+XML、diff、Makefile、Dockerfile を追加し、C のルールが `.cc` `.cxx` `.hpp` `.hxx`
+`.hh` `.inl` にも効くようにしました。
 
-さらに増やすのは `_jvimrc` にブロックを足すだけで、コードは触りません。
+ルールは種別ごとに 1 ファイルで `syntax/` にあります。配布パッケージでは exe の隣、
+`make install` では `$VIM` に入ります。rc からは 1 行で全部に届きます。
 
+```vim
+set fexrc
+set syntax
+source $VIM/syntax/filetype.jvsyn
 ```
-"begin suffixes=.zig
-"syntax Comment			n/\/\/.*$
-"syntax String			m/\".*[^\\]\"
-"syntax Statement		w/fn/return/defer/comptime
-"end   suffixes
-```
 
-先頭の `"` は書き間違いではありません。開いたファイルが一致するまでブロック全体が
-ただのコメントで、それを外すのが `fexrc` (サンプルが設定しています) です。名前で
-一致させたい Makefile や Dockerfile には `"begin files=Name;Other` を使います。
-ルールを書く前に 2 点。行内で最も左の一致が勝ち、同じ桁から始まる場合はファイルの
-前にあるルールが勝ちます — なのでコメントと文字列はブロックの先頭に置きます。
-また `:syntax` は ex コマンドなので、ルールが読まれる前に `|` はコマンドを区切り、
-`"` は行末コメントを始めてしまいます。`"` は `\"` と書き、`\|` は諦めてください
-(選択にはならず、リテラルの `|` が残るだけです)。
+`filetype.jvsyn` がディスパッチャで、色とグループ名の `common.jvsyn` を読んでから、
+開いたファイルに対応する 1 ファイルを読みます。種別を足すのは `syntax/zig.jvsyn` と
+`filetype.jvsyn` の 3 行です。ルール言語で先に知っておかないと午後を無駄にする 2 点
+を含め、詳細は `syntax/README` にあります。
+
+`$VIM` がこれらを探す場所です。Windows ではエディタが exe のあるディレクトリを設定
+するので、展開したパッケージなら何もいりません。Unix では `PREFIX` を変えていなければ
+`/usr/local/lib/jvim3` です。ビルドツリーから直接動かす場合は自分で設定してください。
 
 ## vi に対して増えているもの
 
