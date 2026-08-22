@@ -22,6 +22,11 @@
 # The GUI paints from its own screen array with ExtTextOutW, so a layout question
 # -- whether a column landed where it should -- can only be answered by looking
 # at the window.
+#
+# None of it appears on your screen. The editors are real ones with real
+# windows, but both drivers put themselves on a desktop of their own before
+# starting anything, so nothing here takes the keyboard of whoever is running
+# it. See scripts/windesk.h; WINDESK_OFF=1 turns it off.
 
 set -uo pipefail
 

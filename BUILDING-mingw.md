@@ -143,6 +143,17 @@ scripts/test-winkeys.sh                          # src/jvim32.exe, src/jvim32w.e
 scripts/test-winkeys.sh <console.exe> <gui.exe>  # or a pair from a release
 ```
 
+It runs out of sight, so you can keep working through the four minutes it
+takes. The drivers put themselves on a desktop of their own before starting
+anything, and give the console build a console with no window at all —
+`PostMessage` and `WriteConsoleInput` do not care about either, and neither is
+something a person can see. Measured rather than assumed: while the suite runs,
+nothing it starts has a window on the interactive desktop, and the console
+editor has none at all. `WINDESK_OFF=1` puts it back in sight for when
+something has to be watched happening, and `scripts/windesk.h` says why the
+obvious ways — starting the window hidden, or giving it a new console — do
+not work.
+
 Beyond that, testing on Windows by hand is the only Windows testing there is. A local build is now the same runtime as the
 release, so it counts; to test the exact executable the release page serves,
 take the one CI built:

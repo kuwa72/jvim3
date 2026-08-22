@@ -17,6 +17,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
+#include "windesk.h"
 
 static HWND	hwnd;
 
@@ -94,6 +95,7 @@ static void shoot(HWND hwnd, const char *path)
 
 int main(int argc, char **argv)
 {
+	windesk_reexec();		/* out of sight; see windesk.h */
 	static char			specbuf[4096];
 	const char			*spec;
 	char				cmd[2048] = "";

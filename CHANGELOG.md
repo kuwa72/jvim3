@@ -45,6 +45,15 @@ repository and would drift within three releases.
 
 ### Changed
 
+- The Windows key suite runs out of sight. It drives real editors with real
+  windows, fourteen of them, and each used to appear on the screen and take the
+  keyboard for a couple of seconds; the machine was unusable for the four
+  minutes it takes. The drivers now put themselves on a desktop of their own
+  first and give the console build a console with no window, neither of which
+  `PostMessage` or `WriteConsoleInput` care about. A desktop alone was not
+  enough: `CREATE_NEW_CONSOLE` is handed to whatever is set as the default
+  terminal, and Windows Terminal opens it where the person is looking whatever
+  desktop asked. `WINDESK_OFF=1` puts it back in sight.
 - An unknown mode letter in a syntax rule is refused, with a message naming it,
   instead of being ignored. The 2002 manual says the rest are ignored and they
   were, so a typo in a mode went in as a rule and matched the wrong thing in
@@ -116,6 +125,14 @@ repository and would drift within three releases.
   カラー定義を `doc.j/_jvimrc` (配布物の `_jvimrc.sample`) に追加しました。これまで
   1998 年より新しい言語の定義はひとつもありませんでした。C の定義は `.cc` `.cxx`
   `.hpp` `.hxx` `.hh` `.inl` にも効くようになりました。
+- Windows のキー入力スイートが画面に出なくなりました。実際のエディタを実際の
+  ウィンドウで 14 回起動するため、そのつど画面に現れてキーボードを奪い、4 分間
+  マシンが使えませんでした。ドライバが起動前に専用のデスクトップへ移るようにした
+  うえで、コンソール版にはウィンドウを持たないコンソールを与えるようにしました。
+  `PostMessage` も `WriteConsoleInput` もどちらも気にしません。デスクトップだけでは
+  不十分でした。`CREATE_NEW_CONSOLE` は既定の端末に引き渡され、Windows Terminal は
+  どのデスクトップから要求されても人が見ている側に開くためです。`WINDESK_OFF=1` で
+  元に戻せます。
 - シンタックスルールの未知のモード文字を、無視せずエラーにするようになりました
   (どの文字かをメッセージに出します)。2002 年の説明書は「その他は無視します」と
   していて実際そうだったため、モードの打ち間違いがそのままルールとして登録され、
