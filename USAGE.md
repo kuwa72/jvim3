@@ -307,6 +307,16 @@ Syntax colouring is the Win32 GUI only, and is its own small language — colour
 `syntax link`, regexp rules per file type. `doc.j/readme.doc` §6.26 documents it
 in full, and `doc.j/_jvimrc` is a complete worked example for C.
 
+One thing there is out of date. A multi-line region — the `p` search mode, which
+is how a C comment is coloured — used to be found by searching `synlines` lines
+in each direction from the line being drawn, so a comment or a string longer
+than that lost its colour, and one that was never closed had none at all. This
+tree remembers instead, for each line, which region was open when the line above
+ended: length stops mattering, an unterminated region colours the rest of the
+file, and the lines below the one you are typing on recolour as soon as you type
+the token that opens or closes a region. §6.28's `synlines` now only reaches the
+tag search (`t` mode).
+
 ## What you get beyond vi
 
 Vim 3.0 is vi plus a short list, and the short list is why anyone used it:

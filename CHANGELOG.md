@@ -10,6 +10,47 @@ repository and would drift within three releases.
 
 ## Unreleased
 
+### Changed
+
+- Syntax colouring remembers, per line, which multi-line region was open when
+  the line above ended, instead of searching `synlines` lines in each direction
+  every time a line is drawn. A comment or a string now keeps its colour however
+  long it is, an unterminated one colours the rest of the file rather than
+  nothing at all, and typing the token that opens or closes one recolours the
+  lines below it straight away. `synlines` now only reaches the tag search.
+
+### Fixed
+
+- Syntax rules match Japanese again. Every walk over the text in `syntax.c`
+  still stepped two bytes for a multi-byte character, which was Shift-JIS; the
+  buffer has held UTF-8 since 1.0.0, where a kanji or a kana is three. A rule
+  with a Japanese word in it never found it.
+- A word rule (`w/`) that happened to be the first rule in the list kept the
+  hash of zero it was allocated with, looked itself up in the wrong bucket, and
+  so never matched anything.
+- A region whose opening and closing tokens are the same string — Python's
+  `"""`, a template literal, a fenced code block — used to close on the very
+  characters that opened it when both were on one line, colouring the token and
+  leaving the text after it plain. The closing token is now looked for past the
+  opening one.
+
+### 日本語
+
+- シンタックスカラーが、行をまたぐ領域の状態を行ごとに覚えるようになりました。
+  これまでは 1 行描くたびに前後 `synlines` 行を探していたため、コメントや文字列
+  がその範囲を超えると色が落ちていました。長さに関わらず色が保たれ、閉じていない
+  コメントは以降すべてが色付き (従来は無色) になり、開始・終了の記号を打った時点
+  で下の行の色がすぐ変わります。`synlines` はタグ検索にのみ効くようになりました。
+- 日本語のシンタックスルールが再び一致するようになりました。`syntax.c` の文字送り
+  がすべて Shift-JIS 時代の 2 バイト前提のままで、1.0.0 でバッファが UTF-8
+  (漢字・かなは 3 バイト) になって以降、日本語を含むルールは何にも一致していません
+  でした。
+- 単語ルール (`w/`) がリストの先頭に来た場合、ハッシュが 0 のままになり、誤った
+  バケットを引いて一致しませんでした。
+- 開始と終了が同じ文字列の領域 (Python の `"""`、テンプレートリテラル、コードフェンス)
+  が 1 行に収まっている場合、開始トークン自身で閉じてしまい、記号だけが色付いて後ろの
+  文字列が無色になっていました。終了トークンを開始トークンより後ろから探すようにしました。
+
 ## 1.0.0 — 2026-08-22
 
 The tree starts numbering itself. Everything in this section already shipped,

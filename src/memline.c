@@ -943,6 +943,11 @@ errorret:
 		return IObuff;
 	}
 
+#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+	/* The caller is about to write into the line it is being handed. */
+	if (will_change)
+		syn_changed(buf, lnum);
+#endif
 /*
  * See if it is the same line as requested last time.
  * Otherwise may need to flush last used line.
@@ -1033,6 +1038,9 @@ ml_append_int(BUF *buf, linenr_t lnum, char_u *line, colnr_t len, int newfile)
 	if (lnum > buf->b_ml.ml_line_count)	/* lnum out of range */
 		return FAIL;
 
+#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+	syn_changed(buf, lnum);
+#endif
 	if (lowest_marked && lowest_marked > lnum)
 		lowest_marked = lnum + 1;
 
@@ -1542,6 +1550,9 @@ ml_replace(linenr_t lnum, char_u *line, int copy)
 	if (line == NULL)			/* just checking... */
 		return FAIL;
 
+#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+	syn_changed(curbuf, lnum);
+#endif
 	/*
 	 * if empty file simply append the one and only line
 	 */
@@ -1610,6 +1621,9 @@ ml_delete_int(BUF *buf, linenr_t lnum)
 	if (lnum < 1 || lnum > buf->b_ml.ml_line_count)
 		return FAIL;
 
+#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+	syn_changed(buf, lnum);
+#endif
 	if (lowest_marked && lowest_marked > lnum)
 		lowest_marked--;
 

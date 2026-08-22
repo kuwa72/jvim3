@@ -20,7 +20,11 @@
 #include "regexp.h"
 
 #define MAX_COLS		0x7fffffff
-#define	S_LINE(_max)	(p_synl > 0 ? p_synl : ((_max) > (Rows * 10) ? Rows * 4 : Rows * 2))
+/*
+ * How far a tag search looks for the tag it is inside of. Pair regions used to
+ * be found the same way and had their own, wider window; they are remembered
+ * per line now instead, so 'synlines' only reaches the tag search.
+ */
 #define	T_LINE(_max)	(p_synl > 0 ? p_synl : ((_max) > (Rows * 10) ? Rows * 2 : Rows * 1))
 
 #define SYNTAX_CACHE	1
@@ -148,6 +152,13 @@ syn_clr(BUF *buf)
 	buf->b_syn_match	= NULL;
 	buf->b_syn_matchend	= NULL;
 	buf->b_syn_curp		= NULL;
+	/* The rules the line states were worked out from are gone with them. */
+	if (buf->b_syn_state != NULL)
+		free(buf->b_syn_state);
+	buf->b_syn_state	= NULL;
+	buf->b_syn_statelen	= 0;
+	buf->b_syn_stateval	= 0;
+	buf->b_syn_pairs	= 0;
 }
 
 static int
@@ -155,6 +166,7 @@ syn_regexec(int min, int ic, int jic, regexp *prog, char_u *ptr, int at_bol)
 {
 	char_u			*	startp;
 	char_u			*	endp;
+	char_u			*	lastp;
 	char_u				c;
 	int					rc;
 	int					magic;
@@ -174,20 +186,20 @@ syn_regexec(int min, int ic, int jic, regexp *prog, char_u *ptr, int at_bol)
 	{
 		startp	= prog->startp[0];
 		endp	= prog->endp[0];
-		if (ISkanjiPointer(startp, &endp[-1]) == 2)
-		{
-			c = endp[-2];
-			endp[-2] = '\0';
-			rc = regexec(prog, startp, at_bol);
-			endp[-2] = c;
-		}
-		else
-		{
-			c = endp[-1];
-			endp[-1] = '\0';
-			rc = regexec(prog, startp, at_bol);
-			endp[-1] = c;
-		}
+		/*
+		 * Cut the last character off and see whether the match survives: that
+		 * is how the "m" mode finds the shortest one. The cut has to land on a
+		 * character boundary, and a UTF-8 character is up to four bytes, not
+		 * the two this used to step back over. Stopping at an empty match also
+		 * keeps a pattern that matches nothing out of an endless loop.
+		 */
+		if (endp <= startp)
+			break;
+		lastp = utf_prev(startp, endp);
+		c = *lastp;
+		*lastp = '\0';
+		rc = regexec(prog, startp, at_bol);
+		*lastp = c;
 	}
 	p_magic = magic;
 	prog->startp[0]	= startp;
@@ -215,13 +227,17 @@ syn_isregstr(char_u *str)
 {
 	while (*str)
 	{
+		/*
+		 * A multi-byte character is skipped whole: the trailing str++ below
+		 * accounts for its first byte, so step over the rest here.
+		 */
 		if (ISkanji(*str))
-			str++;
+			str += utf_lenat(str, 0) - 1;
 		else if (*str == '\\')
 		{
 			str++;
 			if (ISkanji(*str))
-				str++;
+				str += utf_lenat(str, 0) - 1;
 			else if (*str != '\0' && strchr("<>+=|(", *str) != NULL)
 				return(TRUE);
 			else if (*str != '\0' && strchr("etrbn", *str) != NULL)
@@ -261,6 +277,25 @@ syn_cls(char_u *ptr)
 }
 
 #if SYNTAX_CACHE
+/*
+ * The bucket a word falls in. One byte per character, which is all the index
+ * built by syn_makeidx() over the buffer text can afford to look at, and the
+ * two have to arrive at the same number for a word to be found at all.
+ */
+static int
+syn_hash(char_u *str, int ic)
+{
+	char_u		*	p		= str;
+	int				hash	= 0;
+
+	while (*p)
+	{
+		hash += ic ? toupper(*p) : *p;
+		p += ISkanji(*p) ? utf_lenat(p, 0) : 1;
+	}
+	return(hash % HASH_SIZE);
+}
+
 static void
 syn_makeidx(char_u *ptr)
 {
@@ -292,11 +327,14 @@ syn_makeidx(char_u *ptr)
 			nocase = 0;
 			indexp = ptr;
 		}
+		/*
+		 * One byte per character goes into the hash, the same way syn_hash()
+		 * builds the number a rule is looked up by. Only the stepping knows
+		 * about character lengths.
+		 */
 		incase += *ptr;
 		nocase += toupper(*ptr);
-		if (ISkanji(*ptr))
-			ptr++;
-		ptr++;
+		ptr += ISkanji(*ptr) ? utf_lenat(ptr, 0) : 1;
 		oclass = sclass;
 	}
 	synhash[incase % HASH_SIZE].cnt++;
@@ -337,9 +375,7 @@ syn_strstr(char_u *s1, char_u *s2, int ic, int word, int hash)
 			}
 			else if (*s1 == *s2)
 				break;
-			if (ISkanji(*s1))
-				s1++;
-			s1++;
+			s1 += ISkanji(*s1) ? utf_lenat(s1, 0) : 1;
 		}
 		if (*s1 == '\0')
 			return(NULL);
@@ -352,9 +388,20 @@ syn_strstr(char_u *s1, char_u *s2, int ic, int word, int hash)
 				break;
 			if (ISkanji(s1[pos]))
 			{
-				if (s1[pos] != s2[pos] || s1[pos + 1] != s2[pos + 1])
+				/*
+				 * Every byte of the character has to match, however many it
+				 * has. A short s1 stops at its NUL, which cannot equal a byte
+				 * of s2, so this never reads past the end.
+				 */
+				int		len = utf_lenat(s2, pos);
+				int		i;
+
+				for (i = 0; i < len; i++)
+					if (s1[pos + i] != s2[pos + i])
+						break;
+				if (i < len)
 					break;
-				pos++;
+				pos += len - 1;
 			}
 			else if (ic)
 			{
@@ -367,7 +414,8 @@ syn_strstr(char_u *s1, char_u *s2, int ic, int word, int hash)
 		}
 		if (s2[pos] == '\0')
 			return(s1);
-		s1++;
+		/* The next place a match could start is the next character. */
+		s1 += ISkanji(*s1) ? utf_lenat(s1, 0) : 1;
 #if SYNTAX_CACHE
 		if (word && synhash[hash].cnt == 1)
 			return(NULL);
@@ -384,28 +432,26 @@ syn_strsave(char_u *p)
 	w = p = strsave(p);
 	while (*w)
 	{
-		if (*w == '\\')
+		/*
+		 * A backslash escapes the character after it: the named ones become
+		 * the control character they stand for, anything else just loses the
+		 * backslash. A trailing backslash with nothing after it is left alone,
+		 * so the walk cannot step past the end of the string.
+		 */
+		if (*w == '\\' && w[1] != '\0')
 		{
-			if (ISkanji(*w))
-				w += 2;
-			else
-			{
-				switch (w[1]) {
-				case 'e':	w[1] = '\033';	break;
-				case 't':	w[1] = '\t';	break;
-				case 'r':	w[1] = '\r';	break;
-				case 'b':	w[1] = '\010';	break;
-				case 'n':	w[1] = '\n';	break;
-				default:					break;
-				}
-				memmove(w, &w[1], strlen(w));
+			switch (w[1]) {
+			case 'e':	w[1] = '\033';	break;
+			case 't':	w[1] = '\t';	break;
+			case 'r':	w[1] = '\r';	break;
+			case 'b':	w[1] = '\010';	break;
+			case 'n':	w[1] = '\n';	break;
+			default:					break;
 			}
+			memmove(w, &w[1], strlen(w));
 		}
-		else if (ISkanji(*w))
-			w++;
-		w++;
+		w += ISkanji(*w) ? utf_lenat(w, 0) : 1;
 	}
-	*w = '\0';
 	return(p);
 }
 
@@ -858,6 +904,15 @@ syn_loadtag(BUF *buf, char_u *fname)
 			free(r);
 			continue;
 		}
+#if SYNTAX_CACHE
+		/*
+		 * Outside the branch below: a word rule that landed first in the list
+		 * kept the hash of 0 it was allocated with, looked itself up in the
+		 * wrong bucket, and so was never found in the text.
+		 */
+		if (r->word)
+			r->hash = syn_hash(r->str, r->ic);
+#endif
 		if (buf->b_syn_ptr == NULL)
 			buf->b_syn_ptr = (char_u *)r;
 		else
@@ -868,25 +923,6 @@ syn_loadtag(BUF *buf, char_u *fname)
 			w->next = r;
 #if SYNTAX_CACHE2
 			r->prep = w;
-#endif
-#if SYNTAX_CACHE
-			if (r->word)
-			{
-				char_u		*	p = r->str;
-				int				hash	= 0;
-
-				while (*p)
-				{
-					if (r->ic)
-						hash += toupper(*p);
-					else
-						hash += *p;
-					if (ISkanji(*p))
-						p++;
-					p++;
-				}
-				r->hash = hash % HASH_SIZE;
-			}
 #endif
 		}
 		breakcheck();
@@ -1193,6 +1229,13 @@ syn_add(BUF *buf, char_u *reg)
 		}
 		else
 			r->str = syn_strsave(p);
+		if (r->type == TYPE_PAIR)
+			buf->b_syn_pairs++;		/* whether the line states are worth keeping */
+#if SYNTAX_CACHE
+		/* Outside the branch below; see the same line in syn_loadtag(). */
+		if (r->word && r->str)
+			r->hash = syn_hash(r->str, r->ic);
+#endif
 		if (buf->b_syn_ptr == NULL)
 			buf->b_syn_ptr = (char_u *)r;
 		else
@@ -1204,25 +1247,6 @@ syn_add(BUF *buf, char_u *reg)
 #if SYNTAX_CACHE2
 			r->prep = w;
 #endif
-#if SYNTAX_CACHE
-			if (r->word && r->str)
-			{
-				char_u		*	p = r->str;
-				int				hash	= 0;
-
-				while (*p)
-				{
-					if (r->ic)
-						hash += toupper(*p);
-					else
-						hash += *p;
-					if (ISkanji(*p))
-						p++;
-					p++;
-				}
-				r->hash = hash % HASH_SIZE;
-			}
-#endif
 		}
 		p = nextp;
 	}
@@ -1231,6 +1255,8 @@ syn_add(BUF *buf, char_u *reg)
 		free(tagprog);
 		free(tagprogend);
 	}
+	/* A new rule can open a region the remembered line states knew nothing of. */
+	buf->b_syn_stateval = 0;
 	updateScreen(CLEAR);
 	p_magic = magic;
 	return(0);
@@ -1485,53 +1511,239 @@ bak_search(BUF *buf, char_u *top, char_u *ptr, linenr_t *ftop)
 	return(topsynp);
 }
 
+/*
+ * What a line inherits from the ones above it.
+ *
+ * Only a pair rule -- the "p" search mode -- can run past the end of a line, so
+ * the only thing a line needs to know about its predecessors is which pair
+ * region, if any, was still open when they ended. That is one number per line:
+ * b_syn_state[i] is the state at the start of line i + 1, held as the position
+ * of the rule among the pair rules, one based, or 0 for nothing open. Entries
+ * up to b_syn_stateval have been worked out; the rest have not been reached
+ * yet, and anything a change makes doubtful is dropped by syn_changed().
+ *
+ * This is what lets a line be coloured on its own. It used to be guessed by
+ * searching 'synlines' lines in each direction every time a line was drawn,
+ * which cost searches per line and still got a comment or a string wrong once
+ * it grew longer than that window.
+ *
+ * The state is held as a position rather than a pointer because the rule list
+ * is thrown away and rebuilt by ":syntax clear", which every buffer runs on the
+ * way in: a position that no longer names a rule reads back as "nothing open",
+ * where a stale pointer would be read.
+ */
+
+static syntax *
+syn_pair(BUF *buf, int no)
+{
+	syntax			*	synp;
+
+	if (no <= 0)
+		return(NULL);
+	for (synp = (syntax *)buf->b_syn_ptr; synp != NULL; synp = synp->next)
+		if (synp->type == TYPE_PAIR && --no == 0)
+			return(synp);
+	return(NULL);
+}
+
+static int
+syn_pairno(BUF *buf, syntax *want)
+{
+	syntax			*	synp;
+	int					no = 0;
+
+	if (want == NULL)
+		return(0);
+	for (synp = (syntax *)buf->b_syn_ptr; synp != NULL; synp = synp->next)
+	{
+		if (synp->type != TYPE_PAIR)
+			continue;
+		no++;
+		if (synp == want)
+			return(no);
+	}
+	return(0);
+}
+
+/*
+ * Run one line of the state machine: given what was open when the line began,
+ * say what is still open when it ends.
+ */
+static syntax *
+syn_linestate(BUF *buf, syntax *open, char_u *line)
+{
+	char_u			*	p = line;
+
+	while (*p != '\0')
+	{
+		linenr_t			at = p - line;
+
+		if (open != NULL)
+		{
+			if (pe_search(open, line, p, p == line) == NULL)
+				return(open);			/* runs on into the next line */
+			p = line + open->endpos;
+			open = NULL;
+		}
+		else
+		{
+			syntax		*	best	= NULL;
+			linenr_t		bestpos	= MAX_COLS;
+			syntax		*	synp;
+
+			for (synp = (syntax *)buf->b_syn_ptr; synp != NULL; synp = synp->next)
+			{
+				if (synp->type != TYPE_PAIR)
+					continue;
+				if (ps_search(synp, line, p, TRUE) == NULL)
+					continue;
+				if (synp->startpos < bestpos)
+				{
+					bestpos	= synp->startpos;
+					best	= synp;
+				}
+			}
+			if (best == NULL)
+				return(NULL);			/* nothing else opens on this line */
+			/* the loop above left the other rules' positions on top */
+			(void)ps_search(best, line, p, TRUE);
+			p = line + best->endpos;
+			open = best;
+		}
+		/*
+		 * A pattern that matches nothing would leave p where it was and spin
+		 * here for ever, so make sure the line is always being consumed.
+		 */
+		if ((p - line) <= at)
+			p = line + at + utf_lenat(line, (int)at);
+	}
+	return(open);
+}
+
+/*
+ * Room for the states of lines 1..lnum. FALSE when there is none, which turns
+ * multi-line colouring off rather than getting it wrong.
+ */
+static int
+syn_stateroom(BUF *buf, linenr_t lnum)
+{
+	linenr_t			want;
+	short			*	p;
+
+	if (lnum > buf->b_syn_statelen)
+	{
+		/* The whole buffer at once: the states are asked for in order. */
+		want = buf->b_ml.ml_line_count;
+		if (want < lnum)
+			want = lnum;
+		if (want > (linenr_t)(0x7fffffffL / (long)sizeof(short)))
+			return(FALSE);
+		p = (short *)realloc(buf->b_syn_state, (size_t)want * sizeof(short));
+		if (p == NULL)
+			return(FALSE);
+		buf->b_syn_state	= p;
+		buf->b_syn_statelen	= want;
+	}
+	if (buf->b_syn_stateval < 1)
+	{
+		buf->b_syn_state[0]	= 0;		/* nothing is open before line 1 */
+		buf->b_syn_stateval	= 1;
+	}
+	return(TRUE);
+}
+
+/*
+ * The pair region open at the start of 'lnum', working out and remembering the
+ * states of any lines in between that have not been reached yet.
+ *
+ * ml_get_buf() is called for those lines, so the caller's pointers into the
+ * line it is drawing have to be fetched again afterwards.
+ */
+static syntax *
+syn_state(BUF *buf, linenr_t lnum)
+{
+	syntax			*	open;
+	linenr_t			n;
+
+	/* With no region rule nothing can reach across a line, so keep nothing. */
+	if (lnum < 1 || buf->b_syn_ptr == NULL || buf->b_syn_pairs <= 0)
+		return(NULL);
+	if (!syn_stateroom(buf, lnum))
+		return(NULL);
+	if (lnum <= buf->b_syn_stateval)
+		return(syn_pair(buf, buf->b_syn_state[lnum - 1]));
+	open = syn_pair(buf, buf->b_syn_state[buf->b_syn_stateval - 1]);
+	for (n = buf->b_syn_stateval; n < lnum; n++)
+	{
+		open = syn_linestate(buf, open, ml_get_buf(buf, n, FALSE));
+		buf->b_syn_state[n] = (short)syn_pairno(buf, open);
+	}
+	buf->b_syn_stateval = lnum;
+	return(open);
+}
+
+/*
+ * Line 'lnum' changed: the states of the lines after it are no longer known.
+ * The state at the start of 'lnum' itself still is -- it was settled by the
+ * lines above, which this did not touch.
+ *
+ * Typing the two characters that open a C comment changes the colour of
+ * everything below, so the lines under the one that changed have to be drawn
+ * again; only the changed line itself would be otherwise. Nothing is lowered
+ * unless a region rule exists and some state was worked out from it, so a
+ * buffer with no multi-line rules never asks for the extra redraw.
+ */
+	void
+syn_changed(BUF *buf, linenr_t lnum)
+{
+	if (lnum < 1)
+		lnum = 1;
+	if (buf->b_syn_stateval > lnum)
+	{
+		buf->b_syn_stateval = lnum;
+		if (must_redraw < NOT_VALID)
+			must_redraw = NOT_VALID;
+	}
+}
+
 static void
 syn_endcalc(BUF *buf, int last)
 {
-	if (ISkanjiPointer(buf->b_syn_match, buf->b_syn_matchend - 1) == 2)
-		buf->b_syn_matchend -= 1;
-	while (last)
+	char_u		*	top = buf->b_syn_match;
+	char_u		*	end = buf->b_syn_matchend;
+
+	if (top == NULL || end == NULL || end <= top)
+		return;
+	/*
+	 * Leave matchend one byte inside the last character rather than past it.
+	 * is_syntax() drops its cache when the drawing loop reaches matchend - 1,
+	 * and the loop only ever stops on a character's first byte, so pointing
+	 * past the end would keep the cache alive after the loop had moved on.
+	 * A one-byte character stays exactly where it was.
+	 */
+	end = utf_head(top, end - 1) + 1;
+	/*
+	 * What the "-" and "+" search modes asked for: take that many characters
+	 * off the end, or add that many.
+	 */
+	for ( ; last > 0; last--)
 	{
-		if (ISkanjiPointer(buf->b_syn_match, buf->b_syn_matchend) == 2)
+		if (end - 1 <= top)		/* nothing left to give back */
 		{
-			if (last > 0)
-			{
-				if (buf->b_syn_match >= buf->b_syn_matchend - 2)
-				{
-					buf->b_syn_matchend = buf->b_syn_match;
-					break;
-				}
-				buf->b_syn_matchend -= 2;
-			}
-			else
-			{
-				if (buf->b_syn_matchend[0] == '\0')
-					break;
-				buf->b_syn_matchend += 1;
-			}
+			end = top;
+			break;
 		}
-		else
-		{
-			if (last > 0)
-			{
-				if (buf->b_syn_match >= buf->b_syn_matchend - 1)
-					break;
-				buf->b_syn_matchend -= 1;
-			}
-			else
-			{
-				if (buf->b_syn_matchend[0] == '\0')
-					break;
-				buf->b_syn_matchend += 1;
-			}
-		}
-		if (ISkanjiPointer(buf->b_syn_match, buf->b_syn_matchend) == 1)
-			buf->b_syn_matchend += 1;
-		if (last > 0)
-			last --;
-		else
-			last ++;
+		end = utf_head(top, end - 2) + 1;
 	}
+	for ( ; last < 0; last++)
+	{
+		char_u	*	next = (end - 1) + utf_lenat(end - 1, 0);
+
+		if (*next == '\0')
+			break;
+		end = next + 1;
+	}
+	buf->b_syn_matchend = end;
 }
 
 void
@@ -1678,23 +1890,16 @@ is_syntax(WIN *wp, linenr_t lnum, char_u **top, char_u **ptr)
 	BUF				*	buf		= wp->w_buffer;
 	syntax			*	synp	= (syntax *)buf->b_syn_curp;
 	linenr_t			ftop	= 0;
-	linenr_t			lpos	= *ptr - *top;
 	syntax			*	pep;
-	syntax			*	wrkp;
 	linenr_t			startpos;
-	linenr_t			ldiff	= 0;
-	linenr_t			nline	= buf->b_syn_nline;
+	linenr_t			endpos;
 
 	if (!wp->w_p_syt)
 		return(0);
 	if (buf->b_syn_ptr == NULL)
 		return(0);
-	if (buf->b_syn_line != lnum)
-	{
-		ldiff = lnum - buf->b_syn_line;
-		buf->b_syn_nline = 0;
-	}
-	else if (synp)
+	/* Still inside the span the last call worked out for this line? */
+	if (buf->b_syn_line == lnum && synp)
 	{
 		if (buf->b_syn_match <= *ptr && *ptr < buf->b_syn_matchend)
 		{
@@ -1716,135 +1921,67 @@ is_syntax(WIN *wp, linenr_t lnum, char_u **top, char_u **ptr)
 		return(0);
 	if (*top == *ptr)
 	{
-		linenr_t			high;
-		linenr_t			low;
-		linenr_t			higher;
-		int					count = 0;
+		syntax			*	openp = syn_state(buf, lnum);
 
-		high	= lnum;
-		higher	= lnum + S_LINE(buf->b_ml.ml_line_count);
-		if (ldiff == 0 || ldiff == 1)
-			high = nline > lnum ? nline + 1 : lnum;
-		else if (ldiff == -1)
-			higher = nline == 0 ? lnum + S_LINE(buf->b_ml.ml_line_count) : lnum;
-		else
-			high = lnum;
-
-		if ((pep = bak_search(buf, *top, *ptr, NULL)) != NULL)
-		{
-			startpos = pep->endpos;
-			if ((synp = ps_search(pep, *ptr, NULL, FALSE)) != NULL)
-			{
-				if (startpos <= synp->startpos)
-				{
-					buf->b_syn_match	= ml_get_buf(buf, lnum, FALSE);
-					buf->b_syn_matchend	= ml_get_buf(buf, lnum, FALSE) + startpos;
-					buf->b_syn_curp		= (char_u *)pep;
-					syn_endcalc(buf, pep->last);
-					if (*ptr >= (buf->b_syn_matchend - 1))
-					{
-						buf->b_syn_match	= NULL;
-						buf->b_syn_matchend	= NULL;
-						buf->b_syn_curp		= NULL;
-					}
-					return(pep->color);
-				}
-			}
-		}
-
-		for (pep = NULL; high <= buf->b_ml.ml_line_count && high <= higher; high++)
-		{
-			*top = ml_get_buf(buf, high, FALSE);
-			if ((pep = bak_search(buf, *top, *top, NULL)) != NULL)
-			{
-				startpos = pep->endpos;
-				if ((synp = ps_search(pep, *top, NULL, FALSE)) != NULL)
-				{
-					if (startpos <= synp->startpos)
-						break;
-					goto breakbreak;
-				}
-				break;
-			}
-		}
-		if (pep == NULL)
-			buf->b_syn_nline = high - 1;
-		else
-		{
-			startpos = pep->endpos;
-			for (low = high - 1; low > 0 && low >= lnum - S_LINE(buf->b_ml.ml_line_count); low--)
-			{
-				*top = ml_get_buf(buf, low, FALSE);
-				if ((synp = ps_search(pep, *top, NULL, FALSE)) != NULL)
-				{
-					if (low > lnum)
-						goto breakbreak;
-					if (pe_search(pep, *top, *top + pep->endpos, FALSE) != NULL)
-						goto breakbreak;
-					*ptr = *top = ml_get_buf(buf, lnum, FALSE);
-					if (lnum == high)
-					{
-						buf->b_syn_match	= *top;
-						buf->b_syn_matchend	= *top + startpos;
-					}
-					else if (lnum == low)
-					{
-						buf->b_syn_match	= *top + synp->startpos;
-						buf->b_syn_matchend	= *top + strlen(*top);
-						if (((wrkp = fwd_search(buf, lnum, top, ptr, &ftop)) != NULL) && wrkp->startpos < synp->startpos)
-							break;
-					}
-					else
-					{
-						buf->b_syn_match	= *top;
-						buf->b_syn_matchend	= *top + strlen(*top);
-					}
-					buf->b_syn_curp		= (char_u *)synp;
-					syn_endcalc(buf, 0);
-					if (buf->b_syn_match <= *ptr && *ptr < buf->b_syn_matchend)
-					{
-						if (*ptr >= (buf->b_syn_matchend - 1))
-						{
-							buf->b_syn_match	= NULL;
-							buf->b_syn_matchend	= NULL;
-							buf->b_syn_curp		= NULL;
-						}
-						return(synp->color);
-					}
-					return(0);
-				}
-				if (pe_search(pep, *top, *top, FALSE) != NULL)
-					break;
-			}
-		}
-breakbreak:
+		/* syn_state() fetched other lines, which moves the one being drawn */
 		*ptr = *top = ml_get_buf(buf, lnum, FALSE);
+		if (openp != NULL)
+		{
+			/*
+			 * A region that opened on an earlier line reaches this one, so it
+			 * colours the line from the start to wherever it closes -- or all
+			 * of it, when it closes later still.
+			 */
+			buf->b_syn_match = *top;
+			if (pe_search(openp, *top, *top, TRUE) != NULL)
+				buf->b_syn_matchend = *top + openp->endpos;
+			else
+				buf->b_syn_matchend = *top + strlen(*top);
+			buf->b_syn_curp = (char_u *)openp;
+			syn_endcalc(buf, openp->last);
+			if (*ptr >= (buf->b_syn_matchend - 1))
+			{
+				buf->b_syn_match	= NULL;
+				buf->b_syn_matchend	= NULL;
+				buf->b_syn_curp		= NULL;
+			}
+			return(openp->color);
+		}
 	}
 	if ((synp = fwd_search(buf, lnum, top, ptr, &ftop)) != NULL)
 	{
+		/*
+		 * Both ends of the match, kept before bak_search() runs: that asks
+		 * every rule whether its closing token is here, and the answer is left
+		 * on the rule this one is about to use.
+		 */
 		startpos = synp->startpos;
+		endpos   = synp->endpos;
 		if ((pep = bak_search(buf, *top, *ptr, &ftop)) != NULL)
 			synp = pep;
 		else if (synp->type == TYPE_PAIR)
 		{
-			if (pe_search(synp, *top, *top + startpos, startpos == 0) != NULL)
+			/*
+			 * Where the region closes, looked for past the token that opened
+			 * it. Starting the search at the opening token instead let a
+			 * region whose two tokens are the same string -- Python's """, a
+			 * shell heredoc -- close on the very characters that opened it, so
+			 * only the opening token was coloured and the text after it was
+			 * left plain. A region with two different tokens cannot match
+			 * there and never noticed the difference.
+			 */
+			if (pe_search(synp, *top, *top + endpos, endpos == 0) != NULL)
 				synp->startpos = startpos;
 			else
 			{
-				linenr_t			high;
-				linenr_t			higher;
-
-				higher	= lnum + S_LINE(buf->b_ml.ml_line_count);
-				for (pep = NULL, high = lnum + 1; high <= buf->b_ml.ml_line_count && high <= higher; high++)
-				{
-					*top = ml_get_buf(buf, high, FALSE);
-					if ((pep = pe_search(synp, *top, *top, FALSE)) != NULL)
-						break;
-				}
-				*top = ml_get_buf(buf, lnum, FALSE);
-				*ptr = *top + lpos;
-				if (pep == NULL)
-					return(0);
+				/*
+				 * The region opens here and does not close on this line, so it
+				 * colours the rest of it; syn_state() reports it as open at
+				 * the start of the next line and the colour carries on there.
+				 * This used to search ahead for the closing token and, if it
+				 * was more than 'synlines' away, leave the region uncoloured
+				 * altogether.
+				 */
 				synp->startpos = startpos;
 				synp->endpos   = startpos + strlen(*top + startpos);
 			}
