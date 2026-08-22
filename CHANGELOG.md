@@ -41,6 +41,10 @@ repository and would drift within three releases.
   characters that opened it when both were on one line, colouring the token and
   leaving the text after it plain. The closing token is now looked for past the
   opening one.
+- The test suites no longer read the rc file of whoever runs them. `HOME` points
+  at their own temporary directory, so a `_vimrc` — the shipped sample sets
+  `textmode`, mappings and a rule set — cannot decide what the editor under test
+  does. Installing the sample used to turn 14 passes into 3.
 
 ### 日本語
 
@@ -63,6 +67,10 @@ repository and would drift within three releases.
 - 開始と終了が同じ文字列の領域 (Python の `"""`、テンプレートリテラル、コードフェンス)
   が 1 行に収まっている場合、開始トークン自身で閉じてしまい、記号だけが色付いて後ろの
   文字列が無色になっていました。終了トークンを開始トークンより後ろから探すようにしました。
+- テストスイートが実行者の rc ファイルを読まなくなりました。`HOME` をスイート自身の
+  一時ディレクトリに向けているので、`_vimrc` (同梱サンプルは textmode・マッピング・
+  ルール定義を設定します) がテスト対象の挙動を変えることはありません。サンプルを
+  導入すると 14 pass が 3 pass になっていました。
 
 ## 1.0.0 — 2026-08-22
 

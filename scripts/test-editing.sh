@@ -36,7 +36,10 @@ if [ -z "$count_only" ]; then
 		exit 2
 	}
 fi
-pty() { "$tmp/ptyrun" /bin/sh -c "$1"; }
+# HOME is the temporary directory, which has no rc in it: a ~/.vimrc belonging
+# to whoever is running this would otherwise decide what the editor does, and
+# every case below assumes the defaults.
+pty() { "$tmp/ptyrun" /bin/sh -c "HOME=$tmp $1"; }
 hex() { od -An -tx1 -v "$1" 2>/dev/null | tr -d ' \n'; }
 
 pass=0; fail=0; xfail=0; xpass=0; cases=0

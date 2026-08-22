@@ -82,7 +82,13 @@ done
 cp "$con" "$work/jvim32.exe"
 cp "$gui" "$work/jvim32w.exe"
 
-win() { cmd.exe /c "cd /d $(wslpath -w "$work") && $*" >/dev/null 2>&1; }
+# HOME and VIM point at the work directory, which has no rc in it, so that a
+# _vimrc in whoever is running this cannot decide what the editor does. The
+# shipped sample alone sets textmode, several mappings and a syntax rule set,
+# and every case below assumes none of that. No space before the "&&": cmd
+# would put it in the value.
+winenv="set HOME=$(wslpath -w "$work")&& set VIM=$(wslpath -w "$work")&&"
+win() { cmd.exe /c "$winenv cd /d $(wslpath -w "$work") && $*" >/dev/null 2>&1; }
 hex() { od -An -tx1 -v "$1" 2>/dev/null | tr -d ' \n'; }
 
 pass=0; fail=0
