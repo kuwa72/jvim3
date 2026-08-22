@@ -93,12 +93,16 @@ nothing looks for. Rename it, or set `helpfile` at it.
 2. then the **first** of: `%VIMINIT%`, `%HOME%\_vimrc`, `%EXINIT%`, `%HOME%\_exrc`
 3. and, only if `exrc` is set, `_vimrc` then `_exrc` in the current directory
 
+Wherever `_vimrc` is looked for, **`_jvimrc` is tried first** — and `.vimrc`
+likewise gives way to `.jvimrc`. Nothing but JVim reads the "j" name, so that is
+where to put settings an ordinary vim on the same machine would not understand:
+`set fexrc`, the syntax rules, anything else from the list [below](#what-jvim-adds).
+
 `%VIM%\vimrc` next to the exe is the simplest, and makes the unpacked directory
-self-contained. `_jvimrc.sample` in the package is Tsuchida's own from 2002 and
-is worth reading — the two settings that no longer apply, `decode` and
-`keywordprg=vshelp.exe`, are commented out in it, and its `tags` lines point at
-a Visual C++ 6 that is not on your machine. [Below](#a-_vimrc-to-start-from) is
-a shorter current one.
+self-contained. Two samples come in the package. `jvimrc.sample` is short and
+works on a Unix build too — copy it to `%HOME%\_jvimrc` and you are done.
+`_jvimrc.sample` is Tsuchida's own from 2002, longer and worth reading, though
+its `tags` lines point at a Visual C++ 6 that is not on your machine.
 
 **3. Set the font.** `Global > Font` in the menu. Only fixed pitch fonts are
 offered, because the editor draws on a character grid — a proportional font
@@ -138,7 +142,10 @@ actually in.
 
 ## A `_vimrc` to start from
 
-Cut this down rather than up. Everything here exists in this build.
+This is `jvimrc.sample`, which comes in the Windows package and which `make
+install` puts in `$VIM` on a Unix. Copy it to `~/.jvimrc`, or `%HOME%\_jvimrc`
+— the "j" name so an ordinary vim never reads it. Cut it down rather than up;
+everything here exists in both builds.
 
 ```vim
 " ---- editing
@@ -156,13 +163,15 @@ set showmatch
 set ruler
 set laststatus=1
 set nobackup            " or: set backup / set backupdir=>$TMP
-set directory=>$TMP     " always keep the swap file here; on Unix, >/tmp
+" set directory=>$TMP  " swap files all in one place; >/tmp on a Unix,
+                        " where $TMP is usually not set
 
 " ---- Japanese
 set nojkanaconv         " leave halfwidth kana alone (the default now)
-set fepctrl             " turn the IME off when leaving insert mode
-set fepkey=\\           " CTRL-\ toggles the IME
-set jinsertmode=a       " insert mode starts in ASCII
+" The IME settings are the Windows build only: uncomment them there.
+"set    fepctrl         " turn the IME off when leaving insert mode
+"set    fepkey=\\       " CTRL-\ toggles the IME
+"set    jinsertmode=a   " insert mode starts in ASCII
 " set jmask=TTTT        " only if the locale is not telling the truth
 
 " ---- colour, on the GUI and on a terminal alike
@@ -171,8 +180,8 @@ set syntax
 set syntype=cfp
 source $VIM/syntax/filetype.jvsyn
 
-" ---- Windows GUI
-set crmark              " show line ends
+" a marker at the end of every line, in crchar
+"set    crmark
 ```
 
 `fexrc` is worth knowing about if you work in several languages: with it set,

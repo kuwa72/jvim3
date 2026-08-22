@@ -60,7 +60,9 @@ the exe are found as they are.
 give it `-nw` to stay in the console instead of opening a window.
 
 Each package also has `vim.hlp`, JVim's Japanese help file, which `:help` finds
-where it is, and `_jvimrc.sample` to read before writing your own.
+where it is, the syntax rules in `syntax/`, and two rcs to start from:
+`jvimrc.sample`, which is short and works on a Unix build too, and
+`_jvimrc.sample`, the long-standing Windows one.
 [USAGE.md](USAGE.md#first-run-on-windows) has the ten minutes of setup worth
 doing.
 

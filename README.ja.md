@@ -58,8 +58,10 @@ JVim 3.0-j2.1b (2002 Dec 24) 由来
 `-nw` を付けるとウィンドウを開かずコンソールで動きます。
 
 パッケージには `vim.hlp` (JVim の日本語ヘルプ。そのままの名前で `:help` が見つけ
-ます) と、自分の設定を書く前に読むための `_jvimrc.sample` も入っています。初期
-設定は [USAGE.ja.md](USAGE.ja.md#windows-での最初の設定) にあります。
+ます)、シンタックスルールの `syntax/`、そして出発点になる rc が 2 つ入っています。
+`jvimrc.sample` は短く Unix ビルドでもそのまま使えるもの、`_jvimrc.sample` は
+従来からある Windows 用のものです。初期設定は
+[USAGE.ja.md](USAGE.ja.md#windows-での最初の設定) にあります。
 
 ### Linux、FreeBSD、NetBSD、OpenBSD、DragonFly
 

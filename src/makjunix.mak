@@ -488,6 +488,9 @@ install: $(TARGET)
 	-mkdir -p $(HELPLOC)/jvim3/syntax
 	cp ../syntax/* $(HELPLOC)/jvim3/syntax/
 	chmod $(HELPMOD) $(HELPLOC)/jvim3/syntax/*
+# An rc to start from, for copying to ~/.jvimrc.
+	cp ../jvimrc.sample $(HELPLOC)/jvim3/jvimrc.sample
+	chmod $(HELPMOD) $(HELPLOC)/jvim3/jvimrc.sample
 
 clean:
 	-rm -f $(OBJ) mkcmdtab.o version.o core $(TARGET) mkcmdtab cmdtab.h

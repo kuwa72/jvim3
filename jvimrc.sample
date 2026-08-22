@@ -1,0 +1,46 @@
+" A short rc that works on both the Windows build and a Unix one. It is the one
+" printed in USAGE.md, "A _vimrc to start from".
+"
+" Copy it to    ~/.jvimrc        on a Unix
+"               %HOME%\_jvimrc   on Windows
+"
+" Not .vimrc / _vimrc: JVim looks for the "j" name first and nothing else reads
+" it, so an ordinary vim on the same machine never has to make sense of the
+" lines below. Everything not commented out exists in both builds -- cut it
+" down rather than add to it. doc.j/_jvimrc, which the Windows package ships as
+" _jvimrc.sample, is the long-standing Windows one and has more in it.
+
+" ---- editing
+set autoindent
+set backspace=2         " backspace over autoindent, line breaks and insert start
+set tabstop=4
+set shiftwidth=4
+set noexpandtab
+set textwidth=0
+set whichwrap=11        " backspace, space and cursor keys wrap at line ends
+set wildchar=9          " TAB completes file names on the : line
+set history=100
+set showcmd
+set showmatch
+set ruler
+set laststatus=1
+set nobackup            " or: set backup / set backupdir=>$TMP
+" set directory=>$TMP  " swap files all in one place; >/tmp on a Unix,
+                        " where $TMP is usually not set
+
+" ---- Japanese
+set nojkanaconv         " leave halfwidth kana alone (the default now)
+" The IME settings are the Windows build only: uncomment them there.
+"set    fepctrl         " turn the IME off when leaving insert mode
+"set    fepkey=\\       " CTRL-\ toggles the IME
+"set    jinsertmode=a   " insert mode starts in ASCII
+" set jmask=TTTT        " only if the locale is not telling the truth
+
+" ---- colour, on the GUI and on a terminal alike
+set fexrc               " read the rules for the type of file being opened
+set syntax
+set syntype=cfp
+source $VIM/syntax/filetype.jvsyn
+
+" a marker at the end of every line, in crchar
+"set    crmark

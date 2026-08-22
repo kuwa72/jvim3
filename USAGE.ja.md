@@ -93,11 +93,16 @@ set helpfile=$VIM\vim-en.hlp
 2. 続いて、次の**最初に見つかったもの 1 つだけ**: `%VIMINIT%`、`%HOME%\_vimrc`、`%EXINIT%`、`%HOME%\_exrc`
 3. `exrc` オプションが設定されている場合にかぎり、カレントディレクトリの `_vimrc`、次に `_exrc`
 
+`_vimrc` を探す場所では、**先に `_jvimrc` が試されます**（`.vimrc` に対する
+`.jvimrc` も同じ）。この "j" 付きの名前を読むのは JVim だけなので、同じマシンの
+普通の vim が解釈できない設定 — `set fexrc`、シンタックスルール、
+[後述](#jvim-が足したもの)のもの — はそちらに置くのが安全です。
+
 exe の隣に置く `%VIM%\vimrc` が一番簡単で、展開したディレクトリだけで完結します。
-パッケージの `_jvimrc.sample` は土田さん自身の 2002 年当時の設定で、読む価値があり
-ます。もう通らない 2 つの設定 (`decode` と `keywordprg=vshelp.exe`) はコメントアウト
-してありますが、`tags` の行は手元にない Visual C++ 6 を指しています。もっと短い今の
-設定例は[下](#出発点になる-_vimrc)にあります。
+パッケージにはサンプルが 2 つ入っています。`jvimrc.sample` は短く、Unix ビルドでも
+そのまま使えます。`%HOME%\_jvimrc` にコピーすれば終わりです。`_jvimrc.sample` は
+土田さん自身の 2002 年当時の設定で、長いぶん読む価値がありますが、`tags` の行は
+手元にない Visual C++ 6 を指しています。
 
 **3. フォントを設定する。** メニューの `Global > Font` から。等幅フォントしか出て
 きませんが、これは仕様です。文字グリッド上に描画しているので、プロポーショナル
@@ -136,7 +141,10 @@ LANG=C             # jmask=EEET — 表示は EUC、新規ファイルは UTF-8
 
 ## 出発点になる `_vimrc`
 
-足すより削って使ってください。ここにあるものはすべてこの版に存在します。
+これは `jvimrc.sample` です。Windows のパッケージに入っていますし、Unix では
+`make install` が `$VIM` に置きます。`~/.jvimrc`、Windows なら `%HOME%\_jvimrc`
+にコピーしてください（"j" の付く名前なので、普通の vim には読まれません）。
+足すより削って使ってください。ここにあるものは両方のビルドに存在します。
 
 ```vim
 " ---- 編集
@@ -154,13 +162,15 @@ set showmatch
 set ruler
 set laststatus=1
 set nobackup            " または set backup / set backupdir=>$TMP
-set directory=>$TMP     " スワップは必ずここへ (Unix なら >/tmp)
+" set directory=>$TMP  " スワップを 1 か所に。Unix では $TMP が未設定な
+                        " ことが多いので >/tmp
 
 " ---- 日本語
 set nojkanaconv         " 半角カナをそのままにする (現在の既定値)
-set fepctrl             " 挿入モードを抜けるとき IME を切る
-set fepkey=\\           " CTRL-\ で IME をトグル
-set jinsertmode=a       " 挿入モードは ASCII で始まる
+" IME 関連は Windows ビルド専用です。Windows ではコメントを外してください。
+"set    fepctrl         " 挿入モードを抜けるとき IME を切る
+"set    fepkey=\\       " CTRL-\ で IME をトグル
+"set    jinsertmode=a   " 挿入モードは ASCII で始まる
 " set jmask=TTTT        " ロケールが当てにならないときだけ
 
 " ---- 色付け (GUI でも端末でも)
@@ -169,8 +179,8 @@ set syntax
 set syntype=cfp
 source $VIM/syntax/filetype.jvsyn
 
-" ---- Windows GUI
-set crmark              " 行末を表示する
+" 行末に crchar の文字で印を付ける
+"set    crmark
 ```
 
 複数の言語を扱うなら `fexrc` は覚えておくと便利です。これを設定すると `main.c` を

@@ -20,6 +20,12 @@ repository and would drift within three releases.
 - The rules live in `syntax/`, one file per file type, instead of 1200 lines
   inside `_jvimrc`. An rc reaches all of them with one line, `source
   $VIM/syntax/filetype.jvsyn`, and `syntax/README` says how to add a type.
+- `jvimrc.sample`, a short rc that works on both builds, in the Windows package
+  and installed into `$VIM` on a Unix. Copy it to `~/.jvimrc` or
+  `%HOME%\_jvimrc` — the "j" name, which JVim reads in preference to `.vimrc`
+  and nothing else reads at all, so an ordinary vim on the same machine is not
+  handed `set fexrc` and a syntax rule set. There was no rc at all that a Unix
+  build could use: `doc.j/_jvimrc` stops at `set fepkeys`, which needs FEPCTRL.
 - `$VIM` has a default on a Unix — `$PREFIX/lib/jvim3`, where `make install`
   puts the rule files. Windows already set it to the directory of the exe.
 - Syntax colouring for Python, JavaScript/TypeScript, Go, Rust, Ruby, shell,
@@ -72,6 +78,13 @@ repository and would drift within three releases.
 - ルールを `_jvimrc` の中の 1200 行から、種別ごと 1 ファイルの `syntax/` に移しました。
   rc からは `source $VIM/syntax/filetype.jvsyn` の 1 行で全部に届きます。種別の
   足し方は `syntax/README` にあります。
+- 両方のビルドで使える短い rc `jvimrc.sample` を追加し、Windows パッケージに同梱、
+  Unix では `$VIM` にインストールするようにしました。`~/.jvimrc` か
+  `%HOME%\_jvimrc` にコピーして使います。この "j" の付く名前は JVim が `.vimrc`
+  より優先して読み、ほかのエディタは読まないので、同じマシンの普通の vim に
+  `set fexrc` やシンタックス定義を渡さずに済みます。これまで Unix ビルドで使える
+  rc は同梱されていませんでした (`doc.j/_jvimrc` は FEPCTRL を要する
+  `set fepkeys` で止まります)。
 - Unix でも `$VIM` に既定値が入るようになりました (`$PREFIX/lib/jvim3`、
   `make install` がルールファイルを置く場所)。Windows では以前から exe の
   ディレクトリが入っていました。
