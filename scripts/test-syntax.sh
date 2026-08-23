@@ -123,7 +123,7 @@ case_ 'YAML: key, string, boolean' t.yml \
 
 case_ 'Markdown: heading, code fence, inline code' t.md \
 '# Title\n\n`code` here\n\n```sh\nnot markdown\n```\n' \
-'1:0-7 MdHead n/^#\\+\\s.*$\n3:0-6 String m/`.*`\n5:0-5 Comment p/^```\n6:0-12 Comment p/^```\n7:0-3 Comment p/^```\n'
+'1:0-7 MdHead n/^#\\+\\s.*$\n3:0-6 String m/`.*`\n5:0-5 MdCode p/^```\n6:0-12 MdCode p/^```\n7:0-3 MdCode p/^```\n'
 
 case_ 'JSON: a key is not a value' t.json \
 '{\n  "name": "jvim",\n  "n": 3\n}\n' \
@@ -263,6 +263,20 @@ case_ 'an unknown mode letter is refused' t.unknown \
 'def x\n' \
 '' \
 ':syntax red q/def\r'
+
+# "on" takes a colour a foreground would take, or the colour itself.
+case_ 'a rule can say what goes behind it' t.unknown \
+'def x\n' \
+'1:0-3 - w/def\n' \
+':syntax red on #ffe6e6 w/def\r'
+
+# "text" is whatever the ordinary text colour is and "reverse" asks the
+# terminal to swap two colours over. Neither names a colour, so neither can be
+# behind anything, and a rule that says so is refused rather than invented for.
+case_ 'reverse is refused as a thing to go behind text' t.unknown \
+'def x\n' \
+'' \
+':syntax red on reverse w/def\r'
 
 if [ -n "$count_only" ]; then
 	printf 'cases %d\n' "$cases"

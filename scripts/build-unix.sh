@@ -234,5 +234,7 @@ if [ "$target" = test ]; then
 	"$root/scripts/test-editing.sh" "$src/jvim3" || rc=1
 	echo
 	"$root/scripts/test-syntax.sh" "$src/jvim3" || rc=1
+	echo
+	"$root/scripts/test-sgr.sh" "$src/jvim3" || rc=1
 	exit $rc
 fi

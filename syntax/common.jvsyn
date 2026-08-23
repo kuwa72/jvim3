@@ -19,8 +19,8 @@ syntax	link	Statement				user7		" Brown			#804040
 syntax	link	PreProc					user8		" Purple		#a020f0
 syntax	link	Type			bold	user9		" SeaGreen		#2e8b57
 syntax	link	Ignore					text		" guifg=bg
-syntax	link	Error			bolic	red			" guifg=White guibg=Red
-syntax	link	Todo			bold	reverse		" guifg=Blue  guibg=Yellow
+syntax	link	Error			bolic	white on maroon	" vim: guifg=White guibg=Red
+syntax	link	Todo			bold	navy on yellow	" vim: guifg=Blue guibg=Yellow
 syntax	link	String					Constant
 syntax	link	Character				Constant
 syntax	link	Number					Constant

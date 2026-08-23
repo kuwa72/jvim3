@@ -2,7 +2,11 @@ syntax link			MdHead		bold	navy
 syntax MdHead			n/^#\+\s.*$
 syntax MdHead			n/^=\+$
 syntax MdHead			n/^---*$
-syntax Comment			p/^```/^```
+" A fenced block is not a comment; it was drawn as one because a comment was
+" the only group that reached across lines. Its own group, with a grey behind
+" it and the text left the colour it would have had.
+syntax link			MdCode				on #f0f0f0
+syntax MdCode			p/^```/^```
 syntax String			m/`.*`
 syntax Type			m/\*\*.*\*\*
 syntax Type			m/__.*__
