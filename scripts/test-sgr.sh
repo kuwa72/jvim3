@@ -124,16 +124,25 @@ case_() {
 	printf '%b' "$src" > "$tmp/$file"
 	printf '%b' "$want" > "$tmp/want"
 	printf ':q!\r' > "$tmp/keys"
+	# To a file and then through the filter, rather than down a pipe: an empty
+	# result is otherwise two questions at once, and the byte count below
+	# answers the first of them.
 	"$tmp/ptyrun" /bin/sh -c \
 		"HOME=$tmp VIM=$root TERM=xterm COLORTERM=$ct \
 			$jvim -T xterm -s $tmp/keys $tmp/$file" \
-		2>/dev/null | normalise > "$tmp/out"
+		> "$tmp/raw" 2>/dev/null
+	normalise < "$tmp/raw" > "$tmp/out"
 
 	if cmp -s "$tmp/want" "$tmp/out"; then
 		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
 	else
 		printf '  FAIL        %s\n' "$name"
 		diff -u "$tmp/want" "$tmp/out" | sed -n '3,14p' | sed 's/^/                /'
+		if [ ! -s "$tmp/out" ]; then
+			printf '                %s bytes came back from the editor\n' \
+					"$(wc -c < "$tmp/raw" | tr -d ' ')"
+			od -c "$tmp/raw" | sed -n '1,3p' | sed 's/^/                /'
+		fi
 		fail=$((fail+1))
 	fi
 }
