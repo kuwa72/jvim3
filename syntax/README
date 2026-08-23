@@ -100,6 +100,21 @@ Writing rules
     backslash, plus the classes \i \k \f \p \s \d \x \o \w \h \a \l \u and
     their upper case complements. There is no \{n,m} and nothing non-greedy.
 
+  o A colour can say what goes behind it, with "on" and a second colour:
+
+        syntax link Error   bolic white on maroon
+        syntax link DiffAdd       green on #e6ffe6
+        syntax link MdCode              on #f0f0f0
+
+    Either a name a foreground would take, or the colour itself as #rrggbb --
+    which is what the rule files use, none of the sixteen named ones being pale
+    enough to read text off. With nothing before the "on" the text keeps the
+    colour it would have had. "text" and "reverse" are refused: neither names a
+    colour, so neither can be behind anything.
+
+    bold, italic and uline belong to the text and go before it as they always
+    did; there is no such thing as a bold background.
+
   o The mode letters before the "/" are i (ignore case), j (fuzzy Japanese),
     w (whole words), m (shortest match), p (a region, two patterns), t (inside
     a tag), - and + (shrink or grow the match by a character), and n, which

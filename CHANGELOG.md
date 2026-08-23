@@ -17,6 +17,22 @@ repository and would drift within three releases.
   matches the wrong thing had no other way of saying so — the screen came out a
   colour short and finding the rule meant reading pixels. `scripts/test-syntax.sh`
   is that turned into a suite, so a rule that stops matching fails a test.
+- A colour can say what goes behind it: `syntax link Error bolic white on
+  maroon`, or the colour itself as `syntax link DiffAdd green on #e6ffe6`, or
+  with nothing in front of the `on` to leave the text the colour it would have
+  had. The sixteen named colours are all too strong to read a line of text off,
+  so the rule files write the tints they want. `Error` and `Todo` are drawn
+  this way now — both are groups vim gives a background, and without one they
+  had been standing in with `bolic red` and `reverse`. Reverse is the terminal
+  swapping two colours it already has, which is not blue on yellow and is not
+  the same twice on two terminals. `diff`'s added and removed lines and
+  Markdown's fenced blocks have one too.
+
+  A cell's attribute is one byte holding a colour id, and 145 of its 256 values
+  are already spoken for, so this is a third plane of the screen array rather
+  than more bits. The background is a position in a table of the colours the
+  rules asked for, not one of the foreground's letters: it never has to serve
+  as a foreground, so it costs nothing to give it a space of its own.
 - `scripts/test-sgr.sh`, which reads the escapes the terminal is actually sent
   and the text under each of them. `:syntax dump` answers which rule coloured
   which bytes, a question about the rules; this is the other half — whether the
@@ -169,6 +185,20 @@ repository and would drift within three releases.
   ルールの間違いは「画面の色が足りない」以外に現れず、原因のルールを特定するには
   ピクセルを読むしかありませんでした。`scripts/test-syntax.sh` はこれをスイートに
   したもので、ルールが一致しなくなればテストが落ちます。
+- 色が「後ろに何を敷くか」を言えるようになりました。`syntax link Error bolic white
+  on maroon`、色そのものを書く `syntax link DiffAdd green on #e6ffe6`、`on` の前に
+  何も書かず文字の色をそのままにする形の 3 通りです。名前付きの 16 色はどれも 1 行
+  まるごと敷いて文字を読むには濃すぎるので、ルールファイルは欲しい淡色を直接
+  書いています。`Error` と `Todo` はこの方式に変わりました — どちらも vim が背景色を
+  与えている群で、背景が無いあいだは `bolic red` と `reverse` で代用されていました。
+  reverse は「端末が持っている 2 色を入れ替えろ」という意味なので、青地に黄でも
+  なければ、端末が違えば同じ見た目にもなりません。diff の追加行・削除行と、
+  Markdown のコードフェンスにも背景が付きました。
+
+  1 セルの属性は色 id を持つ 1 バイトで、256 のうち 145 が既に埋まっています。
+  なのでビットを増やすのではなく、画面配列に 3 枚目の面を足しました。背景は前景の
+  letter ではなく「ルールが求めた色の表の位置」です。背景が前景として使われることは
+  絶対にないので、専用の空間を与えても何も失いません。
 - `scripts/test-sgr.sh` を追加しました。端末に実際に送られるエスケープと、その下に
   書かれた文字を読みます。`:syntax dump` は「どのルールがどのバイトを塗ったか」=
   ルールについての問いに答えますが、これはもう半分 —「その色が端末に届いているか、

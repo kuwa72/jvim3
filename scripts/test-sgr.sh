@@ -23,7 +23,8 @@
 #     [0;1;38;2;46;139;87m|int
 #     [m| x =
 #
-# the escape, a '|', and the text written while it was in force. Cursor
+# the escape, a '|', and the text written while it was in force. Text written
+# before any escape gets a line with nothing in front of the '|'. Cursor
 # positioning is dropped, so a case does not break when a line moves. The '|'
 # is there to make a leading space visible, which is exactly the bug above.
 #
@@ -69,28 +70,46 @@ counted() {
 # it. An SGR escape (the ones ending in 'm') starts a new output line; every
 # other escape -- cursor motion, the window title, the alternate screen -- has
 # its own shape stripped off and only its text kept.
+#
+# Two markers bound what is kept. Clearing the display throws away everything
+# written so far, and jvim does that twice on the way in -- so does the line
+# collected so far. "Thanks for flying Vim" is the last thing it says, and the
+# clear that follows it is a teardown, not a redraw.
 normalise() {
 	LC_ALL=C awk '
-		BEGIN { RS = "\033"; ORS = "" }
+		BEGIN { RS = "\033"; ORS = ""; n = 1; out[1] = "|"; done = 0 }
 		NR > 1 {
-			if (match($0, /^\[[0-9;]*m/))
+			if (done)
+				next
+			r = $0
+			if (match(r, /^\[[0-9;]*m/))
 			{
-				printf "\n%s|", substr($0, RSTART, RLENGTH)
-				r = substr($0, RSTART + RLENGTH)
+				out[++n] = substr(r, RSTART, RLENGTH) "|"
+				r = substr(r, RSTART + RLENGTH)
+			}
+			else if (match(r, /^\[[0-9;?]*[A-Za-z]/))
+			{
+				csi = substr(r, RSTART, RLENGTH)
+				r = substr(r, RSTART + RLENGTH)
+				if (csi == "[2J") { n = 1; out[1] = "|" }
+			}
+			else if (match(r, /^\]2;[^\007]*\007/))
+			{
+				if (index(substr(r, RSTART, RLENGTH), "Thanks for flying") > 0)
+				{
+					done = 1
+					next
+				}
+				r = substr(r, RSTART + RLENGTH)
 			}
 			else
-			{
-				r = $0
-				sub(/^\[[0-9;?]*[A-Za-z]/, "", r)		# CSI
-				sub(/^\]2;[^\007]*\007/, "", r)			# the window title
-				sub(/^[=>78]/, "", r)					# keypad, save, restore
-			}
+				sub(/^[=>78]/, "", r)		# keypad, save, restore
 			gsub(/\r|\n/, "", r)
-			printf "%s", r
+			out[n] = out[n] r
 		}
-		END { print "" }' |
-		grep '|' |					# drop what came before the first colour
-		sed 's/~.*$//'				# and the filler down an empty window
+		END { for (i = 1; i <= n; i++) print out[i] "\n" }' |
+		sed 's/~.*$//' |			# the filler down an empty window
+		grep -v '^|$'				# and a run with neither escape nor text
 }
 
 # case <name> <file name> <source> <wanted> [COLORTERM]
@@ -155,6 +174,40 @@ case_ 'a terminal with no COLORTERM gets one of sixteen' t.c \
 'int x;\n' \
 '[0;1;90m|int\n[m|\n[0m|x;\n[m|\n' \
 'xterm-256color'
+
+# ---------------------------------------------------------- what is behind it
+#
+# 48;2 is 38;2 with a background instead of a foreground, and it goes in the
+# same escape: one run of text, one escape, both of its colours.
+#
+# The tints are written into diff.jvsyn as "#e6ffe6" and "#ffe6e6". None of the
+# sixteen named colours is pale enough to read text off, and these two rules
+# match a whole line.
+case_ 'diff: the added and the removed line are tinted' t.diff \
+'-gone\n+added\n' \
+'[0;38;2;255;0;0;48;2;255;230;230m|-gone\n[m|\n[0;38;2;0;128;0;48;2;230;255;230m|+added\n[m|\n'
+
+# The same two SGR numbers ten higher, which is the whole of the difference
+# between a foreground and a background. 47 is white: #e6ffe6 reduced to the
+# sixteen is nearer white than any green, and a pale tint always will be.
+case_ 'a background falls back to one of sixteen too' t.diff \
+'+added\n' \
+'[0;32;47m|+added\n[m|\n' \
+'xterm-256color'
+
+# What "syntax link Todo bold navy on yellow" is for. The rule said "reverse"
+# before, because a background was the one thing a rule could not ask for, and
+# reverse is the terminal swapping two colours it already has -- which is not
+# blue on yellow and is not the same twice on two different terminals.
+case_ 'Todo is drawn on a colour, not by swapping two' t.md \
+'x TODO x\n' \
+'|x\n[0;1;38;2;0;0;128;48;2;255;255;0m|TODO\n[m|\n[0m|x\n[m|\n'
+
+# A group with a background and no foreground at all: the text keeps the colour
+# it would have had, and only what is behind it changes.
+case_ 'a fenced block changes only what is behind it' t.md \
+'a\n```\nc\n```\n' \
+'|a\n[0;48;2;240;240;240m|```\n[m|\n[0;48;2;240;240;240m|c\n[m|\n[0;48;2;240;240;240m|```\n[m|\n'
 
 if [ -z "$count_only" ]; then
 	echo

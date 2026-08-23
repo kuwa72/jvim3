@@ -110,6 +110,20 @@ typedef struct _synlink {
  */
 static syntax			defcolor	= {NULL, NULL, NULL, 'A'};
 
+/*
+ * The colours rules have asked to be drawn on, one entry per distinct RGB. A
+ * cell of the screen keeps the position in here, one based, because a cell has
+ * one byte for it -- which is also why this is a table rather than the colour.
+ *
+ * Not the foreground's letters ('@', 'A'..'R', 'V'..'_', each with four type
+ * offsets folded in): 145 of the 256 byte values are already reachable that
+ * way, and a background never has to serve as a foreground, so it costs
+ * nothing to give it a space of its own and everything to share one.
+ */
+#define SYN_BGMAX		255
+static int				synbg[SYN_BGMAX];
+static int				synbgcnt = 0;
+
 static syncolor			usercolor[] = {
 	{'[',	0x00000000,},	{'\\',	0x00000000,},	{']',	0x00000000,},
 	{'^',	0x00000000,},	{'_',	0x00000000,},
@@ -205,6 +219,8 @@ syn_clr(BUF *buf)
 	buf->b_syn_stateval	= 0;
 	buf->b_syn_pairs	= 0;
 	buf->b_syn_tags		= 0;
+	/* the rules that asked for these colours are gone with them */
+	synbgcnt			= 0;
 }
 
 static int
@@ -570,6 +586,37 @@ syn_addtag(BUF *buf, char_u *string_l, char_u *string_r, int ic, int jic,
 	return(no);
 }
 
+/*
+ * "#rrggbb", exactly six hex digits, into 0xRRGGBB. FALSE for anything else,
+ * including the empty string and a trailing character.
+ */
+static int
+syn_hexcolor(char_u *p, int *rgb)
+{
+	int					v = 0;
+
+	if (*p != '#')
+		return(FALSE);
+	p++;
+	if (strlen(p) != 6)
+		return(FALSE);
+	while (*p)
+	{
+		v = v << 4;
+		if ('0' <= *p && *p <= '9')
+			v |= *p - '0';
+		else if ('a' <= *p && *p <= 'f')
+			v |= *p - 'a' + 10;
+		else if ('A' <= *p && *p <= 'F')
+			v |= *p - 'A' + 10;
+		else
+			return(FALSE);
+		p++;
+	}
+	*rgb = v;
+	return(TRUE);
+}
+
 static int
 syn_color(BUF *buf, char_u *name)
 {
@@ -594,24 +641,8 @@ syn_color(BUF *buf, char_u *name)
 		return(1);
 	if (no >= sizeof(usercolor) / sizeof(syncolor))
 		return(1);
-	if (*p != '#')
+	if (!syn_hexcolor(p, &rgb))
 		return(1);
-	p++;
-	if (strlen(p) != 6)
-		return(1);
-	while (*p)
-	{
-		rgb = rgb << 4;
-		if ('0' <= *p && *p <= '9')
-			rgb |= *p - '0';
-		else if ('a' <= *p && *p <= 'f')
-			rgb |= *p - 'a' + 10;
-		else if ('A' <= *p && *p <= 'F')
-			rgb |= *p - 'A' + 10;
-		else
-			return(1);
-		p++;
-	}
 	usercolor[no].rgb = rgb;		/* 0xRRGGBB, the way it was written */
 	return(0);
 }
@@ -627,6 +658,38 @@ syn_user_color(char_u id)
 			return(usercolor[no].rgb);
 	}
 	return(0);
+}
+
+/*
+ * Which entry of the background table an RGB is, adding it if it is not there
+ * yet. One based, because a cell keeping 0 means "the window's own colour".
+ * Zero for a table that is full, which the caller reports.
+ */
+static int
+syn_bgno(int rgb)
+{
+	int					no;
+
+	for (no = 0; no < synbgcnt; no++)
+		if (synbg[no] == rgb)
+			return(no + 1);
+	if (synbgcnt >= SYN_BGMAX)
+		return(0);
+	synbg[synbgcnt++] = rgb;
+	return(synbgcnt);
+}
+
+/*
+ * The colour behind a cell, for whoever is painting it. FALSE for 0, which is
+ * every cell that no rule asked to put anything behind.
+ */
+	int
+syn_bgcolor(int no, int *rgb)
+{
+	if (no < 1 || no > synbgcnt)
+		return(FALSE);
+	*rgb = synbg[no - 1];
+	return(TRUE);
 }
 
 /*
@@ -768,6 +831,78 @@ syn_get_color(BUF *buf, char_u *name, char_u **p, char_u **lname)
 	return(color);
 }
 
+/*
+ * A colour to go behind text, as a position in the background table. Either a
+ * name a foreground would take -- "maroon", "user3", the name of a group -- or
+ * the colour itself, "#e6ffe6", which is what the rule files use for the pale
+ * tints the sixteen named ones do not have. Zero, having said why, for
+ * anything else.
+ *
+ * "text" and "reverse" are refused. Neither names a colour: one means whatever
+ * the ordinary text colour is and the other means to swap two colours over, so
+ * behind text each would have to be given a meaning it does not have.
+ */
+static int
+syn_get_bgcolor(BUF *buf, char_u *name)
+{
+	char_u			*	p = (char_u *)"";	/* nothing for it to reach into */
+	int					id;
+	int					rgb = 0;
+	int					no;
+
+	if (!syn_hexcolor(name, &rgb))
+	{
+		if ((id = syn_get_color(buf, name, &p, NULL)) == 0
+				|| !(syn_decode(id & 0xff, &rgb) & SYN_RGB))
+		{
+			emsg2((char_u *)"Not a colour that can go behind text: \"%s\"",
+																		name);
+			return(0);
+		}
+	}
+	if ((no = syn_bgno(rgb)) == 0)
+		emsg((char_u *)"Too many colours behind text");
+	return(no);
+}
+
+/*
+ * The "on <colour>" a line may end with, as the background table position
+ * shifted into the second byte of a colour id, ready to be added to one.
+ *
+ * Zero when the line does not end with one, leaving '*p' where it was, which
+ * is what every line written before "on" existed does -- including the ones
+ * that end in a '"' comment, and a rule whose next word is its search mode.
+ * -1 when there is an "on" and something is wrong with what follows it.
+ */
+static int
+syn_get_bg(BUF *buf, char_u **p)
+{
+	char_u			*	name = *p;
+	char_u			*	next;
+	int					no;
+
+	if (vim_strnicmp(name, (char_u *)"on", 2) != 0
+			|| (name[2] != NUL && !iswhite(name[2])))
+		return(0);
+	next = name + 2;
+	skipspace(&next);
+	if (*next == NUL)
+	{
+		emsg((char_u *)"\"on\" with no colour after it");
+		return(-1);
+	}
+	name = next;
+	while (*next && !iswhite(*next))
+		++next;
+	if (*next != NUL)
+		*next++ = NUL;
+	skipspace(&next);
+	if ((no = syn_get_bgcolor(buf, name)) == 0)
+		return(-1);
+	*p = next;
+	return(no << 8);
+}
+
 static int
 syn_link(BUF *buf, char_u *name)
 {
@@ -778,6 +913,7 @@ syn_link(BUF *buf, char_u *name)
 	synlink			*	lp;
 	char_u			*	lname;
 	int					color = 0;
+	int					bg;
 
 	type = name;
 	while (*type && !iswhite(*type))
@@ -792,8 +928,31 @@ syn_link(BUF *buf, char_u *name)
 		*clr++ = NUL;
 	skipspace(&clr);
 	wk = clr;
-	if ((color = syn_get_color(buf, type, &clr, &lname)) == 0)
-		return(1);
+	if (stricmp("on", type) == 0)
+	{
+		/*
+		 * Nothing named in front of the "on", so the text keeps the colour it
+		 * would have had and only what is behind it is being asked for. That
+		 * is the whole of what a rule like "MdCode on #f0f0f0" has to say.
+		 */
+		char_u		*	q = clr;
+
+		while (*q && !iswhite(*q))
+			++q;
+		*q = NUL;					/* a '"' comment may follow the colour */
+		if ((bg = syn_get_bgcolor(buf, clr)) == 0)
+			return(1);
+		color = 'A' | (bg << 8);
+		lname = NULL;
+	}
+	else
+	{
+		if ((color = syn_get_color(buf, type, &clr, &lname)) == 0)
+			return(1);
+		if ((bg = syn_get_bg(buf, &clr)) < 0)
+			return(1);
+		color |= bg;
+	}
 	if (syn_get_color(buf, name, &wk, NULL) != 0)
 	{
 		lwp = (synlink *)buf->b_syn_link;
@@ -1331,6 +1490,19 @@ syn_add(BUF *buf, char_u *reg)
 	/* choice syntax type */
 	if ((color = syn_get_color(buf, reg, &p, &lname)) == 0)
 		return(1);
+	/*
+	 * A rule that names a group takes the group's background with the rest of
+	 * its colour; this is for one that names a colour of its own instead, as
+	 * in "syntax red on yellow m/...". The next word of every rule written
+	 * before "on" existed is its search mode, which is not "on".
+	 */
+	{
+		int				bg;
+
+		if ((bg = syn_get_bg(buf, &p)) < 0)
+			return(1);
+		color |= bg;
+	}
 
 	/* get mode */
 	while (*p != '\0' && *p != '/')

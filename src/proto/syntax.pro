@@ -8,6 +8,7 @@
 
 /* prototypes from syntax.c */
 int		syn_decode __ARGS((int, int *));
+int		syn_bgcolor __ARGS((int, int *));
 void	syn_clr __ARGS((BUF *));
 int		syn_add __ARGS((BUF *, char_u *));
 void	syn_changed __ARGS((BUF *, linenr_t));

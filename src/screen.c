@@ -66,6 +66,19 @@ static FPOS		old_cursor = {0, 0};	/* last known end of visual part */
 static int		oldCurswant = 0;		/* last known value of Curswant */
 static int		canopt;					/* TRUE when cursor goto can be optimized */
 static int		invert = 0;				/* set to INVERTCODE when inverting */
+/*
+ * The colour behind the cells being drawn, as a position in the buffer's
+ * background palette, 0 for the window's own. Always 0 where there is no
+ * attribute plane to keep it in, which is what lets HIGHLIGHTING below be
+ * written once for every build.
+ */
+static int		invertbg = 0;
+
+/*
+ * Whether anything is being drawn other than plain text. A rule can ask for a
+ * background and no foreground, so "invert" alone stopped being the answer.
+ */
+#define HIGHLIGHTING	(invert || invertbg)
 
 #define INVERTCODE		0x80
 
@@ -84,9 +97,23 @@ static int		invert = 0;				/* set to INVERTCODE when inverting */
 # define SCRSTRIDE		  (Columns * 3)
 # define SCREEN(scr)	  ((scr)[Columns])
 # define SCRBG(scr)		  ((scr)[Columns * 2])
-# define SCRTST(scr)	  (((scr)[Columns]) != 0)
-# define SCRCMP(scr, inv) (inv == 0 ? (((scr)[Columns]) == 0) : (((scr)[Columns]) != 0))
-# define SCRINV(scr, inv) (inv == 0 ? (((scr)[Columns]) != 0) : (((scr)[Columns]) != inv))
+/* the cell is not plain text */
+# define SCRTST(scr)	  (((scr)[Columns]) != 0 || ((scr)[Columns * 2]) != 0)
+/*
+ * Whether drawing this cell again would change its colours -- which is to say,
+ * whether it has to be drawn at all. Both planes: a cell can keep its
+ * character and its colour and still need drawing, because what is behind it
+ * changed. The background is taken from invertbg rather than passed in,
+ * because 'inv' is the foreground and every caller passes 'invert' with it.
+ *
+ * This replaced SCRCMP(), which asked whether the cell had *any* colour rather
+ * than whether it had *this* one, and so could not see a change from one
+ * colour to another at all. Nothing showed while a space was the only thing
+ * that could change colour without changing character; a background makes
+ * every cell one of those.
+ */
+# define SCRINV(scr, inv) (((scr)[Columns]) != (inv) \
+								|| ((scr)[Columns * 2]) != invertbg)
 #endif
 /*
  * With a colour to draw in, the attribute kept for each cell is the colour id
@@ -818,7 +845,7 @@ win_line(WIN *wp, linenr_t lnum, int startrow, int endrow)
 				(void)set_highlight('v');
 				start_highlight();		/* start highlighting */
 			}
-			else if (invert && (vcol == tocol || (noinvcur && vcol == wp->w_virtcol)))
+			else if (HIGHLIGHTING && (vcol == tocol || (noinvcur && vcol == wp->w_virtcol)))
 				stop_highlight();		/* stop highlighting */
 		}
 
@@ -954,7 +981,7 @@ win_line(WIN *wp, linenr_t lnum, int startrow, int endrow)
 #endif
 		if (c == NUL)
 		{
-			if (invert)
+			if (HIGHLIGHTING)
 			{
 				if (vcol == 0)	/* invert first char of empty line */
 				{
@@ -964,6 +991,7 @@ win_line(WIN *wp, linenr_t lnum, int startrow, int endrow)
 					{
 							*screenp = ' ';
 							SCREEN(screenp) = invert;
+							SCRBG(screenp) = invertbg;
 							SCRCP(screen_row, col) = 0;
 							screen_char(screenp, screen_row, col);
 					}
@@ -1005,10 +1033,11 @@ win_line(WIN *wp, linenr_t lnum, int startrow, int endrow)
 		{
 			if (col == Columns - 1 && (*screenp != BRCHAR
 					|| SCRCP(screen_row, col) != 0
-					|| !SCRCMP(screenp, invert)))
+					|| SCRINV(screenp, invert)))
 			{
 				*screenp = BRCHAR;
 				SCREEN(screenp) = invert;
+				SCRBG(screenp) = invertbg;
 				SCRCP(screen_row, col) = 0;
 				screen_char(screenp, screen_row, col);
 			}
@@ -1060,11 +1089,13 @@ win_line(WIN *wp, linenr_t lnum, int startrow, int endrow)
 			{
 				*screenp = c;
 				SCREEN(screenp) = invert;
+				SCRBG(screenp) = invertbg;
 				SCRCP(screen_row, col) = c_cp;
 				if (c_wid == 2)
 				{
 					screenp[1] = c_start[1];
 					SCREEN(screenp + 1) = invert;
+					SCRBG(screenp + 1) = invertbg;
 					SCRCP(screen_row, col + 1) = SCRCP_CONT;
 				}
 				screen_char(screenp, screen_row, col);
@@ -1080,6 +1111,7 @@ win_line(WIN *wp, linenr_t lnum, int startrow, int endrow)
 			{
 				*screenp = c;
 				SCREEN(screenp) = invert;
+				SCRBG(screenp) = invertbg;
 				SCRCP(screen_row, col) = 0;
 				screen_char(screenp, screen_row, col);
 			}
@@ -1099,7 +1131,7 @@ win_line(WIN *wp, linenr_t lnum, int startrow, int endrow)
 #endif	/* KANJI */
 	}
 
-	if (invert)
+	if (HIGHLIGHTING)
 		stop_highlight();
 	return (row);
 }
@@ -1157,15 +1189,17 @@ screen_msg(char_u *msg, int row, int col)
 			if (wid == 2 && col + 1 >= Columns)
 				break;					/* no room for a double width one */
 			if (*screenp != msg[0] || SCRCP(row, col) != cp
-					|| !SCRCMP(screenp, invert))
+					|| SCRINV(screenp, invert))
 			{
 				*screenp = msg[0];
 				SCREEN(screenp) = invert;
+				SCRBG(screenp) = invertbg;
 				SCRCP(row, col) = cp;
 				if (wid == 2)
 				{
 					screenp[1] = msg[1];
 					SCREEN(screenp + 1) = invert;
+					SCRBG(screenp + 1) = invertbg;
 					SCRCP(row, col + 1) = SCRCP_CONT;
 				}
 				screen_char(screenp, row, col);
@@ -1176,10 +1210,11 @@ screen_msg(char_u *msg, int row, int col)
 			continue;
 		}
 		if ((*screenp != *msg) || SCRCP(row, col) != 0
-				|| !SCRCMP(screenp, invert) || (*msg == ' ' && SCRTST(screenp)))
+				|| SCRINV(screenp, invert) || (*msg == ' ' && SCRTST(screenp)))
 		{
 			*screenp = *msg;
 			SCREEN(screenp) = invert;
+			SCRBG(screenp) = invertbg;
 			SCRCP(row, col) = 0;
 			screen_char(screenp, row, col);
 		}
@@ -1292,8 +1327,8 @@ sgr_truecolor(void)
 }
 
 /*
- * The SGR number for the nearest of the sixteen, by plain distance in RGB.
- * The values are xterm's, which everything since has stayed close to.
+ * The nearest of the sixteen, by plain distance in RGB. The values are
+ * xterm's, which everything since has stayed close to.
  */
 static int
 sgr_nearest(int rgb)
@@ -1321,7 +1356,12 @@ sgr_nearest(int rgb)
 			best = i;
 		}
 	}
-	return best < 8 ? 30 + best : 90 + (best - 8);
+	/*
+	 * The index, not the SGR number. A foreground adds 30 to it (60 more for
+	 * the bright half), a background 40, which is the whole of the difference
+	 * between the two -- so the caller adds, and there is one table.
+	 */
+	return best < 8 ? best : 60 + (best - 8);
 }
 
 /*
@@ -1334,9 +1374,10 @@ syn_sgr(int id, char_u *buf)
 {
 	int			syn;
 	int			rgb = 0;
+	int			bgrgb = 0;
 	char_u	*	p = buf;
 
-	if ((syn = syn_decode(id, &rgb)) == 0)
+	if ((syn = syn_decode(id & 0xff, &rgb)) == 0)
 		return FALSE;
 	/* Leading 0: each run says all of what it wants, over whatever went before */
 	STRCPY(p, "\033[0");
@@ -1358,17 +1399,36 @@ syn_sgr(int id, char_u *buf)
 	}
 	if (syn & SYN_REVERSE)
 	{
+		/*
+		 * Reverse names neither colour -- it asks the terminal to swap the two
+		 * it already has. A background asked for alongside it would have to be
+		 * one of the two being swapped, so there is nothing coherent to send
+		 * and none is sent.
+		 */
 		STRCPY(p, ";7");
 		p += 2;
 	}
-	else if (syn & SYN_RGB)
+	else
 	{
-		if (sgr_truecolor())
-			sprintf((char *)p, ";38;2;%d;%d;%d", (rgb >> 16) & 0xff,
+		if (syn & SYN_RGB)
+		{
+			if (sgr_truecolor())
+				sprintf((char *)p, ";38;2;%d;%d;%d", (rgb >> 16) & 0xff,
 											(rgb >> 8) & 0xff, rgb & 0xff);
-		else
-			sprintf((char *)p, ";%d", sgr_nearest(rgb));
-		p += STRLEN(p);
+			else
+				sprintf((char *)p, ";%d", 30 + sgr_nearest(rgb));
+			p += STRLEN(p);
+		}
+		/* the same numbers ten higher, which is what makes them backgrounds */
+		if (syn_bgcolor((id >> 8) & 0xff, &bgrgb))
+		{
+			if (sgr_truecolor())
+				sprintf((char *)p, ";48;2;%d;%d;%d", (bgrgb >> 16) & 0xff,
+										(bgrgb >> 8) & 0xff, bgrgb & 0xff);
+			else
+				sprintf((char *)p, ";%d", 40 + sgr_nearest(bgrgb));
+			p += STRLEN(p);
+		}
 	}
 	STRCPY(p, "m");
 	return TRUE;
@@ -1379,7 +1439,11 @@ syn_sgr(int id, char_u *buf)
 start_highlight(void)
 {
 #ifdef SYN_SGR
-	char_u			seq[40];
+	/*
+	 * Room for the longest: "\033[0;1;3;4" and two of ";48;2;255;255;255",
+	 * with the "m" and the NUL. sprintf() below is not given a bound.
+	 */
+	char_u			seq[64];
 
 	/*
 	 * win_line() asks for the colour of every character, so this is called
@@ -1393,7 +1457,9 @@ start_highlight(void)
 		outstr(seq);
 		sgr_on = TRUE;
 		sgr_color = color;
-		invert = color;
+		/* the foreground is the low byte, what is behind it the next one */
+		invert   = color & 0xff;
+		invertbg = (color >> 8) & 0xff;
 		return;
 	}
 #endif
@@ -1404,10 +1470,15 @@ start_highlight(void)
 	{
 		outstr(highlight);
 #ifdef SCR_COLOR
-		invert = color;
+		invert = color & 0xff;
 #else
 		invert = INVERTCODE;
 #endif
+		/*
+		 * The termcap strings cannot say what is behind the text, so a rule
+		 * asking for a background gets none here rather than the wrong one.
+		 */
+		invertbg = 0;
 	}
 }
 
@@ -1417,16 +1488,18 @@ stop_highlight(void)
 #ifdef SYN_SGR
 	if (sgr_on)
 	{
-		outstr((char_u *)"\033[m");
+		outstr((char_u *)"\033[m");		/* both of them, in one escape */
 		sgr_on = FALSE;
 		invert = 0;
+		invertbg = 0;
 		return;
 	}
 #endif
-	if (invert)
+	if (HIGHLIGHTING)
 	{
 		outstr(unhighlight);
 		invert = 0;
+		invertbg = 0;
 	}
 }
 
@@ -1449,7 +1522,8 @@ run_iscolor(int row, int col, int len)
 	int				i;
 
 	for (i = 0; i < len; i++)
-		if (SCREEN(p + i) != (char_u)invert)
+		if (SCREEN(p + i) != (char_u)invert
+				|| SCRBG(p + i) != (char_u)invertbg)
 			return(FALSE);
 	return(TRUE);
 }
@@ -1475,7 +1549,7 @@ screen_char(char_u *p, int row, int col)
 	if (oldcol != col || oldrow != row)
 	{
 		/* check if no cursor movement is allowed in standout mode */
-		if (invert && !p_wi && (T_MS == NULL || *T_MS == NUL))
+		if (HIGHLIGHTING && !p_wi && (T_MS == NULL || *T_MS == NUL))
 			noinvcurs = 7;
 		else
 			noinvcurs = 0;
@@ -1543,7 +1617,7 @@ screen_char(char_u *p, int row, int col)
 	 */
 	if (p_wi)
 	{
-		if (invert)
+		if (HIGHLIGHTING)
 			outstr(highlight);
 		else
 			outstr(unhighlight);
@@ -1612,7 +1686,7 @@ screen_fill(int start_row, int end_row, int start_col, int end_col, int c1, int 
 	{
 			/* try to use delete-line termcap code */
 #ifdef KANJI
-		if (c2 == ' ' && !invert && end_col == Columns && T_EL != NULL && *T_EL != NUL)
+		if (c2 == ' ' && !HIGHLIGHTING && end_col == Columns && T_EL != NULL && *T_EL != NUL)
 #else
 		if (c2 == ' ' && end_col == Columns && T_EL != NULL && *T_EL != NUL)
 #endif
@@ -1650,7 +1724,7 @@ screen_fill(int start_row, int end_row, int start_col, int end_col, int c1, int 
 		for (col = start_col; col < end_col; ++col)
 		{
 #ifdef KANJI
-			if (*screenp != c || SCRCP(row, col) != 0 || !SCRCMP(screenp, invert))
+			if (*screenp != c || SCRCP(row, col) != 0 || SCRINV(screenp, invert))
 #else
 			if (*screenp != c)
 #endif
@@ -1658,8 +1732,9 @@ screen_fill(int start_row, int end_row, int start_col, int end_col, int c1, int 
 #ifdef KANJI
 				*screenp = c;
 				SCREEN(screenp) = invert;
+				SCRBG(screenp) = invertbg;
 				SCRCP(row, col) = 0;
-				if (!did_delete || c != ' ' || invert)
+				if (!did_delete || c != ' ' || HIGHLIGHTING)
 #else
 				*screenp = c;
 				if (!did_delete || c != ' ')
@@ -1673,7 +1748,7 @@ screen_fill(int start_row, int end_row, int start_col, int end_col, int c1, int 
 		{
 			redraw_cmdline = TRUE;
 #ifdef KANJI
-			if (c1 == ' ' && c2 == ' ' && !invert)
+			if (c1 == ' ' && c2 == ' ' && !HIGHLIGHTING)
 #else
 			if (c1 == ' ' && c2 == ' ')
 #endif

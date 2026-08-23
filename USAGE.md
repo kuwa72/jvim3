@@ -340,6 +340,27 @@ recolour as soon as you type the token that opens or closes one. §6.28's
 `synlines` is still accepted, so an rc that sets it goes on working, but nothing
 reads it any more.
 
+The other thing §6.26 does not have is a background. A colour can now say what
+goes behind it, with `on` and a second colour:
+
+```vim
+syntax link Error   bolic white on maroon
+syntax link DiffAdd       green on #e6ffe6
+syntax link MdCode              on #f0f0f0
+```
+
+Either a name a foreground would take, or the colour itself as `#rrggbb` —
+which is what the rule files use, none of the sixteen named ones being pale
+enough to read a whole line of text off. With nothing in front of the `on` the
+text keeps the colour it would have had. `text` and `reverse` are refused:
+neither names a colour, so neither can be behind anything. `bold`, `italic` and
+`uline` belong to the text and go where they always did.
+
+`Error` and `Todo` are drawn this way now. Both are groups vim gives a
+background, and without one they had been standing in with `bolic red` and
+`reverse` — and reverse is the terminal swapping two colours it already has,
+which is not blue on yellow and is not the same twice on two terminals.
+
 Which file types have rules is a question about the rule files, not about the
 editor. What came with JVim in 2002 was C/C++, Java, VBScript, HTML, `.bat`,
 `.ini`, `.def`, `.rc` and `_vimrc` itself. This tree adds Python,
