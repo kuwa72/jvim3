@@ -72,6 +72,11 @@ The pattern comes back the way the editor got it, after the ex command line has
 eaten a backslash: a rule written  m/\".*\"  prints as  m/".*"  . That is the
 level the regexp actually sees, and a quick way to check an escape.
 
+A rule with two or three patterns is named by the one that matched: a region (p)
+by the pattern that opens it, a tag rule (t) by the third, what it looks for
+inside the tag. Naming a tag rule by its first would print  t/<  for every rule
+in html.jvsyn.
+
 ../scripts/test-syntax.sh is that loop written down -- a few lines of a language
 and the dump they should produce. Change a rule, run it, read the diff. Add a
 case for anything you fix: three lines, and it is the only thing that will

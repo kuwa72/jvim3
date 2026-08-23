@@ -1,6 +1,12 @@
 syntax Comment			n/\/\/.*$
 syntax Comment			p/\/\*/\*\/
 syntax String			m/\".*[^\\]\"
+syntax	Character		m/'.*[^\\]'
+" numbers, which this file did not have and csharp.jvsyn, the same shape of
+" language, does
+syntax	Float			n/\d*\.\d\+
+syntax	Number			w/0x\x\+
+syntax	Number			w/\d\+
 syntax	Include			w/import/native/package
 syntax	Conditional		w/if/else/switch
 syntax	Repeat			w/while/for/do

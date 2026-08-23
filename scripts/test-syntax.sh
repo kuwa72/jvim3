@@ -145,9 +145,11 @@ case_ 'Ruby: instance variable, keywords' t.rb \
 '# c\nrequire "json"\nclass Foo\n  def run\n    @n = nil\n  end\nend\n' \
 '1:0-3 Comment n/#.*$\n2:0-7 Include w/require\n2:8-14 String m/".*[^\\\\]"\n3:0-5 Structure w/class\n4:2-5 Statement w/def\n5:4-6 Identifier n/@@\\=\\i\\+\n5:9-12 Constant w/nil\n6:2-5 Statement w/end\n7:0-3 Statement w/end\n'
 
-case_ 'CSS: selector, colour, unit' t.css \
-'/* c */\n.a, #b {\n  color: #ff8800;\n  margin: 1.5em;\n}\n' \
-'1:0-7 Comment p/\\/\\*\n2:0-2 Tag n/[.#]\\i[-_a-zA-Z0-9]*\n2:4-6 Tag n/[.#]\\i[-_a-zA-Z0-9]*\n3:9-16 Constant n/#\\x\\x\\x\\x\\x\\x\n4:10-15 Float n/\\d*\\.\\d\\+[a-z%]*\n'
+# The last line is the reason the property rule wants an indent: "a:hover" is a
+# name before a colon as much as "color" is, and is expected to stay plain.
+case_ 'CSS: selector, property, colour, unit' t.css \
+'/* c */\n.a, #b {\n  color: #ff8800;\n  margin: 1.5em;\n}\na:hover { color: red }\n' \
+'1:0-7 Comment p/\\/\\*\n2:0-2 Tag n/[.#]\\i[-_a-zA-Z0-9]*\n2:4-6 Tag n/[.#]\\i[-_a-zA-Z0-9]*\n3:0-7 Identifier m-/^\\s\\+[-a-zA-Z]\\+\\s*:\n3:9-16 Constant n/#\\x\\x\\x\\x\\x\\x\n4:0-8 Identifier m-/^\\s\\+[-a-zA-Z]\\+\\s*:\n4:10-15 Float n/\\d*\\.\\d\\+[a-z%]*\n'
 
 case_ 'SQL: keywords are matched either case' t.sql \
 '-- c\nSELECT id FROM t WHERE n > 10;\n' \
@@ -176,6 +178,66 @@ case_ 'Makefile: assignment, target, variable' t.mk \
 case_ 'Dockerfile: matched by name, not by suffix' Dockerfile \
 '# c\nFROM debian:12 AS build\nRUN echo "hi"\n' \
 '1:0-3 Comment n/#.*$\n2:0-4 Statement iw/FROM\n2:15-17 Operator iw/AS\n3:0-3 Statement iw/RUN\n3:9-13 String m/".*[^\\\\]"\n'
+
+case_ 'C#: keywords, types, number' t.cs \
+'using System;\n// c\npublic class A {\n    public static int F(string s) { return 0x1f; }\n}\n' \
+'1:0-5 Include w/using\n2:0-4 Comment n/\\/\\/.*$\n3:0-6 StorageClass w/public\n3:7-12 Structure w/class\n4:4-10 StorageClass w/public\n4:11-17 StorageClass w/static\n4:18-21 Type w/int\n4:24-30 Type w/string\n4:36-42 Statement w/return\n4:43-47 Number w/0x\\x\\+\n'
+
+# HTML is the only type using "t", where the rule names three patterns: the tag
+# to look inside, the one that ends it, and what to match in between. A "t" rule
+# is dumped by the third -- a dozen of these begin "t/<" and the first would
+# tell them apart from nothing.
+case_ 'HTML: tag, argument, entity' t.html \
+'<!-- c -->\n<body bgcolor="#ffffff">\n<a href="http://x.example/">&amp;</a>\n</body>\n' \
+'1:0-10 Comment p/<!--\n2:0-1 Delimiter n/<\n2:1-5 HtmlTag iwt/body\n2:6-13 HtmlArg iwt/bgcolor\n2:14-23 Number t/"#\\x\\x\\x\\x\\x\\x"\n2:23-24 Delimiter n/>\n3:0-1 Delimiter n/<\n3:1-2 HtmlTag iwt/a\n3:3-7 HtmlArg iwt/href\n3:8-27 String mt/"[^#].*"\n3:27-28 Delimiter n/>\n3:28-33 SpecialChar n/&amp;\n3:33-35 Delimiter n/<\\/\n3:35-36 HtmlTag iwt/a\n3:36-37 Delimiter n/>\n4:0-2 Delimiter n/<\\/\n4:2-6 HtmlTag iwt/body\n4:6-7 Delimiter n/>\n'
+
+case_ 'XML: declaration, tag, attribute' t.xml \
+'<?xml version="1.0"?>\n<!-- c -->\n<root id="1">\n  <item/>\n</root>\n' \
+'1:0-21 PreProc m/<?.*?>\n2:0-10 Comment p/<!--\n3:0-5 Statement n/<\\/\\=[^ >]\\+\n3:9-12 String m/".*"\n3:12-13 Statement n/\\/\\=>\n4:2-8 Statement n/<\\/\\=[^ >]\\+\n4:8-9 Statement n/\\/\\=>\n5:0-6 Statement n/<\\/\\=[^ >]\\+\n5:6-7 Statement n/\\/\\=>\n'
+
+case_ 'batch: REM, a variable, a label' t.bat \
+'REM a note\n@echo off\nset OUT=%TEMP%\nif exist %1 goto done\n:done\n' \
+'1:0-10 Comment i/REM.*\n2:1-5 Keyword iw/echo\n3:0-3 Keyword iw/set\n3:8-14 Value m/%.*%\n4:0-2 Conditional iw/if\n4:9-11 Value n/%[\\d\\*]\n4:12-16 Statement iw/goto\n'
+
+# \047 is the apostrophe, which a comment starts with and which cannot be
+# written inside the single quotes these arguments use.
+case_ 'VBScript: apostrophe comment, keywords' t.vbs \
+'\047 c\nDim n\nn = 1.5\nIf n > 0 Then\n  MsgBox "hi"\nEnd If\n' \
+'1:0-3 Comment n/\\\047.*\n2:0-3 Statement iw/Dim\n3:4-7 Float n/\\d*\\.\\d\\+\n4:0-2 Statement iw/If\n4:7-8 Number w/\\d\\+\n4:9-13 Statement iw/Then\n5:2-8 Identifier iw/MsgBox\n5:9-13 String m/".*[^\\\\]"\n6:0-3 Statement iw/End\n6:4-6 Statement iw/If\n'
+
+# The plain-text rules are for mail: headers, quoting depth by alternating
+# colour, and a bare URL.
+case_ 'text: mail headers and quoting' t.txt \
+'From: me@x.example\nSubject: hi\n\n> quoted\n>> deeper\nsee http://x.example/p\n' \
+'1:0-18 Type i/^[-a-z]*From: .*$\n2:0-11 String i/^Subject: .*$\n4:0-8 Comment n/^\\s*[|>].*\n5:0-9 Identifier n/^\\s*[|>]\\s*[|>].*\n6:4-22 Url n/http:\\/\\/[-:&\\~\\%_?=/\\.a-zA-Z0-9]*\n'
+
+case_ 'Java: types, character, numbers' T.java \
+'// c\npackage a.b;\npublic class T {\n    static char c = \047x\047;\n    static double d = 1.5;\n    static int n = 0x1f;\n}\n' \
+'1:0-4 Comment n/\\/\\/.*$\n2:0-7 Include w/package\n3:0-6 StorageClass w/public\n3:7-12 Typedef w/class\n4:4-10 StorageClass w/static\n4:11-15 Type w/char\n4:20-23 Character m/\047.*[^\\\\]\047\n5:4-10 StorageClass w/static\n5:11-17 Type w/double\n5:22-25 Float n/\\d*\\.\\d\\+\n6:4-10 StorageClass w/static\n6:11-14 Type w/int\n6:19-23 Number w/0x\\x\\+\n'
+
+case_ 'INI: comment, section, key' t.ini \
+'; c\n[core]\nname = jvim\n' \
+'1:0-3 Comment n/^;.*\n2:0-6 Tag n/\\[.*\\]\n3:0-5 Identifier m-/^\\s*[^ ;=]\\+\\s*=\n'
+
+case_ 'module definition: the export table' t.def \
+'; c\nLIBRARY jvim\nEXPORTS\n  Foo @1\n' \
+'1:0-3 Comment n/;.*\n2:0-7 Keyword iw/LIBRARY\n3:0-7 Keyword iw/EXPORTS\n4:7-8 Number i/\\d\\+\n'
+
+# .ec is embedded SQL in C, and filetype.jvsyn sources c.jvsyn as well as
+# ec.jvsyn for it -- the comment and "int" below come from the first.
+case_ 'embedded SQL: two rule files at once' t.ec \
+'/* c */\nEXEC SQL BEGIN DECLARE SECTION;\nint n;\nEXEC SQL END DECLARE SECTION;\nEXEC SQL COMMIT;\n' \
+'1:0-7 Comment p/\\/\\*\n2:0-31 Tag n/\\s*EXEC\\s\\+SQL\\s\\+BEGIN\\s\\+DECLARE\\s\\+SECTION\\s*;\n3:0-3 Type w/int\n4:0-29 Tag n/\\s*EXEC\\s\\+SQL\\s\\+END\\s\\+DECLARE\\s\\+SECTION\\s*;\n5:0-8 Tag w/EXEC\\s\\+SQL\n5:9-15 Keyword w/COMMIT\n'
+
+case_ 'resource script: dialog, control, string' t.rc \
+'// c\n#include <windows.h>\nIDD_MAIN DIALOG\nBEGIN\n  LTEXT "hi", 7\nEND\n' \
+'1:0-4 Comment n/\\/\\/.*$\n2:0-8 Include n/^\\s*#\\s*include\n3:9-15 StorageClass w/DIALOG\n4:0-5 Statement w/BEGIN\n5:2-7 Structure w/LTEXT\n5:8-12 String m/".*"\n5:14-15 Number w/\\d\\+\n6:0-3 Statement w/END\n'
+
+# An rc colours its own options, and tells "set x" from "set nox". A comment
+# there is two quotes: one is how a rule writes a quote of its own.
+case_ 'an rc: set, unset, comment' jvimrc \
+'"" c\nset autoindent\nset ts=4\nset noerrorbells\n' \
+'1:0-4 Comment n/"".*\n2:0-3 SetSpecial n/^set\n2:4-14 SetCommand w/autoindent\n3:0-3 SetSpecial n/^set\n3:4-6 SetShortCmd w/ts\n4:0-3 SetSpecial n/^set\n4:4-16 UnsetCommand w/noerrorbells\n'
 
 # The rule language itself. A mode letter nobody handles used to be dropped in
 # silence, so the rule went in and matched the wrong thing; now it is refused,

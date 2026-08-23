@@ -1,2 +1,5 @@
 syntax Comment			n/^;.*
 syntax Tag				n/\[.*\]
+" the key, as toml.jvsyn does it -- the same shape of file, and this had only
+" the comment and the section name
+syntax Identifier		m-/^\s*[^ ;=]\+\s*=
