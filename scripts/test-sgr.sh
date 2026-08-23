@@ -75,12 +75,28 @@ counted() {
 # written so far, and jvim does that twice on the way in -- so does the line
 # collected so far. "Thanks for flying Vim" is the last thing it says, and the
 # clear that follows it is a teardown, not a redraw.
+#
+# No escape character appears in a regexp here, only in strings built with
+# sprintf(). The awk on DragonFly is the one true awk, which does not read
+# "\007" inside a bracket expression the way gawk and mawk do: the window title
+# then went unrecognised, "Thanks for flying" with it, and the clear at the end
+# of the teardown threw the whole run away. Every case came out empty and
+# nothing said why.
 normalise() {
 	LC_ALL=C awk '
-		BEGIN { RS = "\033"; ORS = ""; n = 1; out[1] = "|"; done = 0 }
+		BEGIN {
+			ESC = sprintf("%c", 27); BEL = sprintf("%c", 7)
+			CR  = sprintf("%c", 13); NL  = sprintf("%c", 10)
+			RS = ESC; ORS = ""; n = 1; out[1] = "|"; done = 0
+		}
 		NR > 1 {
 			if (done)
 				next
+			if (index($0, "Thanks for flying") > 0)
+			{
+				done = 1			# the teardown, not another redraw
+				next
+			}
 			r = $0
 			if (match(r, /^\[[0-9;]*m/))
 			{
@@ -93,18 +109,15 @@ normalise() {
 				r = substr(r, RSTART + RLENGTH)
 				if (csi == "[2J") { n = 1; out[1] = "|" }
 			}
-			else if (match(r, /^\]2;[^\007]*\007/))
+			else if (substr(r, 1, 3) == "]2;")		# the window title
 			{
-				if (index(substr(r, RSTART, RLENGTH), "Thanks for flying") > 0)
-				{
-					done = 1
-					next
-				}
-				r = substr(r, RSTART + RLENGTH)
+				b = index(r, BEL)
+				r = (b > 0) ? substr(r, b + 1) : ""
 			}
 			else
 				sub(/^[=>78]/, "", r)		# keypad, save, restore
-			gsub(/\r|\n/, "", r)
+			gsub(CR, "", r)
+			gsub(NL, "", r)
 			out[n] = out[n] r
 		}
 		END { for (i = 1; i <= n; i++) print out[i] "\n" }' |
