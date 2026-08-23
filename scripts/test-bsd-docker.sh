@@ -368,8 +368,11 @@ dexec sh /work/gssh.sh 'cat jvim3/build.log' > "$work/build-$os.log" 2>/dev/null
 echo "full log: $work/build-$os.log"
 
 if [ $rc -eq 0 ] && [ "$target" = test ]; then
-	say "running the encoding tests on $os"
-	guest "cd jvim3 && PATH=\$PATH:$guest_path scripts/test-encoding.sh src/jvim3" || rc=$?
+	# What CI runs on these same systems, so that a pass here means the same
+	# thing. This used to be the encoding suite alone, which is how
+	# BUILDING-unix.md came to claim a guest had run tests it never saw.
+	say "running the tests on $os"
+	guest "cd jvim3 && PATH=\$PATH:$guest_path sh scripts/build-unix.sh test" || rc=$?
 fi
 
 halt

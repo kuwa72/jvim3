@@ -101,6 +101,23 @@ while IFS=: read -r file line text; do
 	esac
 done < <(grep -nE '[0-9]+ *(cases|tests|ケース|個のテスト)' $docs 2>/dev/null)
 
+# The grep above reads one line at a time, so a count that a paragraph wrapped
+# between the number and the word is invisible to it. That is not theory: "All
+# 100\ntests on each" sat in BUILDING-unix.md through two suites growing. Say so
+# rather than widen the match, because the fix is to keep the pair on one line
+# where the check above can see it, not to have two ways of reading a count.
+while read -r msg; do
+	[ -n "$msg" ] && bad "$msg"
+done < <(for f in $docs; do
+	[ -f "$f" ] || continue
+	awk -v f="$f" '
+		NR > 1 && prev ~ /[^0-9][0-9]+[ \t]*$/ &&
+		$0 ~ /^(cases|tests|ケース|個のテスト)([^a-zA-Z]|$)/ {
+			printf "%s:%d: a count is split across the line end, where the check above cannot see it -- keep the number and the word together\n", f, NR - 1
+		}
+		{ prev = $0 }' "$f"
+done)
+
 # ------------------------------------------------------------ platform claims
 # The release job's "needs:" is the definition of what gates a release, so it is
 # the definition of what CI covers.
