@@ -85,16 +85,43 @@ notice when the rule stops working.
 Writing rules
 -------------
 
-../doc.j/readme.doc section 6.26 is the reference. Five things it does not say:
+../doc.j/readme.doc section 6.26 is the reference. Six things it does not say:
 
   o The leftmost match on the line wins, and where two rules match at the same
     column the one earlier in the file does. Put comments and strings at the
     top, and a narrower rule before the wider one it would otherwise lose to.
 
   o ":syntax" is an ex command, so '"' starts a trailing comment and '|' ends
-    the command before the rule is ever looked at. Write '"' as \" -- the
-    backslash is eaten on the way in. \| does not survive as an alternation
-    either, only as a literal pipe: a rule cannot hold one.
+    the command before the rule is ever looked at. The ex line eats one
+    backslash from each of them, which is the whole of the rule:
+
+        \"      one backslash, and the regexp gets a plain "
+        |       no backslash: the command stops there, and the rest of the
+                line is run as another command -- n/aaa|ccc quietly becomes
+                the rule n/aaa and a command "ccc"
+        \|      one backslash, and the regexp gets a plain | to match
+        \\|     two, so the regexp gets \| -- which is an alternation
+
+    So a rule can hold an alternation, written with two backslashes:
+
+        syntax PreCondit  n/^\s*#\s*\(ifdef\\|ifndef\\|if\\|else\)
+
+    The branches are tried left to right at each position, so a longer one
+    goes before a prefix of itself: ifdef before if, or #ifdef comes out as
+    #if with "def" left plain.
+
+    Not in a w rule. That one wraps the whole pattern in \< \>, so w/a\\|b
+    compiles as \<a\|b\> -- "\<a" or "b\>" -- and colours the a in "ab". A w
+    rule already takes a list, separated by the delimiter: w/a/b.
+
+    A list is also much the faster of the two, which is not the way round it
+    looks. Each word of a w list becomes its own rule, but a word rule is
+    looked up in an index of the line built once per line (syn_strstr() in
+    ../src/syntax.c), so a keyword that is not there costs nothing to rule out.
+    An alternation is a regexp and has to be run at each position instead.
+    Rewriting every w list in c.jvsyn as one alternation -- 61 words, identical
+    colouring -- made a 600-redraw scroll of src/syntax.c 2.4 times slower.
+    Keep word lists as w lists; use an alternation for what w cannot say.
 
   o The regexp is vim's "magic": . * [ ^ $ bare, and \+ \= \< \> \( \) with a
     backslash, plus the classes \i \k \f \p \s \d \x \o \w \h \a \l \u and

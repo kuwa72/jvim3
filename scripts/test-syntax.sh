@@ -278,6 +278,40 @@ case_ 'reverse is refused as a thing to go behind text' t.unknown \
 '' \
 ':syntax red on reverse w/def\r'
 
+# How many backslashes reach the regexp, which is the whole of what "|" does in
+# a rule. ":syntax" is an ex command and the ex line eats one backslash, so the
+# three forms are three different rules. The README claimed the last of them
+# was impossible until someone tried two backslashes.
+#
+# None: the command stops at the pipe. The rule is n/aaa and "ccc" is run as a
+# command of its own, which is not one, so it does nothing and says so.
+case_ 'a bare pipe ends the command, not the pattern' t.unknown \
+'aaa bbb ccc\n' \
+'1:0-3 - n/aaa\n' \
+':syntax red n/aaa|ccc\r'
+
+# One: the regexp gets a plain pipe and matches a pipe.
+case_ 'one backslash before a pipe matches a pipe' t.unknown \
+'a|b zz\n' \
+'1:0-3 - n/a|b\n' \
+':syntax red n/a\\|b\r'
+
+# Two: the regexp gets \| and branches. Both ends match, and the "bbb" between
+# them does not.
+case_ 'two backslashes before a pipe make an alternation' t.unknown \
+'aaa bbb ccc\n' \
+'1:0-3 - n/aaa\\|ccc\n1:8-11 - n/aaa\\|ccc\n' \
+':syntax red n/aaa\\\\|ccc\r'
+
+# A w rule wraps its pattern in \< \>, so an alternation inside one groups as
+# "\<a" or "b\>" and colours the a in "ab". The list notation is what w is for,
+# and it is also the faster of the two: each word becomes a rule looked up in a
+# per-line index, where an alternation has to be run at every position.
+case_ 'a w list does not colour the halves of a longer word' t.unknown \
+'a b ab\n' \
+'1:0-1 - w/a\n1:2-3 - w/b\n' \
+':syntax red w/a/b\r'
+
 if [ -n "$count_only" ]; then
 	printf 'cases %d\n' "$cases"
 	exit 0
