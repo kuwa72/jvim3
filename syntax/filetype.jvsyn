@@ -5,6 +5,15 @@ source $VIM/syntax/common.jvsyn
 "begin files=_jvimrc;jvimrc;.jvimrc;_vimrc;vimrc;.vimrc;_exrc;exrc;.exrc
 "source $VIM/syntax/jvimrc.jvsyn
 "end   files
+"begin files=_jvimrc.sample;jvimrc.sample;_vimrc.sample;vimrc.sample
+"source $VIM/syntax/jvimrc.jvsyn
+"end   files
+" A rule file is the same language as the "syntax" lines of an rc, which
+" jvimrc.jvsyn already colours -- the group names, the colour names each drawn
+" in its own colour, the attributes, and the begin/end blocks.
+"begin suffixes=.jvsyn
+"source $VIM/syntax/jvimrc.jvsyn
+"end   suffixes
 "begin suffixes=.cpp.c.h.ec.cc.cxx.hpp.hxx.hh.inl
 "source $VIM/syntax/c.jvsyn
 "end   suffixes

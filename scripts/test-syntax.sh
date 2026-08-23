@@ -260,6 +260,37 @@ case_ 'an rc: set, unset, comment' jvimrc \
 '"" c\nset autoindent\nset ts=4\nset noerrorbells\n' \
 '1:0-4 Comment n/"".*\n2:0-3 SetSpecial n/^set\n2:4-14 SetCommand w/autoindent\n3:0-3 SetSpecial n/^set\n3:4-6 SetShortCmd w/ts\n4:0-3 SetSpecial n/^set\n4:4-16 UnsetCommand w/noerrorbells\n'
 
+# The shipped samples are the file most people see an rc in, and their names
+# are not the names an rc is read from, so they need saying separately.
+case_ 'the sample rc is coloured under its own name' _jvimrc.sample \
+'set autoindent\n" a note\n' \
+'1:0-3 SetSpecial n/^set\n1:4-14 SetCommand w/autoindent\n2:0-8 Comment n/^\\s*".*\n'
+
+# A rule file is the same language as the "syntax" lines of an rc, so it reads
+# the rc rules. Every group name is drawn in its own group and every colour
+# name in its own colour, which is what makes a rule file worth looking at:
+# "Error" is red here because Error is red.
+#
+# "white" is drawn on grey. It is the one colour name that cannot be shown in
+# itself on the window's own background, and a rule can say what goes behind it
+# now, so it does.
+case_ 'a rule file is coloured in the colours it names' t.jvsyn \
+'syntax link Error bolic white on maroon\n" a note\nsyntax Comment n/x\n' \
+'1:0-6 SetSpecial n/^syntax\n1:7-11 SetSpecial w/link\n1:12-17 Error w/Error\n1:18-23 - w/bolic\n1:24-29 - w/white\n1:30-32 SetSpecial w/on\n1:33-39 - w/maroon\n2:0-8 Comment n/^\\s*".*\n3:0-6 SetSpecial n/^syntax\n3:7-14 Comment w/Comment\n'
+
+# A quote on its own line is a comment; a quote inside a pattern is not. Rule
+# files write \" constantly -- this very case is one -- and a comment rule that
+# took any quote would paint the pattern of every String rule as a comment.
+case_ 'a quote inside a pattern does not start a comment' t.jvsyn \
+'syntax String m/\\".*[^\\\\]\\"\n' \
+'1:0-6 SetSpecial n/^syntax\n1:7-13 String w/String\n'
+
+# The block markers keep the quote in front of them, so they win the tie with
+# the comment rule: both start at column 0, and the earlier rule takes it.
+case_ 'a begin block is not swallowed by the comment rule' t.jvsyn \
+'"begin suffixes=.c\n"source $VIM/syntax/c.jvsyn\n"end   suffixes\n' \
+'1:0-18 PreCondit n/^"\\=begin\\s\\+suffixes\\s*=.*\n2:0-27 Comment n/^\\s*".*\n3:0-15 PreCondit n/^"\\=end\\s\\+suffixes\n'
+
 # The rule language itself. A mode letter nobody handles used to be dropped in
 # silence, so the rule went in and matched the wrong thing; now it is refused,
 # and the dump is the way to see which of the two happened.
