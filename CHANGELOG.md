@@ -135,6 +135,28 @@ repository and would drift within three releases.
 
 ### Fixed
 
+- A rule file is coloured when you open one. `.jvsyn` had no file type at all,
+  which is a poor advertisement for a syntax colouring engine: the thirty files
+  the editor ships are the ones most likely to be edited by anyone changing the
+  colours, and they came up plain. They are the same language as the `syntax`
+  lines of an rc, so they read `jvimrc.jvsyn`, which already draws every group
+  name in its own group and every colour name in its own colour — `Error` is red
+  there because `Error` is red.
+
+  That file had not been told about the notation added since, either: `white`
+  was missing from the colour list, and so were `link`, `clear`, `load`,
+  `color`, `dump`, `crchar`, the `on` that introduces a background, and
+  `#rrggbb`. `white` is the one name that cannot be drawn in itself on the
+  window's own background — it is drawn on grey, which a rule can ask for now.
+
+  A quote on a line of its own is a comment. Only that one: a rule file writes
+  `\"` inside its patterns constantly, and a rule that took any quote for the
+  start of a comment would paint the pattern of every `String` rule as one. The
+  `begin`/`end` block markers keep the quote in front of them so they still win
+  the tie against it.
+- The shipped `_jvimrc.sample` and `jvimrc.sample` are coloured. They are the
+  file most people first see an rc in, and `.sample` is not one of the names an
+  rc is read from, so nothing matched them.
 - A rule can hold an alternation, and `syntax/README` said it could not. The ex
   command line eats one backslash, so `\|` reaches the regexp as a plain pipe
   and matches a pipe — but `\\|` reaches it as `\|`, which is the alternation
@@ -304,6 +326,27 @@ repository and would drift within three releases.
   で、探索方式は 0.88〜1.03 秒でした (両者の色付け結果はバイト単位で同一)。`t` を
   使わないルールしか持たないバッファは区切りを 1 つも走査しませんし、領域の両端が
   タグと取り違えられることもありません。
+- ルールファイルを開くと色が付きます。`.jvsyn` にはファイル種別が一切割り当てられて
+  いませんでした。シンタックスカラーのエンジンとしては具合の悪い話で、同梱の 30
+  ファイルは配色を変えたい人が最も触るものなのに、真っ白で出ていました。中身は rc の
+  `syntax` 行と同じ言語なので `jvimrc.jvsyn` を読ませます。あちらは既に群名を
+  その群の色で、色名をその色そのもので描いています — `Error` が赤いのは `Error` が
+  赤だからです。
+
+  その `jvimrc.jvsyn` にも、以降に増えた記法が入っていませんでした。色名の一覧に
+  `white` が無く、`link`・`clear`・`load`・`color`・`dump`・`crchar`、背景を導く
+  `on`、`#rrggbb` も同様です。`white` は窓の地色の上では唯一「自分自身の色では
+  描けない」名前なので、灰色を敷いて描いています — ルールが背景を言えるように
+  なったので。
+
+  行頭の `"` はコメントとして色が付きます。**行頭のものだけ**です。ルールファイルは
+  パターンの中に `\"` を常時書くので、どの `"` でもコメント開始とみなすルールにすると
+  `String` ルールのパターンが軒並みコメント色になってしまいます。`begin`/`end` の
+  ブロック行は `"` を own の一部として取り込んであるので、同じ 0 桁目で競合しても
+  そちらが勝ちます。
+- 同梱の `_jvimrc.sample` と `jvimrc.sample` に色が付きます。多くの人が rc を最初に
+  目にするのはこのファイルですが、`.sample` は rc として読まれる名前ではないため、
+  どの種別にも一致していませんでした。
 - ルールに選択肢 (alternation) を書けます。`syntax/README` は「書けない」と
   断言していましたが、間違いでした。ex のコマンド行はバックスラッシュを 1 つ食べる
   ので、`\|` は正規表現にはただのパイプとして届いてパイプに一致します。しかし

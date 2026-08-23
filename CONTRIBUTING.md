@@ -9,7 +9,7 @@ welcome as English, in issues, pull requests and commit messages.
 
 Two things:
 
-1. `./scripts/build-unix.sh test` passes — 163 cases, and they run in about a
+1. `./scripts/build-unix.sh test` passes — 167 cases, and they run in about a
    minute.
 2. `./scripts/build-unix.sh strict` passes. That is the same `-Werror=` set CI
    uses — an implicit declaration, a mismatched pointer type, a missing
