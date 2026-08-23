@@ -109,4 +109,9 @@ Writing rules
     mode went in, matched something other than what was meant, and the only
     sign of it was a colour in the wrong place.
 
-  o Only p reaches past the end of a line. Everything else matches within one.
+  o p and t reach past the end of a line: a region opened on one line runs on
+    into the next, and a tag rule sees into a tag whose "<" and ">" are lines
+    apart. Both are remembered per line rather than searched for, so how far
+    apart they are does not matter, and 'synlines' -- which is what the window
+    of that search was called -- no longer does anything. Every other mode
+    matches within one line.

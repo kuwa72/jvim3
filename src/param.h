@@ -257,5 +257,11 @@ EXTERN int	p_tagex	INIT(= TRUE);			/* extend tag jump */
 #endif
 #ifdef USE_SYNTAX
 EXTERN char_u *p_synt	INIT(= "cdefgmnpstuvx");
-EXTERN long p_synl		INIT(= 0);			/* tag/pear check line */
+/*
+ * How far the colouring used to search around a line for what reached into it.
+ * Nothing reads it any more -- both a region and a tag are remembered per line
+ * instead -- but it is still accepted, so that an rc that sets it goes on
+ * working rather than stopping on an unknown option.
+ */
+EXTERN long p_synl		INIT(= 0);			/* no longer used */
 #endif
