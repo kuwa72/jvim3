@@ -9,14 +9,10 @@
  *
  * scripts/test-sgr.sh is the only thing that uses it.
  *
- * This was three lines of awk to begin with, and awk is where it went wrong.
- * The one true awk, which is what DragonFly has, does not read "\007" inside a
- * bracket expression the way gawk and mawk do; the window title went
- * unrecognised, "Thanks for flying Vim" is a window title, and so the clear
- * that follows it in the teardown was taken for a redraw and threw the whole
- * run away. Every case came out empty on one system out of five and nothing
- * said why. The suites already build ptyrun.c because script(1) is a different
- * program on every system -- this is the same answer to the same problem.
+ * This was three lines of awk to begin with. The suites already build ptyrun.c
+ * because script(1) is a different program on every system, and a filter that
+ * has to agree with four awks is the same problem; in C there is nothing left
+ * for them to disagree about.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,6 +33,9 @@ static char			out[OUTMAX];
 static size_t		olen;
 static size_t		start[LINEMAX];		/* where each line begins in out */
 static int			nline;
+static int			pending;			/* a clear waiting to see if anything follows */
+
+static void settle(void);
 
 static void
 put(int c)
@@ -54,6 +53,7 @@ newline(const char *esc, size_t esclen)
 {
 	size_t		i;
 
+	settle();
 	if (nline >= LINEMAX)
 		return;
 	start[nline++] = olen;
@@ -63,34 +63,32 @@ newline(const char *esc, size_t esclen)
 }
 
 /*
- * Whether a window title is the one an editor sets on its way out. strstr()
- * would want a terminator this has not got.
- */
-static int
-is_goodbye(const char *p, size_t len)
-{
-	static const char	bye[] = "Thanks for flying";
-	size_t				want = sizeof(bye) - 1;
-	size_t				i;
-
-	if (len < want)
-		return(0);
-	for (i = 0; i + want <= len; i++)
-		if (memcmp(p + i, bye, want) == 0)
-			return(1);
-	return(0);
-}
-
-/*
  * The display was cleared: everything written before it is not on the screen
- * any more, so it is not in the answer either.
+ * any more, so it is not in the answer either -- but only if something is
+ * drawn afterwards. Leaving the alternate screen on the way out clears it too,
+ * and that clear must not take the answer with it.
+ *
+ * Waiting for the next thing drawn is the whole of the test. Keying on what an
+ * editor says on its way out is not: it sets the window title back, and to
+ * what depends on the system. Linux says "Thanks for flying Vim" there and
+ * DragonFly says "xterm", which is how this went wrong twice.
  */
 static void
 clear(void)
 {
+	pending = 1;
+}
+
+static void
+settle(void)
+{
+	if (!pending)
+		return;
+	pending = 0;
 	olen = 0;
 	nline = 0;
-	newline("", 0);
+	start[nline++] = 0;
+	put('|');
 }
 
 int
@@ -100,7 +98,6 @@ main(void)
 	size_t			n = 0;
 	size_t			i;
 	size_t			got;
-	int				done = 0;
 
 	while ((got = fread(in + n, 1, sizeof(in) - n, stdin)) > 0)
 	{
@@ -110,13 +107,16 @@ main(void)
 	}
 
 	clear();
-	for (i = 0; i < n && !done; )
+	for (i = 0; i < n; )
 	{
 		if (in[i] != ESC)
 		{
 			/* text: what was actually drawn, less the line ends */
 			if (in[i] != '\r' && in[i] != '\n')
+			{
+				settle();
 				put(in[i]);
+			}
 			i++;
 			continue;
 		}
@@ -135,22 +135,15 @@ main(void)
 			if (in[j] == 'm')				/* a colour: start a line with it */
 				newline(in + i, j - i + 1);
 			else if (in[j] == 'J' && j - i == 2 && in[i + 1] == '2')
-				clear();					/* and everything before it goes */
+				clear();
 			i = j + 1;
 		}
 		else if (in[i] == ']')
 		{
-			/*
-			 * A window title. The last one an editor sets on the way out says
-			 * "Thanks for flying Vim", and the clear that follows it is the
-			 * teardown -- past that there is nothing left to read.
-			 */
-			size_t		j = i;
+			size_t		j = i;			/* a window title, up to the bell */
 
 			while (j < n && in[j] != BEL)
 				j++;
-			if (is_goodbye(in + i, j - i))
-				done = 1;
 			i = (j < n) ? j + 1 : n;
 		}
 		else
