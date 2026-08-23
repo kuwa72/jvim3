@@ -135,6 +135,34 @@ repository and would drift within three releases.
 
 ### Fixed
 
+- A rule can hold an alternation, and `syntax/README` said it could not. The ex
+  command line eats one backslash, so `\|` reaches the regexp as a plain pipe
+  and matches a pipe — but `\\|` reaches it as `\|`, which is the alternation
+  the engine has always had. Nobody had tried two. Written down now, along with
+  what a bare `|` does (ends the command, so `n/aaa|ccc` quietly becomes the
+  rule `n/aaa` and a command `ccc`), and pinned by four cases so it cannot go
+  back to being folklore.
+
+  Not in a `w` rule: that one wraps its pattern in `\< \>`, so `w/a\\|b`
+  compiles as `\<a` or `b\>` and colours the `a` in `ab`. A `w` list is also
+  much the faster of the two, which is not the way round it looks — each word
+  becomes its own rule, but a word rule is looked up in an index of the line
+  built once per line, so a keyword that is not there costs nothing to rule
+  out. Rewriting every `w` list in `c.jvsyn` as one alternation — 61 words,
+  identical colouring — made a 600-redraw scroll 2.4 times slower.
+- `syntax/make.jvsyn` was the same nine rules written out twice. Every Makefile
+  walked a doubled list, and could not have coloured anything differently for
+  it. `scripts/check-docs.sh` refuses a repeated rule now, and a repeated or
+  empty word inside a `w` list with it: `rc.jvsyn` had `CURSOR` and
+  `IDI_WINLOGO` twice and a stray `//` that built a rule for the empty word,
+  and `java`, `vbs` and `html` each repeated a word the list above already had.
+  None of it showed on the screen, which is why it accumulated.
+- A batch parameter with modifiers is coloured. `bat.jvsyn` had seventeen rules
+  for particular spellings of `%~…`, all of them written *after* the `%VAR%`
+  rule — which matches from any `%` to the next one on the line, so it took
+  `%~f1 %` out of `%~f1 %~dp2` and left the rest plain. The seventeen never
+  coloured anything, and did not list `dpnx` in any case. One rule that takes
+  the modifiers in any order, before `%VAR%`, replaces them.
 - A cell the cursor stepped over on its way to the next one was retyped in the
   wrong colour. Moving a few columns along a row, jvim types the cells in
   between rather than positioning the cursor, which is faster — but it types
@@ -268,6 +296,32 @@ repository and would drift within three releases.
   で、探索方式は 0.88〜1.03 秒でした (両者の色付け結果はバイト単位で同一)。`t` を
   使わないルールしか持たないバッファは区切りを 1 つも走査しませんし、領域の両端が
   タグと取り違えられることもありません。
+- ルールに選択肢 (alternation) を書けます。`syntax/README` は「書けない」と
+  断言していましたが、間違いでした。ex のコマンド行はバックスラッシュを 1 つ食べる
+  ので、`\|` は正規表現にはただのパイプとして届いてパイプに一致します。しかし
+  `\\|` なら `\|` として届き、これは正規表現エンジンが最初から持っている選択肢です。
+  誰も 2 つ書いて試していませんでした。素の `|` が何をするか (コマンドがそこで
+  終わるので、`n/aaa|ccc` は黙ってルール `n/aaa` とコマンド `ccc` になる) と
+  合わせて文書化し、ケース 4 本で固定したので、もう口伝には戻りません。
+
+  ただし `w` ルールの中では使えません。`w` はパターン全体を `\< \>` で包むので、
+  `w/a\\|b` は `\<a` または `b\>` になり、`ab` の `a` に色が付きます。そして
+  `w` のリストは選択肢よりずっと高速です — 見た目に反しますが、1 単語が 1 ルールに
+  なる代わりに、単語ルールは行ごとに 1 回作る索引で引かれるので、その行に無い
+  キーワードを外すコストがゼロだからです。`c.jvsyn` の `w` リスト全部 (61 語) を
+  1 本の選択肢に書き換えたところ、色付け結果は完全に同一のまま、600 回再描画の
+  スクロールが 2.4 倍遅くなりました。
+- `syntax/make.jvsyn` は同じ 9 ルールを 2 回書いたファイルでした。Makefile を開く
+  たびに倍の長さのリストを走査していて、そのぶん色が変わることはありません。
+  `scripts/check-docs.sh` がルールの重複を弾くようになり、`w` リスト内の重複語と
+  空語も一緒に見ます: `rc.jvsyn` には `CURSOR` と `IDI_WINLOGO` が 2 回ずつと、
+  空語のルールを作る `//` があり、`java`・`vbs`・`html` にもそれぞれ上の行と重複した
+  語がありました。どれも画面には出ないので溜まっていたものです。
+- バッチの修飾子付きパラメータに色が付きます。`bat.jvsyn` には `%~…` の個別の綴りに
+  対するルールが 17 本ありましたが、すべて `%VAR%` のルールより**後ろ**にありました。
+  `%VAR%` は行内の任意の `%` から次の `%` までに一致するので、`%~f1 %~dp2` からは
+  `%~f1 %` が取られ、残りは無色でした。17 本は何も塗っておらず、そもそも `dpnx` は
+  どれにも載っていません。修飾子を任意の順で取る 1 本を `%VAR%` の前に置きました。
 - カーソルが通り過ぎるセルが間違った色で打ち直されていました。同じ行を数桁動くとき、
   jvim はカーソルを位置決めせず間のセルを打ち直します (そのほうが速い)。ところが
   打ち直すのは文字だけで、色は直前のエスケープが指定したまま — つまり「これから
