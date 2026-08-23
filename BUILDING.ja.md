@@ -15,9 +15,14 @@
 
 ```sh
 ./scripts/build-unix.sh          # src/jvim3 をビルド
-./scripts/build-unix.sh test     # ビルドしてテスト 136 ケースを実行
+./scripts/build-unix.sh test     # ビルドしてテスト 148 ケースを実行
+./scripts/build-unix.sh strict   # CI がエラー扱いする警告つきでビルド
 ./scripts/build-unix.sh clean
 ```
+
+`strict` は CI の「出てはいけない警告」ジョブと同じもので、push の前に手元で
+走らせられます。1 分の価値はあります。構造体の初期化子が別のメンバに落ちても
+gcc は警告で済ませますが、FreeBSD がビルドに使う clang は止まります。
 
 必要なものは C コンパイラだけです。curses / termcap ライブラリがあれば本物の端末
 データベースを使い、なければ JVim 組み込みの端末定義にフォールバックします
@@ -164,13 +169,14 @@ ARCH=x86_64 ./scripts/build-mingw.sh warn
 ./scripts/build-unix.sh test           # 3 つのスイート
 ./scripts/test-encoding.sh src/jvim3   # 48 ケース
 ./scripts/test-editing.sh  src/jvim3   # 64 ケース
-./scripts/test-syntax.sh   src/jvim3   # 24 ケース
+./scripts/test-syntax.sh   src/jvim3   # 36 ケース
 ```
 
 `test-encoding.sh` は漢字・UTF-8・マルチバイト編集を、`test-editing.sh` は移動、
 オペレータ、レジスタ、マーク、undo、ex の範囲指定、`:g`、`:s`、検索、`:!` フィルタ、
 ワイルドカード展開を見ます。`scripts/test-syntax.sh` は syntax/ のルールが実際に
-何を色付けするかを `:syntax dump` 越しに見ます。合わせて 136 ケースです。
+何を色付けするかを `:syntax dump` 越しに見ます（`syntax/` の全ファイルに 1 つ
+以上）。合わせて 148 ケースです。
 
 必要なのは bash と C コンパイラです。jvim に端末を与えるために `scripts/ptyrun.c`
 をビルドします。以前は `script(1)` を使っていましたが、あれは Linux と NetBSD と

@@ -135,8 +135,10 @@ the check being fooled instead of doing its job.
 There is no Windows runtime test in CI, but there is one to run by hand:
 `scripts/test-winkeys.sh` types into both builds for real -- console key events
 for one, window messages for the other -- and covers the cursor keys, the
-function keys, CTRL-@ and the file name cases that only Windows has. It needs
-WSL on Windows and takes a couple of minutes:
+function keys, CTRL-@, the file name cases that only Windows has, and whether
+the syntax rules colour anything at all in the GUI build, which is the only
+Windows build that has colouring (`SYN_ON()` is `'syntax'` *and* `GuiWin`). It
+needs WSL on Windows and takes a couple of minutes:
 
 ```sh
 scripts/test-winkeys.sh                          # src/jvim32.exe, src/jvim32w.exe
@@ -153,6 +155,15 @@ editor has none at all. `WINDESK_OFF=1` puts it back in sight for when
 something has to be watched happening, and `scripts/windesk.h` says why the
 obvious ways — starting the window hidden, or giving it a new console — do
 not work.
+
+The GUI driver types one Escape before the case does anything. The window
+appears while the editor is still reading its rc, and a key posted then is
+lost — not delayed. With no rc that window is short and a fixed sleep covered
+it nearly always, which is the worst way to be wrong: one run in a hundred
+failed with nothing to blame. An rc that sources the rule files widened it
+enough to lose the key every time, which is how it was found.
+`WaitForInputIdle` does not help, because it reports the process idle as soon
+as it has been idle once, and that happens before the rc is read.
 
 Beyond that, testing on Windows by hand is the only Windows testing there is. A local build is now the same runtime as the
 release, so it counts; to test the exact executable the release page serves,

@@ -4,9 +4,15 @@
 
 ```sh
 ./scripts/build-unix.sh          # build src/jvim3
-./scripts/build-unix.sh test     # build, then run the encoding tests
+./scripts/build-unix.sh test     # build, then run the three test suites
+./scripts/build-unix.sh strict   # build with the warnings CI refuses
 ./scripts/build-unix.sh clean
 ```
+
+`strict` is the "warnings that have to stay away" CI job, runnable before the
+push instead of after it. It is worth the minute: gcc's default only warns about
+an initialiser landing in the wrong field of a struct, and clang, which is what
+FreeBSD builds with, stops.
 
 `src/makjunix.mak` still expects three lines to be uncommented by hand for your
 machine. The script works out the same answers by asking the compiler and hands
@@ -24,9 +30,9 @@ It is POSIX `sh` and avoids `make -C`, so it works with the BSDs' `/bin/sh` and
 `test` runs all three suites: `scripts/test-encoding.sh` (48 cases — kanji,
 UTF-8, multi-byte editing, file names), `scripts/test-editing.sh` (64 cases —
 motions, operators, registers, marks, undo, ex ranges, `:g`, `:s`, searching,
-the `:!` filter and wildcard expansion) and `scripts/test-syntax.sh` (24 cases
-— what the rules in `syntax/` actually colour, read back with `:syntax dump`).
-136 cases in all.
+the `:!` filter and wildcard expansion) and `scripts/test-syntax.sh` (36 cases
+— what the rules in `syntax/` actually colour, read back with `:syntax dump`,
+one for every file in `syntax/`). 148 cases in all.
 
 They need bash and a C compiler: they build `scripts/ptyrun.c` to give jvim a
 terminal. That used to be `script(1)`, which is a different program on Linux,
@@ -114,7 +120,7 @@ described above, and a handful of unused variables and ignored return values.
 | `main.c`, `message.c`, `getchar.c` | Five `fprintf(stderr, (char *)s)` calls with a non-literal format. Debian, Ubuntu and Fedora build with `-Werror=format-security` by default, which refuses them, so the build failed before reaching the link. |
 | `term.c`, `termlib.c` | `outchar()` was `void(unsigned)` but was handed to `tputs()`, which declares its third argument `int (*)(int)`. Calling through a mismatched function pointer is undefined; it happened to work. `outchar()` is `int(int)` now and JVim's own `tputs()` agrees. |
 | `termlib.c` | Six functions relied on the implicit `int` return type, which C23 also removed. |
-| 7 places | `strcpy(p, p + 1)` and friends: the ranges overlap, which is undefined. `STRMOVE()` now. |
+| 9 places | `strcpy(p, p + 1)` and friends: the ranges overlap, which is undefined. `STRMOVE()` now. The last two were the `\"` and `\%` unescaping in `DoOneCmd()`, which nothing reached often enough to notice until the rule files in `syntax/` — full of `\"` — were sourced at every startup, and AddressSanitizer stopped the editor before it drew a screen. |
 | `unix.h`, `unix.c` | Declarations for libcs that predate C89 — `bcopy()`, `bzero()`, `ioctl()`, `fork()`, `execvp()`, and `memmove()`/`memset()` mapped onto the b* functions — were skipped through a chain of `!defined()` per block, and macOS was in none of them. On macOS these are errors, not warnings, because its own `bcopy()` and `execvp()` have different prototypes; the build stopped in `alloc.c`. `MODERN_LIBC` in `unix.h` names those systems once. |
 | `cmdcmds.c`, `unix.c`, `misccmds.c` | `mktemp()` for the `:!` filter and wildcard expansion only picks a name, leaving a gap for somebody to drop a symlink into; the linkers on the BSDs warn about every use. `vim_mktemp()` uses `mkstemp()` where the build finds it. `getwd()` in three places was handed no length at all and wrote up to `PATH_MAX` into the caller's buffer; `getcwd()` now. |
 | `unix.c` | `sig_winch()` was declared and defined as the 4.3BSD three argument signal handler, `(int, int, struct sigcontext *)`. NetBSD no longer declares `struct sigcontext` in `<signal.h>`, so the prototype and the definition named two different types and the build stopped. Nothing in the handler looks at its arguments, so the modern BSDs and macOS take the plain `(int)` form. |
@@ -130,7 +136,9 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 - Distribution hardening: `-D_FORTIFY_SOURCE=2 -Werror=format-security
   -fstack-protector-strong`
 - `/bin/sh` being dash
-- All 46 encoding tests, and the same again under AddressSanitizer
+- All 148 tests, and the same again under AddressSanitizer
+  (`OPT="-O1 -g -fsanitize=address" EXTRA_LIBS=-fsanitize=address`)
+- `./scripts/build-unix.sh strict`, the `-Werror=` set CI refuses to build without
 - 64 bit: no `-Wpointer-to-int-cast` anywhere in the portable sources. The three
   `-Wint-to-pointer-cast` left are `long` values passed to `emsg2()` for a `%ld`,
   which keep their value on LP64. (The Windows build is a different story, see
@@ -139,26 +147,31 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 Verified on FreeBSD 14.3-RELEASE-p16, clang 19.1.7, amd64, in the QEMU guest
 `scripts/test-bsd-docker.sh` builds:
 
-- All 136 tests
+- All 148 tests
 - `-DTERMCAP` against base ncurses, found as `-ltinfo`
 - `jmask` following `LANG`: `ja_JP.UTF-8` gives `TTTT`, `ja_JP.eucJP` gives
   `EEEE`, `C` gives `EEET`
 - Both tty paths: `-DBSD4_4` (`<termios.h>`, what the script picks now) and the
-  `<sgtty.h>` branch it used to take. Each passes all 136 tests. The `BSD4_4`
+  `<sgtty.h>` branch it used to take. Each passes the whole suite. The `BSD4_4`
   branch had never been compiled before — it cannot be, against Linux headers.
 
 Verified on NetBSD 10.1, gcc 10.5.0, amd64, the same way:
 
-- All 136 tests
+- All 148 tests
 - `-DTERMCAP` against base curses, found as `-lcurses`
-- Three warnings for the whole build, all `-Wint-to-pointer-cast` in
-  `buffer.c`, which are the `%ld` ones described above.
+- 58 warnings for the whole build, every one of them the second argument of
+  `tgetstr()`: NetBSD's curses declares it `char **` and `term.c` hands it a
+  `char_u **`. Harmless, and not worth 58 casts over a declaration that differs
+  between systems.
 
 Verified in CI, on whatever release the VM images carry — FreeBSD 15.1,
-NetBSD 11.0 and OpenBSD 7.9 at the time of writing, plus DragonFly. All 100
-tests on each. OpenBSD had never been built at all before that; `-lncursesw` is
-what it finds. DragonFly is CI only: `scripts/test-bsd-docker.sh` has no guest
-for it, so it has never been looked at interactively.
+NetBSD 11.0 and OpenBSD 7.9 at the time of writing, plus DragonFly. The whole
+suite on each, whatever it holds that day — no number here, because a count
+written down in two places is a count that goes stale in one of them, and this
+one did: it said 100 for months. OpenBSD had never been built at all before
+that; `-lncursesw` is what it finds. DragonFly is CI only:
+`scripts/test-bsd-docker.sh` has no guest for it, so it has never been looked at
+interactively.
 
 **Not** verified:
 
