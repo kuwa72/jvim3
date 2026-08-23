@@ -51,7 +51,7 @@ fi
 
 if [ -n "$count_only" ]; then
 	# Count the cases without any of the Windows preflight below.
-	cases=$(grep -cE '^(run|expand_lists|opens_long_name|opens_past_max_path|colours_a_file) ' "$0")
+	cases=$(grep -cE '^(run|expand_lists|opens_long_name|opens_past_max_path|colours_a_file|draws_a_background) ' "$0")
 	printf 'cases %d\n' "$cases"
 	exit 0
 fi
@@ -231,6 +231,48 @@ colours_a_file() {
 	fi
 }
 
+# draws_a_background <name>
+#
+# The one thing only a picture can answer. ":syntax dump" says which rule
+# coloured which bytes and scripts/test-sgr.sh says what a terminal is sent,
+# but the GUI paints from its own screen array with FillRect and ExtTextOutW,
+# and neither of those leaves a trace anywhere a test can read. So take the
+# window as a bitmap and look at it.
+#
+# diff.jvsyn draws an added line on #e6ffe6 and a removed one on #ffe6e6. A
+# 24 bit BMP holds a pixel as blue, green, red, so those are "e6ffe6" and
+# "e6e6ff" in the file. Twenty of either in a row is two and a half characters
+# of one of them and cannot be anything else on a white window.
+draws_a_background() {
+	local name=$1
+	local w="$work/bg" h ok=1 c pat
+
+	rm -rf "$w"; mkdir -p "$w"
+	cp -R "$root/syntax" "$w/syntax"
+	cp "$work/guikeys.exe" "$work/jvim32w.exe" "$w/"
+	printf 'set fexrc\r\nset syntax\r\nsource $VIM/syntax/filetype.jvsyn\r\n' \
+			> "$w/_jvimrc"
+	printf -- '-gone\r\n+added\r\n' > "$w/t.diff"
+	printf ':\r' > "$w/keys"
+	cmd.exe /c "set HOME=$(wslpath -w "$w")&& set VIM=$(wslpath -w "$w")&& \
+			cd /d $(wslpath -w "$w") && \
+			guikeys.exe -shot shot.bmp keys jvim32w.exe t.diff" \
+			>/dev/null 2>&1
+	h=$(hex "$w/shot.bmp")
+	for c in e6e6ff e6ffe6; do
+		pat=$(printf "$c%.0s" $(seq 1 20))
+		printf '%s' "$h" | grep -q "$pat" || ok=0
+	done
+
+	if [ "$ok" = 1 ]; then
+		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
+	else
+		printf '  FAIL        %s\n' "$name"
+		printf '                no run of either tint in the window\n'
+		fail=$((fail+1))
+	fi
+}
+
 # opens_past_max_path <name>
 #
 # A whole path longer than MAX_PATH, which is 260 *characters*. jvim.manifest
@@ -303,6 +345,7 @@ run gui "up recalls a : line"       ':1d\r:<U><CR>'      'a\nb\nc\n'  'c\n'
 # codes may only be picked out where a character starts
 run gui "kanji input holding 0xa0"  'i<u30A0><u3042><ESC>' 'X\n' '\xe3\x82\xa0\xe3\x81\x82X\n'
 colours_a_file "the rules colour a file"
+draws_a_background "a rule draws on a colour"
 
 echo
 echo "Japanese file names, which are three bytes a character:"

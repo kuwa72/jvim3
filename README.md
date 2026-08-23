@@ -23,7 +23,7 @@ derived from JVim 3.0-j2.1b (2002 Dec 24)
 Platforms        Windows 10/11 (Win32 GUI + console), Linux,
                  FreeBSD, NetBSD, OpenBSD, DragonFly
 Tests            158 cases, run on all of the above in CI. The Windows
-                 keyboard has 15 more in scripts/test-winkeys.sh, typed on
+                 keyboard has 16 more in scripts/test-winkeys.sh, typed on
                  the real thing from WSL
 Licence          Public domain — see LICENSE, and uganda.txt for the
                  charity request that comes with it

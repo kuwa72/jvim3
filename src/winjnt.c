@@ -1644,13 +1644,25 @@ GetColor(char_u mode, int tb)
 #endif
 
 /*
- * The colour behind a cell whose attribute byte is 'mode'. The same choice the
- * run loop in PaintWindow() makes when it calls SetBkColor(), kept here so the
- * background pass over a row can make it too.
+ * The colour behind a cell, from its two attribute bytes. A colour a rule
+ * asked to draw on if there is one; otherwise what the foreground implies,
+ * which is the text colour for reverse and the window's own for everything
+ * else. Every place that paints a background asks here, so that the run pass
+ * over a row and the run inside PrintChar() cannot answer differently.
+ *
+ * 'do_vb' is the whole window inverted for a visual bell. That swaps the two
+ * colours the window was given, and not one a rule named: a rule asking for
+ * maroon means maroon either way round.
  */
 static DWORD
-run_bkcolor(char_u mode)
+run_bkcolor(char_u mode, char_u bgmode)
 {
+#if defined(KANJI) && defined(USE_SYNTAX)
+	int			rgb = 0;
+
+	if (syn_bgcolor(bgmode, &rgb))
+		return(RGB((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff));
+#endif
 #ifdef KANJI
 	if (mode)
 		return(do_vb ? GetColor(mode, 't') : GetColor(mode, 'b'));
@@ -1663,7 +1675,7 @@ run_bkcolor(char_u mode)
 
 static void
 PrintChar(HDC hdc, RECT *rt, HFONT *phOldFont, char_u *p, int size, char_u mode,
-			int row, int col)
+			char_u bgmode, int row, int col)
 {
 #if defined(KANJI) && defined(SYNTAX)
 	HBRUSH		hbrush;
@@ -1672,20 +1684,7 @@ PrintChar(HDC hdc, RECT *rt, HFONT *phOldFont, char_u *p, int size, char_u mode,
 
 	if (issynpaint())
 	{
-		if (mode)
-		{
-			if (do_vb)
-				color = GetColor(mode, 't');
-			else
-				color = GetColor(mode, 'b');
-		}
-		else
-		{
-			if (do_vb)
-				color = *v_fgcolor;
-			else
-				color = *v_bgcolor;
-		}
+		color = run_bkcolor(mode, bgmode);
 		if ((!do_vb && *v_bgcolor != color) || (do_vb && *v_fgcolor != color))
 		{
 			hbrush	= CreateSolidBrush(color);
@@ -1870,6 +1869,15 @@ PaintWindow(HWND hWnd)
 		int			i;
 		int			i0;
 		char_u		attr;
+#if defined(KANJI) && defined(SYNTAX)
+		/*
+		 * The run's background, which breaks the run only where PrintChar()
+		 * is the one painting it. Where the pass above the loop does, the
+		 * glyphs go over it transparently and two runs that differ in
+		 * nothing but their ground can be drawn as one.
+		 */
+		char_u		bgattr;
+#endif
 #ifdef KANJI
 		int			kanji;
 #endif
@@ -1905,7 +1913,9 @@ PaintWindow(HWND hWnd)
 			for (c = nCol; c <= nEndCol + 1; c++)
 			{
 #ifdef KANJI
-				if (c <= nEndCol && p[Columns + c] == p[Columns + c0])
+				/* both planes: two runs can share a colour and not a ground */
+				if (c <= nEndCol && p[Columns + c] == p[Columns + c0]
+						&& p[Columns * 2 + c] == p[Columns * 2 + c0])
 #else
 				if (c <= nEndCol && (p[c] & 0x80) == (p[c0] & 0x80))
 #endif
@@ -1919,9 +1929,10 @@ PaintWindow(HWND hWnd)
 					fr.left		= c0 * v_xchar;
 					fr.right	= c * v_xchar;
 #ifdef KANJI
-					hbrush = CreateSolidBrush(run_bkcolor(p[Columns + c0]));
+					hbrush = CreateSolidBrush(run_bkcolor(p[Columns + c0],
+														p[Columns * 2 + c0]));
 #else
-					hbrush = CreateSolidBrush(run_bkcolor(p[c0]));
+					hbrush = CreateSolidBrush(run_bkcolor(p[c0], 0));
 #endif
 					FillRect(hDC, &fr, hbrush);
 					DeleteObject(hbrush);
@@ -1930,34 +1941,42 @@ PaintWindow(HWND hWnd)
 			}
 		}
 		attr = 0xff;
+#if defined(KANJI) && defined(SYNTAX)
+		bgattr = p[Columns * 2 + nCol];
+#endif
 #ifdef KANJI
 		kanji = CELLKANA(nRow, nCol);
 #endif
 		for (i = i0 = nCol; i <= nEndCol; i++)
 		{
 #ifdef KANJI
-			if (attr != p[Columns + i] || kanji != CELLKANA(nRow, i))
+			if (attr != p[Columns + i] || kanji != CELLKANA(nRow, i)
+#if defined(KANJI) && defined(SYNTAX)
+					|| (issynpaint() && bgattr != p[Columns * 2 + i])
+#endif
+				)
 #else
 			if (attr != (p[i] & 0x80))
 #endif
 			{
 #ifdef KANJI
-				if (p[Columns + i0])
+				/* either plane: a rule may ask for a ground and no colour */
+				if (p[Columns + i0] || p[Columns * 2 + i0])
 #else
 				if (p[i0] & 0x80)
 #endif
 				{
 #ifdef KANJI
-					if (do_vb)
-					{
-						SetTextColor(hDC, GetColor(p[Columns + i0], 'b'));
-						SetBkColor(hDC, GetColor(p[Columns + i0], 't'));
-					}
-					else
-					{
-						SetTextColor(hDC, GetColor(p[Columns + i0], 't'));
-						SetBkColor(hDC, GetColor(p[Columns + i0], 'b'));
-					}
+					/*
+					 * One call each way round. run_bkcolor() knows what a
+					 * visual bell does to the two colours the window was
+					 * given, and what it does not do to one a rule named.
+					 */
+					SetTextColor(hDC, p[Columns + i0]
+							? GetColor(p[Columns + i0], do_vb ? 'b' : 't')
+							: (do_vb ? *v_bgcolor : *v_fgcolor));
+					SetBkColor(hDC, run_bkcolor(p[Columns + i0],
+													p[Columns * 2 + i0]));
 #else
 					if (do_vb)
 					{
@@ -1993,30 +2012,33 @@ PaintWindow(HWND hWnd)
 						rect.left  = (i0 + 1) * v_xchar;
 						rect.right = (i + 1) * v_xchar;
 						PrintChar(hDC, &rect, &hOldFont, p + i0 + 1, i - i0,
-									p[Columns + i0], nRow, i0 + 1);
+									p[Columns + i0], p[Columns * 2 + i0], nRow, i0 + 1);
 					}
 					else if (CELLCONT(nRow, i0))
 					{
 						rect.left  = (i0 + 1) * v_xchar;
 						if ((i - (i0 + 1)) > 0)
 							PrintChar(hDC, &rect, &hOldFont, p + i0 + 1,
-									i - (i0 + 1), p[Columns + i0], nRow, i0 + 1);
+									i - (i0 + 1), p[Columns + i0], p[Columns * 2 + i0], nRow, i0 + 1);
 					}
 					else if (CELLWIDE(nRow, i))
 					{
 						rect.right = (i + 1) * v_xchar;
 						PrintChar(hDC, &rect, &hOldFont, p + i0, (i - i0) + 1,
-									p[Columns + i0], nRow, i0);
+									p[Columns + i0], p[Columns * 2 + i0], nRow, i0);
 					}
 					else
 #endif
 					PrintChar(hDC, &rect, &hOldFont, p + i0, i - i0,
-								p[Columns + i0], nRow, i0);
+								p[Columns + i0], p[Columns * 2 + i0], nRow, i0);
 					rect.left	= i * v_xchar;
 					i0 = i;
 				}
 #ifdef KANJI
 				attr = p[Columns + i];
+#if defined(KANJI) && defined(SYNTAX)
+				bgattr = p[Columns * 2 + i];
+#endif
 				kanji = CELLKANA(nRow, i);
 #else
 				attr = (p[i] & 0x80);
@@ -2026,22 +2048,17 @@ PaintWindow(HWND hWnd)
 		if ((i - i0) > 0)
 		{
 #ifdef KANJI
-			if (p[Columns + i0])
+			if (p[Columns + i0] || p[Columns * 2 + i0])
 #else
 			if (p[i0] & 0x80)
 #endif
 			{
 #ifdef KANJI
-				if (do_vb)
-				{
-					SetTextColor(hDC, GetColor(p[Columns + i0], 'b'));
-					SetBkColor(hDC, GetColor(p[Columns + i0], 't'));
-				}
-				else
-				{
-					SetTextColor(hDC, GetColor(p[Columns + i0], 't'));
-					SetBkColor(hDC, GetColor(p[Columns + i0], 'b'));
-				}
+				SetTextColor(hDC, p[Columns + i0]
+						? GetColor(p[Columns + i0], do_vb ? 'b' : 't')
+						: (do_vb ? *v_bgcolor : *v_fgcolor));
+				SetBkColor(hDC, run_bkcolor(p[Columns + i0],
+												p[Columns * 2 + i0]));
 #else
 				if (do_vb)
 				{
@@ -2075,25 +2092,25 @@ PaintWindow(HWND hWnd)
 				rect.left  = (i0 + 1) * v_xchar;
 				rect.right = (i + 1) * v_xchar;
 				PrintChar(hDC, &rect, &hOldFont, p + i0 + 1, i - i0,
-							p[Columns + i0], nRow, i0 + 1);
+							p[Columns + i0], p[Columns * 2 + i0], nRow, i0 + 1);
 			}
 			else if (CELLCONT(nRow, i0))
 			{
 				rect.left  = (i0 + 1) * v_xchar;
 				if ((i - (i0 + 1)) > 0)
 					PrintChar(hDC, &rect, &hOldFont, p + i0 + 1,
-							i - (i0 + 1), p[Columns + i0], nRow, i0 + 1);
+							i - (i0 + 1), p[Columns + i0], p[Columns * 2 + i0], nRow, i0 + 1);
 			}
 			else if (CELLWIDE(nRow, i))
 			{
 				rect.right = (i + 1) * v_xchar;
 				PrintChar(hDC, &rect, &hOldFont, p + i0, (i - i0) + 1,
-							p[Columns + i0], nRow, i0);
+							p[Columns + i0], p[Columns * 2 + i0], nRow, i0);
 			}
 			else
 #endif
 			PrintChar(hDC, &rect, &hOldFont, p + i0, i - i0,
-						p[Columns + i0], nRow, i0);
+						p[Columns + i0], p[Columns * 2 + i0], nRow, i0);
 		}
 	}
 #if defined(KANJI) && defined(SYNTAX)
@@ -2249,7 +2266,15 @@ clear_cmode(HWND hWnd)
 		p = WinScreen[i];
 		for (j = 0; j < Columns; j++)
 #if defined(KANJI) && defined(SYNTAX)
-			p[Columns + j]  =  0;
+		{
+			/*
+			 * Both planes, or a screen would come back with its colours
+			 * wiped and its grounds kept. Either way the redraw this asks
+			 * for puts them back.
+			 */
+			p[Columns + j]		= 0;
+			p[Columns * 2 + j]	= 0;
+		}
 #else
 			p[Columns + j] &= ~CMODE;
 #endif
@@ -2259,6 +2284,25 @@ clear_cmode(HWND hWnd)
 	rect.top	= 0;
 	rect.bottom	= Rows * v_ychar;
 	InvalidateRect(hWnd, &rect, FALSE);
+}
+
+/*
+ * Mark one cell of a row as selected.
+ *
+ * Where there are colours the marker is written over the one the cell had --
+ * CMODE is '*', which is not a colour id -- so the ground has to go with it,
+ * or the selection would be drawn over the background of whatever it covers.
+ * Both come back with the redraw clear_cmode() asks for.
+ */
+static void
+mark_cmode(char_u *p, int j)
+{
+#if defined(KANJI) && defined(SYNTAX)
+	p[Columns + j]		= CMODE;
+	p[Columns * 2 + j]	= 0;
+#else
+	p[Columns + j]	   |= CMODE;
+#endif
 }
 
 static VOID
@@ -2281,30 +2325,27 @@ draw_cmode(HWND hWnd, int cs_row, int cs_col, int ce_row, int ce_col)
 		for (j = nCol; j <= nEndCol; j++)
 		{
 #ifdef KANJI
+			/*
+			 * Half of a wide character at either end of the selection takes
+			 * its other half with it. The two builds used to disagree about
+			 * which half that is at the far end -- j - 1 where SYNTAX was
+			 * defined, j + 1 where it was not -- and CELLWIDE() says the cell
+			 * is the left half, so it is the one after. Neither arm looked
+			 * where it was going, either: at the ends of a row j - 1 and
+			 * j + 1 are in another row's planes.
+			 */
 			if (j == nCol)
 			{
-				if (CELLCONT(i, j))
-# ifdef SYNTAX
-					p[Columns + j - 1]  = CMODE;
-# else
-					p[Columns + j - 1] |= CMODE;
-# endif
+				if (CELLCONT(i, j) && j > 0)
+					mark_cmode(p, j - 1);
 			}
 			else if (j == nEndCol)
 			{
-				if (CELLWIDE(i, j))
-# ifdef SYNTAX
-					p[Columns + j - 1]  = CMODE;
-# else
-					p[Columns + j + 1] |= CMODE;
-# endif
+				if (CELLWIDE(i, j) && j + 1 < Columns)
+					mark_cmode(p, j + 1);
 			}
 #endif
-#if defined(KANJI) && defined(SYNTAX)
-			p[Columns + j]  = CMODE;
-#else
-			p[Columns + j] |= CMODE;
-#endif
+			mark_cmode(p, j);
 		}
 	}
 	rect.left	= nCol * v_xchar;
@@ -4705,11 +4746,7 @@ get_clipdata:
 				}
 				for (col = start; col <= end; col++)
 				{
-#if defined(KANJI) && defined(SYNTAX)
-					p[Columns + col]  = CMODE;
-#else
-					p[Columns + col] |= CMODE;
-#endif
+					mark_cmode(p, col);
 					cmode = TRUE;
 				}
 				KillTimer(hWnd, TRIPLE_TIME);
@@ -4928,15 +4965,9 @@ get_clipdata:
 				{
 					int		w = cell_width(row, col);
 
-# ifdef SYNTAX
-					p[Columns + col]  = CMODE;
-					if (w == 2)
-						p[Columns + col + 1]  = CMODE;
-# else
-					p[Columns + col] |= CMODE;
-					if (w == 2)
-						p[Columns + col + 1] |= CMODE;
-# endif
+					mark_cmode(p, col);
+					if (w == 2 && col + 1 < Columns)
+						mark_cmode(p, col + 1);
 					col += w;
 					cmode = TRUE;
 				}
@@ -4949,11 +4980,7 @@ get_clipdata:
 				while (col < Columns && CELLCP(row, col) == 0
 						&& isidchar(p[col]))
 				{
-# ifdef SYNTAX
-					p[Columns + col]  = CMODE;
-# else
-					p[Columns + col] |= CMODE;
-# endif
+					mark_cmode(p, col);
 					col++;
 					cmode = TRUE;
 				}

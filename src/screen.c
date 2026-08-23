@@ -1470,15 +1470,23 @@ start_highlight(void)
 	{
 		outstr(highlight);
 #ifdef SCR_COLOR
-		invert = color & 0xff;
-#else
-		invert = INVERTCODE;
-#endif
 		/*
-		 * The termcap strings cannot say what is behind the text, so a rule
-		 * asking for a background gets none here rather than the wrong one.
+		 * Not only for the terminal. On Windows there is no escape to write
+		 * at all -- SYN_SGR is off there -- and the GUI paints from the screen
+		 * array, so this is the only place either plane learns what colours
+		 * the run is being drawn in.
+		 *
+		 * On a terminal this is reached only for the contexts of the
+		 * 'highlight' option, whose ids are lowercase letters with no
+		 * background behind them, so nothing is recorded that the termcap
+		 * strings could not send.
 		 */
+		invert   = color & 0xff;
+		invertbg = (color >> 8) & 0xff;
+#else
+		invert   = INVERTCODE;
 		invertbg = 0;
+#endif
 	}
 }
 

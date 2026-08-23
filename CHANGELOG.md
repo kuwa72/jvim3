@@ -33,6 +33,12 @@ repository and would drift within three releases.
   than more bits. The background is a position in a table of the colours the
   rules asked for, not one of the foreground's letters: it never has to serve
   as a foreground, so it costs nothing to give it a space of its own.
+
+  Both painters draw it — the terminal as `48;2;r;g;b` in the same escape as
+  the foreground, or the nearest of sixteen plus forty; the Win32 GUI as the
+  rectangle it already fills behind each run. The GUI one can only be checked
+  by looking, so `scripts/test-winkeys.sh` takes the window as a bitmap and
+  reads the pixels.
 - `scripts/test-sgr.sh`, which reads the escapes the terminal is actually sent
   and the text under each of them. `:syntax dump` answers which rule coloured
   which bytes, a question about the rules; this is the other half — whether the
@@ -199,6 +205,11 @@ repository and would drift within three releases.
   なのでビットを増やすのではなく、画面配列に 3 枚目の面を足しました。背景は前景の
   letter ではなく「ルールが求めた色の表の位置」です。背景が前景として使われることは
   絶対にないので、専用の空間を与えても何も失いません。
+
+  描画側は両方が対応します。端末へは前景と同じエスケープの中に `48;2;r;g;b`
+  (または 16 色フォールバックの 40 番台) を、Win32 GUI へは run ごとに既に塗って
+  いる矩形の色として。GUI のほうは見るしか確かめようがないので、
+  `scripts/test-winkeys.sh` が窓をビットマップに取ってピクセルを読みます。
 - `scripts/test-sgr.sh` を追加しました。端末に実際に送られるエスケープと、その下に
   書かれた文字を読みます。`:syntax dump` は「どのルールがどのバイトを塗ったか」=
   ルールについての問いに答えますが、これはもう半分 —「その色が端末に届いているか、
