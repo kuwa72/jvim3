@@ -200,6 +200,57 @@ grep -nE '^(Latest release|最新リリース) ' README.md README.ja.md 2>/dev/n
 grep -qE '^(Latest release|最新リリース) ' README.md README.ja.md 2>/dev/null &&
 	problems=$((problems+1))
 
+# ------------------------------------------------------------- the rule files
+# A rule the editor already has is walked again for every character of every
+# line and can never colour anything the first one did not. None of this shows
+# on the screen, which is why it accumulated: make.jvsyn was the same nine
+# rules written out twice, rc.jvsyn had CURSOR and IDI_WINLOGO twice in one
+# list and a stray "//" that built a rule for the empty word, and java and vbs
+# each repeated a keyword the line above already had.
+#
+# Only a repeat within one group is reported. The same word under two groups is
+# dead too -- the earlier rule wins -- but sometimes deliberately so: php has
+# "static" as a StorageClass and again as a Type, and both readings are real.
+for f in syntax/*.jvsyn; do
+	[ -f "$f" ] || continue
+	dup=$(grep -v '^[[:space:]]*"' "$f" | grep -v '^[[:space:]]*$' |
+			sort | uniq -d)
+	[ -z "$dup" ] || bad "$f: these rules appear more than once:
+$(printf '%s\n' "$dup" | sed 's/^/    /')"
+
+	# The words of a w rule, which are what the "/" separates. A t rule spends
+	# its first two fields on the delimiters of the tag it looks inside, so
+	# html's twenty "itw/</>/..." lines are not twenty rules for "<".
+	words=$(awk '
+		/^[[:space:]]*"/ || /^[[:space:]]*$/	{ next }
+		{
+			if (match($0, /^syntax[ \t]+[^ \t]+[ \t]+[a-z]*w[a-z]*\//) == 0)
+				next
+			n = split($0, a, /[ \t]+/)
+			group = a[2]
+			mode  = substr(a[3], 1, index(a[3], "/") - 1)
+			rest  = substr(a[3], index(a[3], "/") + 1)
+			first = (index(mode, "t") > 0) ? 3 : 1
+			nw = split(rest, w, "/")
+			for (i = first; i <= nw; i++)
+			{
+				if (w[i] == "")
+				{
+					print NR ": an empty word, from a \"/\" with nothing before it"
+					continue
+				}
+				key = group SUBSEP ((index(mode, "i") > 0) ? tolower(w[i]) : w[i])
+				if (key in seen)
+					print NR ": \"" w[i] "\" is already a " group \
+							" at line " seen[key]
+				else
+					seen[key] = NR
+			}
+		}' "$f")
+	[ -z "$words" ] || bad "$f: words a rule already has:
+$(printf '%s\n' "$words" | sed 's/^/    /')"
+done
+
 # ------------------------------------------------------------------- VERSION
 version=$(tr -d ' \t\r\n' < VERSION 2>/dev/null)
 case $version in

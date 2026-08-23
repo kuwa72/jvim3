@@ -145,7 +145,7 @@ syntax	Special			iw/SeriesActivated/SeriesSelected/SeriesUpdated
 syntax	Special			iw/SettingChanged/SplitChange/StateChanged
 syntax	Special			iw/StatusUpdate/SysColorsChanged/Terminate
 syntax	Special			iw/TimeChanged/TitleActivated/TitleSelected
-syntax	Special			iw/TitleActivated/UnboundAddData/UnboundDeleteRow
+syntax	Special			iw/UnboundAddData/UnboundDeleteRow
 syntax	Special			iw/UnboundGetRelativeBookmark/UnboundReadData
 syntax	Special			iw/UnboundWriteData/Unload/UpClick/Updated/Validate
 syntax	Special			iw/ValidationError/WillAssociate/WillChangeData

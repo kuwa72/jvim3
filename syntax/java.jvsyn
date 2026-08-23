@@ -19,7 +19,7 @@ syntax	Type			w/void
 syntax	Statement		w/return
 syntax	StorageClass	w/static/synchronized/transient/volatile/final/strictfp
 syntax	Exception		w/throw/try/catch/finally
-syntax	StorageClass	w/synchronized/throws
+syntax	StorageClass	w/throws
 syntax	StorageClass	w/extends/implements/interface
 syntax	Typedef			w/class
 syntax	Conditional		w/break/continue
