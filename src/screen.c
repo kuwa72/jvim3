@@ -47,6 +47,7 @@ static int		**CPPointers = NULL;
 # define SCRCP(row, col)	(CPPointers[row][col])
 static int	out_cell __ARGS((int, int));
 static int	run_iscolor __ARGS((int, int, int));
+static void	screenrow_blank __ARGS((char_u *));
 #endif
 
 /*
@@ -69,7 +70,20 @@ static int		invert = 0;				/* set to INVERTCODE when inverting */
 #define INVERTCODE		0x80
 
 #ifdef KANJI
+/*
+ * Three planes to a row of the screen array, laid end to end: the characters,
+ * the colour of each cell, and the colour behind it. SCREEN() and SCRBG() get
+ * at the last two from a pointer into the first, which is what lets win_line()
+ * carry one pointer and reach all three.
+ *
+ * SCRSTRIDE is how far apart two rows are. Nothing else in this file may spell
+ * that out: the same number has to be right in the allocation, in the row
+ * pointers and in the memset()s that blank a row, and a miss in the last of
+ * those leaves uninitialised memory to be read back as a colour.
+ */
+# define SCRSTRIDE		  (Columns * 3)
 # define SCREEN(scr)	  ((scr)[Columns])
+# define SCRBG(scr)		  ((scr)[Columns * 2])
 # define SCRTST(scr)	  (((scr)[Columns]) != 0)
 # define SCRCMP(scr, inv) (inv == 0 ? (((scr)[Columns]) == 0) : (((scr)[Columns]) != 0))
 # define SCRINV(scr, inv) (inv == 0 ? (((scr)[Columns]) != 0) : (((scr)[Columns]) != inv))
@@ -1730,7 +1744,7 @@ screenalloc(int clear)
 		win_free_lsize(wp);
 
 #ifdef KANJI
-	Nextscreen = (char_u *)malloc((size_t) (Rows * Columns * 2));
+	Nextscreen = (char_u *)malloc((size_t) (Rows * SCRSTRIDE));
 #else
 	Nextscreen = (char_u *)malloc((size_t) (Rows * Columns));
 #endif
@@ -1778,7 +1792,7 @@ screenalloc(int clear)
 #ifdef KANJI
 		for (i = 0; i < Rows; ++i)
 		{
-			LinePointers[i] = Nextscreen + i * Columns * 2;
+			LinePointers[i] = Nextscreen + i * SCRSTRIDE;
 			CPPointers[i] = ScreenCP + i * Columns;
 		}
 		memset((char *)ScreenCP, 0, (size_t)(Rows * Columns) * sizeof(int));
@@ -1789,10 +1803,7 @@ screenalloc(int clear)
 #ifdef NT
 # ifdef KANJI
 		for (i = 0; i < Rows; i++)
-		{
-			memset(&Nextscreen[i * Columns * 2], ' ', Columns);
-			memset(&Nextscreen[i * Columns * 2 + Columns], 0, Columns);
-		}
+			screenrow_blank(Nextscreen + i * SCRSTRIDE);
 # else
 		memset((char *)Nextscreen, ' ', (size_t)(Rows * Columns));
 # endif
@@ -1810,6 +1821,22 @@ screenclear(void)
 	screenclear2();
 }
 
+#ifdef KANJI
+/*
+ * Blank one row of the screen array: spaces, no colour, nothing behind them.
+ *
+ * The one place that knows a row is three planes long, so that the four places
+ * which blank a row -- the first allocation, screenclear2(), and the row that
+ * rotates out at each end of a scroll -- cannot disagree about how many.
+ */
+	static void
+screenrow_blank(char_u *p)
+{
+	memset((char *)p, ' ', (size_t)Columns);
+	memset((char *)p + Columns, 0, (size_t)Columns * 2);
+}
+#endif
+
 	static void
 screenclear2(void)
 {
@@ -1823,10 +1850,7 @@ screenclear2(void)
 	{
 		int			i;
 		for (i = 0; i < Rows; i++)
-		{
-			memset(&Nextscreen[i * Columns * 2], ' ', Columns);
-			memset(&Nextscreen[i * Columns * 2 + Columns], 0, Columns);
-		}
+			screenrow_blank(Nextscreen + i * SCRSTRIDE);
 		memset((char *)ScreenCP, 0, (size_t)(Rows * Columns) * sizeof(int));
 	}
 #else
@@ -2499,11 +2523,12 @@ screen_ins_lines(int off, int row, int nlines, int end)
 #endif
 		}
 		LinePointers[j + nlines] = temp;
-		memset((char *)temp, ' ', (size_t)Columns);
 #ifdef KANJI
+		screenrow_blank(temp);
 		CPPointers[j + nlines] = tempcp;
-		memset((char *)&temp[Columns], 0, (size_t)Columns);
 		memset((char *)tempcp, 0, (size_t)Columns * sizeof(int));
+#else
+		memset((char *)temp, ' ', (size_t)Columns);
 #endif
 	}
 	return OK;
@@ -2598,11 +2623,12 @@ screen_del_lines(int off, int row, int nlines, int end)
 #endif
 		}
 		LinePointers[j - nlines] = temp;
-		memset((char *)temp, ' ', (size_t)Columns);
 #ifdef KANJI
+		screenrow_blank(temp);
 		CPPointers[j - nlines] = tempcp;
-		memset((char *)&temp[Columns], 0, (size_t)Columns);
 		memset((char *)tempcp, 0, (size_t)Columns * sizeof(int));
+#else
+		memset((char *)temp, ' ', (size_t)Columns);
 #endif
 	}
 	return OK;
