@@ -207,6 +207,15 @@ case_ 'XML: declaration, tag, attribute' t.xml \
 '<?xml version="1.0"?>\n<!-- c -->\n<root id="1">\n  <item/>\n</root>\n' \
 '1:0-21 PreProc m/<?.*?>\n2:0-10 Comment p/<!--\n3:0-5 Statement n/<\\/\\=[^ >]\\+\n3:9-12 String m/".*"\n3:12-13 Statement n/\\/\\=>\n4:2-8 Statement n/<\\/\\=[^ >]\\+\n4:8-9 Statement n/\\/\\=>\n5:0-6 Statement n/<\\/\\=[^ >]\\+\n5:6-7 Statement n/\\/\\=>\n'
 
+# %VAR%, then the two forms of a parameter, then a parameter with modifiers.
+# The rule for the last of these used to be seventeen rules written after the
+# %VAR% one, so %VAR% -- which matches from any % to the next one -- took "%~f1
+# %" out of line 3 and left the rest plain, and %~dpnx2 was in none of the
+# seventeen anyway. All three lines are one Value per parameter now.
+case_ 'batch: a parameter and its modifiers' t.bat \
+'echo %PATH%\necho %1 %*\necho %~f1 %~dpnx2\necho %~$PATH:3\n' \
+'1:0-4 Keyword iw/echo\n1:5-11 Value m/%.*%\n2:0-4 Keyword iw/echo\n2:5-7 Value n/%[\\d\\*]\n2:8-10 Value n/%[\\d\\*]\n3:0-4 Keyword iw/echo\n3:5-9 Value n/%\\~[fdpnxsatz]*\\($PATH:\\)\\=\\d\n3:10-17 Value n/%\\~[fdpnxsatz]*\\($PATH:\\)\\=\\d\n4:0-4 Keyword iw/echo\n4:5-14 Value n/%\\~[fdpnxsatz]*\\($PATH:\\)\\=\\d\n'
+
 case_ 'batch: REM, a variable, a label' t.bat \
 'REM a note\n@echo off\nset OUT=%TEMP%\nif exist %1 goto done\n:done\n' \
 '1:0-10 Comment i/REM.*\n2:1-5 Keyword iw/echo\n3:0-3 Keyword iw/set\n3:8-14 Value m/%.*%\n4:0-2 Conditional iw/if\n4:9-11 Value n/%[\\d\\*]\n4:12-16 Statement iw/goto\n'
