@@ -84,12 +84,15 @@ repository and would drift within three releases.
 - `scripts/test-bsd-docker.sh` runs the three suites in the guest, as CI does
   on the same systems. It ran the encoding suite alone, which is how
   BUILDING-unix.md came to say a guest had passed tests it never saw.
-- The GUI key driver types one Escape before a case starts. The window appears
-  while the editor is still reading its rc and a key posted then is lost — not
-  delayed — so a case read as though its second keystroke were its first. With
-  no rc that window is narrow and a fixed sleep covered it nearly always, which
-  is the worst way to be wrong: one run in a hundred failed and nothing
-  explained it.
+- The GUI key driver waits for the editor's CPU time to stop moving, then types
+  one Escape, before a case starts. The window appears while the editor is
+  still reading its rc and a key posted then is lost — not delayed — so a case
+  read as though its second keystroke were its first. With no rc that window is
+  narrow and a fixed sleep covered it nearly always, which is the worst way to
+  be wrong: one run in a hundred failed and nothing explained it.
+  `WaitForInputIdle` does not help (it reports idle before the rc is read) and
+  `SendMessage` in place of `PostMessage` is worse (the editor stops taking
+  keys at all).
 
 ### Fixed
 

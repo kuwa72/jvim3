@@ -156,14 +156,24 @@ something has to be watched happening, and `scripts/windesk.h` says why the
 obvious ways — starting the window hidden, or giving it a new console — do
 not work.
 
-The GUI driver types one Escape before the case does anything. The window
-appears while the editor is still reading its rc, and a key posted then is
-lost — not delayed. With no rc that window is short and a fixed sleep covered
-it nearly always, which is the worst way to be wrong: one run in a hundred
-failed with nothing to blame. An rc that sources the rule files widened it
-enough to lose the key every time, which is how it was found.
-`WaitForInputIdle` does not help, because it reports the process idle as soon
-as it has been idle once, and that happens before the rc is read.
+The GUI driver waits for the editor to stop working, then types one Escape
+before the case does anything. The window appears while the editor is still
+reading its rc, and a key posted then is lost — not delayed, lost — so the case
+reads as though its second keystroke were its first. With no rc that window is
+short and a fixed sleep covered it nearly always, which is the worst way to be
+wrong: one run in a hundred failed with nothing to blame. An rc that sources
+the rule files widened it enough to lose the key every time, which is how it
+was found.
+
+Two obvious answers are not answers. `WaitForInputIdle` reports the process
+idle as soon as it has been idle once, and that happens before the rc is read.
+`SendMessage` in place of `PostMessage` — which would wait for the window
+procedure rather than guess — stops the editor taking keys at all: tried,
+measured, three GUI cases produced no output whatever. So the driver polls
+`GetProcessTimes` until the editor's CPU time has not moved for 200 ms, which
+is a real signal and needs no number chosen in advance, and the throwaway
+Escape covers whatever is left. Escape in normal mode does nothing and every
+case starts there, so it cannot affect what follows.
 
 Beyond that, testing on Windows by hand is the only Windows testing there is. A local build is now the same runtime as the
 release, so it counts; to test the exact executable the release page serves,
