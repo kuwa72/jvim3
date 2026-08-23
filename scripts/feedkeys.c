@@ -25,6 +25,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
+#include "windesk.h"
 
 static HANDLE hin;
 
@@ -126,6 +127,7 @@ static void dump_screen(HANDLE hout, const char *path)
 
 int main(int argc, char **argv)
 {
+	windesk_reexec();		/* out of sight; see windesk.h */
 	const char			*spec;
 	char				cmd[2048] = "";
 	static char			specbuf[4096];

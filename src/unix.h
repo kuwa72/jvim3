@@ -55,10 +55,17 @@
 
 #define BASENAMELEN		(MAXNAMLEN - 5)
 
+/*
+ * stricmp() is a Microsoft name. Nothing here declares it, and the test used
+ * to be "#ifdef stricmp", which only replaced it where it was already a macro
+ * -- so on glibc it was left as an undeclared function and the link failed the
+ * first time a file outside the Windows build called it. alloc.c carries
+ * vim_stricmp() for exactly this; use it always, so both sides agree.
+ */
 #ifdef stricmp
-#undef stricmp
-#define stricmp vim_stricmp
+# undef stricmp
 #endif
+#define stricmp vim_stricmp
 
 /*
  * prototypes for functions not in unix.c

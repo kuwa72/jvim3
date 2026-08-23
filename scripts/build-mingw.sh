@@ -174,7 +174,9 @@ if [ "$TARGET" = release ]; then
 		}
 		name=jvim3-$version-win$bits
 		mkdir -p "$rel/$name"
-		cp -p "$root/dist/$arch/vim.hlp" "$root/dist/$arch/_jvimrc.sample" "$rel/$name/"
+		cp -p "$root/dist/$arch/vim.hlp" "$root/dist/$arch/_jvimrc.sample" \
+			"$root/dist/$arch/jvimrc.sample" "$rel/$name/"
+		cp -pR "$root/dist/$arch/syntax" "$rel/$name/syntax"
 		# makefile.mingw calls its targets jvim32*.exe whatever the architecture
 		# is; the name in the package says which one it actually is.
 		cp -p "$root/dist/$arch/jvim32w.exe" "$rel/$name/jvim${bits}w.exe"
@@ -237,6 +239,13 @@ done
 # an unpacked package without a _vimrc.
 cp -p "$root/doc.j/vim.hlp" "$dist/vim.hlp"
 cp -p "$root/doc.j/_jvimrc" "$dist/_jvimrc.sample"
+# The short one that also works on a Unix; _jvimrc.sample is the long Windows
+# one. Copied to %HOME%\_jvimrc, which is read before _vimrc.
+cp -p "$root/jvimrc.sample" "$dist/jvimrc.sample"
+# The rules an rc reaches with "source $VIM/syntax/...", and $VIM with nothing
+# set is this directory, so they are where the sample expects them already.
+rm -rf "$dist/syntax"
+cp -pR "$root/syntax" "$dist/syntax"
 
 echo
 echo "built for $ARCH (${CROSS:-native}, $crt) -> $dist"

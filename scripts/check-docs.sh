@@ -50,20 +50,32 @@ done
 enc=$(COUNT_ONLY=1 ./scripts/test-encoding.sh 2>/dev/null | sed -n 's/^cases //p')
 edt=$(COUNT_ONLY=1 ./scripts/test-editing.sh  2>/dev/null | sed -n 's/^cases //p')
 win=$(COUNT_ONLY=1 ./scripts/test-winkeys.sh  2>/dev/null | sed -n 's/^cases //p')
-case ${enc:-x}${edt:-x} in
-*x*)	bad "cannot get the case counts from the test suites (enc='$enc' edt='$edt')"
-		enc=0; edt=0 ;;
+syn=$(COUNT_ONLY=1 ./scripts/test-syntax.sh   2>/dev/null | sed -n 's/^cases //p')
+case ${enc:-x}${edt:-x}${syn:-x} in
+*x*)	bad "cannot get the case counts from the test suites (enc='$enc' edt='$edt' syn='$syn')"
+		enc=0; edt=0; syn=0 ;;
 esac
-total=$((enc + edt))
+# What "build-unix.sh test" runs, which is what a document saying "the tests"
+# means. The Windows suite is not in it: it needs Windows.
+total=$((enc + edt + syn))
 
-echo "suites say: encoding $enc, editing $edt, total $total${win:+, winkeys $win}"
+echo "suites say: encoding $enc, editing $edt, syntax $syn, total $total${win:+, winkeys $win}"
 
 # Every "<n> cases" / "<n> tests" / "<n> ケース" / "<n> 個のテスト" in the prose
 # has to be one of those numbers, and where the line names a particular suite it
 # has to be that suite's number.
-allowed=" $enc $edt $total ${win:-} "
+allowed=" $enc $edt $syn $total ${win:-} "
+# The first released heading in the CHANGELOG. Anything at or below it is a
+# record of what that release shipped, and stays true by not being touched --
+# adding a test today does not change how many 1.0.0 had.
+chlog_history=$(sed -n '/^## [0-9]/{=;q;}' CHANGELOG.md 2>/dev/null)
+
 while IFS=: read -r file line text; do
 	[ -n "${file:-}" ] || continue
+	if [ "$file" = CHANGELOG.md ] && [ -n "${chlog_history:-}" ] &&
+	   [ "$line" -ge "$chlog_history" ]; then
+		continue
+	fi
 	n=$(printf '%s\n' "$text" |
 		sed -n 's/.*[^0-9]\([0-9][0-9]*\) *\(cases\|tests\|ケース\|個のテスト\).*/\1/p' |
 		head -1)
@@ -78,6 +90,9 @@ while IFS=: read -r file line text; do
 	*test-winkeys*)
 		[ -z "$win" ] || [ "$n" = "$win" ] ||
 			bad "$file:$line: says $n, should be $win (the Windows key suite)" ;;
+	*test-syntax*)
+		[ -z "$syn" ] || [ "$n" = "$syn" ] ||
+			bad "$file:$line: says $n, should be $syn (the syntax suite)" ;;
 	*)
 		case $allowed in
 		*" $n "*)	;;
@@ -85,6 +100,23 @@ while IFS=: read -r file line text; do
 		esac ;;
 	esac
 done < <(grep -nE '[0-9]+ *(cases|tests|ケース|個のテスト)' $docs 2>/dev/null)
+
+# The grep above reads one line at a time, so a count that a paragraph wrapped
+# between the number and the word is invisible to it. That is not theory: "All
+# 100\ntests on each" sat in BUILDING-unix.md through two suites growing. Say so
+# rather than widen the match, because the fix is to keep the pair on one line
+# where the check above can see it, not to have two ways of reading a count.
+while read -r msg; do
+	[ -n "$msg" ] && bad "$msg"
+done < <(for f in $docs; do
+	[ -f "$f" ] || continue
+	awk -v f="$f" '
+		NR > 1 && prev ~ /[^0-9][0-9]+[ \t]*$/ &&
+		$0 ~ /^(cases|tests|ケース|個のテスト)([^a-zA-Z]|$)/ {
+			printf "%s:%d: a count is split across the line end, where the check above cannot see it -- keep the number and the word together\n", f, NR - 1
+		}
+		{ prev = $0 }' "$f"
+done)
 
 # ------------------------------------------------------------ platform claims
 # The release job's "needs:" is the definition of what gates a release, so it is
@@ -193,8 +225,17 @@ elif [ -n "$want_version" ]; then
 fi
 
 # -------------------------------------------------------------- relative links
+# The first released heading in the CHANGELOG. Anything at or below it is a
+# record of what that release shipped, and stays true by not being touched --
+# adding a test today does not change how many 1.0.0 had.
+chlog_history=$(sed -n '/^## [0-9]/{=;q;}' CHANGELOG.md 2>/dev/null)
+
 while IFS=: read -r file line text; do
 	[ -n "${file:-}" ] || continue
+	if [ "$file" = CHANGELOG.md ] && [ -n "${chlog_history:-}" ] &&
+	   [ "$line" -ge "$chlog_history" ]; then
+		continue
+	fi
 	printf '%s\n' "$text" | grep -oE '\]\([^)#][^)]*\)' | tr -d '])(' |
 	while read -r target; do
 		case $target in

@@ -1,0 +1,8 @@
+syntax Comment			n/#.*$
+syntax Statement		iw/FROM/RUN/CMD/LABEL/MAINTAINER/EXPOSE/ENV/ADD/COPY
+syntax Statement		iw/ENTRYPOINT/VOLUME/USER/WORKDIR/ARG/ONBUILD
+syntax Statement		iw/STOPSIGNAL/HEALTHCHECK/SHELL
+syntax Operator		iw/AS
+syntax String			m/\".*[^\\]\"
+syntax String			m/'.*'
+syntax Identifier		n/\${\=\i\+

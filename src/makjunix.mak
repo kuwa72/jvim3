@@ -177,7 +177,9 @@ DEFS = -DDIGRAPHS -DTERMCAP -DSOME_BUILTIN_TCAPS -DNO_FREE_NULL -DVIM_ISSPACE \
 		-DWEBB_COMPLETE -DWEBB_KEYWORD_COMPL \
 		-DVIM_HLP=\"$(HELPLOC)/jvim3.hlp\" \
 		-DDEFVIMRC_FILE=\"$(PREFIX)/etc/jvim3rc\" \
-		-DKANJI -DUCODE -DTRACK -DCRMARK -DFEXRC -DUSE_GREP -DUSE_TAGEX -DUSE_OPT $(FEPOPT)
+		-DVIMDIR=\"$(HELPLOC)/jvim3\" \
+		-DKANJI -DUCODE -DTRACK -DCRMARK -DFEXRC -DSYNTAX \
+		-DUSE_GREP -DUSE_TAGEX -DUSE_OPT $(FEPOPT)
 
 #
 # PART 3: hardware dependend
@@ -440,12 +442,18 @@ OBJ =	alloc.o unix.o buffer.o charset.o cmdcmds.o cmdline.o \
 	linefunc.o main.o mark.o memfile.o memline.o message.o misccmds.o \
 	normal.o ops.o param.o quickfix.o regexp.o \
 	regsub.o screen.o search.o \
-	tag.o term.o undo.o window.o $(TERMLIB) kanji.o track.o utf8.o \
+	syntax.o tag.o term.o undo.o window.o $(TERMLIB) kanji.o track.o utf8.o \
 	u2s.o s2u.o $(FEPOBJS)
 
 GOBJ = grep.o alloc.o charset.o kanji.o regexp.o regsub.o u2s.o s2u.o utf8.o
 
 all: $(TARGET) grep
+
+# Every object depends on every header. Without this a header edit -- or a
+# changed -D, which usually comes with one -- left objects behind that were
+# compiled against the old one, and the link failed somewhere unrelated or,
+# worse, succeeded with half the tree disagreeing about a definition.
+$(OBJ): $(INCL)
 
 $(TARGET): $(OBJ) version.c
 	$(CC) $(CFLAGS) version.c
@@ -461,20 +469,35 @@ debug: $(OBJ) version.c
 ctags:
 	ctags *.c *.h
 
+# "mkdir -p": a PREFIX whose parents do not exist yet is the ordinary case for
+# anything but /usr/local -- "make install PREFIX=$HOME/.local" stopped at the
+# man directory, because plain mkdir will not make man1 without man.
 install: $(TARGET)
-	-mkdir $(BINLOC)
+	-mkdir -p $(BINLOC)
 	cp $(TARGET) $(BINLOC)
 	chmod $(BINMOD) $(BINLOC)/$(TARGET)
 	$(STRIP) $(BINLOC)/$(TARGET)
-	-mkdir $(MANLOC)
+	-mkdir -p $(MANLOC)
 	cp $(MANFILE) $(MANLOC)/jvim3.1
 	chmod $(MANMOD) $(MANLOC)/jvim3.1
-	-mkdir $(HELPLOC)
+	-mkdir -p $(HELPLOC)
 	cp $(HELPFILE) $(HELPLOC)/jvim3.hlp
 	chmod $(HELPMOD) $(HELPLOC)/jvim3.hlp
+# The syntax rules, where $VIM points: an rc reaches them by that name, and the
+# build compiled the same path in as the default for $VIM.
+	-mkdir -p $(HELPLOC)/jvim3/syntax
+	cp ../syntax/* $(HELPLOC)/jvim3/syntax/
+	chmod $(HELPMOD) $(HELPLOC)/jvim3/syntax/*
+# An rc to start from, for copying to ~/.jvimrc.
+	cp ../jvimrc.sample $(HELPLOC)/jvim3/jvimrc.sample
+	chmod $(HELPMOD) $(HELPLOC)/jvim3/jvimrc.sample
 
+# Not cmdtab.h: it is generated, but it is also committed, and makefile.mingw
+# has no rule to make one -- so a "clean" here left the Windows cross build
+# unable to compile cmdline.c until somebody thought to check out a file they
+# had not edited. The rule below rebuilds it whenever cmdtab.tab is newer.
 clean:
-	-rm -f $(OBJ) mkcmdtab.o version.o core $(TARGET) mkcmdtab cmdtab.h
+	-rm -f $(OBJ) mkcmdtab.o version.o core $(TARGET) mkcmdtab
 	-rm -f *.bak
 	-rm -f $(GOBJ)
 #	-rm -f jptab.h jptab

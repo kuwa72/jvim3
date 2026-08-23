@@ -1,0 +1,12 @@
+syntax	link			Value				gray
+syntax	Value			w/SQLCODE
+syntax	Label			n/\s*GO\s\+TO\s\+.*;
+syntax	Tag				n/\s*EXEC\s\+SQL\s\+BEGIN\s\+DECLARE\s\+SECTION\s*;
+syntax	Tag				n/\s*EXEC\s\+SQL\s\+END\s\+DECLARE\s\+SECTION\s*;
+syntax SpecialChar		n/\sSQL\s\+TYPE\s\+IS\s\+BLOB(.*)
+syntax Tag				w/EXEC\s\+SQL
+syntax	Keyword			w/WHENEVER/SQLERROR/NOT\s\+FOUND/CONTINUE
+syntax	Keyword			w/FROM/CURSOR
+syntax	Keyword			w/CONNECT/OPEN/FETCH/CLOSE/DISCONNECT/COMMIT/ROLLBACK
+syntax	Keyword			w/USER/USING/FOR/INTO
+syntax	Keyword			w/PREPARE/DECLARE/EXECUTE

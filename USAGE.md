@@ -62,7 +62,7 @@ Environment:
 
 | | |
 | --- | --- |
-| `VIM` | Where the help file and the system `vimrc` are looked for. On Windows, if it is unset the editor sets it to the directory holding the exe. |
+| `VIM` | Where the help file, the system `vimrc` and the syntax rules are looked for. Unset, the editor fills it in: the directory holding the exe on Windows, `$PREFIX/lib/jvim3` on a Unix. |
 | `HOME` | Where your `.vimrc` / `_vimrc` is. On Windows, if unset, `%HOMEDRIVE%%HOMEPATH%`, or the exe's directory. |
 | `VIMINIT`, `EXINIT` | Ex commands to run at startup, instead of an rc file. |
 | `TERM` | Unix: which terminal entry to use. |
@@ -93,12 +93,16 @@ nothing looks for. Rename it, or set `helpfile` at it.
 2. then the **first** of: `%VIMINIT%`, `%HOME%\_vimrc`, `%EXINIT%`, `%HOME%\_exrc`
 3. and, only if `exrc` is set, `_vimrc` then `_exrc` in the current directory
 
+Wherever `_vimrc` is looked for, **`_jvimrc` is tried first** — and `.vimrc`
+likewise gives way to `.jvimrc`. Nothing but JVim reads the "j" name, so that is
+where to put settings an ordinary vim on the same machine would not understand:
+`set fexrc`, the syntax rules, anything else from the list [below](#what-jvim-adds).
+
 `%VIM%\vimrc` next to the exe is the simplest, and makes the unpacked directory
-self-contained. `_jvimrc.sample` in the package is Tsuchida's own from 2002 and
-is worth reading — the two settings that no longer apply, `decode` and
-`keywordprg=vshelp.exe`, are commented out in it, and its `tags` lines point at
-a Visual C++ 6 that is not on your machine. [Below](#a-_vimrc-to-start-from) is
-a shorter current one.
+self-contained. Two samples come in the package. `jvimrc.sample` is short and
+works on a Unix build too — copy it to `%HOME%\_jvimrc` and you are done.
+`_jvimrc.sample` is Tsuchida's own from 2002, longer and worth reading, though
+its `tags` lines point at a Visual C++ 6 that is not on your machine.
 
 **3. Set the font.** `Global > Font` in the menu. Only fixed pitch fonts are
 offered, because the editor draws on a character grid — a proportional font
@@ -138,8 +142,10 @@ actually in.
 
 ## A `_vimrc` to start from
 
-Cut this down rather than up. Everything here exists in this build; the
-`syntax` lines are the Win32 GUI only.
+This is `jvimrc.sample`, which comes in the Windows package and which `make
+install` puts in `$VIM` on a Unix. Copy it to `~/.jvimrc`, or `%HOME%\_jvimrc`
+— the "j" name so an ordinary vim never reads it. Cut it down rather than up;
+everything here exists in both builds.
 
 ```vim
 " ---- editing
@@ -157,19 +163,25 @@ set showmatch
 set ruler
 set laststatus=1
 set nobackup            " or: set backup / set backupdir=>$TMP
-set directory=>$TMP     " always keep the swap file here; on Unix, >/tmp
+" set directory=>$TMP  " swap files all in one place; >/tmp on a Unix,
+                        " where $TMP is usually not set
 
 " ---- Japanese
 set nojkanaconv         " leave halfwidth kana alone (the default now)
-set fepctrl             " turn the IME off when leaving insert mode
-set fepkey=\\           " CTRL-\ toggles the IME
-set jinsertmode=a       " insert mode starts in ASCII
+" The IME settings are the Windows build only: uncomment them there.
+"set    fepctrl         " turn the IME off when leaving insert mode
+"set    fepkey=\\       " CTRL-\ toggles the IME
+"set    jinsertmode=a   " insert mode starts in ASCII
 " set jmask=TTTT        " only if the locale is not telling the truth
 
-" ---- Windows GUI
+" ---- colour, on the GUI and on a terminal alike
+set fexrc               " read the rules for the type of file being opened
 set syntax
 set syntype=cfp
-set crmark              " show line ends
+source $VIM/syntax/filetype.jvsyn
+
+" a marker at the end of every line, in crchar
+"set    crmark
 ```
 
 `fexrc` is worth knowing about if you work in several languages: with it set,
@@ -303,9 +315,63 @@ Two known limits, both in the drawing:
 you wanted. `trackset` (`trs`) picks the character set used for ruled lines:
 `as` ASCII, `jp` the Japanese box drawing characters.
 
-Syntax colouring is the Win32 GUI only, and is its own small language — colours,
-`syntax link`, regexp rules per file type. `doc.j/readme.doc` §6.26 documents it
-in full, and `doc.j/_jvimrc` is a complete worked example for C.
+Syntax colouring is its own small language — colours, `syntax link`, regexp
+rules per file type. `doc.j/readme.doc` §6.26 documents it in full, and
+`syntax/README` says how this tree lays the rules out.
+
+It used to be the Win32 GUI only. It now works on a terminal as well: the same
+colour goes out as an SGR escape. Whether it can be asked for exactly depends on
+the terminal, and `$COLORTERM` decides — `truecolor` or `24bit` gets the colour
+itself, anything else the nearest of the sixteen a terminal has always had.
+`set nosyntax` if the terminal you are in cannot colour at all.
+
+One thing there is out of date. A multi-line region — the `p` search mode, which
+is how a C comment is coloured — used to be found by searching `synlines` lines
+in each direction from the line being drawn, so a comment or a string longer
+than that lost its colour, and one that was never closed had none at all. This
+tree remembers instead, for each line, which region was open when the line above
+ended: length stops mattering, an unterminated region colours the rest of the
+file, and the lines below the one you are typing on recolour as soon as you type
+the token that opens or closes a region. §6.28's `synlines` now only reaches the
+tag search (`t` mode).
+
+Which file types have rules is a question about the rule files, not about the
+editor. What came with JVim in 2002 was C/C++, Java, VBScript, HTML, `.bat`,
+`.ini`, `.def`, `.rc` and `_vimrc` itself. This tree adds Python,
+JavaScript/TypeScript, Go, Rust, Ruby, shell, Markdown, JSON, YAML, TOML, SQL,
+CSS/SCSS, C#, PHP, Lua, XML, diff, Makefile and Dockerfile, and lets the C rules
+cover `.cc`, `.cxx`, `.hpp`, `.hxx`, `.hh` and `.inl` as well.
+
+They live one file per type in `syntax/`, which the package ships beside the exe
+and `make install` puts in `$VIM`. One line in an rc reaches all of them:
+
+```vim
+set fexrc
+set syntax
+source $VIM/syntax/filetype.jvsyn
+```
+
+`filetype.jvsyn` is the dispatcher: it reads `common.jvsyn` for the colours and
+group names, then the one file that goes with what you are opening. Adding a
+type is `syntax/zig.jvsyn` plus three lines in `filetype.jvsyn`; `syntax/README`
+has the details, including the things about the rule language that will
+otherwise waste your afternoon.
+
+A rule that colours the wrong thing has no other way of telling you, so ask:
+
+```vim
+:syntax dump /tmp/out
+```
+
+writes one line per coloured run — `3:4-6 Conditional w/if` is line 3, bytes 4
+to 6, the group, and the rule. It comes from the same code the screen draws
+from, and needs no window: `jvim3 -s cmds file.py` with `:syntax dump` in the
+script is the whole loop. `scripts/test-syntax.sh` is that loop as a suite.
+
+`$VIM` is where all this is looked for. On Windows the editor sets it to the
+directory the exe is in, so an unpacked package needs nothing. On a Unix it is
+`/usr/local/lib/jvim3` unless `PREFIX` said otherwise; running out of a build
+tree, set it by hand.
 
 ## What you get beyond vi
 

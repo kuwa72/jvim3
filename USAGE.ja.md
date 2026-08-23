@@ -62,7 +62,7 @@ jvim3 [options] -e [errorfile]
 
 | | |
 | --- | --- |
-| `VIM` | ヘルプファイルとシステム全体の `vimrc` を探す場所。Windows では未設定なら実行ファイルのあるディレクトリが使われます。 |
+| `VIM` | ヘルプファイル、システム全体の `vimrc`、シンタックスルールを探す場所。未設定ならエディタが補います (Windows は実行ファイルのあるディレクトリ、Unix は `$PREFIX/lib/jvim3`)。 |
 | `HOME` | `.vimrc` / `_vimrc` を置く場所。Windows で未設定なら `%HOMEDRIVE%%HOMEPATH%`、それも無ければ実行ファイルのディレクトリ。 |
 | `VIMINIT`, `EXINIT` | rc ファイルの代わりに起動時に実行する ex コマンド。 |
 | `TERM` | Unix: 使う端末定義。 |
@@ -93,11 +93,16 @@ set helpfile=$VIM\vim-en.hlp
 2. 続いて、次の**最初に見つかったもの 1 つだけ**: `%VIMINIT%`、`%HOME%\_vimrc`、`%EXINIT%`、`%HOME%\_exrc`
 3. `exrc` オプションが設定されている場合にかぎり、カレントディレクトリの `_vimrc`、次に `_exrc`
 
+`_vimrc` を探す場所では、**先に `_jvimrc` が試されます**（`.vimrc` に対する
+`.jvimrc` も同じ）。この "j" 付きの名前を読むのは JVim だけなので、同じマシンの
+普通の vim が解釈できない設定 — `set fexrc`、シンタックスルール、
+[後述](#jvim-が足したもの)のもの — はそちらに置くのが安全です。
+
 exe の隣に置く `%VIM%\vimrc` が一番簡単で、展開したディレクトリだけで完結します。
-パッケージの `_jvimrc.sample` は土田さん自身の 2002 年当時の設定で、読む価値があり
-ます。もう通らない 2 つの設定 (`decode` と `keywordprg=vshelp.exe`) はコメントアウト
-してありますが、`tags` の行は手元にない Visual C++ 6 を指しています。もっと短い今の
-設定例は[下](#出発点になる-_vimrc)にあります。
+パッケージにはサンプルが 2 つ入っています。`jvimrc.sample` は短く、Unix ビルドでも
+そのまま使えます。`%HOME%\_jvimrc` にコピーすれば終わりです。`_jvimrc.sample` は
+土田さん自身の 2002 年当時の設定で、長いぶん読む価値がありますが、`tags` の行は
+手元にない Visual C++ 6 を指しています。
 
 **3. フォントを設定する。** メニューの `Global > Font` から。等幅フォントしか出て
 きませんが、これは仕様です。文字グリッド上に描画しているので、プロポーショナル
@@ -136,8 +141,10 @@ LANG=C             # jmask=EEET — 表示は EUC、新規ファイルは UTF-8
 
 ## 出発点になる `_vimrc`
 
-足すより削って使ってください。ここにあるものはすべてこの版に存在します。`syntax`
-の行は Win32 GUI 専用です。
+これは `jvimrc.sample` です。Windows のパッケージに入っていますし、Unix では
+`make install` が `$VIM` に置きます。`~/.jvimrc`、Windows なら `%HOME%\_jvimrc`
+にコピーしてください（"j" の付く名前なので、普通の vim には読まれません）。
+足すより削って使ってください。ここにあるものは両方のビルドに存在します。
 
 ```vim
 " ---- 編集
@@ -155,19 +162,25 @@ set showmatch
 set ruler
 set laststatus=1
 set nobackup            " または set backup / set backupdir=>$TMP
-set directory=>$TMP     " スワップは必ずここへ (Unix なら >/tmp)
+" set directory=>$TMP  " スワップを 1 か所に。Unix では $TMP が未設定な
+                        " ことが多いので >/tmp
 
 " ---- 日本語
 set nojkanaconv         " 半角カナをそのままにする (現在の既定値)
-set fepctrl             " 挿入モードを抜けるとき IME を切る
-set fepkey=\\           " CTRL-\ で IME をトグル
-set jinsertmode=a       " 挿入モードは ASCII で始まる
+" IME 関連は Windows ビルド専用です。Windows ではコメントを外してください。
+"set    fepctrl         " 挿入モードを抜けるとき IME を切る
+"set    fepkey=\\       " CTRL-\ で IME をトグル
+"set    jinsertmode=a   " 挿入モードは ASCII で始まる
 " set jmask=TTTT        " ロケールが当てにならないときだけ
 
-" ---- Windows GUI
+" ---- 色付け (GUI でも端末でも)
+set fexrc               " 開いたファイルの種別に応じたルールを読む
 set syntax
 set syntype=cfp
-set crmark              " 行末を表示する
+source $VIM/syntax/filetype.jvsyn
+
+" 行末に crchar の文字で印を付ける
+"set    crmark
 ```
 
 複数の言語を扱うなら `fexrc` は覚えておくと便利です。これを設定すると `main.c` を
@@ -297,9 +310,60 @@ Unix で IME を制御するには、入力メソッドのプロトコルを話�
 変換されてしまうのが不便な場面向けです。`trackset` (`trs`) は罫線に使う文字種で、
 `as` が ASCII、`jp` が日本語の罫線です。
 
-シンタックスカラーは Win32 GUI 専用で、それ自体が小さな設定言語 (色の定義、
-`syntax link`、ファイル種別ごとの正規表現ルール) になっています。`doc.j/readme.doc`
-§6.26 に全仕様があり、`doc.j/_jvimrc` が C 用の完全な実例です。
+シンタックスカラーはそれ自体が小さな設定言語 (色の定義、`syntax link`、ファイル
+種別ごとの正規表現ルール) になっています。`doc.j/readme.doc` §6.26 に全仕様があり、
+このツリーでのルールの置き方は `syntax/README` にあります。
+
+以前は Win32 GUI 専用でしたが、端末でも動くようになりました。同じ色を SGR
+エスケープとして出します。その色をそのまま出せるかは端末次第で、判断には
+`$COLORTERM` を使います。`truecolor` か `24bit` ならその色そのもの、それ以外なら
+昔から端末にある 16 色のうち最も近いものになります。色を出せない端末では
+`set nosyntax` してください。
+
+1 点だけ、そこの記述は古くなっています。行をまたぐ領域 (C のコメントを色付けする
+`p` 検索モード) は、以前は描画する行から前後 `synlines` 行を探して見つけていたため、
+それより長いコメントや文字列は色が落ち、閉じていないものは最初から無色でした。この
+ツリーでは代わりに、各行について「上の行が終わった時点でどの領域が開いていたか」を
+覚えます。長さは関係なくなり、閉じていない領域はファイルの末尾まで色が付き、領域を
+開く・閉じる記号を打った時点で下の行の色がすぐ変わります。§6.28 の `synlines` は
+タグ検索 (`t` モード) にのみ効くようになりました。
+
+どのファイル種別に色が付くかは、エディタ本体ではなくルールファイルの問題です。
+2002 年の JVim にあったのは C/C++、Java、VBScript、HTML、`.bat`、`.ini`、`.def`、
+`.rc`、そして `_vimrc` 自身でした。このツリーでは Python、JavaScript/TypeScript、
+Go、Rust、Ruby、シェル、Markdown、JSON、YAML、TOML、SQL、CSS/SCSS、C#、PHP、Lua、
+XML、diff、Makefile、Dockerfile を追加し、C のルールが `.cc` `.cxx` `.hpp` `.hxx`
+`.hh` `.inl` にも効くようにしました。
+
+ルールは種別ごとに 1 ファイルで `syntax/` にあります。配布パッケージでは exe の隣、
+`make install` では `$VIM` に入ります。rc からは 1 行で全部に届きます。
+
+```vim
+set fexrc
+set syntax
+source $VIM/syntax/filetype.jvsyn
+```
+
+`filetype.jvsyn` がディスパッチャで、色とグループ名の `common.jvsyn` を読んでから、
+開いたファイルに対応する 1 ファイルを読みます。種別を足すのは `syntax/zig.jvsyn` と
+`filetype.jvsyn` の 3 行です。ルール言語で先に知っておかないと午後を無駄にする点も
+含め、詳細は `syntax/README` にあります。
+
+ルールが違うものに色を付けても、それ以外に知らせる手段はありません。訊いてください。
+
+```vim
+:syntax dump /tmp/out
+```
+
+色の付いた範囲ごとに 1 行出ます。`3:4-6 Conditional w/if` は 3 行目のバイト 4〜6、
+グループ名、該当ルールです。画面が描画するのと同じコードを通るので、実際に描かれる
+ものと一致します。ウィンドウは不要で、`jvim3 -s cmds file.py` のスクリプトに
+`:syntax dump` を入れるだけで一巡します。`scripts/test-syntax.sh` はこれをスイートに
+したものです。
+
+`$VIM` がこれらを探す場所です。Windows ではエディタが exe のあるディレクトリを設定
+するので、展開したパッケージなら何もいりません。Unix では `PREFIX` を変えていなければ
+`/usr/local/lib/jvim3` です。ビルドツリーから直接動かす場合は自分で設定してください。
 
 ## vi に対して増えているもの
 

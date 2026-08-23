@@ -21,8 +21,8 @@ JVim 3.0-j2.1b (2002 Dec 24) 由来
 ```
 対応環境       Windows 10/11 (Win32 GUI + コンソール)、Linux、
                FreeBSD、NetBSD、OpenBSD、DragonFly
-テスト         110 ケース。上記すべてで CI が実行。Windows のキー入力は
-               scripts/test-winkeys.sh の 14 ケース (WSL から実機で実行)
+テスト         148 ケース。上記すべてで CI が実行。Windows のキー入力は
+               scripts/test-winkeys.sh の 15 ケース (WSL から実機で実行)
 ライセンス     パブリックドメイン — LICENSE を参照。付随する寄付のお願いは
                uganda.txt にあります
 ```
@@ -58,15 +58,17 @@ JVim 3.0-j2.1b (2002 Dec 24) 由来
 `-nw` を付けるとウィンドウを開かずコンソールで動きます。
 
 パッケージには `vim.hlp` (JVim の日本語ヘルプ。そのままの名前で `:help` が見つけ
-ます) と、自分の設定を書く前に読むための `_jvimrc.sample` も入っています。初期
-設定は [USAGE.ja.md](USAGE.ja.md#windows-での最初の設定) にあります。
+ます)、シンタックスルールの `syntax/`、そして出発点になる rc が 2 つ入っています。
+`jvimrc.sample` は短く Unix ビルドでもそのまま使えるもの、`_jvimrc.sample` は
+従来からある Windows 用のものです。初期設定は
+[USAGE.ja.md](USAGE.ja.md#windows-での最初の設定) にあります。
 
 ### Linux、FreeBSD、NetBSD、OpenBSD、DragonFly
 
 ```sh
 git clone https://github.com/kuwa72/jvim3
 cd jvim3
-./scripts/build-unix.sh test        # src/jvim3 をビルドして 110 個のテストを実行
+./scripts/build-unix.sh test        # src/jvim3 をビルドして 148 個のテストを実行
 ```
 
 必要なのは C コンパイラと、組み込みの端末定義ではなく本物の端末データベースを
@@ -173,10 +175,11 @@ Vim 3.0 のマニュアル (`doc/`、1994 年、英語):
 ## テスト
 
 ```sh
-./scripts/build-unix.sh test           # ビルドして両方のスイートを実行
-./scripts/test-encoding.sh src/jvim3   # 46 ケース: 文字コード、マルチバイト編集
+./scripts/build-unix.sh test           # ビルドして 3 つのスイートを実行
+./scripts/test-encoding.sh src/jvim3   # 48 ケース: 文字コード、マルチバイト編集
 ./scripts/test-editing.sh  src/jvim3   # 64 ケース: 移動、オペレータ、レジスタ、
                                        #   マーク、undo、ex の範囲指定、:g、:s、:!
+./scripts/test-syntax.sh   src/jvim3   # 36 ケース: syntax/ が実際に何を色付けするか
 ```
 
 どちらも本物の pty (`scripts/ptyrun.c`) 越しにエディタを動かしてバイト列を比較
@@ -184,7 +187,7 @@ Vim 3.0 のマニュアル (`doc/`、1994 年、英語):
 キー入力待ちで止まったケースはスイートを固めずに失敗します。
 
 push と pull request のたびに、Linux・FreeBSD・NetBSD・OpenBSD・DragonFly の 5
-環境で 110 ケースすべてを実行し、Windows 版を両アーキテクチャでクロスビルド
+環境で 148 ケースすべてを実行し、Windows 版を両アーキテクチャでクロスビルド
 します。`v*` のタグはそれに加えて Windows の zip を公開するので、壊れたビルドが
 リリースになることはありません
 ([.github/workflows/build.yml](.github/workflows/build.yml))。

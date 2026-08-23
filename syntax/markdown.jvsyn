@@ -1,0 +1,14 @@
+syntax link			MdHead		bold	navy
+syntax MdHead			n/^#\+\s.*$
+syntax MdHead			n/^=\+$
+syntax MdHead			n/^---*$
+syntax Comment			p/^```/^```
+syntax String			m/`.*`
+syntax Type			m/\*\*.*\*\*
+syntax Type			m/__.*__
+syntax Constant		m/\[.*\](.*)
+syntax Special			n/^\s*>.*$
+syntax Statement		n/^\s*[-*+]\s
+syntax Statement		n/^\s*\d\+\.\s
+syntax Identifier		n/^\s*\|.*\|\s*$
+syntax Todo			w/TODO/FIXME/XXX/NOTE

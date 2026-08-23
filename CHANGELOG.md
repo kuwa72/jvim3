@@ -10,6 +10,243 @@ repository and would drift within three releases.
 
 ## Unreleased
 
+### Added
+
+- `:syntax dump <file>` writes what the rules did to the buffer, as text: one
+  line per coloured run, with the group and the rule that made it. A rule that
+  matches the wrong thing had no other way of saying so — the screen came out a
+  colour short and finding the rule meant reading pixels. `scripts/test-syntax.sh`
+  is that turned into a suite, so a rule that stops matching fails a test.
+- Two encoding cases for a file name of three-byte characters — opening it by
+  name and finding it by a wildcard. The Windows suite has had them since
+  1.0.0; the part of them that is not about Windows was untested anywhere a CI
+  runs, because the Windows suite needs Windows and never does.
+- Syntax colouring works on a terminal, not only in the Win32 GUI. The colour a
+  rule asks for goes out as an SGR escape — the exact one where `$COLORTERM`
+  says the terminal can take it, the nearest of the sixteen otherwise. The
+  palette is now in one place, so a terminal and the GUI cannot disagree about
+  what "navy" is.
+- The rules live in `syntax/`, one file per file type, instead of 1200 lines
+  inside `_jvimrc`. An rc reaches all of them with one line, `source
+  $VIM/syntax/filetype.jvsyn`, and `syntax/README` says how to add a type.
+- `jvimrc.sample`, a short rc that works on both builds, in the Windows package
+  and installed into `$VIM` on a Unix. Copy it to `~/.jvimrc` or
+  `%HOME%\_jvimrc` — the "j" name, which JVim reads in preference to `.vimrc`
+  and nothing else reads at all, so an ordinary vim on the same machine is not
+  handed `set fexrc` and a syntax rule set. There was no rc at all that a Unix
+  build could use: `doc.j/_jvimrc` stops at `set fepkeys`, which needs FEPCTRL.
+- `$VIM` has a default on a Unix — `$PREFIX/lib/jvim3`, where `make install`
+  puts the rule files. Windows already set it to the directory of the exe.
+- Syntax colouring for Python, JavaScript/TypeScript, Go, Rust, Ruby, shell,
+  Markdown, JSON, YAML, TOML, SQL, CSS/SCSS, C#, PHP, Lua, XML, diff, Makefile
+  and Dockerfile, in `doc.j/_jvimrc` — which ships as `_jvimrc.sample`. Nothing
+  newer than 1998 had rules before. The C rules now also cover `.cc`, `.cxx`,
+  `.hpp`, `.hxx`, `.hh` and `.inl`.
+- Every file in `syntax/` has a case in `scripts/test-syntax.sh`. It covered
+  eighteen of them; the other twelve — HTML, XML, C#, batch, VBScript, plain
+  text, Java, INI, `.def`, `.ec`, `.rc` and an rc itself — were shipped and
+  unchecked.
+- CSS colours the property name, INI the key, and Java its numbers and
+  character constants. Each was the one obvious thing its rule file did not do.
+- `scripts/build-unix.sh strict` builds with the `-Werror=` set CI refuses to
+  build without, so it can be run before the push rather than after it. Several
+  of those are warnings under gcc and stop clang, which is what FreeBSD uses.
+- The Windows key suite asks whether the rules colour anything at all in the
+  GUI build. Colouring is GUI-only on Windows (`SYN_ON()` is `'syntax'` *and*
+  `GuiWin`) and the suite that reads colouring back needs a pty, so nothing
+  checked that the engine runs there.
+
+### Changed
+
+- The Windows key suite runs out of sight. It drives real editors with real
+  windows, fifteen of them, and each used to appear on the screen and take the
+  keyboard for a couple of seconds; the machine was unusable for the four
+  minutes it takes. The drivers now put themselves on a desktop of their own
+  first and give the console build a console with no window, neither of which
+  `PostMessage` or `WriteConsoleInput` care about. A desktop alone was not
+  enough: `CREATE_NEW_CONSOLE` is handed to whatever is set as the default
+  terminal, and Windows Terminal opens it where the person is looking whatever
+  desktop asked. `WINDESK_OFF=1` puts it back in sight.
+- An unknown mode letter in a syntax rule is refused, with a message naming it,
+  instead of being ignored. The 2002 manual says the rest are ignored and they
+  were, so a typo in a mode went in as a rule and matched the wrong thing in
+  silence. `n`, which is what every rule wanting no mode is written with, is
+  now a mode of its own rather than one of the ignored letters.
+- Syntax colouring remembers, per line, which multi-line region was open when
+  the line above ended, instead of searching `synlines` lines in each direction
+  every time a line is drawn. A comment or a string now keeps its colour however
+  long it is, an unterminated one colours the rest of the file rather than
+  nothing at all, and typing the token that opens or closes one recolours the
+  lines below it straight away. `synlines` now only reaches the tag search.
+- `:syntax dump` names a tag rule (`t`) by the pattern it matches rather than
+  the tag it looks inside. A dozen rules in `html.jvsyn` reported themselves as
+  `t/<`, which told them apart from nothing.
+- `scripts/test-bsd-docker.sh` runs the three suites in the guest, as CI does
+  on the same systems. It ran the encoding suite alone, which is how
+  BUILDING-unix.md came to say a guest had passed tests it never saw.
+- The GUI key driver waits for the editor's CPU time to stop moving, then types
+  one Escape, before a case starts. The window appears while the editor is
+  still reading its rc and a key posted then is lost — not delayed — so a case
+  read as though its second keystroke were its first. With no rc that window is
+  narrow and a fixed sleep covered it nearly always, which is the worst way to
+  be wrong: one run in a hundred failed and nothing explained it.
+  `WaitForInputIdle` does not help (it reports idle before the rc is read) and
+  `SendMessage` in place of `PostMessage` is worse (the editor stops taking
+  keys at all).
+
+### Fixed
+
+- Syntax rules match Japanese again. Every walk over the text in `syntax.c`
+  still stepped two bytes for a multi-byte character, which was Shift-JIS; the
+  buffer has held UTF-8 since 1.0.0, where a kanji or a kana is three. A rule
+  with a Japanese word in it never found it.
+- A word rule (`w/`) that happened to be the first rule in the list kept the
+  hash of zero it was allocated with, looked itself up in the wrong bucket, and
+  so never matched anything.
+- A region whose opening and closing tokens are the same string — Python's
+  `"""`, a template literal, a fenced code block — used to close on the very
+  characters that opened it when both were on one line, colouring the token and
+  leaving the text after it plain. The closing token is now looked for past the
+  opening one.
+- The test suites no longer read the rc file of whoever runs them. `HOME` points
+  at their own temporary directory, so a `_vimrc` — the shipped sample sets
+  `textmode`, mappings and a rule set — cannot decide what the editor under test
+  does. Installing the sample used to turn 14 passes into 3.
+- A `:source` inside an rc no longer stops the per-file-type blocks from
+  matching. The suffix and name being matched were pointers into `NameBuff`,
+  which the nested `:source` reuses for the name it is expanding, so after the
+  first one every `"begin suffixes=` was compared against the wrong string.
+- `purple` is `#800080` rather than a second `maroon`.
+- `stricmp` links outside the Windows build. It was replaced by `vim_stricmp`
+  only where it already happened to be a macro, which is nowhere on glibc.
+- The editor no longer aborts under AddressSanitizer while reading the rule
+  files. Two `strcpy()` calls in `DoOneCmd()` unescape `\"` and `\%` by copying
+  a string over itself one byte to the left; the ranges overlap, which is
+  undefined. Nothing reached them often enough to notice until every startup
+  sourced files full of `\"`. `STRMOVE()` now, as in the seven found before.
+- The Windows build works again on a compiler that means it. `defcolor`, the
+  entry `is_syntax()` uses to record that nothing matches the rest of a line, is
+  initialised positionally, and a field added to the struct above `.color` moved
+  its `'A'` into a pointer. gcc warns; clang, which FreeBSD builds with, stops.
+  `scripts/build-unix.sh strict` catches it now.
+- `scripts/build-unix.sh clean` no longer deletes `src/cmdtab.h`. It is
+  generated but committed, and `makefile.mingw` has no rule to make one, so a
+  clean left the Windows cross build unable to compile `cmdline.c`.
+- `scripts/check-docs.sh` sees a case count that a paragraph wrapped between the
+  number and the word. It reads one line at a time, and "All 100\ntests on each"
+  sat in BUILDING-unix.md through two suites growing.
+
+### 日本語
+
+- `:syntax dump <file>` を追加しました。ルールがバッファに何をしたかをテキストで
+  書き出します (色の付いた範囲ごとに1行、グループ名と該当ルール付き)。これまで
+  ルールの間違いは「画面の色が足りない」以外に現れず、原因のルールを特定するには
+  ピクセルを読むしかありませんでした。`scripts/test-syntax.sh` はこれをスイートに
+  したもので、ルールが一致しなくなればテストが落ちます。
+- 3 バイト文字のファイル名を扱う文字コードのケースを 2 つ追加しました (名前で開く、
+  ワイルドカードで見つける)。Windows 側には 1.0.0 からありましたが、Windows 固有
+  でない部分は CI の走る環境でまったくテストされていませんでした。Windows スイートは
+  Windows を必要とし、CI では動かないためです。
+- シンタックスカラーが Win32 GUI だけでなく端末でも動くようになりました。ルールが
+  指定した色を SGR エスケープとして出します。`$COLORTERM` が対応を示していれば
+  その色そのもの、そうでなければ 16 色のうち最も近いものです。パレットを 1 箇所に
+  まとめたので、端末と GUI で「navy」の意味が食い違うことはありません。
+- ルールを `_jvimrc` の中の 1200 行から、種別ごと 1 ファイルの `syntax/` に移しました。
+  rc からは `source $VIM/syntax/filetype.jvsyn` の 1 行で全部に届きます。種別の
+  足し方は `syntax/README` にあります。
+- 両方のビルドで使える短い rc `jvimrc.sample` を追加し、Windows パッケージに同梱、
+  Unix では `$VIM` にインストールするようにしました。`~/.jvimrc` か
+  `%HOME%\_jvimrc` にコピーして使います。この "j" の付く名前は JVim が `.vimrc`
+  より優先して読み、ほかのエディタは読まないので、同じマシンの普通の vim に
+  `set fexrc` やシンタックス定義を渡さずに済みます。これまで Unix ビルドで使える
+  rc は同梱されていませんでした (`doc.j/_jvimrc` は FEPCTRL を要する
+  `set fepkeys` で止まります)。
+- Unix でも `$VIM` に既定値が入るようになりました (`$PREFIX/lib/jvim3`、
+  `make install` がルールファイルを置く場所)。Windows では以前から exe の
+  ディレクトリが入っていました。
+- Python、JavaScript/TypeScript、Go、Rust、Ruby、シェル、Markdown、JSON、YAML、
+  TOML、SQL、CSS/SCSS、C#、PHP、Lua、XML、diff、Makefile、Dockerfile のシンタックス
+  カラー定義を `doc.j/_jvimrc` (配布物の `_jvimrc.sample`) に追加しました。これまで
+  1998 年より新しい言語の定義はひとつもありませんでした。C の定義は `.cc` `.cxx`
+  `.hpp` `.hxx` `.hh` `.inl` にも効くようになりました。
+- Windows のキー入力スイートが画面に出なくなりました。実際のエディタを実際の
+  ウィンドウで 14 回起動するため、そのつど画面に現れてキーボードを奪い、4 分間
+  マシンが使えませんでした。ドライバが起動前に専用のデスクトップへ移るようにした
+  うえで、コンソール版にはウィンドウを持たないコンソールを与えるようにしました。
+  `PostMessage` も `WriteConsoleInput` もどちらも気にしません。デスクトップだけでは
+  不十分でした。`CREATE_NEW_CONSOLE` は既定の端末に引き渡され、Windows Terminal は
+  どのデスクトップから要求されても人が見ている側に開くためです。`WINDESK_OFF=1` で
+  元に戻せます。
+- シンタックスルールの未知のモード文字を、無視せずエラーにするようになりました
+  (どの文字かをメッセージに出します)。2002 年の説明書は「その他は無視します」と
+  していて実際そうだったため、モードの打ち間違いがそのままルールとして登録され、
+  黙って違うものに一致していました。モードなしを表す `n` は、無視される文字では
+  なく正式なモードにしました。
+- シンタックスカラーが、行をまたぐ領域の状態を行ごとに覚えるようになりました。
+  これまでは 1 行描くたびに前後 `synlines` 行を探していたため、コメントや文字列
+  がその範囲を超えると色が落ちていました。長さに関わらず色が保たれ、閉じていない
+  コメントは以降すべてが色付き (従来は無色) になり、開始・終了の記号を打った時点
+  で下の行の色がすぐ変わります。`synlines` はタグ検索にのみ効くようになりました。
+- 日本語のシンタックスルールが再び一致するようになりました。`syntax.c` の文字送り
+  がすべて Shift-JIS 時代の 2 バイト前提のままで、1.0.0 でバッファが UTF-8
+  (漢字・かなは 3 バイト) になって以降、日本語を含むルールは何にも一致していません
+  でした。
+- 単語ルール (`w/`) がリストの先頭に来た場合、ハッシュが 0 のままになり、誤った
+  バケットを引いて一致しませんでした。
+- 開始と終了が同じ文字列の領域 (Python の `"""`、テンプレートリテラル、コードフェンス)
+  が 1 行に収まっている場合、開始トークン自身で閉じてしまい、記号だけが色付いて後ろの
+  文字列が無色になっていました。終了トークンを開始トークンより後ろから探すようにしました。
+- テストスイートが実行者の rc ファイルを読まなくなりました。`HOME` をスイート自身の
+  一時ディレクトリに向けているので、`_vimrc` (同梱サンプルは textmode・マッピング・
+  ルール定義を設定します) がテスト対象の挙動を変えることはありません。サンプルを
+  導入すると 14 pass が 3 pass になっていました。
+- rc の中で `:source` すると、以降ファイル種別ごとのブロックが一致しなくなる問題を
+  修正しました。判定に使う拡張子とファイル名が `NameBuff` へのポインタで、入れ子の
+  `:source` が同じバッファを展開に使うため、1 回目以降はすべて誤った文字列と比較して
+  いました。
+- `purple` が maroon と同じ色だったのを `#800080` にしました。
+- Windows 以外のビルドで `stricmp` がリンクできない問題を修正しました。`vim_stricmp`
+  への置き換えが「すでにマクロだった場合」にしか効かず、glibc では効きませんでした。
+- `syntax/` の全ファイルに `scripts/test-syntax.sh` のケースを用意しました。これまで
+  30 ファイル中 18 だけで、HTML、XML、C#、バッチ、VBScript、プレーンテキスト、Java、
+  INI、`.def`、`.ec`、`.rc`、rc 自身の 12 個は配布しているのに未検証でした。
+- CSS でプロパティ名、INI でキー、Java で数値と文字定数に色が付くようになりました。
+  それぞれ、その定義ファイルに欠けていた最も基本的なものです。
+- `scripts/build-unix.sh strict` を追加しました。CI がエラー扱いする `-Werror=` 群
+  つきでビルドするので、push の後ではなく前に確認できます。この中には gcc なら警告
+  で済み、FreeBSD が使う clang では止まるものがあります。
+- Windows のキー入力スイートに、GUI ビルドでシンタックスカラーが動いているかを見る
+  ケースを追加しました。Windows では色付けは GUI 版だけの機能で (`SYN_ON()` は
+  `'syntax'` かつ `GuiWin`)、色を読み戻すスイートは pty を必要とするため、そこで
+  エンジンが動いているかを確かめるものがありませんでした。
+- `:syntax dump` が、タグルール (`t`) を「内側を見るタグ」ではなく「実際に一致する
+  パターン」で表示するようになりました。`html.jvsyn` の十数個のルールが揃って
+  `t/<` と名乗っており、区別が付きませんでした。
+- `scripts/test-bsd-docker.sh` がゲスト内で 3 つのスイートすべてを実行します
+  (CI が同じ OS でしていることと同じ)。文字コードのスイートしか動かしていなかった
+  ため、BUILDING-unix.md がゲストで走っていないテストの結果を書いていました。
+- GUI のキードライバが、ケース開始前に Escape を 1 回打つようにしました。ウィンドウが
+  出るのは rc を読み終わる前で、その間に送ったキーは遅れるのではなく失われるため、
+  ケースの 2 打目が 1 打目として扱われていました。rc がなければこの隙間は狭く、固定の
+  sleep でほぼ隠れていましたが、それが一番たちの悪い状態です。100 回に 1 回落ちて、
+  理由が何も残りません。
+- AddressSanitizer 下でルールファイルを読むと異常終了する問題を修正しました。
+  `DoOneCmd()` の 2 か所が `\"` と `\%` の解除に、文字列を 1 バイト左へ自分自身の上に
+  `strcpy()` していました。範囲が重なるので未定義動作です。起動のたびに `\"` だらけの
+  ファイルを読むようになるまで、気づくほど通る場所ではありませんでした。既出の 7 か所
+  と同じく `STRMOVE()` にしました。
+- 本気のコンパイラで Windows 版が再びビルドできるようになりました。`is_syntax()` が
+  「この行の残りは何にも一致しない」と記録するために使う `defcolor` は位置指定の
+  初期化子で、`.color` より前に構造体メンバを足したことで `'A'` がポインタに入って
+  いました。gcc は警告、FreeBSD が使う clang は停止します。`scripts/build-unix.sh
+  strict` で検出できます。
+- `scripts/build-unix.sh clean` が `src/cmdtab.h` を消さないようにしました。生成物
+  ではありますがコミットされており、`makefile.mingw` には作り直す規則がないため、
+  clean すると Windows クロスビルドが `cmdline.c` をコンパイルできなくなっていました。
+- `scripts/check-docs.sh` が、数字と単語の間で折り返されたケース数を見落とさなくなり
+  ました。1 行ずつ読んでいたため、"All 100\ntests on each" が BUILDING-unix.md に
+  スイート 2 回分の増加をまたいで残っていました。
+
 ## 1.0.0 — 2026-08-22
 
 The tree starts numbering itself. Everything in this section already shipped,

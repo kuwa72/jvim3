@@ -44,7 +44,10 @@ if [ -z "$count_only" ]; then
 		exit 2
 	}
 fi
-pty() { "$tmp/ptyrun" /bin/sh -c "$1"; }
+# HOME is the temporary directory, which has no rc in it: a ~/.vimrc belonging
+# to whoever is running this would otherwise decide what the editor does, and
+# every case below assumes the defaults.
+pty() { "$tmp/ptyrun" /bin/sh -c "HOME=$tmp $1"; }
 
 # xxd is vim's own, so it is not on a machine that has no vim yet; od is POSIX.
 hex() { od -An -tx1 -v "$1" 2>/dev/null | tr -d ' \n'; }
@@ -262,6 +265,20 @@ AA='\xe3\x81\x82'								# あ
 II='\xe3\x81\x84'								# い
 UU='\xe3\x81\x86'								# う
 NN='\xe3\x82\x93'								# ん
+
+echo
+echo "file names, which are three bytes a character here too:"
+# The Windows suite has these as well, where they are about the manifest making
+# the ...A file APIs take UTF-8. This is the part of it that is not Windows:
+# the name goes out through fileconvsto() and comes back through the directory
+# scan, and both have to agree about how long a character is. "-K TTT" pins the
+# codes, so what the machine's locale happens to be does not decide the answer.
+edit "a name of 3 byte characters" ok \
+	":w! $tmp/$NIHON$GO.txt\r:e! $tmp/$NIHON$GO.txt\rdd" 'a\nb\n' 'b\n'
+# expansion hands the name to the shell and reads the answer back, so the name
+# makes a second round trip through the code conversion on the way
+edit "a name found by a wildcard" ok \
+	":w! $tmp/$NIHON$GO.txt\r:e! $tmp/$NIHON*\rdd" 'a\nb\n' 'b\n'
 
 echo
 echo "regexp character classes over multi-byte characters:"

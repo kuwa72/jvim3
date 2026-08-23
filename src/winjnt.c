@@ -1574,94 +1574,39 @@ GetColor(char_u mode, int tb)
 		else
 			p = T_SO;
 		break;
-#if defined(KANJI) && defined(SYNTAX)
-	case 'A':	/* text */
-		break;
-	case 'B':	/* white */
-		if (tb == 't')
-			rgb = RGB(0xff, 0xff, 0xff);
-		break;
-	case 'C':	/* black */
-		if (tb == 't')
-			rgb = RGB(0x00, 0x00, 0x00);
-		break;
-	case 'D':	/* red */
-		if (tb == 't')
-			rgb = RGB(0xff, 0x00, 0x00);
-		break;
-	case 'E':	/* green */
-		if (tb == 't')
-			rgb = RGB(0x00, 0x80, 0x00);
-		break;
-	case 'F':	/* blue */
-		if (tb == 't')
-			rgb = RGB(0x00, 0x00, 0xff);
-		break;
-	case 'G':	/* yellow */
-		if (tb == 't')
-			rgb = RGB(0xff, 0xff, 0x00);
-		break;
-	case 'H':	/* fuchsia */
-		if (tb == 't')
-			rgb = RGB(0xff, 0x00, 0xff);
-		break;
-	case 'I':	/* silver */
-		if (tb == 't')
-			rgb = RGB(0xc0, 0xc0, 0xc0);
-		break;
-	case 'J':	/* gold */
-		if (tb == 't')
-			rgb = RGB(0x80, 0x80, 0x00);
-		break;
-	case 'K':	/* lime green */
-		if (tb == 't')
-			rgb = RGB(0x00, 0xff, 0x00);
-		break;
-	case 'L':	/* navy */
-		if (tb == 't')
-			rgb = RGB(0x00, 0x00, 0x80);
-		break;
-	case 'M':	/* aqua */
-		if (tb == 't')
-			rgb = RGB(0x00, 0xff, 0xff);
-		break;
-	case 'N':	/* gray */
-		if (tb == 't')
-			rgb = RGB(0x80, 0x80, 0x80);
-		break;
-	case 'O':	/* maroon */
-		if (tb == 't')
-			rgb = RGB(0x80, 0x00, 0x00);
-		break;
-	case 'P':	/* olive */
-		if (tb == 't')
-			rgb = RGB(0x80, 0x80, 0x00);
-		break;
-	case 'Q':	/* purple */
-		if (tb == 't')
-			rgb = RGB(0x80, 0x00, 0x00);
-		break;
-	case 'R':	/* teal */
-		if (tb == 't')
-			rgb = RGB(0x00, 0x80, 0x80);
-		break;
-	case '[': case '\\': case ']': case '^': case '_':
-	case 'V': case 'W': case 'X': case 'Y': case 'Z':
-		if (tb == 't')
-			rgb = syn_user_color(mode);
-		break;
-	case '@':	/* reverse */
-		if (!config_bitmap)
+	default:
+#ifdef USE_SYNTAX
 		{
-			if (tb == 't')
-				rgb = *v_bgcolor;
-			else
-				rgb = *v_fgcolor;
-			break;
+			/*
+			 * A colour a syntax rule asked for. The palette itself lives in
+			 * syn_decode(), because a terminal paints the same ids as SGR
+			 * escapes and the two must not be able to drift apart.
+			 */
+			int		syn;
+			int		syn_rgb = 0;
+
+			syn = syn_decode(mode & 0x7f, &syn_rgb);
+			if (syn & SYN_TEXT)
+				break;				/* leave the ordinary colours alone */
+			if (syn & SYN_RGB)
+			{
+				if (tb == 't')
+					rgb = RGB((syn_rgb >> 16) & 0xff, (syn_rgb >> 8) & 0xff,
+															syn_rgb & 0xff);
+				break;
+			}
+			if ((syn & SYN_REVERSE) && !config_bitmap)
+			{
+				if (tb == 't')
+					rgb = *v_bgcolor;
+				else
+					rgb = *v_fgcolor;
+				break;
+			}
 		}
-		/* no break */
+		/* no rule named this, or reverse with a bitmap behind it */
 #endif
-	default:	/* invert/reverse */
+		/* invert/reverse */
 		if (*v_ticolor != (-1))
 		{
 			if (tb == 't')

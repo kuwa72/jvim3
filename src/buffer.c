@@ -183,7 +183,7 @@ close_buffer(BUF *buf, int free_buf, int remove)
 #ifdef TRACK
 		free(buf->b_p_trs);
 #endif
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 		syn_clr(buf);
 #endif
 		free(buf);

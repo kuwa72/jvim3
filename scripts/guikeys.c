@@ -17,6 +17,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
+#include "windesk.h"
 
 static HWND	hwnd;
 
@@ -32,6 +33,51 @@ static void text_key(unsigned char c)
 {
 	PostMessageW(hwnd, WM_CHAR, c, 1);
 	Sleep(15);
+}
+
+/*
+ * Wait for the editor to stop working, rather than for a length of time.
+ *
+ * Its CPU time stops moving once it has read its rc and is sitting in the
+ * message loop with nothing to do, and that is the moment a posted key is
+ * safe. How long it takes depends on what the rc sources -- nothing, or thirty
+ * rule files -- so no fixed sleep is right for both, and the one that was here
+ * was right for one of them about ninety-nine times in a hundred.
+ *
+ * SendMessage instead of PostMessage looks like the real answer and is not: it
+ * waits for the window procedure, and with the keys arriving that way the
+ * editor stops taking them at all. Tried, measured, three cases dead.
+ */
+static void wait_idle(HANDLE proc)
+{
+	/*
+	 * "Stopped" and not "exactly equal": an editor with a blinking cursor is
+	 * never exactly still, and asking for that turned every one of these into
+	 * a twenty second sleep. A caret timer costs microseconds; reading the rc
+	 * costs tens of milliseconds, so a millisecond in fifty is a wide gap
+	 * between the two.
+	 */
+	const ULONGLONG	quiet = 10000;		/* 1ms, in 100ns units */
+	FILETIME		c, e, k, u;
+	ULONGLONG		last = 0, now;
+	int				same = 0, i;
+
+	for (i = 0; i < 200; i++)			/* up to 10s */
+	{
+		if (!GetProcessTimes(proc, &c, &e, &k, &u))
+			return;
+		now = (((ULONGLONG)k.dwHighDateTime << 32) | k.dwLowDateTime)
+			+ (((ULONGLONG)u.dwHighDateTime << 32) | u.dwLowDateTime);
+		if (i > 0 && now - last < quiet)
+		{
+			if (++same >= 4)			/* 200ms of nothing much */
+				return;
+		}
+		else
+			same = 0;
+		last = now;
+		Sleep(50);
+	}
 }
 
 /*
@@ -94,6 +140,7 @@ static void shoot(HWND hwnd, const char *path)
 
 int main(int argc, char **argv)
 {
+	windesk_reexec();		/* out of sight; see windesk.h */
 	static char			specbuf[4096];
 	const char			*spec;
 	char				cmd[2048] = "";
@@ -153,7 +200,28 @@ int main(int argc, char **argv)
 		TerminateProcess(pi.hProcess, 1);
 		return 2;
 	}
-	Sleep(700);						/* let it finish starting up */
+	/*
+	 * The window appears before the editor is ready for a key: it is still
+	 * reading the rc, and a key posted while it is doing that is lost. Not
+	 * "delayed" -- lost, and only the first one, so a case reads as though its
+	 * second keystroke were its first. With no rc in the work directory that
+	 * is a fraction of a second and a fixed sleep covered it nearly always,
+	 * which is the worst way for it to be wrong: one case in a hundred runs
+	 * fails and nothing explains it. An rc that sources the rule files takes
+	 * long enough to lose the key every time, which is how it was finally seen.
+	 *
+	 * WaitForInputIdle is the usual answer and is not one here: it reports the
+	 * process idle as soon as it has been idle once, which happens before the
+	 * rc is read. wait_idle() below watches the editor's CPU time instead, and
+	 * the first key is still a throwaway on top of that. Escape in normal mode
+	 * does nothing -- every case starts there -- so whether it is swallowed or
+	 * delivered, what follows is unaffected, and the second wait means the case
+	 * does not begin until the editor has digested it.
+	 */
+	WaitForInputIdle(pi.hProcess, 10000);
+	wait_idle(pi.hProcess);
+	spec_key(VK_ESCAPE);
+	wait_idle(pi.hProcess);
 
 	spec = specbuf;
 	while (*spec)

@@ -43,7 +43,7 @@
 #ifdef XARGS
 # include "proto/xargs.pro"
 #endif
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 # include "proto/syntax.pro"
 #endif
 

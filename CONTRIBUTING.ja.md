@@ -10,11 +10,11 @@ request、コミットメッセージ、いずれも日本語で構いません�
 
 2 つあります。
 
-1. `./scripts/build-unix.sh test` が通ること。110 ケースで、1 分ほどで終わります。
-2. CI がエラー扱いにしている警告を増やさないこと。暗黙の宣言、ポインタ型の不一致、
-   プロトタイプなし、return なし、暗黙の `int`、未初期化変数の使用です。正確な
-   一覧は [.github/workflows/build.yml](.github/workflows/build.yml) の
-   `-Werror=` 群です。
+1. `./scripts/build-unix.sh test` が通ること。148 ケースで、1 分ほどで終わります。
+2. `./scripts/build-unix.sh strict` が通ること。CI と同じ `-Werror=` 群
+   （暗黙の宣言、ポインタ型の不一致、プロトタイプなし、return なし、暗黙の
+   `int`、未初期化変数の使用）を push の前に確認できます。この中には gcc では
+   警告で済み、FreeBSD のジョブが使う clang では止まるものがあります。
 
 `-Wpointer-sign` の警告は想定内で、そのまま残しています。ソースは `char` と
 `unsigned char` (`char_u`) を意図的に混ぜており、236 個あります。理由は

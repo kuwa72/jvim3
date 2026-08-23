@@ -73,8 +73,24 @@ static int		invert = 0;				/* set to INVERTCODE when inverting */
 # define SCRCMP(scr, inv) (inv == 0 ? (((scr)[Columns]) == 0) : (((scr)[Columns]) != 0))
 # define SCRINV(scr, inv) (inv == 0 ? (((scr)[Columns]) != 0) : (((scr)[Columns]) != inv))
 #endif
-#if defined(KANJI) && defined(NT)
+/*
+ * With a colour to draw in, the attribute kept for each cell is the colour id
+ * rather than a plain "inverted" flag: two runs in different colours have to
+ * count as different, or the second would not be redrawn over the first.
+ */
+#if defined(KANJI) && (defined(NT) || defined(USE_SYNTAX))
+# define SCR_COLOR
 static int		color = 0;
+#endif
+/*
+ * Everywhere but Windows the colour goes to the terminal as an SGR escape. On
+ * Windows the GUI is handed the id and paints it itself, and the console build
+ * has no way to ask for a colour at all.
+ */
+#if defined(USE_SYNTAX) && !defined(NT)
+# define SYN_SGR
+static int		sgr_on = 0;		/* the last start_highlight() wrote an escape */
+static int		sgr_color = 0;	/* and the colour it asked for */
 #endif
 
 static int win_line __ARGS((WIN *, linenr_t, int, int));
@@ -738,8 +754,8 @@ win_line(WIN *wp, linenr_t lnum, int startrow, int endrow)
 		while (vcol < wp->w_leftcol && *ptr)
 		{
 #ifdef KANJI
-# if defined(NT) && defined(SYNTAX)
-			if (wp->w_p_syt && GuiWin)
+# ifdef USE_SYNTAX
+			if (SYN_ON(wp))
 				is_syntax(wp, lnum, &ltop, &ptr);
 # endif
 			if (ISkanji(*ptr))
@@ -813,8 +829,8 @@ win_line(WIN *wp, linenr_t lnum, int startrow, int endrow)
 		}
 		else
 		{
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
-			if (wp->w_p_syt && GuiWin)
+#ifdef USE_SYNTAX
+			if (SYN_ON(wp))
 			{
 				if (!canopt && (fromcol <= vcol) && (vcol <= tocol))
 					;
@@ -855,8 +871,8 @@ win_line(WIN *wp, linenr_t lnum, int startrow, int endrow)
 					p_extra = (char_u *)"";
 					n_extra = 1;
 					c = '$';
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
-					if (wp->w_p_syt && GuiWin)
+#ifdef USE_SYNTAX
+					if (SYN_ON(wp))
 					{
 						int		clr = is_crsyntax(wp);
 
@@ -878,8 +894,8 @@ win_line(WIN *wp, linenr_t lnum, int startrow, int endrow)
 					c = *p_cc;
 					if (c == NUL || ISkanji(c) || c <= ' ')
 						c = '$';
-# if defined(KANJI) && defined(NT) && defined(SYNTAX)
-					if (wp->w_p_syt && GuiWin)
+# ifdef USE_SYNTAX
+					if (SYN_ON(wp))
 					{
 						int		clr = is_crsyntax(wp);
 
@@ -1225,19 +1241,154 @@ set_highlight(int context)
 		highlight = NULL;
 		return FAIL;
 	}
-#if defined(KANJI) && defined(NT)
+#ifdef SCR_COLOR
 	color = mode & 0xff;
 #endif
 	return OK;
 }
 
+#ifdef SYN_SGR
+/*
+ * Colour on a terminal.
+ *
+ * The Win32 GUI is handed the colour id and paints it; a terminal has to be
+ * told in its own language, which is an SGR escape. The palette is the GUI's,
+ * from syn_decode(), so the two agree by construction.
+ *
+ * Whether that colour can be asked for exactly depends on the terminal, and
+ * termcap has nothing to say about colour that this Vim reads -- t_Co and
+ * friends came later. $COLORTERM is what everything else uses to answer the
+ * same question, so use that: 24 bit where it is offered, and otherwise the
+ * nearest of the sixteen a terminal has had since the eighties.
+ */
+static int
+sgr_truecolor(void)
+{
+	static int		known = -1;
+	char_u		*	p;
+
+	if (known < 0)
+	{
+		p = vimgetenv((char_u *)"COLORTERM");
+		known = (p != NULL && (STRCMP(p, "truecolor") == 0
+										|| STRCMP(p, "24bit") == 0));
+	}
+	return known;
+}
+
+/*
+ * The SGR number for the nearest of the sixteen, by plain distance in RGB.
+ * The values are xterm's, which everything since has stayed close to.
+ */
+static int
+sgr_nearest(int rgb)
+{
+	static const long	ansi[16] = {
+		0x000000L, 0xcd0000L, 0x00cd00L, 0xcdcd00L,
+		0x0000eeL, 0xcd00cdL, 0x00cdcdL, 0xe5e5e5L,
+		0x7f7f7fL, 0xff0000L, 0x00ff00L, 0xffff00L,
+		0x5c5cffL, 0xff00ffL, 0x00ffffL, 0xffffffL,
+	};
+	int			best = 0;
+	long		bestd = -1;
+	int			i;
+
+	for (i = 0; i < 16; i++)
+	{
+		long	dr = ((rgb >> 16) & 0xff) - ((ansi[i] >> 16) & 0xff);
+		long	dg = ((rgb >>  8) & 0xff) - ((ansi[i] >>  8) & 0xff);
+		long	db = (rgb & 0xff) - (ansi[i] & 0xff);
+		long	d  = dr * dr + dg * dg + db * db;
+
+		if (bestd < 0 || d < bestd)
+		{
+			bestd = d;
+			best = i;
+		}
+	}
+	return best < 8 ? 30 + best : 90 + (best - 8);
+}
+
+/*
+ * Write the escape colour id 'id' asks for into buf. FALSE when the id names
+ * no colour, which is every context of the 'highlight' option: those keep the
+ * termcap strings they have always used.
+ */
+static int
+syn_sgr(int id, char_u *buf)
+{
+	int			syn;
+	int			rgb = 0;
+	char_u	*	p = buf;
+
+	if ((syn = syn_decode(id, &rgb)) == 0)
+		return FALSE;
+	/* Leading 0: each run says all of what it wants, over whatever went before */
+	STRCPY(p, "\033[0");
+	p += STRLEN(p);
+	if (syn & SYN_BOLD)
+	{
+		STRCPY(p, ";1");
+		p += 2;
+	}
+	if (syn & SYN_ITALIC)
+	{
+		STRCPY(p, ";3");
+		p += 2;
+	}
+	if (syn & SYN_ULINE)
+	{
+		STRCPY(p, ";4");
+		p += 2;
+	}
+	if (syn & SYN_REVERSE)
+	{
+		STRCPY(p, ";7");
+		p += 2;
+	}
+	else if (syn & SYN_RGB)
+	{
+		if (sgr_truecolor())
+			sprintf((char *)p, ";38;2;%d;%d;%d", (rgb >> 16) & 0xff,
+											(rgb >> 8) & 0xff, rgb & 0xff);
+		else
+			sprintf((char *)p, ";%d", sgr_nearest(rgb));
+		p += STRLEN(p);
+	}
+	STRCPY(p, "m");
+	return TRUE;
+}
+#endif
+
 	void
 start_highlight(void)
 {
+#ifdef SYN_SGR
+	char_u			seq[40];
+
+	/*
+	 * win_line() asks for the colour of every character, so this is called
+	 * once per character of a coloured run. Say it once: the escape is twenty
+	 * bytes and the terminal is already in that colour.
+	 */
+	if (sgr_on && color == sgr_color)
+		return;
+	if (syn_sgr(color, seq))
+	{
+		outstr(seq);
+		sgr_on = TRUE;
+		sgr_color = color;
+		invert = color;
+		return;
+	}
+#endif
+#ifdef SYN_SGR
+	sgr_on = FALSE;			/* whatever follows, it is not an escape of ours */
+#endif
 	if (highlight != NULL)
 	{
 		outstr(highlight);
-#if defined(KANJI) && defined(NT)
+#ifdef SCR_COLOR
 		invert = color;
 #else
 		invert = INVERTCODE;
@@ -1248,6 +1399,15 @@ start_highlight(void)
 	void
 stop_highlight(void)
 {
+#ifdef SYN_SGR
+	if (sgr_on)
+	{
+		outstr((char_u *)"\033[m");
+		sgr_on = FALSE;
+		invert = 0;
+		return;
+	}
+#endif
 	if (invert)
 	{
 		outstr(unhighlight);

@@ -172,6 +172,23 @@ main(int argc, char **argv)
 		w32crash_init(!SubSysCon);
 #endif
 
+#if defined(UNIX) && defined(VIMDIR)
+	/*
+	 * $VIM is where the files that come with the editor are -- the syntax rule
+	 * files an rc reads by name. Windows fills it in with the directory the exe
+	 * is in (see mch_windinit), which is right there because the package is one
+	 * directory; on a Unix they were installed, so the place is the one the
+	 * build was told to install to. Set rather than merely defaulted at the
+	 * point of use, because an rc says "$VIM" and nothing else would expand it.
+	 */
+	if (vimgetenv((char_u *)"VIM") == NULL)
+	{
+		static char		vimdir[] = "VIM=" VIMDIR;
+
+		putenv(vimdir);
+	}
+#endif
+
 /*
  * Check if we have an interactive window.
  * If not, open one with a newcli command (needed for :! to work).

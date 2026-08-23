@@ -1,0 +1,14 @@
+syntax Comment			n/#.*$
+syntax PreProc			n/^---
+syntax PreProc			n/^\.\.\.$
+syntax Identifier		-m/^\s*[^ #]\+:
+syntax Identifier		-m/^\s*-\s\+[^ #]\+:
+syntax String			m/\".*[^\\]\"
+syntax String			m/'.*'
+syntax Constant		n/[&*]\i\+
+syntax Statement		n/^\s*-\s
+syntax Boolean			w/true/false/yes/no/on/off
+syntax Constant		w/null
+syntax Float			n/\d*\.\d\+
+syntax Number			w/\d\+
+syntax Todo			w/TODO/FIXME/XXX/NOTE

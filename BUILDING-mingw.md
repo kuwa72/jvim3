@@ -135,13 +135,45 @@ the check being fooled instead of doing its job.
 There is no Windows runtime test in CI, but there is one to run by hand:
 `scripts/test-winkeys.sh` types into both builds for real -- console key events
 for one, window messages for the other -- and covers the cursor keys, the
-function keys, CTRL-@ and the file name cases that only Windows has. It needs
-WSL on Windows and takes a couple of minutes:
+function keys, CTRL-@, the file name cases that only Windows has, and whether
+the syntax rules colour anything at all in the GUI build, which is the only
+Windows build that has colouring (`SYN_ON()` is `'syntax'` *and* `GuiWin`). It
+needs WSL on Windows and takes a couple of minutes:
 
 ```sh
 scripts/test-winkeys.sh                          # src/jvim32.exe, src/jvim32w.exe
 scripts/test-winkeys.sh <console.exe> <gui.exe>  # or a pair from a release
 ```
+
+It runs out of sight, so you can keep working through the four minutes it
+takes. The drivers put themselves on a desktop of their own before starting
+anything, and give the console build a console with no window at all —
+`PostMessage` and `WriteConsoleInput` do not care about either, and neither is
+something a person can see. Measured rather than assumed: while the suite runs,
+nothing it starts has a window on the interactive desktop, and the console
+editor has none at all. `WINDESK_OFF=1` puts it back in sight for when
+something has to be watched happening, and `scripts/windesk.h` says why the
+obvious ways — starting the window hidden, or giving it a new console — do
+not work.
+
+The GUI driver waits for the editor to stop working, then types one Escape
+before the case does anything. The window appears while the editor is still
+reading its rc, and a key posted then is lost — not delayed, lost — so the case
+reads as though its second keystroke were its first. With no rc that window is
+short and a fixed sleep covered it nearly always, which is the worst way to be
+wrong: one run in a hundred failed with nothing to blame. An rc that sources
+the rule files widened it enough to lose the key every time, which is how it
+was found.
+
+Two obvious answers are not answers. `WaitForInputIdle` reports the process
+idle as soon as it has been idle once, and that happens before the rc is read.
+`SendMessage` in place of `PostMessage` — which would wait for the window
+procedure rather than guess — stops the editor taking keys at all: tried,
+measured, three GUI cases produced no output whatever. So the driver polls
+`GetProcessTimes` until the editor's CPU time has not moved for 200 ms, which
+is a real signal and needs no number chosen in advance, and the throwaway
+Escape covers whatever is left. Escape in normal mode does nothing and every
+case starts there, so it cannot affect what follows.
 
 Beyond that, testing on Windows by hand is the only Windows testing there is. A local build is now the same runtime as the
 release, so it counts; to test the exact executable the release page serves,
@@ -523,7 +555,7 @@ make jvim3
 cd .. && ./scripts/test-encoding.sh
 ```
 
-All 46 cases pass. Run it against an AddressSanitizer build to check for memory
+All 48 cases pass. Run it against an AddressSanitizer build to check for memory
 errors at the same time:
 
 ```sh

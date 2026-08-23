@@ -393,15 +393,24 @@ struct buffer
 # define FOPT_C_COMMENT			0x0040		/* C Comment Skip showmatch */
 # define FOPT_GAIJI				0x0080		/* Gaiji */
 #endif
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 	char_u		   *b_syn_ptr;
 	char_u		   *b_syn_tag;
 	char_u		   *b_syn_match;
 	char_u		   *b_syn_matchend;
 	char_u		   *b_syn_curp;
 	linenr_t		b_syn_line;
-	linenr_t		b_syn_nline;
 	char_u		   *b_syn_link;
+	/*
+	 * What a multi-line region leaves open at the start of each line, so that a
+	 * line can be coloured without searching the ones around it: entry i is the
+	 * state at the start of line i + 1. See the comment above syn_pair() in
+	 * syntax.c. States up to b_syn_stateval are worked out, the rest are not.
+	 */
+	short		   *b_syn_state;
+	linenr_t		b_syn_statelen;
+	linenr_t		b_syn_stateval;
+	int				b_syn_pairs;	/* rules that can reach past a line */
 #endif
 };
 
@@ -509,7 +518,7 @@ struct window
 	int				w_tagstackidx;				/* index just below active entry */
 	int				w_tagstacklen;				/* number of tags on the stack */
 
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 	int				 w_p_syt;				/* syntax mode */
 #endif
 };

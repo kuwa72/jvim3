@@ -1,0 +1,5 @@
+syntax Comment			p/<!--/-->
+syntax PreProc			m/<?.*?>
+syntax String			m/\".*\"
+syntax Statement		n/<\/\=[^ >]\+
+syntax Statement		n/\/\=>

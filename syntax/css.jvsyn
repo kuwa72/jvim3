@@ -1,0 +1,22 @@
+syntax Comment			p/\/\*/\*\/
+syntax Comment			n/\/\/.*$
+syntax String			m/\".*[^\\]\"
+syntax String			m/'.*'
+syntax Constant		n/#\x\x\x\x\x\x
+syntax Constant		n/#\x\x\x
+syntax PreProc			n/@\i\+
+syntax Identifier		n/\$\i[-_a-zA-Z0-9]*
+syntax Tag				n/[.#]\i[-_a-zA-Z0-9]*
+" a property name, the way the other key-and-value types do it. The indent is
+" what tells it from a selector: "a:hover {" is a name before a colon too, and
+" nothing else in the line says which of the two it is. Conventional CSS indents
+" its declarations and not its selectors, so this asks for that, and gives up on
+" the one-line "a { color: red }" rather than colour every pseudo-class as well.
+" The indent is inside the match -- there is no way to shrink one off the front
+" -- which costs nothing while the groups are foreground colours.
+syntax Identifier		m-/^\s\+[-a-zA-Z]\+\s*:
+" the unit belongs to the number: "10px" is one word to the word matcher, so
+" a rule for "px" on its own would never fire
+syntax Float			n/\d*\.\d\+[a-z%]*
+syntax Number			n/\d\+[a-z%]*
+syntax Statement		w/important/inherit/initial/unset/auto/none

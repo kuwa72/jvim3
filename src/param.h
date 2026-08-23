@@ -255,7 +255,7 @@ EXTERN int	p_opt	INIT(= 0);
 #ifdef USE_TAGEX
 EXTERN int	p_tagex	INIT(= TRUE);			/* extend tag jump */
 #endif
-#if defined(KANJI) && defined(NT) && defined(SYNTAX)
+#ifdef USE_SYNTAX
 EXTERN char_u *p_synt	INIT(= "cdefgmnpstuvx");
 EXTERN long p_synl		INIT(= 0);			/* tag/pear check line */
 #endif
