@@ -17,6 +17,13 @@ repository and would drift within three releases.
   matches the wrong thing had no other way of saying so — the screen came out a
   colour short and finding the rule meant reading pixels. `scripts/test-syntax.sh`
   is that turned into a suite, so a rule that stops matching fails a test.
+- `scripts/test-sgr.sh`, which reads the escapes the terminal is actually sent
+  and the text under each of them. `:syntax dump` answers which rule coloured
+  which bytes, a question about the rules; this is the other half — whether the
+  colour reaches the terminal, and reaches only the cells it was meant for.
+  Nothing else in the tree looks at the painter: the Windows suite drives the
+  GUI and the dump never draws. It found a bug the first time it was run, in
+  the entry below.
 - Two encoding cases for a file name of three-byte characters — opening it by
   name and finding it by a wildcard. The Windows suite has had them since
   1.0.0; the part of them that is not about Windows was untested anywhere a CI
@@ -106,6 +113,15 @@ repository and would drift within three releases.
 
 ### Fixed
 
+- A cell the cursor stepped over on its way to the next one was retyped in the
+  wrong colour. Moving a few columns along a row, jvim types the cells in
+  between rather than positioning the cursor, which is faster — but it types
+  their characters and nothing else, so they arrive in whatever colour the
+  last escape asked for, which is the colour of the cell it is on its way to.
+  An unchanged space in front of a coloured word came out inside that word's
+  colour. Nobody saw it, because a space has no ink to be the wrong colour.
+  The cells are now retyped only when they are already in that colour, and
+  skipped over otherwise — they did not change, so there is nothing to draw.
 - Syntax rules match Japanese again. Every walk over the text in `syntax.c`
   still stepped two bytes for a multi-byte character, which was Shift-JIS; the
   buffer has held UTF-8 since 1.0.0, where a kanji or a kana is three. A rule
@@ -153,6 +169,12 @@ repository and would drift within three releases.
   ルールの間違いは「画面の色が足りない」以外に現れず、原因のルールを特定するには
   ピクセルを読むしかありませんでした。`scripts/test-syntax.sh` はこれをスイートに
   したもので、ルールが一致しなくなればテストが落ちます。
+- `scripts/test-sgr.sh` を追加しました。端末に実際に送られるエスケープと、その下に
+  書かれた文字を読みます。`:syntax dump` は「どのルールがどのバイトを塗ったか」=
+  ルールについての問いに答えますが、これはもう半分 —「その色が端末に届いているか、
+  そして届くべきセルにだけ届いているか」です。描画側を見るものは他にありません
+  (Windows スイートは GUI を動かし、dump は一切描画しません)。初回実行でいきなり
+  バグを 1 つ見つけました。下の「修正」を参照。
 - 3 バイト文字のファイル名を扱う文字コードのケースを 2 つ追加しました (名前で開く、
   ワイルドカードで見つける)。Windows 側には 1.0.0 からありましたが、Windows 固有
   でない部分は CI の走る環境でまったくテストされていませんでした。Windows スイートは
@@ -205,6 +227,13 @@ repository and would drift within three releases.
   で、探索方式は 0.88〜1.03 秒でした (両者の色付け結果はバイト単位で同一)。`t` を
   使わないルールしか持たないバッファは区切りを 1 つも走査しませんし、領域の両端が
   タグと取り違えられることもありません。
+- カーソルが通り過ぎるセルが間違った色で打ち直されていました。同じ行を数桁動くとき、
+  jvim はカーソルを位置決めせず間のセルを打ち直します (そのほうが速い)。ところが
+  打ち直すのは文字だけで、色は直前のエスケープが指定したまま — つまり「これから
+  描くセルの色」です。色の付いた語の手前にある無関係な空白が、その語の色の中で
+  打ち直されていました。空白にはインクが無いので誰も気付きませんでした。今は
+  「既にその色になっているセル」のときだけ打ち直し、そうでなければ飛ばします
+  (変わっていないセルなので、そもそも描く必要がありません)。
 - 日本語のシンタックスルールが再び一致するようになりました。`syntax.c` の文字送り
   がすべて Shift-JIS 時代の 2 バイト前提のままで、1.0.0 でバッファが UTF-8
   (漢字・かなは 3 バイト) になって以降、日本語を含むルールは何にも一致していません

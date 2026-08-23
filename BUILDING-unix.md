@@ -27,12 +27,14 @@ CC=clang OPT="-O0 -g" EXTRA_CFLAGS=-I/usr/local/include \
 It is POSIX `sh` and avoids `make -C`, so it works with the BSDs' `/bin/sh` and
 `bmake` as well as with bash and GNU make.
 
-`test` runs all three suites: `scripts/test-encoding.sh` (48 cases — kanji,
+`test` runs all four suites: `scripts/test-encoding.sh` (48 cases — kanji,
 UTF-8, multi-byte editing, file names), `scripts/test-editing.sh` (64 cases —
 motions, operators, registers, marks, undo, ex ranges, `:g`, `:s`, searching,
-the `:!` filter and wildcard expansion) and `scripts/test-syntax.sh` (37 cases
+the `:!` filter and wildcard expansion), `scripts/test-syntax.sh` (37 cases
 — what the rules in `syntax/` actually colour, read back with `:syntax dump`,
-one for every file in `syntax/`). 149 cases in all.
+one for every file in `syntax/`) and `scripts/test-sgr.sh` (3 cases — the
+escapes the terminal is actually sent, which is the only check of the painter
+rather than the rules). 152 cases in all.
 
 They need bash and a C compiler: they build `scripts/ptyrun.c` to give jvim a
 terminal. That used to be `script(1)`, which is a different program on Linux,
@@ -136,7 +138,7 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 - Distribution hardening: `-D_FORTIFY_SOURCE=2 -Werror=format-security
   -fstack-protector-strong`
 - `/bin/sh` being dash
-- All 149 tests, and the same again under AddressSanitizer
+- All 152 tests, and the same again under AddressSanitizer
   (`OPT="-O1 -g -fsanitize=address" EXTRA_LIBS=-fsanitize=address`)
 - `./scripts/build-unix.sh strict`, the `-Werror=` set CI refuses to build without
 - 64 bit: no `-Wpointer-to-int-cast` anywhere in the portable sources. The three
@@ -147,7 +149,7 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 Verified on FreeBSD 14.3-RELEASE-p16, clang 19.1.7, amd64, in the QEMU guest
 `scripts/test-bsd-docker.sh` builds:
 
-- All 149 tests
+- All 152 tests
 - `-DTERMCAP` against base ncurses, found as `-ltinfo`
 - `jmask` following `LANG`: `ja_JP.UTF-8` gives `TTTT`, `ja_JP.eucJP` gives
   `EEEE`, `C` gives `EEET`
@@ -157,7 +159,7 @@ Verified on FreeBSD 14.3-RELEASE-p16, clang 19.1.7, amd64, in the QEMU guest
 
 Verified on NetBSD 10.1, gcc 10.5.0, amd64, the same way:
 
-- All 149 tests
+- All 152 tests
 - `-DTERMCAP` against base curses, found as `-lcurses`
 - 58 warnings for the whole build, every one of them the second argument of
   `tgetstr()`: NetBSD's curses declares it `char **` and `term.c` hands it a

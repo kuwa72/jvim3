@@ -46,6 +46,7 @@ static int		*ScreenCP = NULL;
 static int		**CPPointers = NULL;
 # define SCRCP(row, col)	(CPPointers[row][col])
 static int	out_cell __ARGS((int, int));
+static int	run_iscolor __ARGS((int, int, int));
 #endif
 
 /*
@@ -1415,6 +1416,31 @@ stop_highlight(void)
 	}
 }
 
+#ifdef KANJI
+/*
+ * Whether the cells about to be retyped already hold the colour that is about
+ * to be typed in.
+ *
+ * screen_char() below saves a windgoto() by retyping the few cells between
+ * where the cursor is and where it has to be. out_cell() writes their
+ * characters and nothing else, so they arrive in whatever colour the last
+ * escape asked for -- the colour of the cell being drawn, not their own. An
+ * unchanged space in front of a coloured word came out inside that word's
+ * colour, which a foreground hides, a space having no ink. Ask first.
+ */
+	static int
+run_iscolor(int row, int col, int len)
+{
+	char_u		*	p = LinePointers[row] + col;
+	int				i;
+
+	for (i = 0; i < len; i++)
+		if (SCREEN(p + i) != (char_u)invert)
+			return(FALSE);
+	return(TRUE);
+}
+#endif
+
 /*
  * put character '*p' on the screen at position 'row' and 'col'
  */
@@ -1445,14 +1471,20 @@ screen_char(char_u *p, int row, int col)
 		 * avoid a windgoto().
 		 * If we are only a few characters off, output the
 		 * characters. That is faster than cursor positioning.
-		 * This can't be used when inverting (a part of) the line.
+		 * This can't be used when inverting (a part of) the line, nor when
+		 * the cells in between are not already in the colour that retyping
+		 * them would give them -- see run_iscolor().
 		 */
 		if (oldrow == row && oldcol < col)
 		{
 			register int i;
 
 			i = col - oldcol;
-			if (i <= 4 + noinvcurs && canopt)
+			if (i <= 4 + noinvcurs && canopt
+#ifdef KANJI
+					&& run_iscolor(row, col - i, i)
+#endif
+				)
 			{
 #ifdef KANJI
 				int		cc;
