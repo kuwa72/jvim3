@@ -155,7 +155,27 @@ int main(int argc, char **argv)
 		TerminateProcess(pi.hProcess, 1);
 		return 2;
 	}
-	Sleep(700);						/* let it finish starting up */
+	/*
+	 * The window appears before the editor is ready for a key: it is still
+	 * reading the rc, and a key posted while it is doing that is lost. Not
+	 * "delayed" -- lost, and only the first one, so a case reads as though its
+	 * second keystroke were its first. With no rc in the work directory that
+	 * is a fraction of a second and a fixed sleep covered it nearly always,
+	 * which is the worst way for it to be wrong: one case in a hundred runs
+	 * fails and nothing explains it. An rc that sources the rule files takes
+	 * long enough to lose the key every time, which is how it was finally seen.
+	 *
+	 * WaitForInputIdle is the usual answer and is not one here: it reports the
+	 * process idle as soon as it has been idle once, which happens before the
+	 * rc is read. So the first key is a throwaway. Escape in normal mode does
+	 * nothing -- every case starts there -- so whether it is swallowed or
+	 * delivered, what follows is unaffected, and the editor is provably past
+	 * the point of losing keys because it has just been given one.
+	 */
+	WaitForInputIdle(pi.hProcess, 10000);
+	Sleep(300);						/* and a little for the first paint */
+	spec_key(VK_ESCAPE);
+	Sleep(200);
 
 	spec = specbuf;
 	while (*spec)

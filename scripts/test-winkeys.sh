@@ -51,7 +51,7 @@ fi
 
 if [ -n "$count_only" ]; then
 	# Count the cases without any of the Windows preflight below.
-	cases=$(grep -cE '^(run|expand_lists|opens_long_name|opens_past_max_path) ' "$0")
+	cases=$(grep -cE '^(run|expand_lists|opens_long_name|opens_past_max_path|colours_a_file) ' "$0")
 	printf 'cases %d\n' "$cases"
 	exit 0
 fi
@@ -190,6 +190,47 @@ opens_long_name() {
 	fi
 }
 
+# colours_a_file <name>
+#
+# Whether the syntax engine runs at all in the Windows GUI build. SYN_ON() is
+# 'syntax' *and* GuiWin there, so the console build beside it colours nothing
+# however the rules are written, and the one suite that reads colouring back --
+# scripts/test-syntax.sh, through ":syntax dump" -- needs a pty and runs on a
+# Unix. What each rule matches is that suite's business; this asks the single
+# question it cannot: does any of it happen here.
+#
+# Its own directory, because HOME for the cases above deliberately holds no rc
+# and this one needs one. The dump is opened in text mode, so the lines come
+# back with CRLF.
+colours_a_file() {
+	local name=$1
+	local w="$work/syn" want
+
+	rm -rf "$w"; mkdir -p "$w"
+	cp -R "$root/syntax" "$w/syntax"
+	cp "$work/guikeys.exe" "$work/jvim32w.exe" "$w/"
+	printf 'set fexrc\r\nset syntax\r\nsource $VIM/syntax/filetype.jvsyn\r\n' \
+			> "$w/_jvimrc"
+	printf 'def f(n):\r\n    return None\r\n' > "$w/t.py"
+	printf ':syntax dump out\r:q!\r' > "$w/keys"
+	cmd.exe /c "set HOME=$(wslpath -w "$w")&& set VIM=$(wslpath -w "$w")&& \
+			cd /d $(wslpath -w "$w") && guikeys.exe keys jvim32w.exe t.py" \
+			>/dev/null 2>&1
+	want='1:0-3 Statement w/def
+2:4-10 Statement w/return
+2:11-15 Constant w/None'
+
+	if [ "$(tr -d '\r' < "$w/out" 2>/dev/null)" = "$want" ]; then
+		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
+	else
+		printf '  FAIL        %s\n' "$name"
+		printf '                want %s\n' "$(printf '%s' "$want" | tr '\n' '|')"
+		printf '                got  %s\n' \
+			"$(tr -d '\r' < "$w/out" 2>/dev/null | tr '\n' '|')"
+		fail=$((fail+1))
+	fi
+}
+
 # opens_past_max_path <name>
 #
 # A whole path longer than MAX_PATH, which is 260 *characters*. jvim.manifest
@@ -261,6 +302,7 @@ run gui "up recalls a : line"       ':1d\r:<U><CR>'      'a\nb\nc\n'  'c\n'
 # a typed character whose UTF-8 ends in 0xa0, the byte K_ZERO uses: the key
 # codes may only be picked out where a character starts
 run gui "kanji input holding 0xa0"  'i<u30A0><u3042><ESC>' 'X\n' '\xe3\x82\xa0\xe3\x81\x82X\n'
+colours_a_file "the rules colour a file"
 
 echo
 echo "Japanese file names, which are three bytes a character:"
