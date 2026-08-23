@@ -72,12 +72,22 @@ repository and would drift within three releases.
   were, so a typo in a mode went in as a rule and matched the wrong thing in
   silence. `n`, which is what every rule wanting no mode is written with, is
   now a mode of its own rather than one of the ignored letters.
-- Syntax colouring remembers, per line, which multi-line region was open when
-  the line above ended, instead of searching `synlines` lines in each direction
-  every time a line is drawn. A comment or a string now keeps its colour however
-  long it is, an unterminated one colours the rest of the file rather than
-  nothing at all, and typing the token that opens or closes one recolours the
-  lines below it straight away. `synlines` now only reaches the tag search.
+- Syntax colouring remembers, per line, which multi-line region and which tag
+  were open when the line above ended, instead of searching `synlines` lines in
+  each direction every time a line is drawn. A comment or a string now keeps
+  its colour however long it is, an unterminated one colours the rest of the
+  file rather than nothing at all, and typing the token that opens or closes
+  one recolours the lines below it straight away. A tag rule (`t`) reads the
+  same state, so a tag written over more lines than the old window colours its
+  name and its attributes like any other; `<` and `>` a hundred lines apart are
+  no different from `<` and `>` on one line. `synlines` is still accepted, so
+  an rc that sets it goes on working, but nothing reads it any more.
+
+  It is not slower than the search it replaces: colouring a 1500 line file of
+  nested tags takes 0.78–0.85s where the search took 0.88–1.03s, and the two
+  produce byte for byte the same colouring on it. Nothing else pays anything —
+  a buffer whose rules have no `t` in them never walks a delimiter, and a
+  region's two ends are not mistaken for a tag's.
 - `:syntax dump` names a tag rule (`t`) by the pattern it matches rather than
   the tag it looks inside. A dozen rules in `html.jvsyn` reported themselves as
   `t/<`, which told them apart from nothing.
@@ -182,11 +192,19 @@ repository and would drift within three releases.
   していて実際そうだったため、モードの打ち間違いがそのままルールとして登録され、
   黙って違うものに一致していました。モードなしを表す `n` は、無視される文字では
   なく正式なモードにしました。
-- シンタックスカラーが、行をまたぐ領域の状態を行ごとに覚えるようになりました。
+- シンタックスカラーが、行をまたぐ領域とタグの状態を行ごとに覚えるようになりました。
   これまでは 1 行描くたびに前後 `synlines` 行を探していたため、コメントや文字列
   がその範囲を超えると色が落ちていました。長さに関わらず色が保たれ、閉じていない
   コメントは以降すべてが色付き (従来は無色) になり、開始・終了の記号を打った時点
-  で下の行の色がすぐ変わります。`synlines` はタグ検索にのみ効くようになりました。
+  で下の行の色がすぐ変わります。タグルール (`t`) も同じ状態を読むため、その範囲を
+  超える長さで書かれたタグでもタグ名や属性に色が付きます。`<` と `>` が 100 行
+  離れていても 1 行に並んでいるのと変わりません。`synlines` は今も受け付けるので
+  設定してある rc はそのまま動きますが、もう誰も読んでいません。
+
+  置き換え前の探索より遅くはなりません。入れ子タグ 1500 行の色付けは 0.78〜0.85 秒
+  で、探索方式は 0.88〜1.03 秒でした (両者の色付け結果はバイト単位で同一)。`t` を
+  使わないルールしか持たないバッファは区切りを 1 つも走査しませんし、領域の両端が
+  タグと取り違えられることもありません。
 - 日本語のシンタックスルールが再び一致するようになりました。`syntax.c` の文字送り
   がすべて Shift-JIS 時代の 2 バイト前提のままで、1.0.0 でバッファが UTF-8
   (漢字・かなは 3 バイト) になって以降、日本語を含むルールは何にも一致していません

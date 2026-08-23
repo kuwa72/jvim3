@@ -191,6 +191,18 @@ case_ 'HTML: tag, argument, entity' t.html \
 '<!-- c -->\n<body bgcolor="#ffffff">\n<a href="http://x.example/">&amp;</a>\n</body>\n' \
 '1:0-10 Comment p/<!--\n2:0-1 Delimiter n/<\n2:1-5 HtmlTag iwt/body\n2:6-13 HtmlArg iwt/bgcolor\n2:14-23 Number t/"#\\x\\x\\x\\x\\x\\x"\n2:23-24 Delimiter n/>\n3:0-1 Delimiter n/<\n3:1-2 HtmlTag iwt/a\n3:3-7 HtmlArg iwt/href\n3:8-27 String mt/"[^#].*"\n3:27-28 Delimiter n/>\n3:28-33 SpecialChar n/&amp;\n3:33-35 Delimiter n/<\\/\n3:35-36 HtmlTag iwt/a\n3:36-37 Delimiter n/>\n4:0-2 Delimiter n/<\\/\n4:2-6 HtmlTag iwt/body\n4:6-7 Delimiter n/>\n'
 
+# A tag over more than one line, with 'synlines' set as low as it goes.
+#
+# The rules that colour what is inside a tag used to find the tag by searching
+# that many lines around the one being drawn, and the ">" here is two lines
+# below the "td", so the tag name came out plain. The tag a line is inside of
+# is remembered per line now, the way a region already was, and 'synlines'
+# reaches nothing.
+case_ 'HTML: a tag over three lines' t.html \
+'<td\nwidth=3\n>4</td>\n' \
+'1:0-1 Delimiter n/<\n1:1-3 HtmlTag iwt/td\n2:0-5 HtmlArg iwt/width\n2:6-7 Number t/\\d\\+\n3:0-1 Delimiter n/>\n3:2-4 Delimiter n/<\\/\n3:4-6 HtmlTag iwt/td\n3:6-7 Delimiter n/>\n' \
+':set synlines=1\r'
+
 case_ 'XML: declaration, tag, attribute' t.xml \
 '<?xml version="1.0"?>\n<!-- c -->\n<root id="1">\n  <item/>\n</root>\n' \
 '1:0-21 PreProc m/<?.*?>\n2:0-10 Comment p/<!--\n3:0-5 Statement n/<\\/\\=[^ >]\\+\n3:9-12 String m/".*"\n3:12-13 Statement n/\\/\\=>\n4:2-8 Statement n/<\\/\\=[^ >]\\+\n4:8-9 Statement n/\\/\\=>\n5:0-6 Statement n/<\\/\\=[^ >]\\+\n5:6-7 Statement n/\\/\\=>\n'

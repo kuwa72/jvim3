@@ -25,12 +25,6 @@
 #include "regexp.h"
 
 #define MAX_COLS		0x7fffffff
-/*
- * How far a tag search looks for the tag it is inside of. Pair regions used to
- * be found the same way and had their own, wider window; they are remembered
- * per line now instead, so 'synlines' only reaches the tag search.
- */
-#define	T_LINE(_max)	(p_synl > 0 ? p_synl : ((_max) > (Rows * 10) ? Rows * 2 : Rows * 1))
 
 #define SYNTAX_CACHE	1
 
@@ -51,6 +45,12 @@ typedef struct _syntax {
 	int					last;
 	int					min;
 	int					type;
+	/*
+	 * Which pair of tag delimiters a "t" rule looks inside of, as a position in
+	 * the buffer's tag list. Zero for a rule that is not a tag rule, and for
+	 * one whose delimiters could not be kept.
+	 */
+	int					tagno;
 	linenr_t			startpos;
 	linenr_t			endpos;
 	char_u			*	str;
@@ -68,6 +68,14 @@ typedef struct _syntax {
 #define TYPE_TAGP		3
 #define TYPE_CRCH		4
 
+/*
+ * A pair of tag delimiters -- "<" and ">" for HTML -- shared by every "t" rule
+ * written with them. html.jvsyn has around eighty such rules and one of these.
+ *
+ * prog_l and prog_r are this list's own, compiled from the same patterns as the
+ * rules' but not shared with them: syn_state() walks the delimiters of a line
+ * without knowing which rule is asking, and the rules are freed on their own.
+ */
 typedef struct _syntag {
 	struct _syntag	*	next;
 	char_u			*	string_l;
@@ -76,6 +84,9 @@ typedef struct _syntag {
 	char_u			*	str_r;
 	regexp			*	prog_l;
 	regexp			*	prog_r;
+	int					ic;
+	int					jic;
+	int					istag;		/* a tag rule looks in it, not just a region */
 } syntag;
 
 typedef struct {
@@ -164,6 +175,12 @@ syn_clr(BUF *buf)
 			free(gwp->str_l);
 		if (gwp->str_r)
 			free(gwp->str_r);
+		/* This list's own since the line states began reading them. */
+		if (gwp->prog_l)
+			free(gwp->prog_l);
+		if (gwp->prog_r)
+			free(gwp->prog_r);
+		free(gwp);
 		gwp = gnp;
 	}
 	lwp = (synlink *)buf->b_syn_link;
@@ -187,6 +204,7 @@ syn_clr(BUF *buf)
 	buf->b_syn_statelen	= 0;
 	buf->b_syn_stateval	= 0;
 	buf->b_syn_pairs	= 0;
+	buf->b_syn_tags		= 0;
 }
 
 static int
@@ -483,43 +501,73 @@ syn_strsave(char_u *p)
 	return(p);
 }
 
-static void
-syn_addtag(BUF *buf, char_u *string_l, char_u *string_r, regexp *regp_l, regexp *regp_r)
+/*
+ * Record a pair of tag delimiters, and say which one it is: the position in the
+ * list, one based, so that a line state can name it in a short. Zero means the
+ * pair could not be kept, and a rule given that answers the way it always did,
+ * by searching the lines around the one being drawn.
+ *
+ * A pair already in the list is not added twice, and the two rules then share
+ * the case folding of whichever asked first. Two rules with the same
+ * delimiters and different "i" would be a strange thing to write.
+ *
+ * A region rule ("p") registers its two ends here as well, and always has:
+ * syn_inschar() watches the list to know when typing one of them means the
+ * lines below have to be drawn again. Only a tag rule sets 'istag', and only
+ * those are what the line states walk -- otherwise the two ends of a C comment
+ * would be tracked as though they opened and closed a tag, in every C file.
+ */
+static int
+syn_addtag(BUF *buf, char_u *string_l, char_u *string_r, int ic, int jic,
+			int istag)
 {
 	syntag			*	gwp;
 	syntag			*	gnp;
+	int					no = 0;
 
 	gwp = (syntag *)buf->b_syn_tag;
 	while (gwp)
 	{
+		no++;
 		if ((strcmp(gwp->string_l, string_l) == 0)
 				&& (strcmp(gwp->string_r, string_r) == 0))
-			return;
+			break;
 		gwp = gwp->next;
 	}
-	gwp = malloc(sizeof(syntag));
-	memset(gwp, 0, sizeof(syntag));
-	gwp->string_l	= strsave(string_l);
-	gwp->string_r	= strsave(string_r);
-	if (!syn_isregstr(string_l) && !syn_isregstr(string_r))
+	if (gwp == NULL)
 	{
-		gwp->str_l	= syn_strsave(string_l);
-		gwp->str_r	= syn_strsave(string_r);
+		gwp = malloc(sizeof(syntag));
+		memset(gwp, 0, sizeof(syntag));
+		gwp->string_l	= strsave(string_l);
+		gwp->string_r	= strsave(string_r);
+		gwp->ic			= ic;
+		gwp->jic		= jic;
+		if (!syn_isregstr(string_l) && !syn_isregstr(string_r))
+		{
+			gwp->str_l	= syn_strsave(string_l);
+			gwp->str_r	= syn_strsave(string_r);
+		}
+		gwp->prog_l	= syn_regcomp(ic, jic, string_l);
+		gwp->prog_r	= syn_regcomp(ic, jic, string_r);
+		if (buf->b_syn_tag == NULL)
+			buf->b_syn_tag = (char_u *)gwp;
+		else
+		{
+			gnp = (syntag *)buf->b_syn_tag;
+			while (gnp->next)
+				gnp = gnp->next;
+			gnp->next = gwp;
+		}
+		no++;
 	}
-	else
+	if (istag && !gwp->istag)
 	{
-		gwp->prog_l	= regp_l;
-		gwp->prog_r	= regp_r;
+		gwp->istag = TRUE;
+		buf->b_syn_tags++;
 	}
-	if (buf->b_syn_tag == NULL)
-		buf->b_syn_tag = (char_u *)gwp;
-	else
-	{
-		gnp = (syntag *)buf->b_syn_tag;
-		while (gnp->next)
-			gnp = gnp->next;
-		gnp->next = gwp;
-	}
+	if (gwp->prog_l == NULL || gwp->prog_r == NULL)
+		return(0);				/* kept, but the states cannot use it */
+	return(no);
 }
 
 static int
@@ -1239,6 +1287,7 @@ syn_add(BUF *buf, char_u *reg)
 	char_u			*	tagprog		= NULL;
 	char_u			*	tagprogend	= NULL;
 	int					tagfirst= TRUE;
+	int					tagno	= 0;		/* the delimiters, for every rule on the line */
 
 	p = reg;
 	while (*p && !iswhite(*p))
@@ -1396,7 +1445,8 @@ syn_add(BUF *buf, char_u *reg)
 						return(2);
 					}
 					if (l_type == TYPE_TAG || l_type == TYPE_PAIR)
-						syn_addtag(buf, pattern_l, pattern, r->prog, r->progend);
+						tagno = syn_addtag(buf, pattern_l, pattern, l_ic, l_jic,
+											l_type == TYPE_TAG);
 					if (l_type == TYPE_TAG)
 						tagprogend = strsave(pattern);
 				}
@@ -1454,7 +1504,8 @@ syn_add(BUF *buf, char_u *reg)
 				 */
 				if (r->pat != NULL)
 					free(r->pat);
-				r->pat = strsave(p);
+				r->pat		= strsave(p);
+				r->tagno	= tagno;		/* the delimiters, shared by them all */
 				if (l_jic || syn_isregstr(p))
 				{
 					strcpy(pattern, p);
@@ -1605,75 +1656,161 @@ pe_search(syntax *synp, char_u *top, char_u *ptr, int at_bol)
 	return(NULL);
 }
 
-static int
-syn_tagchk(syntax *synp, BUF *buf, linenr_t lnum, char_u **top, char_u **ptr)
+/*
+ * The tag delimiters at position 'no' in the buffer's list.
+ */
+static syntag *
+syn_tagat(BUF *buf, int no)
 {
-	int				rc;
-	linenr_t		pos  = *ptr - *top;
-	linenr_t		line;
+	syntag			*	tagp;
+
+	if (no <= 0)
+		return(NULL);
+	for (tagp = (syntag *)buf->b_syn_tag; tagp != NULL; tagp = tagp->next)
+		if (--no == 0)
+			return(tagp);
+	return(NULL);
+}
+
+/*
+ * The next opening ('close' false) or closing delimiter of one tag pair, at or
+ * after 'from'. Both ends of it come back, because the search for the delimiter
+ * after this one has to start past this one -- a tag whose two delimiters are
+ * the same string would otherwise close on the characters that opened it.
+ *
+ * The shortest match, as syn_inschar() also takes it: what the next search
+ * starts from is the end of this delimiter, and the tighter that is the less
+ * of the line a delimiter written as a pattern can swallow.
+ */
+static int
+syn_tagfind(syntag *tagp, int close, char_u *line, char_u *from,
+			char_u **sp, char_u **ep)
+{
+	regexp			*	prog = close ? tagp->prog_r : tagp->prog_l;
+
+	if (prog == NULL)
+		return(FALSE);
+	if (!syn_regexec(TRUE, tagp->ic, tagp->jic, prog, from, from == line))
+		return(FALSE);
+	*sp = prog->startp[0];
+	*ep = prog->endp[0];
+	return(TRUE);
+}
+
+/*
+ * Walk the tag delimiters of one line, in the order they appear.
+ *
+ * 'open' is the tag open where the line begins, as a position in the buffer's
+ * tag list, and what is open when the line ends comes back. A tag is open at
+ * some point of the line when the last delimiter to begin before that point
+ * was an opening one -- which is how the search this replaces decided it too.
+ *
+ * When 'want' is not zero the walk also answers, through '*inside', whether
+ * byte 'pos' of the line is inside a tag of that pair. Asking during the walk
+ * rather than afterwards is what makes one pass enough: the delimiters are
+ * visited in order, so the answer is simply the state as 'pos' goes by.
+ *
+ * Asked that way the walk stops as soon as the answer can no longer change,
+ * and what it returns is then not the state at the end of the line. That is
+ * worth having: a line of HTML is asked about once per rule that matches
+ * anywhere on it, which on a dense line is dozens of times.
+ */
+static int
+syn_tagwalk(BUF *buf, int open, char_u *line, int want, linenr_t pos,
+			int *inside)
+{
+	char_u			*	p = line;
+
+	if (inside != NULL)
+		*inside = (want != 0 && open == want);
+	while (*p != '\0')
+	{
+		linenr_t			at = p - line;
+		char_u			*	s;
+		char_u			*	e;
+
+		/* every delimiter from here on begins at or after 'pos' */
+		if (inside != NULL && at >= pos)
+			break;
+
+		if (open != 0)
+		{
+			syntag		*	tagp = syn_tagat(buf, open);
+
+			if (tagp == NULL || !syn_tagfind(tagp, TRUE, line, p, &s, &e))
+				break;					/* runs on into the next line */
+			if (inside != NULL && want == open && (s - line) < pos)
+				*inside = FALSE;
+			p	 = e;
+			open = 0;
+		}
+		else
+		{
+			syntag		*	tagp;
+			char_u		*	bests = NULL;
+			char_u		*	beste = NULL;
+			int				best  = 0;
+			int				no	  = 0;
+
+			/* whichever pair opens first from here; ties go to the first written */
+			for (tagp = (syntag *)buf->b_syn_tag; tagp != NULL; tagp = tagp->next)
+			{
+				no++;
+				if (!tagp->istag)		/* the two ends of a region, not a tag */
+					continue;
+				if (!syn_tagfind(tagp, FALSE, line, p, &s, &e))
+					continue;
+				if (bests == NULL || s < bests)
+				{
+					bests	= s;
+					beste	= e;
+					best	= no;
+				}
+			}
+			if (best == 0)
+				break;					/* nothing else opens on this line */
+			if (inside != NULL && want == best && (bests - line) < pos)
+				*inside = TRUE;
+			p	 = beste;
+			open = best;
+		}
+		/*
+		 * A delimiter that matches nothing would leave p where it was and spin
+		 * here for ever, so make sure the line is always being consumed.
+		 */
+		if ((p - line) <= at)
+			p = line + at + utf_lenat(line, (int)at);
+	}
+	return(open);
+}
+
+/*
+ * Whether the match a "t" rule has just made is inside the tag the rule looks
+ * in. 'open' is the tag open where the line begins, which the line states
+ * already know, so nothing outside the line is read.
+ *
+ * This used to search up to 'synlines' lines in each direction for the
+ * delimiters, and neither end of that window did what it looks like it did.
+ * Running out of lines going up was taken to mean the tag was open, so the
+ * limit held nothing back there at all; running out going down was taken to
+ * mean it never closed, so a tag written over more lines than the window had
+ * its own name and its attributes left plain. That second one is what showed.
+ */
+static int
+syn_tagchk(BUF *buf, syntax *synp, int open, char_u *top)
+{
+	int					inside;
 
 	if (!(synp->type == TYPE_TAG || synp->type == TYPE_TAGP))
 		return(1);
-	/* start position search */
-	rc = syn_regexec(synp->min, synp->ic, synp->jic, synp->prog, *top, TRUE);
-	if (rc == 0 || (*top + synp->endpos) <= synp->prog->startp[0])
-	{
-		for (line = lnum - 1; line > 0 && line >= (lnum - T_LINE(buf->b_ml.ml_line_count)); line--)
-		{
-			rc = syn_regexec(synp->min, synp->ic, synp->jic, synp->prog, ml_get_buf(buf, line, FALSE), TRUE);
-			if (rc)
-			{
-				rc = syn_regexec(synp->min, synp->ic, synp->jic, synp->progend, synp->prog->endp[0], FALSE);
-				while (rc)
-				{
-					rc = syn_regexec(synp->min, synp->ic, synp->jic, synp->prog, synp->progend->endp[0], FALSE);
-					if (!rc)
-						goto breakbreak;
-					rc = syn_regexec(synp->min, synp->ic, synp->jic, synp->progend, synp->prog->endp[0], FALSE);
-					if (!rc)
-						break;
-				}
-				break;
-			}
-			rc = syn_regexec(synp->min, synp->ic, synp->jic, synp->progend, ml_get_buf(buf, line, FALSE), TRUE);
-			if (rc)
-				goto breakbreak;
-		}
-		if (line == 0)
-			goto breakbreak;
-		*top = ml_get_buf(buf, lnum, FALSE);
-		*ptr = *top + pos;
-	}
-	/* end position search */
-	rc = syn_regexec(synp->min, synp->ic, synp->jic, synp->progend, *top, TRUE);
-	while (rc)
-	{
-		if ((*top + synp->endpos) <= synp->progend->startp[0])
-			return(1);
-		rc = syn_regexec(synp->min, synp->ic, synp->jic, synp->prog, synp->progend->endp[0], FALSE);
-		if (!rc || (*top + synp->endpos) <= synp->prog->startp[0])
-			return(0);
-		rc = syn_regexec(synp->min, synp->ic, synp->jic, synp->progend, synp->prog->endp[0], FALSE);
-	}
-	for (line = lnum + 1; line <= buf->b_ml.ml_line_count && line <= (lnum + T_LINE(buf->b_ml.ml_line_count)); line++)
-	{
-		rc = syn_regexec(synp->min, synp->ic, synp->jic, synp->progend, ml_get_buf(buf, line, FALSE), TRUE);
-		if (rc)
-			break;
-	}
-	if (!rc)
-		goto breakbreak;
-	*top = ml_get_buf(buf, lnum, FALSE);
-	*ptr = *top + pos;
-	return(1);
-breakbreak:
-	*top = ml_get_buf(buf, lnum, FALSE);
-	*ptr = *top + pos;
-	return(0);
+	if (synp->tagno == 0)
+		return(0);			/* delimiters that were not kept: match nothing */
+	(void)syn_tagwalk(buf, open, top, synp->tagno, synp->endpos, &inside);
+	return(inside);
 }
 
 static syntax *
-fwd_search(BUF *buf, linenr_t lnum, char_u **top, char_u **ptr, linenr_t *ftop)
+fwd_search(BUF *buf, int tagopen, char_u *top, char_u *ptr, linenr_t *ftop)
 {
 	syntax			*	synp;
 	syntax			*	topsynp = NULL;
@@ -1687,24 +1824,35 @@ fwd_search(BUF *buf, linenr_t lnum, char_u **top, char_u **ptr, linenr_t *ftop)
 		if (synp->type == TYPE_CRCH)
 			continue;
 #if SYNTAX_CACHE
-		if (synp->word && synp->str && *ptr != org)
+		if (synp->word && synp->str && ptr != org)
 		{
-			syn_makeidx(*ptr);
-			org = *ptr;
+			syn_makeidx(ptr);
+			org = ptr;
 		}
 		if (synp->word && synp->str && synhash[synp->hash].cnt == 0)
 			continue;
 #endif
-		if (ps_search(synp, *top, *ptr, TRUE) != NULL)
+		if (ps_search(synp, top, ptr, TRUE) != NULL)
 		{
-			if (!syn_tagchk(synp, buf, lnum, top, ptr))
+			int				covers = synp->startpos <= (ptr - top)
+										&& (ptr - top) < synp->endpos;
+
+			/*
+			 * A rule that neither covers where the drawing is nor begins
+			 * earlier than the best so far cannot win, so do not ask whether
+			 * it is inside its tag: that walks the line, and html.jvsyn has
+			 * eighty rules that would each ask.
+			 */
+			if (!covers && synp->startpos >= *ftop)
+				continue;
+			if (!syn_tagchk(buf, synp, tagopen, top))
 				continue;
 			if (*ftop > synp->startpos)
 			{
 				*ftop	= synp->startpos;
 				topsynp	= synp;
 			}
-			if (synp->startpos <= (*ptr - *top) && (*ptr - *top) < synp->endpos)
+			if (covers)
 			{
 				topsynp = synp;
 				break;
@@ -1761,23 +1909,25 @@ bak_search(BUF *buf, char_u *top, char_u *ptr, linenr_t *ftop)
 /*
  * What a line inherits from the ones above it.
  *
- * Only a pair rule -- the "p" search mode -- can run past the end of a line, so
- * the only thing a line needs to know about its predecessors is which pair
- * region, if any, was still open when they ended. That is one number per line:
- * b_syn_state[i] is the state at the start of line i + 1, held as the position
- * of the rule among the pair rules, one based, or 0 for nothing open. Entries
- * up to b_syn_stateval have been worked out; the rest have not been reached
- * yet, and anything a change makes doubtful is dropped by syn_changed().
+ * Two things reach past the end of a line: a pair rule -- the "p" search mode
+ * -- and the delimiters a tag rule looks inside of, "<" and ">" for HTML. So
+ * the only thing a line needs to know about its predecessors is which region
+ * and which tag, if either, were still open when they ended. That is two
+ * numbers per line: b_syn_state[i] is the state at the start of line i + 1,
+ * each held as a position in its list, one based, or 0 for nothing open.
+ * Entries up to b_syn_stateval have been worked out; the rest have not been
+ * reached yet, and anything a change makes doubtful is dropped by
+ * syn_changed().
  *
- * This is what lets a line be coloured on its own. It used to be guessed by
+ * This is what lets a line be coloured on its own. Both used to be guessed by
  * searching 'synlines' lines in each direction every time a line was drawn,
- * which cost searches per line and still got a comment or a string wrong once
- * it grew longer than that window.
+ * which cost searches per line and still got a comment, a string, or the
+ * attributes of a long tag wrong once it grew past that window.
  *
- * The state is held as a position rather than a pointer because the rule list
- * is thrown away and rebuilt by ":syntax clear", which every buffer runs on the
- * way in: a position that no longer names a rule reads back as "nothing open",
- * where a stale pointer would be read.
+ * The state is held as a position rather than a pointer because the lists are
+ * thrown away and rebuilt by ":syntax clear", which every buffer runs on the
+ * way in: a position that no longer names anything reads back as "nothing
+ * open", where a stale pointer would be read.
  */
 
 static syntax *
@@ -1875,7 +2025,7 @@ static int
 syn_stateroom(BUF *buf, linenr_t lnum)
 {
 	linenr_t			want;
-	short			*	p;
+	SYNSTATE		*	p;
 
 	if (lnum > buf->b_syn_statelen)
 	{
@@ -1883,9 +2033,10 @@ syn_stateroom(BUF *buf, linenr_t lnum)
 		want = buf->b_ml.ml_line_count;
 		if (want < lnum)
 			want = lnum;
-		if (want > (linenr_t)(0x7fffffffL / (long)sizeof(short)))
+		if (want > (linenr_t)(0x7fffffffL / (long)sizeof(SYNSTATE)))
 			return(FALSE);
-		p = (short *)realloc(buf->b_syn_state, (size_t)want * sizeof(short));
+		p = (SYNSTATE *)realloc(buf->b_syn_state,
+								(size_t)want * sizeof(SYNSTATE));
 		if (p == NULL)
 			return(FALSE);
 		buf->b_syn_state	= p;
@@ -1893,40 +2044,58 @@ syn_stateroom(BUF *buf, linenr_t lnum)
 	}
 	if (buf->b_syn_stateval < 1)
 	{
-		buf->b_syn_state[0]	= 0;		/* nothing is open before line 1 */
-		buf->b_syn_stateval	= 1;
+		/* nothing is open before line 1 */
+		buf->b_syn_state[0].sy_pair	= 0;
+		buf->b_syn_state[0].sy_tag	= 0;
+		buf->b_syn_stateval			= 1;
 	}
 	return(TRUE);
 }
 
 /*
- * The pair region open at the start of 'lnum', working out and remembering the
- * states of any lines in between that have not been reached yet.
+ * What is open at the start of 'lnum' -- a region, a tag, both or neither --
+ * working out and remembering the states of any lines in between that have not
+ * been reached yet.
  *
  * ml_get_buf() is called for those lines, so the caller's pointers into the
  * line it is drawing have to be fetched again afterwards.
  */
-static syntax *
+static SYNSTATE
 syn_state(BUF *buf, linenr_t lnum)
 {
+	SYNSTATE			st;
 	syntax			*	open;
+	int					tag;
 	linenr_t			n;
 
-	/* With no region rule nothing can reach across a line, so keep nothing. */
-	if (lnum < 1 || buf->b_syn_ptr == NULL || buf->b_syn_pairs <= 0)
-		return(NULL);
+	st.sy_pair = 0;
+	st.sy_tag  = 0;
+	/* With neither kind of rule nothing reaches across a line, so keep nothing. */
+	if (lnum < 1 || buf->b_syn_ptr == NULL
+			|| (buf->b_syn_pairs <= 0 && buf->b_syn_tags <= 0))
+		return(st);
 	if (!syn_stateroom(buf, lnum))
-		return(NULL);
+		return(st);
 	if (lnum <= buf->b_syn_stateval)
-		return(syn_pair(buf, buf->b_syn_state[lnum - 1]));
-	open = syn_pair(buf, buf->b_syn_state[buf->b_syn_stateval - 1]);
+		return(buf->b_syn_state[lnum - 1]);
+	st	 = buf->b_syn_state[buf->b_syn_stateval - 1];
+	open = syn_pair(buf, st.sy_pair);
+	tag  = st.sy_tag;
 	for (n = buf->b_syn_stateval; n < lnum; n++)
 	{
-		open = syn_linestate(buf, open, ml_get_buf(buf, n, FALSE));
-		buf->b_syn_state[n] = (short)syn_pairno(buf, open);
+		char_u		*	line = ml_get_buf(buf, n, FALSE);
+
+		if (buf->b_syn_pairs > 0)
+			open = syn_linestate(buf, open, line);
+		if (buf->b_syn_tags > 0)
+			tag = syn_tagwalk(buf, tag, line, 0, 0, NULL);
+		buf->b_syn_state[n].sy_pair	= (short)syn_pairno(buf, open);
+		buf->b_syn_state[n].sy_tag	= (short)tag;
 	}
-	buf->b_syn_stateval = lnum;
-	return(open);
+	buf->b_syn_stateval	= lnum;
+	st.sy_pair			= (short)syn_pairno(buf, open);
+	st.sy_tag			= (short)tag;
+	return(st);
 }
 
 /*
@@ -2140,6 +2309,7 @@ is_syntax(WIN *wp, linenr_t lnum, char_u **top, char_u **ptr)
 	syntax			*	pep;
 	linenr_t			startpos;
 	linenr_t			endpos;
+	SYNSTATE			state;
 
 	if (!wp->w_p_syt)
 		return(0);
@@ -2167,12 +2337,23 @@ is_syntax(WIN *wp, linenr_t lnum, char_u **top, char_u **ptr)
 	buf->b_syn_curp		= NULL;
 	if (*ptr == NULL || (*ptr != NULL && **ptr == '\0'))
 		return(0);
+	{
+		linenr_t			off = *ptr - *top;
+
+		/*
+		 * What the lines above left open, asked for once for the whole line,
+		 * and not only when drawing starts at its beginning: a tag rule needs
+		 * the answer wherever in the line it is asked.
+		 */
+		state = syn_state(buf, lnum);
+		/* syn_state() fetched other lines, which moves the one being drawn */
+		*top = ml_get_buf(buf, lnum, FALSE);
+		*ptr = *top + off;
+	}
 	if (*top == *ptr)
 	{
-		syntax			*	openp = syn_state(buf, lnum);
+		syntax			*	openp = syn_pair(buf, state.sy_pair);
 
-		/* syn_state() fetched other lines, which moves the one being drawn */
-		*ptr = *top = ml_get_buf(buf, lnum, FALSE);
 		if (openp != NULL)
 		{
 			/*
@@ -2197,7 +2378,7 @@ is_syntax(WIN *wp, linenr_t lnum, char_u **top, char_u **ptr)
 			return(openp->color);
 		}
 	}
-	if ((synp = fwd_search(buf, lnum, top, ptr, &ftop)) != NULL)
+	if ((synp = fwd_search(buf, state.sy_tag, *top, *ptr, &ftop)) != NULL)
 	{
 		/*
 		 * Both ends of the match, kept before bak_search() runs: that asks

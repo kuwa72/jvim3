@@ -276,6 +276,20 @@ struct memline
 
 typedef struct buffer BUF;
 
+#ifdef USE_SYNTAX
+/*
+ * What the lines above a line leave open where it begins, one of these per
+ * line, so that the line can be coloured without reading the ones around it.
+ * See the comment above syn_pair() in syntax.c. Both are held as positions in
+ * their list rather than as pointers, because ":syntax clear" throws the lists
+ * away and a position that no longer names anything reads back as "nothing".
+ */
+typedef struct {
+	short			 sy_pair;			/* the region rule open here, 0 none */
+	short			 sy_tag;			/* the tag delimiters open here, 0 none */
+} SYNSTATE;
+#endif
+
 struct buffer
 {
 	MEMLINE			 b_ml;				/* associated memline (also contains
@@ -402,15 +416,16 @@ struct buffer
 	linenr_t		b_syn_line;
 	char_u		   *b_syn_link;
 	/*
-	 * What a multi-line region leaves open at the start of each line, so that a
+	 * What a region or a tag leaves open at the start of each line, so that a
 	 * line can be coloured without searching the ones around it: entry i is the
 	 * state at the start of line i + 1. See the comment above syn_pair() in
 	 * syntax.c. States up to b_syn_stateval are worked out, the rest are not.
 	 */
-	short		   *b_syn_state;
+	SYNSTATE	   *b_syn_state;
 	linenr_t		b_syn_statelen;
 	linenr_t		b_syn_stateval;
 	int				b_syn_pairs;	/* rules that can reach past a line */
+	int				b_syn_tags;		/* delimiter pairs a tag rule looks in */
 #endif
 };
 
