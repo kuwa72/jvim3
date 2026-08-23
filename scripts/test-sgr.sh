@@ -100,9 +100,9 @@ case_() {
 		printf '  FAIL        %s\n' "$name"
 		diff -u "$tmp/want" "$tmp/out" | sed -n '3,14p' | sed 's/^/                /'
 		if [ ! -s "$tmp/out" ]; then
-			printf '                %s bytes came back from the editor\n' \
+			printf '                %s bytes came back from the editor:\n' \
 					"$(wc -c < "$tmp/raw" | tr -d ' ')"
-			od -c "$tmp/raw" | sed -n '1,3p' | sed 's/^/                /'
+			od -c "$tmp/raw" | sed 's/^/                /'
 		fi
 		fail=$((fail+1))
 	fi
