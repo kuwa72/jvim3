@@ -92,12 +92,36 @@ zip=$(ls "$tmp"/jvim3-*-win$bits.zip 2>/dev/null | head -1)
 rm -rf "$DEST"
 mkdir -p "$DEST"
 if command -v unzip >/dev/null 2>&1; then
-	unzip -q -j "$zip" -d "$DEST"
+	unzip -q "$zip" -d "$tmp/x"
 else
 	python3 -c 'import sys,zipfile;zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])' \
 		"$zip" "$tmp/x"
-	find "$tmp/x" -type f -exec cp -p {} "$DEST/" \;
 fi
+
+# The package holds one directory named for the version, and its *contents* are
+# what DEST wants: the exe at the top, and syntax/ still a directory beside it.
+#
+# This used to unpack with "unzip -j", which junks the paths. The exe landed
+# where it belongs, so it looked right and ran -- but syntax/ was flattened into
+# the same directory, and "source $VIM/syntax/filetype.jvsyn" had nothing to
+# open. The package only grew a subdirectory when the rules were split out of
+# the rc, which is after this script was written.
+inner=$tmp/x
+only=$(ls -A "$tmp/x")
+if [ "$(printf '%s\n' "$only" | wc -l)" -eq 1 ] && [ -d "$tmp/x/$only" ]; then
+	inner=$tmp/x/$only
+fi
+cp -pR "$inner/." "$DEST/"
+
+# Say so here rather than let the editor say "can't open file" later. Anything
+# the package puts in a subdirectory is reachable only through $VIM, which is
+# exactly what a flattening unpack breaks.
+[ -f "$DEST/syntax/filetype.jvsyn" ] || {
+	echo "unpacked, but $DEST/syntax/filetype.jvsyn is not there." >&2
+	echo "The rules are what an rc reaches with \"source \$VIM/syntax/...\";" >&2
+	echo "without them the editor starts and colours nothing." >&2
+	exit 1
+}
 
 # Prove it is the runtime the release uses rather than taking it on trust: this
 # is the whole point of not building locally.
