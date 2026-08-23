@@ -48,11 +48,13 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 if [ -z "$count_only" ]; then
-	${CC:-cc} -o "$tmp/ptyrun" "$root/scripts/ptyrun.c" 2>"$tmp/cc.err" || {
-		echo "cannot build $root/scripts/ptyrun.c, which gives jvim a pty:" >&2
-		cat "$tmp/cc.err" >&2
-		exit 2
-	}
+	for src in ptyrun sgrfilter; do
+		${CC:-cc} -o "$tmp/$src" "$root/scripts/$src.c" 2>"$tmp/cc.err" || {
+			echo "cannot build $root/scripts/$src.c:" >&2
+			cat "$tmp/cc.err" >&2
+			exit 2
+		}
+	done
 	printf 'set fexrc\nset syntax\nsource $VIM/syntax/filetype.jvsyn\n' \
 			> "$tmp/.jvimrc"
 fi
@@ -64,65 +66,11 @@ counted() {
 	[ -n "$count_only" ]
 }
 
-# Everything jvim wrote, as escape-and-text lines.
-#
-# RS is the escape character, so each record is one escape and the text after
-# it. An SGR escape (the ones ending in 'm') starts a new output line; every
-# other escape -- cursor motion, the window title, the alternate screen -- has
-# its own shape stripped off and only its text kept.
-#
-# Two markers bound what is kept. Clearing the display throws away everything
-# written so far, and jvim does that twice on the way in -- so does the line
-# collected so far. "Thanks for flying Vim" is the last thing it says, and the
-# clear that follows it is a teardown, not a redraw.
-#
-# No escape character appears in a regexp here, only in strings built with
-# sprintf(). The awk on DragonFly is the one true awk, which does not read
-# "\007" inside a bracket expression the way gawk and mawk do: the window title
-# then went unrecognised, "Thanks for flying" with it, and the clear at the end
-# of the teardown threw the whole run away. Every case came out empty and
-# nothing said why.
+# Everything jvim wrote, as escape-and-text lines. scripts/sgrfilter.c does the
+# work and says at the top of itself why it is a C program and not three lines
+# of awk.
 normalise() {
-	LC_ALL=C awk '
-		BEGIN {
-			ESC = sprintf("%c", 27); BEL = sprintf("%c", 7)
-			CR  = sprintf("%c", 13); NL  = sprintf("%c", 10)
-			RS = ESC; ORS = ""; n = 1; out[1] = "|"; done = 0
-		}
-		NR > 1 {
-			if (done)
-				next
-			if (index($0, "Thanks for flying") > 0)
-			{
-				done = 1			# the teardown, not another redraw
-				next
-			}
-			r = $0
-			if (match(r, /^\[[0-9;]*m/))
-			{
-				out[++n] = substr(r, RSTART, RLENGTH) "|"
-				r = substr(r, RSTART + RLENGTH)
-			}
-			else if (match(r, /^\[[0-9;?]*[A-Za-z]/))
-			{
-				csi = substr(r, RSTART, RLENGTH)
-				r = substr(r, RSTART + RLENGTH)
-				if (csi == "[2J") { n = 1; out[1] = "|" }
-			}
-			else if (substr(r, 1, 3) == "]2;")		# the window title
-			{
-				b = index(r, BEL)
-				r = (b > 0) ? substr(r, b + 1) : ""
-			}
-			else
-				sub(/^[=>78]/, "", r)		# keypad, save, restore
-			gsub(CR, "", r)
-			gsub(NL, "", r)
-			out[n] = out[n] r
-		}
-		END { for (i = 1; i <= n; i++) print out[i] "\n" }' |
-		sed 's/~.*$//' |			# the filler down an empty window
-		grep -v '^|$'				# and a run with neither escape nor text
+	"$tmp/sgrfilter"
 }
 
 # case <name> <file name> <source> <wanted> [COLORTERM]
