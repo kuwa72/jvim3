@@ -492,8 +492,12 @@ install: $(TARGET)
 	cp ../jvimrc.sample $(HELPLOC)/jvim3/jvimrc.sample
 	chmod $(HELPMOD) $(HELPLOC)/jvim3/jvimrc.sample
 
+# Not cmdtab.h: it is generated, but it is also committed, and makefile.mingw
+# has no rule to make one -- so a "clean" here left the Windows cross build
+# unable to compile cmdline.c until somebody thought to check out a file they
+# had not edited. The rule below rebuilds it whenever cmdtab.tab is newer.
 clean:
-	-rm -f $(OBJ) mkcmdtab.o version.o core $(TARGET) mkcmdtab cmdtab.h
+	-rm -f $(OBJ) mkcmdtab.o version.o core $(TARGET) mkcmdtab
 	-rm -f *.bak
 	-rm -f $(GOBJ)
 #	-rm -f jptab.h jptab

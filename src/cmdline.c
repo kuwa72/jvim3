@@ -1157,7 +1157,7 @@ DoOneCmd(char_u *buff)
 			{
 				if (*(p - 1) == '\\')	/* remove the backslash */
 				{
-					STRCPY(p - 1, p);
+					STRMOVE(p - 1, p);	/* the ranges overlap by all but one */
 					--p;
 				}
 				else
@@ -1250,7 +1250,7 @@ DoOneCmd(char_u *buff)
 				continue;
 			if (*(p - 1) == '\\')		/* remove escaped char */
 			{
-				STRCPY(p - 1, p);
+				STRMOVE(p - 1, p);		/* the ranges overlap by all but one */
 				--p;
 				continue;
 			}

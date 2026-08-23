@@ -4,7 +4,8 @@
 #
 #   scripts/build-unix.sh              build src/jvim3
 #   scripts/build-unix.sh clean
-#   scripts/build-unix.sh test         build, then run the encoding tests
+#   scripts/build-unix.sh test         build, then run the three test suites
+#   scripts/build-unix.sh strict       build with the warnings CI refuses
 #
 # src/makjunix.mak still expects you to uncomment three lines by hand for your
 # machine. This works out the same answers by asking the compiler, and hands
@@ -180,6 +181,19 @@ defs="$defs -DJVIM_VERSION=\\\"$jvim_version\\\""
 [ -z "$jvim_build" ] || defs="$defs -DJVIM_BUILDID=\\\"$jvim_build\\\""
 
 OPT=${OPT:--O2 -g}
+# The classes of warning that have bitten this codebase, as errors. This is the
+# same list as the "warnings that have to stay away" job in
+# .github/workflows/build.yml, here so that it can be run before the push rather
+# than after it: it is what caught 'A' sliding into the wrong field of a struct
+# after a member was added above it, which gcc only warns about and clang, on
+# FreeBSD, refuses outright. The char/char_u signedness warnings stay warnings.
+if [ "$target" = strict ]; then
+	EXTRA_CFLAGS="-Wall -Wno-pointer-sign \
+		-Werror=implicit-function-declaration -Werror=implicit-int \
+		-Werror=incompatible-pointer-types -Werror=int-conversion \
+		-Werror=strict-prototypes -Werror=old-style-definition \
+		-Werror=return-type -Werror=uninitialized $EXTRA_CFLAGS"
+fi
 cflags="$OPT $std $fcommon $EXTRA_CFLAGS"
 
 echo
@@ -192,10 +206,10 @@ clean)
 	echo "cleaned"
 	exit 0
 	;;
-all|test)
+all|test|strict)
 	;;
 *)
-	echo "usage: $0 [all|test|clean]" >&2
+	echo "usage: $0 [all|test|strict|clean]" >&2
 	exit 2
 	;;
 esac

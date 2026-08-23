@@ -90,7 +90,14 @@ typedef struct _synlink {
 	int					color;
 } synlink;
 
-static syntax			defcolor	= {NULL, NULL, 'A'};
+/*
+ * The one "rule" that is not one: is_syntax() parks it in b_syn_curp to record
+ * that nothing matches the rest of the line, and 'A' is the ordinary text
+ * colour. The initialiser is positional over struct _syntax, so a field added
+ * before .color has to be counted here -- adding .pat silently moved 'A' into
+ * it, which clang refuses and gcc only warns about.
+ */
+static syntax			defcolor	= {NULL, NULL, NULL, 'A'};
 
 static syncolor			usercolor[] = {
 	{'[',	0x00000000,},	{'\\',	0x00000000,},	{']',	0x00000000,},
@@ -1167,6 +1174,17 @@ syn_dump(WIN *wp, char_u *fname)
 		{
 			syn_hit = NULL;
 			clr = is_syntax(wp, lnum, &top, &ptr);
+			if (syn_hit == &defcolor)
+			{
+				/*
+				 * Not a rule: the note is_syntax() leaves to itself to say
+				 * that nothing matches the rest of this line, so that the
+				 * characters after this one need no second search. It asks for
+				 * the ordinary text colour, which is nothing to report.
+				 */
+				clr		= 0;
+				syn_hit	= NULL;
+			}
 			off = (int)(ptr - top);		/* is_syntax() may fetch the line again */
 			if (clr != last || syn_hit != rule)
 			{
@@ -1211,8 +1229,15 @@ syn_add(BUF *buf, char_u *reg)
 	int					l_type	= TYPE_NON;
 	int					magic;
 	int					rc;
-	char_u			*	tagprog;
-	char_u			*	tagprogend;
+	/*
+	 * The two tag patterns, kept across turns of the loop below: a tag rule
+	 * names its word list after them and every word gets its own rule, which
+	 * recompiles these. Only the first turn parses them, so nothing reaches
+	 * them unset -- but the compiler cannot see that, and a warning nobody can
+	 * dismiss is worth two initialisers.
+	 */
+	char_u			*	tagprog		= NULL;
+	char_u			*	tagprogend	= NULL;
 	int					tagfirst= TRUE;
 
 	p = reg;
@@ -1421,6 +1446,15 @@ syn_add(BUF *buf, char_u *reg)
 					if (*nextp == '/')
 						*nextp++ = '\0';
 				}
+				/*
+				 * "syntax dump" names a rule by its pattern, and a tag rule's
+				 * first one is the tag it looks inside -- html.jvsyn has a
+				 * dozen rules whose first pattern is "<". The third is what it
+				 * actually matches, so name it by that.
+				 */
+				if (r->pat != NULL)
+					free(r->pat);
+				r->pat = strsave(p);
 				if (l_jic || syn_isregstr(p))
 				{
 					strcpy(pattern, p);
