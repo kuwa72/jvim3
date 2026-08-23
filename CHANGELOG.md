@@ -211,6 +211,14 @@ repository and would drift within three releases.
 - `scripts/check-docs.sh` sees a case count that a paragraph wrapped between the
   number and the word. It reads one line at a time, and "All 100\ntests on each"
   sat in BUILDING-unix.md through two suites growing.
+- `scripts/fetch-ci-build.sh` unpacks the package with its directories. It used
+  `unzip -j`, which junks paths — that was how the version-named top directory
+  was stripped, and it was harmless while the package was flat. Once the rules
+  were split out of the rc it poured `syntax/`'s thirty files in beside the exe,
+  and the editor said `can't open file …\syntax\filetype.jvsyn` on startup. The
+  exe lands in the right place either way, which is the only thing anyone checks
+  after unpacking, so nothing else gave a sign. It also says so itself now if the
+  rules are missing afterwards, rather than leaving the editor to say it later.
 
 ### 日本語
 
@@ -388,6 +396,14 @@ repository and would drift within three releases.
 - `scripts/check-docs.sh` が、数字と単語の間で折り返されたケース数を見落とさなくなり
   ました。1 行ずつ読んでいたため、"All 100\ntests on each" が BUILDING-unix.md に
   スイート 2 回分の増加をまたいで残っていました。
+- `scripts/fetch-ci-build.sh` がパッケージをディレクトリ構造ごと展開するように
+  なりました。`unzip -j` を使っていたためパスが潰れていました。バージョン名の
+  トップディレクトリを剥がす手段としてはそれでよく、パッケージが平坦なあいだは
+  無害でしたが、ルールを rc から分離して以降は `syntax/` の 30 ファイルが exe と
+  同じ場所にばら撒かれ、起動時に `can't open file …\syntax\filetype.jvsyn` と
+  出るようになっていました。どちらにせよ exe は正しい位置に落ちる — 展開後に
+  確認されるのはそれだけ — ので、他に兆候がありませんでした。展開後にルールが
+  無ければスクリプト自身がその場で言うようにもしました。
 
 ## 1.0.0 — 2026-08-22
 
