@@ -3,6 +3,7 @@ set background=dark
 hi clear
 let g:colors_name = "monokai"
 
+hi Normal       guifg=#f8f8f2 guibg=#272822
 hi Comment      guifg=#75715e
 hi Constant     guifg=#ae81ff
 hi String       guifg=#e6db74

@@ -12,6 +12,40 @@ repository and would drift within three releases.
 
 ### Added
 
+- `hi Normal guifg=... guibg=...` in a colour scheme now overrides the Text
+  Color / Back Color configured in the Windows GUI/console for as long as the
+  scheme keeps setting it, instead of being accepted and silently dropped.
+  `hi clear`, or loading a scheme that never sets `Normal`, puts the
+  configured colours back — the configured Text/Back Color itself is never
+  touched, only which one is drawn with. All eleven bundled schemes now set
+  `Normal` to their own base foreground/background, so switching to one of
+  them (`dracula`, `nord`, ...) no longer leaves body text painted in
+  whatever Text/Back Color happened to be configured while embedded
+  markdown-code/HTML regions used the scheme's own (differently intended)
+  background — the mismatch that made those regions read as low-contrast.
+  Still nothing to override on a plain terminal, where there was never a
+  configured base colour to begin with.
+
+### 日本語
+
+- 配色スキーム中の `hi Normal guifg=... guibg=...` が、Windows の GUI・
+  コンソールで設定されている Text Color・Back Color を、そのスキームが
+  指定し続けている間だけ上書きするようになりました。これまでは受け付けた
+  ふりをして黙って捨てていました。`hi clear`、あるいは `Normal` を
+  指定しないスキームに切り替えれば、設定した色に戻ります — 設定そのものが
+  書き換えられることはなく、どちらを描画に使うかが変わるだけです。同梱の
+  11 テーマすべてに、それぞれの地の前景色・背景色として `Normal` を追加
+  しました。これにより `dracula` や `nord` などに切り替えても、地の文が
+  設定済みの Text/Back Color のまま残る一方で埋め込みの markdown コード・
+  HTML 領域だけがテーマ本来の（異なる意図の）背景色になる、という
+  食い違い — 見た目上そこだけコントラストが低く見えていた原因 — が
+  なくなります。プレーンな端末では、そもそも上書き対象となる設定色が
+  無いため従来どおり何も起きません。
+
+## 1.1.0 — 2026-08-24
+
+### Added
+
 - A mapping can name the characters it could not hold: `<CR>` `<NL>` `<LF>`
   `<Esc>` `<Tab>` `<Space>` `<BS>` `<Nul>`, in either half, in any case.
 

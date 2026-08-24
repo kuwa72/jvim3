@@ -3,6 +3,7 @@ set background=dark
 hi clear
 let g:colors_name = "default"
 
+hi Normal       guifg=#f8f8f2 guibg=#282a36
 hi Comment      guifg=#7aa2f7
 hi Constant     guifg=#f1fa8c
 hi String       guifg=#f1fa8c

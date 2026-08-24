@@ -3,6 +3,7 @@ set background=dark
 hi clear
 let g:colors_name = "gruvbox"
 
+hi Normal       guifg=#ebdbb2 guibg=#282828
 hi Comment      guifg=#928374
 hi Constant     guifg=#d3869b
 hi String       guifg=#b8bb26

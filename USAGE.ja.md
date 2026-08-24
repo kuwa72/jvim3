@@ -456,8 +456,11 @@ underline のうち最初に出てきたもの。 |
 | `hi link {Group} {Target}` | `{Group}` が `{Target}` の色を取り、`{Target}`
 が後で付け替えられればそれにも追従します。 |
 | `hi clear` | すべてのリンクと色を外し、地の文の色に戻します。 |
-| `hi Normal ...` | 受け付けますが何もしません。地の文の色を上書きする群は
-存在しないためです。 |
+| `hi Normal ...` | Windows の GUI・コンソールでは、ここでの `guifg`/`guibg` が
+「設定」の Text Color・Back Color を、テーマが指定し続けている間だけ上書き
+します。`hi clear`（または `Normal` を指定しないテーマ）に戻れば、設定した
+色に戻ります。プレーンな端末では上書きする対象自体が無く、受け付けはします
+が何も起きません。 |
 
 **これは汎用の Vimscript インタプリタではなく、決まった命令だけを読みます。**
 `set`、`hi`、`let g:colors_name = "..."`、`finish`、`if` / `elseif` / `else` /

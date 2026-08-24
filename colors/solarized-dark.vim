@@ -3,6 +3,7 @@ set background=dark
 hi clear
 let g:colors_name = "solarized-dark"
 
+hi Normal       guifg=#839496 guibg=#002b36
 hi Comment      guifg=#586e75
 hi Constant     guifg=#2aa198
 hi String       guifg=#2aa198

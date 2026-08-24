@@ -3,6 +3,7 @@ set background=light
 hi clear
 let g:colors_name = "solarized-light"
 
+hi Normal       guifg=#657b83 guibg=#fdf6e3
 hi Comment      guifg=#93a1a1
 hi Constant     guifg=#2aa198
 hi String       guifg=#2aa198
