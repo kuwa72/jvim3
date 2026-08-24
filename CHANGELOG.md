@@ -10,6 +10,8 @@ repository and would drift within three releases.
 
 ## Unreleased
 
+## 1.1.0 — 2026-08-24
+
 ### Added
 
 - `hi Normal guifg=... guibg=...` in a colour scheme now overrides the Text
@@ -428,6 +430,23 @@ repository and would drift within three releases.
   both declare. This is also what the 58 warnings BUILDING-unix.md recorded for
   NetBSD were, and it said they were not worth 58 casts to be rid of: they were
   worth one. The NetBSD guest now builds with no warnings at all.
+- The `ansi` terminal built into JVim — used when there is no termcap/terminfo
+  library to fall back on, or `$TERM` names it directly — had `t_el` (clear to
+  end of line) clear the whole line instead: `ANSI_TCAP` wrote `\033[2K` where
+  `\033[K` was meant. Every redraw that only means to erase ahead of the
+  cursor — the tail of a line that got shorter, a status line, retyping a word
+  with fewer characters — also erased everything already drawn to its left,
+  undoing whatever the screen had just written there.
+- `set_init()` recognised only the two exact spellings `en_US.UTF-8` and
+  `ja_JP.UTF-8` as UTF-8; every other UTF-8 locale — `C.UTF-8`, `ja_JP.utf8`,
+  whatever WSL or a modern distribution actually sets — fell through to the
+  Unix default `jmask=EEET`, which reads the terminal as EUC-JP and mojibakes
+  every Japanese character on a real UTF-8 terminal. Matching is a
+  case-insensitive substring now (`UTF-8` / `utf8` anywhere in the name), an
+  unset `$LC_CTYPE` falls back to `$LC_ALL` before `$LANG`, and the older
+  JIS/EUC/Shift-JIS names are matched the same substring way rather than
+  against a fixed list of exact spellings — in both `set_init()` and the
+  bundled `grep` helper, which had the identical exact-match list.
 
 ### 日本語
 
@@ -778,6 +797,24 @@ repository and would drift within three releases.
   BUILDING-unix.md が NetBSD について記録していた 58 個の警告もこれでした。
   「58 個のキャストを書くほどの価値はない」と書いていましたが、必要だったのは
   1 個でした。NetBSD ゲストのビルドは警告 0 件になりました。
+- JVim 組み込みの `ansi` 端末定義 — termcap/terminfo ライブラリが無いときの
+  フォールバック、または `$TERM` が直接それを指す場合に使われます — で、
+  `t_el`（カーソルから行末までのクリア）が行全体を消していました。
+  `ANSI_TCAP` が `\033[K` と書くべきところを `\033[2K` にしていたためです。
+  カーソルより先だけを消すつもりの再描画 — 短くなった行の末尾、ステータス行、
+  文字数の少ない単語への打ち直しなど — のたびに、カーソルより左に
+  すでに描いてあったものまで消え、画面がそこに書いたばかりの内容を
+  台無しにしていました。
+- `set_init()` が UTF-8 と認識するのは `en_US.UTF-8` と `ja_JP.UTF-8` という
+  完全一致の 2 つだけで、それ以外の UTF-8 系ロケール — `C.UTF-8`、
+  `ja_JP.utf8`、WSL や最近のディストリビューションが実際に設定してくる
+  もの全般 — は Unix の既定値 `jmask=EEET` に落ちていました。これは端末表示を
+  EUC-JP として読むため、実際は UTF-8 の端末で日本語がすべて文字化けします。
+  判定は大文字小文字を区別しない部分一致になりました（名前のどこかに
+  `UTF-8` / `utf8` があればよい）。`$LC_CTYPE` が未設定のときは `$LANG` の前に
+  `$LC_ALL` も見るようになり、JIS・EUC・Shift-JIS の従来の判定も、固定の
+  完全一致リストではなく同じ部分一致方式にしました — `set_init()` と、
+  同じ完全一致リストを持っていた同梱の `grep` ヘルパーの両方です。
 
 ## 1.0.0 — 2026-08-22
 
