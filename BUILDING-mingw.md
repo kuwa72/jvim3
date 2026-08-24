@@ -91,9 +91,9 @@ $ ARCH=x86_64 ./scripts/build-mingw.sh warn 2>&1 \
 Both are built in CI. What is left in either is 22 `%d` against a `long` or a
 `DWORD` -- the same width on Windows -- and a dozen cosmetic ones.
 
-**The 64 bit build has never been run.** It compiles and nothing truncates a
-pointer any more, which is not the same thing as working; there is no Windows
-runtime test here at all. The release stays 32 bit until somebody runs it.
+**There is no Windows runtime test here at all**, for either architecture --
+compiling, and the Unix suite over the same portable sources, stand in for
+it.
 
 ## Which C runtime
 

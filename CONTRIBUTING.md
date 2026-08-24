@@ -28,9 +28,8 @@ cannot publish anything.
 
 ## What is most wanted
 
-- **Running the 64 bit Windows build.** It compiles with nothing truncating a
-  pointer, which is not the same as working: nobody has run it. Say what
-  happens, either way.
+- **Running the 64 bit Windows build.** CI only compiles it; there is no
+  automated runtime test for either Windows architecture. Say what happens.
 - **Using any of this with a real IME on real hardware.** CI is runners, ptys
   and serial consoles. Nothing here has been tried at length with a real IME.
 - **A package for a distribution.** There is none anywhere yet. If you make one,

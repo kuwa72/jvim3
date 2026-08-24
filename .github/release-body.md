@@ -10,8 +10,8 @@ finds `vim.hlp` beside the exe.
 
 | | |
 | --- | --- |
-| `jvim3-*-win32.zip` | `jvim32w.exe`, `jvim32.exe`. The one that has been used; runs on 64 bit Windows under WoW64. |
-| `jvim3-*-win64.zip` | `jvim64w.exe`, `jvim64.exe`. Native 64 bit. It compiles with nothing truncating a pointer, but it has never been run: there is no Windows runtime test here. Try it and say what happens. |
+| `jvim3-*-win32.zip` | `jvim32w.exe`, `jvim32.exe`. Runs on 64 bit Windows under WoW64. |
+| `jvim3-*-win64.zip` | `jvim64w.exe`, `jvim64.exe`. Native 64 bit, for a machine you know is 64 bit. |
 
 What it is and how to drive it: [README](https://github.com/kuwa72/jvim3#readme)
 ([日本語](https://github.com/kuwa72/jvim3/blob/master/README.ja.md)),

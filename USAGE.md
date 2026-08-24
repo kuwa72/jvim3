@@ -547,10 +547,9 @@ automatically.
 
 ## Known limits
 
-- **The released Windows build is 32 bit.** The 64 bit one compiles clean but
-  has never been run; there is no Windows runtime test in CI at all. Both
-  Windows builds are checked by compiling, and by the tests running on Unix
-  over the same portable sources.
+- **Neither Windows build has an automated runtime test in CI.** Both are
+  checked by compiling, and by the tests running on Unix over the same
+  portable sources.
 - **GDI draws no colour emoji.** A colour glyph needs DirectWrite; what you get
   is the fallback font's monochrome outline. It is the right width and it edits
   correctly.

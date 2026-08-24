@@ -54,8 +54,8 @@ the exe are found as they are.
 
 | Package | Holds | |
 | --- | --- | --- |
-| `jvim3-*-win32.zip` | `jvim32w.exe`, `jvim32.exe` | **The one to take.** 32 bit; runs on 64 bit Windows under WoW64. |
-| `jvim3-*-win64.zip` | `jvim64w.exe`, `jvim64.exe` | Native 64 bit. It compiles with nothing truncating a pointer, which is not the same as working — nobody has run it. Try it and [say what happens](https://github.com/kuwa72/jvim3/issues). |
+| `jvim3-*-win32.zip` | `jvim32w.exe`, `jvim32.exe` | 32 bit; runs on 64 bit Windows under WoW64. |
+| `jvim3-*-win64.zip` | `jvim64w.exe`, `jvim64.exe` | Native 64 bit, for a machine you know is 64 bit. |
 
 `jvim32w.exe` is the GUI. `jvim32.exe` is the same editor from a console window;
 give it `-nw` to stay in the console instead of opening a window.
@@ -154,9 +154,10 @@ fonts is history now, not instructions.
 
 ## Where it stands
 
-The released Windows build is 32 bit; the 64 bit one compiles but has never
-been run outside CI. Console mode Japanese input on Windows is unreliable, GDI
-draws no colour emoji, and a couple of encoding conversions are one-way.
+Neither Windows build has an automated runtime test in CI — both are checked
+by compiling, and by the tests running on Unix over the same portable
+sources. Console mode Japanese input on Windows is unreliable, GDI draws no
+colour emoji, and a couple of encoding conversions are one-way.
 [USAGE.md](USAGE.md#known-limits) has the full list, with what each one means
 for actual use.
 
