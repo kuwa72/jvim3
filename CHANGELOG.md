@@ -10,6 +10,8 @@ repository and would drift within three releases.
 
 ## Unreleased
 
+## 1.1.0 — 2026-08-24
+
 ### Added
 
 - A mapping can name the characters it could not hold: `<CR>` `<NL>` `<LF>`
