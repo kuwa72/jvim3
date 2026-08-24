@@ -45,7 +45,7 @@ CI は push と pull request のたびに、Linux、FreeBSD、NetBSD、OpenBSD�
 | | |
 | --- | --- |
 | [BUILDING-unix.md](BUILDING-unix.md) | Linux と BSD でのビルド。スクリプトが検出するもの。CI がカバーする範囲。検証済みのことと、していないこと。 |
-| [BUILDING-mingw.md](BUILDING-mingw.md) | Windows 版のビルドと、UTF-8・Unicode GUI・DPI 対応・テキスト描画の詳しい説明。「途中で見つけたバグ」も。 |
+| [BUILDING-mingw.md](BUILDING-mingw.md) | Windows 版のビルドと、UTF-8・Unicode GUI・DPI 対応・テキスト描画の詳しい説明。 |
 | [BUILDING.ja.md](BUILDING.ja.md) | ビルド手順の日本語版 (両プラットフォーム)。 |
 | [USAGE.ja.md](USAGE.ja.md) | 起動方法、設定、エンコーディングの考え方、IME、トラブルシューティング。 |
 
@@ -64,8 +64,7 @@ CI は push と pull request のたびに、Linux、FreeBSD、NetBSD、OpenBSD�
 
 その変更が何をするのかを、命令形の 1 文で書いてください。`fix:` や `feat:` の
 ような接頭辞は付けません (`git log` を見てください)。50 文字程度です。知る価値の
-ある理由があれば本文に書いてください。このリポジトリのコミットはほとんど本文を
-持っています。日本語でも構いません。
+ある理由は本文に書いてください。日本語でも構いません。
 
 CLA も sign-off もありません。これはパブリックドメインです
 ([LICENSE](LICENSE))。パッチを送ることで、それもパブリックドメインに置くことに
@@ -85,6 +84,5 @@ CLA も sign-off もありません。これはパブリックドメインです
 
 ## セキュリティ
 
-非公開の報告窓口はありません。約束するのは不誠実だと考えています。1994 年の C の
-コードで、文字列処理もそれ相応で、メンテナは 1 人です。ネットワーク機能のない
-ローカルのテキストエディタです。通常の公開 issue を立ててください。
+非公開の報告窓口はありません。ネットワーク機能のないローカルのテキストエディタで、
+メンテナは 1 人です。通常の公開 issue を立ててください。

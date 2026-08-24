@@ -21,15 +21,10 @@
 ./scripts/build-unix.sh clean
 ```
 
-`strict` は CI の「出てはいけない警告」ジョブと同じもので、push の前に手元で
-走らせられます。1 分の価値はあります。構造体の初期化子が別のメンバに落ちても
-gcc は警告で済ませますが、FreeBSD がビルドに使う clang は止まります。
-
-CI ではこれを 2 回、Linux の gcc と FreeBSD の clang で走らせます。gcc で緑でも
-clang で緑とは限らないからです。最初は gcc だけで走らせていて、clang に訊いた
-とたんに 2 つ出てきました。K&R 形式の関数定義は警告ではなく拒否されますし、
-誤った型へのキャストはエラーです。どちらも誰も見ていなかった `unix.c` と
-`term.c` にありました。
+`strict` は CI が強制する `-Werror=` 群でビルドするので、push の前に自分で
+確認できます。CI はこれを Linux (gcc) と FreeBSD (clang) の両方で走らせます。
+clang は古い形式の関数定義や型の合わないキャストをエラー扱いし、gcc は警告
+で済ませることがあるため、gcc で緑でも clang で緑とは限りません。
 
 必要なものは C コンパイラだけです。curses / termcap ライブラリがあれば本物の端末
 データベースを使い、なければ JVim 組み込みの端末定義にフォールバックします
@@ -164,25 +159,15 @@ tools/deploy-windows.sh /mnt/c/path  # 展開先を指定
 そのほかのターゲット: `clean`、`warn` (警告を表示してコンパイル)、`split`
 (デバッグ情報を `jvim32w.exe.debug` に分離して exe を strip)。
 
-`ARCH` の切り替えや `warn` の on/off に `clean` は不要です。オブジェクトディレクトリ
-と exe の名前は両アーキテクチャで共通なので、`obj-mingw` に「何向けにビルドしたか」
-を示すスタンプを置き、ツールチェインや警告フラグが変わったら全体を再ビルド・再リンク
-します (同じ条件での再実行では何もコンパイルしません)。これがないと、32 ビットの
-オブジェクトに 64 ビットのリンカを当てて `file format not recognized` で止まり、逆
-方向はさらに厄介で、オブジェクトが最新のままなので make は何もせず、別アーキテクチャ
-でリンクされた exe が残っていました。
+`ARCH` の切り替えや `warn` の on/off に `clean` は不要です。`obj-mingw` に
+「何向けにビルドしたか」を示すスタンプを置いてあるので、ツールチェインや警告
+フラグが変わると自動で全体を再ビルド・再リンクします。
 
 ### 32 ビットと 64 ビット
 
-**リリースしているのは 32 ビット**で、Windows 11 x64 でも WoW64 で問題なく動きます。
-
-`ARCH=x86_64` は、以前はポインタが `int` や `long` を経由して半分失われる箇所が
-37 か所、ハードエラーが 9 か所ありました。それらは解消済みです。両方とも CI で
-ビルドしています。
-
-```sh
-ARCH=x86_64 ./scripts/build-mingw.sh warn
-```
+両アーキテクチャとも CI でビルドしてリリースしています。32 ビットは 64 ビット
+Windows でも WoW64 で問題なく動きます。ポインタが `int`/`long` を経由して
+切られる箇所はどちらのアーキテクチャにもありません。
 
 **Windows の実行時テストはここには存在しません。** コンパイルが通り、ポインタが
 切られなくなったことの確認は、同じ移植部分のソースを Unix でテストすることで
@@ -232,15 +217,11 @@ ARCH=x86_64 ./scripts/build-mingw.sh warn
 ./scripts/test-bsd-docker.sh freebsd clean   # 保存したゲストディスクを捨てる
 ```
 
-**ローカルに置くゲストは FreeBSD だけです。** CI が FreeBSD・NetBSD・OpenBSD・
-DragonFly のすべてで一式を実行しているので、網羅は CI の仕事です。ローカルのゲスト
-の価値は時間ではありません (ここでの 1 回は CI とだいたい同じだけかかります)。
-push しなくても分かることです。コミットしていない変更を含めて今のツリーをビルド
-しますし、`shell` なら失敗した状態のゲストにそのまま入れます。それが効くのが
-FreeBSD です。**clang** でビルドするので gcc が警告で済ませるところで止まりますし、
-実際に問題を出してきた BSD でもあります。NetBSD も
-`./scripts/test-bsd-docker.sh netbsd` でインストールできますが、これは CI が
-NetBSD 固有の失敗を見つけたときのためで、通常の確認には含めません。
+**ローカルに置くゲストは FreeBSD だけです。** **clang** でビルドするので gcc が
+警告で済ませるところで止まり、push しなくてもコミットしていない変更を含めて
+今のツリーを確認できます。`shell` なら失敗した状態のゲストにそのまま入れます。
+NetBSD も `./scripts/test-bsd-docker.sh netbsd` でインストールできますが、
+NetBSD 固有の失敗を追うときだけで構いません。
 
 Docker で BSD のコンテナは動きません (BSD のバイナリには BSD のカーネルが必要
 です)。ここでのコンテナは QEMU を置く場所にすぎず、中の BSD は各 OS 自身のイメージ
@@ -259,8 +240,8 @@ Docker で BSD のコンテナは動きません (BSD のバイナリには BSD 
 
 ## CI が見ているもの
 
-push と pull request のたびに、**Linux**、**macOS**、**FreeBSD**、**NetBSD**、
-**OpenBSD**、**DragonFly** でビルドして両方のスイートを実行し、mingw-w64 で
+push と pull request のたびに、**Linux**、**FreeBSD**、**NetBSD**、
+**OpenBSD**、**DragonFly** でビルドしてテストを実行し、mingw-w64 で
 Windows 版を 32/64 ビットともクロスビルドします。`v*` のタグは同じことをしたうえで
 Windows 版をリリースページに公開するので、壊れたビルドがリリースになることはあり
 ません。定義は [.github/workflows/build.yml](.github/workflows/build.yml) です。
@@ -282,18 +263,18 @@ BSD は Linux ランナー上の VM で動きます。数分で起動する既�
 `char *` インタフェースに至る所で渡しています。これは型のノイズであってバグでは
 ないため、残しています。
 
-実際に壊れる種類の警告は、CI ではエラーにしています。暗黙の関数宣言 (64 ビットで
-戻り値のポインタが切られます。OpenBSD で `tgoto()` が全テストを落としたのがまさに
-これでした)、ポインタ型の不一致、暗黙の `int`、プロトタイプなし、return なし、
-未初期化変数の使用です。
+実際に壊れる種類の警告は、CI ではエラーにしています。暗黙の関数宣言
+(64 ビットで戻り値のポインタが切られます)、ポインタ型の不一致、暗黙の `int`、
+プロトタイプなし、return なし、未初期化変数の使用です。
 
 検証済みの環境と、検証していないことの一覧は
 [BUILDING-unix.md](BUILDING-unix.md#what-has-been-verified-and-what-has-not) に
 あります。要点は次のとおりです。
 
-- Linux (Ubuntu 24.04 / gcc)、FreeBSD、NetBSD、OpenBSD で 110 テスト通過。
-  Linux ではエンコーディングの 48 ケースを AddressSanitizer 下でも通しています。
-- DragonFly は CI でビルドとテストを通していますが、それ以外の確認はありません。
+- Linux (Ubuntu 24.04 / gcc)、FreeBSD (clang)、NetBSD、OpenBSD、DragonFly で
+  179 テスト全件通過。Linux ではエンコーディングの 48 ケースを
+  AddressSanitizer 下でも通しています。
+- macOS は 2026-08 まで CI で通っていましたが、今は対象ではありません。
 - 実機・実端末・本物の IME での確認はしていません。すべてシリアルコンソール、
   pty、CI ランナー上です。
 - Windows 版に実行時テストはありません。
