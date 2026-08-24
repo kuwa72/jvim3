@@ -938,7 +938,7 @@ mch_get_winsize(void)
  */
 	if (Columns == 0 || Rows == 0)
 	{
-		extern void getlinecol();
+		extern void getlinecol __ARGS((void));
 
 		getlinecol();	/* get "co" and "li" entries from termcap */
 	}
@@ -1276,13 +1276,20 @@ RealWaitForChar(int ticks)
 #endif
 }
 
+/*
+ * remove(), for the systems whose libc had none. The two shapes are spelled
+ * out rather than switching the one word "const" in the middle of a K&R
+ * definition, because clang refuses an old-style definition outright
+ * (-Wdeprecated-non-prototype) and the strict build makes that fatal.
+ */
 #if !defined(__alpha) && !defined(mips) && !defined(SCO) && !defined(remove) && !defined(CONVEX)
-	int
-remove(buf)
 # if defined(linux) || defined(__STDC__) || defined(__NeXT__) || defined(M_UNIX)
-	const
+	int
+remove(const char *buf)
+# else
+	int
+remove(char *buf)
 # endif
-			char *buf;
 {
 	return unlink(buf);
 }

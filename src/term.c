@@ -136,11 +136,13 @@ char		*UP, *BC, PC;		/* should be extern, but some don't have them */
 # endif
 #endif /* TERMCAP */
 
-#if defined(linux) || (defined(MSDOS) && defined(TERMCAP))	/* DOSGEN */
-# define TGETSTR(s, p)	(char_u *)tgetstr((s), (char **)(p))
-#else
-# define TGETSTR(s, p)	(char_u *)tgetstr((s), (char *)(p))
-#endif
+/* The area argument is where tgetstr() puts the string and it is a char **
+ * everywhere this builds: in the declaration above, in Linux's <termcap.h>,
+ * and in the BSDs' curses. It used to be cast to char * for everything but
+ * Linux and MSDOS, which was a cast to the wrong type against a declaration
+ * in this very file -- gcc warned, and clang, which FreeBSD builds with,
+ * stops. */
+#define TGETSTR(s, p)	(char_u *)tgetstr((s), (char **)(p))
 
 	void
 set_term(char_u *term)

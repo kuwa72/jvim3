@@ -3,22 +3,35 @@
 # Build and test JVim on a BSD, from a Linux machine, using Docker.
 #
 #   scripts/test-bsd-docker.sh                  FreeBSD: build and run the tests
-#   scripts/test-bsd-docker.sh netbsd           the same on NetBSD
-#   scripts/test-bsd-docker.sh all              both, one after the other
 #   scripts/test-bsd-docker.sh freebsd build    build only
-#   scripts/test-bsd-docker.sh netbsd shell     leave the guest up for poking at
+#   scripts/test-bsd-docker.sh freebsd shell    leave the guest up for poking at
 #   scripts/test-bsd-docker.sh freebsd clean    throw the cached guest disk away
+#   scripts/test-bsd-docker.sh freebsd compact  shrink a guest kept by an older
+#                                               version of this script
+#   scripts/test-bsd-docker.sh netbsd           the same on NetBSD
+#
+# **FreeBSD is the guest to use.** CI runs these same suites on FreeBSD, NetBSD,
+# OpenBSD and DragonFly, so coverage is its job; the guest here is for finding
+# out without pushing — it builds the tree as it stands, uncommitted changes
+# and all — on the one system that differs from Linux in a way that keeps
+# catching things, since it builds with clang. NetBSD is still installable, for
+# a NetBSD-only failure CI has already found, but it is not part of a routine
+# check and it costs a second guest disk.
 #
 # Docker cannot run a FreeBSD or NetBSD container: containers share the host
 # kernel, and a BSD binary needs a BSD kernel. So the container here is only a
 # place to keep QEMU and its tools; the BSD in it is a real virtual machine,
 # booted from the project's own image and accelerated with KVM.
 #
-# Needs: docker, /dev/kvm, about 12 GB of disk, and network on the first run.
+# Needs: docker, /dev/kvm, 1.5 GB of disk to keep a guest in, room for the
+# guest's whole virtual disk while it is being built or compacted (25 GB for
+# FreeBSD, 2 GB for NetBSD — see zero_free_space), and network on the first run.
 #
-# The first run of each system installs it far enough to be usable over ssh and
-# keeps the result as prepared-<os>.qcow2; later runs overlay that and are up in
-# under a minute.
+# The first run of each system installs it far enough to be usable over ssh,
+# then makes what it keeps small: the caches go, the free space is zeroed, and
+# the release image is folded into the guest and compressed as
+# prepared-<os>.qcow2, 1.3 GB for FreeBSD, after which the download is deleted.
+# Later runs overlay that file and are up in under a minute.
 #
 # The work directory has to be somewhere the Docker daemon can see. A session
 # private /tmp is not, which is why this defaults to ~/.cache.
@@ -33,18 +46,11 @@ os=freebsd
 target=test
 for a in "$@"; do
 	case $a in
-	freebsd|netbsd|all)		os=$a ;;
-	test|build|shell|clean)	target=$a ;;
-	*) echo "usage: $0 [freebsd|netbsd|all] [test|build|shell|clean]" >&2; exit 2 ;;
+	freebsd|netbsd)			os=$a ;;
+	test|build|shell|clean|compact)	target=$a ;;
+	*) echo "usage: $0 [freebsd|netbsd] [test|build|shell|clean|compact]" >&2; exit 2 ;;
 	esac
 done
-
-if [ "$os" = all ]; then
-	rc=0
-	sh "$0" freebsd "$target" || rc=$?
-	sh "$0" netbsd "$target" || rc=$?
-	exit $rc
-fi
 
 container=jvim-$os
 prepared=prepared-$os.qcow2
@@ -79,11 +85,43 @@ esac
 say() { printf '\n=== %s\n' "$1"; }
 dexec() { docker exec "$container" "$@"; }
 guest() { docker exec "$container" sh /work/gssh.sh "$@"; }
+mb() { du -sm "$1" 2>/dev/null | cut -f1; }
+
+# What the first run has to fetch. Kept only until the guest is built: flatten()
+# folds the release image into the guest disk, and after that a copy of it here
+# is a few gigabytes that nothing reads.
+rm_downloads() {
+	rm -f "$work/$image" "$work/$image.xz" "$work/$image.gz"
+	if [ -n "${iso:-}" ]; then rm -f "$work/$iso"; fi
+}
+
+# Fold the backing chain into one compressed file, and drop the download.
+#
+# A guest disk used to be an overlay on the release image, so both had to stay:
+# 3.6 GB of FreeBSD image plus a 4.3 GB overlay, most of which is the first
+# boot applying every patch since the release. Both halves are a filesystem,
+# and a filesystem compresses: tidied first (see zero_free_space) and written
+# with zstd, that pair is 1.3 GB in one file. The overlay the tests run in is
+# still created on top of it — qemu reads compressed clusters and writes go to
+# the overlay — and boots in the same twenty seconds.
+flatten() {
+	[ -f "$work/$prepared" ] || { echo "no $work/$prepared to compact" >&2; exit 1; }
+	say "compacting $prepared"
+	qimg convert -O qcow2 -c -o compression_type=zstd \
+		"/work/$prepared" "/work/$prepared.new"
+	mv "$work/$prepared.new" "$work/$prepared"
+	rm_downloads
+	# Not compared with what it was: by this point the zeroing has made that a
+	# number about the free space, not about the guest.
+	echo "$prepared: $(mb "$work/$prepared") MB, standalone, nothing else kept"
+}
 
 if [ "$target" = clean ]; then
 	docker rm -f "$container" 2>/dev/null || true
-	rm -f "$work/$prepared" "$work/run-$os.qcow2" "$work/console-$os.log"
-	echo "cleaned $os in $work (the downloaded image is kept)"
+	rm -f "$work/$prepared" "$work/run-$os.qcow2" \
+		"$work/console-$os.log" "$work/build-$os.log"
+	rm_downloads
+	echo "cleaned $os in $work (the next run installs the guest again)"
 	exit 0
 fi
 
@@ -101,16 +139,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 EOF
 echo "$runner ready"
 
-if [ ! -f "$work/$image" ]; then
-	say "downloading $image"
-	case $url in
-	*.xz)	curl -fL --progress-bar -o "$work/$image.xz" "$url"; xz -T0 -d "$work/$image.xz" ;;
-	*.gz)	curl -fL --progress-bar -o "$work/$image.gz" "$url"; gunzip "$work/$image.gz" ;;
-	esac
-fi
-if [ "$os" = netbsd ] && [ ! -f "$work/$iso" ]; then
-	say "downloading $iso"
-	curl -fL --progress-bar -o "$work/$iso" "$iso_url"
+# Only while there is a guest to build: once there is one the release image is
+# inside it, and asking for it again would be a 4 GB download nothing looks at.
+if [ ! -f "$work/$prepared" ]; then
+	if [ ! -f "$work/$image" ]; then
+		say "downloading $image"
+		case $url in
+		*.xz)	curl -fL --progress-bar -o "$work/$image.xz" "$url"; xz -T0 -d "$work/$image.xz" ;;
+		*.gz)	curl -fL --progress-bar -o "$work/$image.gz" "$url"; gunzip "$work/$image.gz" ;;
+		esac
+	fi
+	if [ "$os" = netbsd ] && [ ! -f "$work/$iso" ]; then
+		say "downloading $iso"
+		curl -fL --progress-bar -o "$work/$iso" "$iso_url"
+	fi
 fi
 
 [ -f "$work/id_ed25519" ] || ssh-keygen -t ed25519 -N '' -C jvim-bsd -f "$work/id_ed25519" >/dev/null
@@ -247,8 +289,67 @@ prepare_netbsd() {
 	wait_ssh 30
 	guest 'uname -sr; cc --version | head -1'
 	echo "installing bash, which scripts/test-encoding.sh needs"
-	guest "PKG_PATH=http://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/amd64/$release/All/ /usr/sbin/pkg_add bash" >/dev/null
+	# The packages directory is not where its name says any more: the CDN now
+	# answers amd64/10.1 with a redirect to x86_64/10.0_2026Q2, and the guest's
+	# fetch(3) does not follow it — pkg_add sits there until something kills
+	# it. curl on this side does follow it, so the directory is resolved here
+	# and handed over. pkg_summary.gz because it is the one file that is
+	# certainly in there, and if the redirect ever goes away this resolves to
+	# the address it started from.
+	all=$(curl -sIL -o /dev/null -w '%{url_effective}' \
+		"http://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/amd64/$release/All/pkg_summary.gz")
+	all=${all%/*}/
+	echo "  from $all"
+	guest "PKG_PATH=$all /usr/sbin/pkg_add bash" >/dev/null
 }
+
+# --- making the guest disk small before it is kept ------------------------
+
+# Two things make a kept guest bigger than the files in it. The installer's own
+# downloads and backups are still there, and a block a file used to live in
+# still holds what the file had: nothing rewrites it on delete, so it is not a
+# zero cluster and flatten() has to store it. So the caches go, and then the
+# free space is filled with zeros and the file removed — the zeros end up as
+# clusters flatten() can leave out altogether. On FreeBSD that is most of what
+# is kept: compressing the same guest without this gives 3.3 GB, with it
+# 1.3 GB.
+#
+# The price is that the qcow2 grows to the guest's whole virtual disk while
+# this runs, 20 GB for FreeBSD, before flatten() takes it back. Nothing else
+# here needs that much room, so it is worth saying out loud.
+#
+# dd is meant to end in ENOSPC, so its status is not looked at.
+zero_free_space() {	# zero_free_space <a shell prefix that gets root>
+	echo "zeroing the free space, which is what makes the kept disk small"
+	guest "$1 'dd if=/dev/zero of=/var/tmp/zero bs=1m; rm -f /var/tmp/zero; sync'" \
+		>/dev/null 2>&1 || true
+}
+
+tidy_freebsd() {
+	# freebsd-update keeps every file it replaced, and pkg keeps the packages
+	# it installed. The tests need neither.
+	guest "su -m root -c 'rm -rf /var/db/freebsd-update/files /var/cache/pkg'" || true
+	zero_free_space 'su -m root -c'
+}
+
+tidy_netbsd() {
+	guest "rm -rf /var/db/pkg_summary.gz /var/db/pkg_summary.txt" || true
+	zero_free_space 'sh -c'
+}
+
+# A guest kept by a version of this script that did neither of these. Boot the
+# kept disk itself, rather than an overlay on it, so that the tidying is what
+# gets kept.
+if [ "$target" = compact ]; then
+	[ -f "$work/$prepared" ] || { echo "no $work/$prepared to compact" >&2; exit 1; }
+	say "booting $os to tidy it"
+	boot "$prepared" qcow2 "" "file:/work/console-$os.log"
+	wait_ssh 30
+	tidy_$os
+	halt
+	flatten
+	exit 0
+fi
 
 if [ ! -f "$work/$prepared" ]; then
 	if [ "$os" = netbsd ]; then
@@ -323,8 +424,19 @@ exit 0
 EXP
 	fi
 	say "preparing a $os guest (first run only, several minutes)"
-	prepare_$os
+	# In a subshell so that a prepare_*() giving up on its own (it does that
+	# with exit) lands here rather than ending the script: what is on disk at
+	# that point is a guest disk that boots into a half-installed system, and
+	# every later run would find it and trust it. Seen for real when the NetBSD
+	# package mirror stopped answering in the middle of pkg_add.
+	if ! ( prepare_$os && tidy_$os ); then
+		halt
+		rm -f "$work/$prepared"
+		echo "preparing $os failed; its half-built disk has been removed" >&2
+		exit 1
+	fi
 	halt
+	flatten
 	echo "kept $work/$prepared"
 fi
 

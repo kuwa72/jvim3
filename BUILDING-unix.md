@@ -14,6 +14,12 @@ push instead of after it. It is worth the minute: gcc's default only warns about
 an initialiser landing in the wrong field of a struct, and clang, which is what
 FreeBSD builds with, stops.
 
+CI runs it twice, on Linux with gcc and on FreeBSD with clang, because green on
+gcc does not mean green on clang. It went in on gcc alone at first, and clang
+had two things to say the moment it was asked: an old-style function definition
+is refused outright rather than warned about, and a cast to the wrong pointer
+type is an error. Both were in `unix.c` and `term.c` where nothing had looked.
+
 `src/makjunix.mak` still expects three lines to be uncommented by hand for your
 machine. The script works out the same answers by asking the compiler and hands
 them to that makefile on the command line, so the makefile itself stays as it
@@ -61,16 +67,36 @@ guest to look around.
 
 ```sh
 ./scripts/test-bsd-docker.sh              # FreeBSD: build and run the tests
-./scripts/test-bsd-docker.sh netbsd
-./scripts/test-bsd-docker.sh all
+./scripts/test-bsd-docker.sh freebsd shell   # leave the guest up to poke at
+./scripts/test-bsd-docker.sh freebsd clean   # throw the kept guest disk away
 ```
+
+**FreeBSD is the guest to keep here.** CI already runs the whole thing on
+FreeBSD, NetBSD, OpenBSD and DragonFly, so the coverage is its job, and a
+second local guest is a second guest disk for a system CI checks anyway. What a
+local guest buys is not the clock — a run here takes about as long as CI's —
+but not having to push to find out: it builds the tree as it is, uncommitted
+changes and all, and `shell` leaves you in the guest with the failure still
+there. FreeBSD is where that pays: it builds with **clang**, which stops where
+gcc only warns, and it is the BSD whose differences have actually cost
+something. NetBSD is still installable, `./scripts/test-bsd-docker.sh netbsd`,
+for a NetBSD-only failure CI has found; it is not part of a routine check.
 
 Docker cannot run a BSD container — a BSD binary needs a BSD kernel — so the
 container is only somewhere to keep QEMU, and the BSD inside it is a real
-virtual machine booted from the project's own image. It needs `/dev/kvm`, about
-12 GB of disk and, on the first run of each system, the network. That first run
-installs the guest far enough to be reachable over ssh and keeps the disk, so
-later runs are up in under a minute.
+virtual machine booted from the project's own image. It needs `/dev/kvm`,
+1.5 GB of disk to keep the guest in, 25 GB free while it builds one, and the
+network on the first run of each system.
+
+That first run installs the guest far enough to be reachable over ssh, and then
+makes what it keeps small: the installer's caches go, the free space is written
+over with zeros so that the blocks deleted files left behind stop being worth
+storing, and the release image is folded into the guest disk and compressed
+with zstd. One file is left — 1.3 GB for FreeBSD, against 7.9 GB for the image
+and the overlay it used to be — and the download is deleted. Later runs overlay
+that file and are up in twenty seconds. A guest kept by an earlier version of
+this script is the two files; `./scripts/test-bsd-docker.sh freebsd compact`
+does the same to it, without reinstalling.
 
 ## The one flag the build still needs
 
@@ -150,6 +176,9 @@ Verified on FreeBSD 14.3-RELEASE-p16, clang 19.1.7, amd64, in the QEMU guest
 `scripts/test-bsd-docker.sh` builds:
 
 - All 177 tests
+- `./scripts/build-unix.sh strict` with clang 19, which is what the FreeBSD CI
+  job now runs after the tests. It took two fixes to get there, both of them
+  things gcc had only warned about; see the CHANGELOG for the day.
 - `-DTERMCAP` against base ncurses, found as `-ltinfo`
 - `jmask` following `LANG`: `ja_JP.UTF-8` gives `TTTT`, `ja_JP.eucJP` gives
   `EEEE`, `C` gives `EEET`
@@ -161,10 +190,11 @@ Verified on NetBSD 10.1, gcc 10.5.0, amd64, the same way:
 
 - All 177 tests
 - `-DTERMCAP` against base curses, found as `-lcurses`
-- 58 warnings for the whole build, every one of them the second argument of
-  `tgetstr()`: NetBSD's curses declares it `char **` and `term.c` hands it a
-  `char_u **`. Harmless, and not worth 58 casts over a declaration that differs
-  between systems.
+- No warnings at all for the whole build. There were 58, every one of them the
+  second argument of `tgetstr()`, which NetBSD's curses declares `char **` while
+  `term.c` cast it to `char *`. That looked like 58 casts nobody wanted to write
+  over a declaration that differs between systems; it was one wrong cast in one
+  macro, and fixing that took all 58 with it.
 
 Verified in CI, on whatever release the VM images carry — FreeBSD 15.1,
 NetBSD 11.0 and OpenBSD 7.9 at the time of writing, plus DragonFly. The whole
