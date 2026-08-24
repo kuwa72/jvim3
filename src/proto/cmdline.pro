@@ -13,3 +13,4 @@ int check_fname __PARMS((void));
 int getfile __PARMS((unsigned char *fname, unsigned char *sfname, int setpm, long lnum));
 unsigned char *ExpandOne __PARMS((unsigned char *str, int list_notfound, int mode));
 int dosource __PARMS((unsigned char *fname));
+void docmd_colorscheme __PARMS((unsigned char *name));

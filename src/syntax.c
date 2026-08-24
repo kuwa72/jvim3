@@ -129,6 +129,7 @@ static syncolor			usercolor[] = {
 	{'^',	0x00000000,},	{'_',	0x00000000,},
 	{'Z',	0x00000000,},	{'Y',	0x00000000,},	{'X',	0x00000000,},
 	{'W',	0x00000000,},	{'V',	0x00000000,},
+	{'S',	0x00000000,},	{'T',	0x00000000,},	{'U',	0x00000000,},
 } ;
 
 /*
@@ -660,6 +661,73 @@ syn_user_color(char_u id)
 	return(0);
 }
 
+static int
+syn_named_rgb(char_u *name, int *rgb)
+{
+	static const struct {
+		char	*name;
+		int		rgb;
+	} colors[] = {
+		{"orange",		0xffa500},
+		{"brown",		0xa52a2a},
+		{"violet",		0xee82ee},
+		{"skyblue",		0x87ceeb},
+		{"slateblue",	0x6a5acd},
+		{"seagreen",	0x2e8b57},
+		{"darkblue",	0x00008b},
+		{"darkgreen",	0x006400},
+		{"darkred",		0x8b0000},
+		{"darkcyan",	0x008b8b},
+		{"darkmagenta",	0x8b008b},
+		{"darkgray",	0xa9a9a9},
+		{"darkgrey",	0xa9a9a9},
+		{"lightblue",	0xadd8e6},
+		{"lightgreen",	0x90ee90},
+		{"lightcyan",	0xe0ffff},
+		{"lightyellow",	0xffffe0},
+		{"khaki",		0xf0e68c},
+		{"coral",		0xff7f50},
+		{"salmon",		0xfa8072},
+		{"gold",		0xffd700},
+	};
+	int i;
+	for (i = 0; i < sizeof(colors)/sizeof(colors[0]); i++)
+	{
+		if (stricmp(colors[i].name, (char *)name) == 0)
+		{
+			*rgb = colors[i].rgb;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+static int
+syn_alloc_user_color(int rgb)
+{
+	int no;
+	int free_slot = -1;
+	static int next_slot = 0;
+
+	for (no = 0; no < sizeof(usercolor) / sizeof(syncolor); no++)
+	{
+		if (usercolor[no].rgb == rgb)
+			return usercolor[no].id;
+		if (usercolor[no].rgb == 0 && free_slot == -1)
+			free_slot = no;
+	}
+	if (free_slot != -1)
+	{
+		usercolor[free_slot].rgb = rgb;
+		return usercolor[free_slot].id;
+	}
+	no = next_slot;
+	usercolor[no].rgb = rgb;
+	next_slot = (next_slot + 1) % (sizeof(usercolor) / sizeof(syncolor));
+	return usercolor[no].id;
+}
+
+
 /*
  * Which entry of the background table an RGB is, adding it if it is not there
  * yet. One based, because a cell keeping 0 means "the window's own colour".
@@ -745,6 +813,7 @@ syn_decode(int id, int *rgb)
 	case 'R':	*rgb = 0x008080;	break;				/* teal */
 	case '[': case '\\': case ']': case '^': case '_':
 	case 'V': case 'W': case 'X': case 'Y': case 'Z':
+	case 'S': case 'T': case 'U':
 		*rgb = syn_user_color((char_u)id);
 		break;
 	default:
@@ -758,6 +827,7 @@ syn_get_color(BUF *buf, char_u *name, char_u **p, char_u **lname)
 {
 	int					color = 0;
 	synlink			*	lwp;
+	int					rgb_val = 0;
 
 	if (lname != NULL)
 		*lname = NULL;
@@ -827,6 +897,10 @@ syn_get_color(BUF *buf, char_u *name, char_u **p, char_u **lname)
 	else if (stricmp("user7",   name) == 0)	color += 'X';
 	else if (stricmp("user8",   name) == 0)	color += 'W';
 	else if (stricmp("user9",   name) == 0)	color += 'V';
+	else if (syn_hexcolor(name, &rgb_val) || syn_named_rgb(name, &rgb_val))
+	{
+		color += syn_alloc_user_color(rgb_val);
+	}
 	else									return(0);
 	return(color);
 }
@@ -850,7 +924,7 @@ syn_get_bgcolor(BUF *buf, char_u *name)
 	int					rgb = 0;
 	int					no;
 
-	if (!syn_hexcolor(name, &rgb))
+	if (!syn_hexcolor(name, &rgb) && !syn_named_rgb(name, &rgb))
 	{
 		if ((id = syn_get_color(buf, name, &p, NULL)) == 0
 				|| !(syn_decode(id & 0xff, &rgb) & SYN_RGB))
@@ -902,13 +976,38 @@ syn_get_bg(BUF *buf, char_u **p)
 	*p = next;
 	return(no << 8);
 }
+static void
+syn_clr_links(BUF *buf)
+{
+	synlink		*lwp;
+	syntax		*twp;
+	int			no;
+
+	for (no = 0; no < sizeof(usercolor) / sizeof(syncolor); no++)
+		usercolor[no].rgb = 0x00000000;
+
+	lwp = (synlink *)buf->b_syn_link;
+	while (lwp)
+	{
+		lwp->color = 'A';
+		lwp = lwp->next;
+	}
+	synbgcnt = 0;
+
+	/* Reset rules color to default text until re-linked */
+	twp = (syntax *)buf->b_syn_ptr;
+	while (twp)
+	{
+		twp->color = 'A';
+		twp = twp->next;
+	}
+}
 
 static int
 syn_link(BUF *buf, char_u *name)
 {
 	char_u			*	clr;
 	char_u			*	type;
-	char_u			*	wk;
 	synlink			*	lwp;
 	synlink			*	lp;
 	char_u			*	lname;
@@ -927,14 +1026,9 @@ syn_link(BUF *buf, char_u *name)
 	if (*clr != NUL)
 		*clr++ = NUL;
 	skipspace(&clr);
-	wk = clr;
+
 	if (stricmp("on", type) == 0)
 	{
-		/*
-		 * Nothing named in front of the "on", so the text keeps the colour it
-		 * would have had and only what is behind it is being asked for. That
-		 * is the whole of what a rule like "MdCode on #f0f0f0" has to say.
-		 */
 		char_u		*	q = clr;
 
 		while (*q && !iswhite(*q))
@@ -953,47 +1047,57 @@ syn_link(BUF *buf, char_u *name)
 			return(1);
 		color |= bg;
 	}
-	if (syn_get_color(buf, name, &wk, NULL) != 0)
+	lwp = (synlink *)buf->b_syn_link;
+	while (lwp)
 	{
-		lwp = (synlink *)buf->b_syn_link;
-		while (lwp)
+		if (stricmp(name, lwp->name) == 0)
 		{
-			if (stricmp(name, lwp->name) == 0)
-			{
-				syntax			*	twp;
-				char_u			sbuf[CMDBUFFSIZE + 1];
+			syntax			*twp;
+			synlink			*tlp;
+			int				changed;
+			int				depth = 0;
 
-				lwp->color	= color;
-				if (lname && stricmp(name, lname) == 0)
-					lwp->lname	= NULL;
-				else
-					lwp->lname	= lname;
-				lwp = (synlink *)buf->b_syn_link;
-				while (lwp)
+			lwp->color	= color;
+			if (lname != NULL)
+				lwp->lname = lname;
+
+			/* Propagate new color to all dependent links non-recursively */
+			do {
+				changed = 0;
+				for (tlp = (synlink *)buf->b_syn_link; tlp; tlp = tlp->next)
 				{
-					if (lwp->lname && stricmp(name, lwp->lname) == 0
-								&& (lname == NULL || stricmp(lname, lwp->name) != 0))
+					if (tlp->lname != NULL)
 					{
-						strcpy(sbuf, lwp->name);
-						strcat(sbuf, " ");
-						strcat(sbuf, name);
-						syn_link(buf, sbuf);
+						synlink *tgt;
+						for (tgt = (synlink *)buf->b_syn_link; tgt; tgt = tgt->next)
+						{
+							if (tgt != tlp && stricmp(tlp->lname, tgt->name) == 0 && tlp->color != tgt->color)
+							{
+								tlp->color = tgt->color;
+								changed = 1;
+							}
+						}
 					}
-					lwp = lwp->next;
 				}
-				twp = (syntax *)buf->b_syn_ptr;
-				while (twp)
+				if (++depth > 20)
+					break;
+			} while (changed);
+
+			/* Update all syntax rules to match link colors */
+			for (tlp = (synlink *)buf->b_syn_link; tlp; tlp = tlp->next)
+			{
+				for (twp = (syntax *)buf->b_syn_ptr; twp; twp = twp->next)
 				{
-					if (twp->name && stricmp(twp->name, name) == 0)
-						twp->color = color;
-					twp = twp->next;
+					if (twp->name && stricmp(twp->name, tlp->name) == 0)
+						twp->color = tlp->color;
 				}
-				return(0);
 			}
-			lwp = lwp->next;
+
+			return(0);
 		}
-		return(1);
+		lwp = lwp->next;
 	}
+
 
 	/* An alias may not be named after a sub-command of ":syntax" */
 		 if (stricmp("load",   name) == 0) return(1);
@@ -1017,6 +1121,15 @@ syn_link(BUF *buf, char_u *name)
 		while (lwp->next)
 			lwp = lwp->next;
 		lwp->next = lp;
+	}
+	{
+		syntax			*twp = (syntax *)buf->b_syn_ptr;
+		while (twp)
+		{
+			if (twp->name && stricmp(twp->name, name) == 0)
+				twp->color = color;
+			twp = twp->next;
+		}
 	}
 	return(0);
 }
@@ -2619,4 +2732,170 @@ is_syntax(WIN *wp, linenr_t lnum, char_u **top, char_u **ptr)
 	}
 	return(0);
 }
+
+/*
+ * syn_highlight: handle ":highlight" / ":hi" commands for Vim color scheme compatibility.
+ */
+
+
+/*
+ * syn_highlight: handle ":highlight" / ":hi" commands for Vim color scheme compatibility.
+ */
+int
+syn_highlight(BUF *buf, char_u *arg)
+{
+	char_u		argbuf[512];
+	char_u		*p;
+	char_u		*group;
+	char_u		cmd[512];
+	char_u		guifg[64];
+	char_u		guibg[64];
+	char_u		attr[64];
+	int			has_attr = FALSE;
+	int			is_bold = FALSE;
+	int			is_italic = FALSE;
+	int			is_uline = FALSE;
+	int			rc;
+
+	if (arg == NULL)
+		return 0;
+	strncpy((char *)argbuf, (char *)arg, sizeof(argbuf) - 1);
+	argbuf[sizeof(argbuf) - 1] = NUL;
+	p = argbuf;
+
+	skipspace(&p);
+	if (*p == NUL)
+		return 0;
+
+	/* hi default link ... -> treat as hi link */
+	if (stricmp("def", p) == 0 || vim_strnicmp(p, "default", 7) == 0)
+	{
+		while (*p && !iswhite(*p))
+			p++;
+		skipspace(&p);
+	}
+
+	group = p;
+	while (*p && !iswhite(*p))
+		p++;
+	if (*p != NUL)
+		*p++ = NUL;
+	skipspace(&p);
+
+	/* hi clear [group] */
+	if (stricmp("clear", group) == 0)
+	{
+		if (*p == NUL)
+		{
+			syn_clr_links(buf);
+			updateScreen(CLEAR);
+			return 0;
+		}
+		return 0;
+	}
+
+	/* hi link Source Target */
+	if (stricmp("link", group) == 0)
+	{
+		if (*p == NUL)
+			return 1;
+		rc = syn_link(buf, p);
+		updateScreen(CLEAR);
+		return rc;
+	}
+
+	guifg[0] = NUL;
+	guibg[0] = NUL;
+	attr[0] = NUL;
+
+	while (*p != NUL)
+	{
+		char_u *key = p;
+		char_u *val = NULL;
+		while (*p && !iswhite(*p))
+		{
+			if (*p == '=' && val == NULL)
+			{
+				*p = NUL;
+				val = p + 1;
+			}
+			p++;
+		}
+		if (*p != NUL)
+			*p++ = NUL;
+		skipspace(&p);
+
+		if (val == NULL)
+		{
+			/* key may be a link target group, e.g. "hi Function Identifier" */
+			if (guifg[0] == NUL && guibg[0] == NUL && !has_attr)
+			{
+				snprintf((char *)cmd, sizeof(cmd), "%s %s", group, key);
+				rc = syn_link(buf, cmd);
+				updateScreen(CLEAR);
+				return rc;
+			}
+			continue;
+		}
+
+		if (stricmp("guifg", key) == 0 || (guifg[0] == NUL && stricmp("ctermfg", key) == 0))
+		{
+			if (stricmp("NONE", val) == 0 || stricmp("bg", val) == 0)
+				strcpy((char *)guifg, "text");
+			else
+				strncpy((char *)guifg, (char *)val, sizeof(guifg) - 1);
+		}
+		else if (stricmp("guibg", key) == 0 || (guibg[0] == NUL && stricmp("ctermbg", key) == 0))
+		{
+			if (stricmp("NONE", val) == 0 || stricmp("fg", val) == 0)
+				guibg[0] = NUL;
+			else
+				strncpy((char *)guibg, (char *)val, sizeof(guibg) - 1);
+		}
+		else if (stricmp("gui", key) == 0 || (!has_attr && stricmp("cterm", key) == 0))
+		{
+			char_u *a = val;
+			has_attr = TRUE;
+			while (*a)
+			{
+				if (vim_strnicmp(a, "bold", 4) == 0) is_bold = TRUE;
+				else if (vim_strnicmp(a, "italic", 6) == 0) is_italic = TRUE;
+				else if (vim_strnicmp(a, "underline", 9) == 0) is_uline = TRUE;
+				else if (vim_strnicmp(a, "uline", 5) == 0) is_uline = TRUE;
+				while (*a && *a != ',') a++;
+				if (*a == ',') a++;
+			}
+		}
+	}
+
+	if (is_bold && is_italic)
+		strcpy((char *)attr, "bolic ");
+	else if (is_bold)
+		strcpy((char *)attr, "bold ");
+	else if (is_italic)
+		strcpy((char *)attr, "italic ");
+	else if (is_uline)
+		strcpy((char *)attr, "uline ");
+	else
+		attr[0] = NUL;
+
+	if (stricmp("Normal", group) == 0)
+		return 0;
+
+	if (guifg[0] != NUL && guibg[0] != NUL)
+		snprintf((char *)cmd, sizeof(cmd), "%s %s%s on %s", group, attr, guifg, guibg);
+	else if (guifg[0] != NUL)
+		snprintf((char *)cmd, sizeof(cmd), "%s %s%s", group, attr, guifg);
+	else if (guibg[0] != NUL)
+		snprintf((char *)cmd, sizeof(cmd), "%s %son %s", group, attr, guibg);
+	else if (attr[0] != NUL)
+		snprintf((char *)cmd, sizeof(cmd), "%s %stext", group, attr);
+	else
+		return 0;
+
+	rc = syn_link(buf, cmd);
+	updateScreen(CLEAR);
+	return rc;
+}
 #endif
+

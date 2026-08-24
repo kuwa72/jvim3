@@ -1,26 +1,26 @@
 syntax	clear
 syntax	crchar	silver
-syntax	color	user0					#009900
-syntax	color	user1					#339900
-syntax	color	user2					#669900
-syntax	color	user3					#999900
-syntax	color	user4					#cc9900
-syntax	color	user5					#6a5acd		" SlateBlue
-syntax	color	user6					#008080		" DarkCyan
-syntax	color	user7					#804040		" Brown
-syntax	color	user8					#a020f0		" Purple
-syntax	color	user9					#2e8b57		" SeaGreen
+syntax	color	user0					#00cc00
+syntax	color	user1					#33cc00
+syntax	color	user2					#66cc00
+syntax	color	user3					#99cc00
+syntax	color	user4					#cccc00
+syntax	color	user5					#8be9fd		" Slate/Cyan
+syntax	color	user6					#50fa7b		" Bright Green
+syntax	color	user7					#ff79c6		" Pink/Statement
+syntax	color	user8					#bd93f9		" Purple/PreProc
+syntax	color	user9					#ffb86c		" Orange/Type
 ""============================================================================
-syntax	link	Comment					blue		" Blue
-syntax	link	Constant				fuchsia		" Magenta
-syntax	link	Special					user5		" SlateBlue		#6a5acd
-syntax	link	Identifier				user6		" DarkCyan		#008080
-syntax	link	Statement				user7		" Brown			#804040
-syntax	link	PreProc					user8		" Purple		#a020f0
-syntax	link	Type			bold	user9		" SeaGreen		#2e8b57
+syntax	link	Comment					#7aa2f7		" Bright Sky Blue
+syntax	link	Constant				#f1fa8c		" Light Yellow
+syntax	link	Special					user5		" #8be9fd
+syntax	link	Identifier				user6		" #50fa7b
+syntax	link	Statement				user7		" #ff79c6
+syntax	link	PreProc					user8		" #bd93f9
+syntax	link	Type			bold	user9		" #ffb86c
 syntax	link	Ignore					text		" guifg=bg
 syntax	link	Error			bolic	white on maroon	" vim: guifg=White guibg=Red
-syntax	link	Todo			bold	navy on yellow	" vim: guifg=Blue guibg=Yellow
+syntax	link	Todo			bold	#282a36 on #f1fa8c	" Yellow bg, dark fg
 syntax	link	String					Constant
 syntax	link	Character				Constant
 syntax	link	Number					Constant
@@ -45,10 +45,10 @@ syntax	link	SpecialChar				Special
 syntax	link	Delimiter				Special
 syntax	link	SpecialComment			Special
 syntax	link	Debug					Special
-syntax	link	tagsClass		bolic	navy
-syntax	link	tagsDefine		italic	navy
+syntax	link	tagsClass		bolic	#8be9fd
+syntax	link	tagsDefine		italic	#8be9fd
 syntax	link	tagsValue		bold	gold
-syntax	link	tagsFunction	bold	navy
+syntax	link	tagsFunction	bold	#8be9fd
 syntax	link	tagsEnum				tagsClass
 syntax	link	tagsMember				tagsValue
 syntax	link	tagsNames		italic	silver
@@ -71,13 +71,13 @@ syntax	link	E-Mail					Special
 syntax	link	HtmlTag					Statement
 syntax	link	HtmlExt					Statement
 syntax	link	HtmlArg					Type
-syntax	link	MdHead			bold	navy
+syntax	link	MdHead			bold	#8be9fd
 " A tint rather than one of the sixteen: a whole line of saturated green is
 " hard to read the text off, and the two rules that use these match a whole
 " line. MdCode and HtmlEmbed name nothing in front of the "on", so the text
 " inside keeps the colour it would have had and only the ground changes.
-syntax	link	DiffAdd					green on #e6ffe6
-syntax	link	DiffDel					red on #ffe6e6
-syntax	link	MdCode					on #f0f0f0
-syntax	link	HtmlEmbed				on #f0f0f0
+syntax	link	DiffAdd					#50fa7b on #1e3a1e
+syntax	link	DiffDel					#ff5555 on #3a1e1e
+syntax	link	MdCode					on #282a36
+syntax	link	HtmlEmbed				on #282a36
 ""============================================================================

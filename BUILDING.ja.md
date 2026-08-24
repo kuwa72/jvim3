@@ -15,7 +15,7 @@
 
 ```sh
 ./scripts/build-unix.sh          # src/jvim3 をビルド
-./scripts/build-unix.sh test     # ビルドしてテスト 177 ケースを実行
+./scripts/build-unix.sh test     # ビルドしてテスト 179 ケースを実行
 ./scripts/build-unix.sh strict   # CI がエラー扱いする警告つきでビルド
 ./scripts/build-unix.sh install  # PREFIX (既定: /usr/local) へビルド＆インストール
 ./scripts/build-unix.sh clean
@@ -208,7 +208,7 @@ ARCH=x86_64 ./scripts/build-mingw.sh warn
 ./scripts/test-encoding.sh src/jvim3   # 48 ケース
 ./scripts/test-editing.sh  src/jvim3   # 72 ケース
 ./scripts/test-syntax.sh   src/jvim3   # 50 ケース
-./scripts/test-sgr.sh      src/jvim3   # 7 ケース
+./scripts/test-sgr.sh      src/jvim3   # 9 ケース
 ```
 
 `test-encoding.sh` は漢字・UTF-8・マルチバイト編集を、`test-editing.sh` は移動、
@@ -216,7 +216,7 @@ ARCH=x86_64 ./scripts/build-mingw.sh warn
 ワイルドカード展開を見ます。`scripts/test-syntax.sh` は syntax/ のルールが実際に
 何を色付けするかを `:syntax dump` 越しに見ます（`syntax/` の全ファイルに 1 つ
 以上）。`scripts/test-sgr.sh` は端末に実際に送られるエスケープを見ます — ルール
-ではなく描画側を見る唯一のスイートです。合わせて 177 ケースです。
+ではなく描画側を見る唯一のスイートです。合わせて 179 ケースです。
 
 必要なのは bash と C コンパイラです。jvim に端末を与えるために `scripts/ptyrun.c`
 をビルドします。以前は `script(1)` を使っていましたが、あれは Linux と NetBSD と

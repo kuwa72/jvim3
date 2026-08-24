@@ -106,6 +106,11 @@ static struct param params[] =
 		{"autoindent",	"ai",	P_BOOL|P_IND,		(char_u *)PV_AI},
 		{"autoprint",	"ap",	P_BOOL,				(char_u *)NULL},
 		{"autowrite",	"aw",	P_BOOL,				(char_u *)&p_aw},
+#ifdef USE_SYNTAX
+		{"background",	"bg",	P_STRING,			(char_u *)&p_bg},
+#else
+		{"background",	"bg",	P_STRING,			(char_u *)NULL},
+#endif
 		{"backspace",	"bs",	P_NUM,				(char_u *)&p_bs},
 		{"backup",		"bk",	P_BOOL,				(char_u *)&p_bk},
 #if defined(UNIX) || (defined(NT) && !defined(notdef))
@@ -499,6 +504,8 @@ set_init(void)
 #endif
 #ifdef USE_SYNTAX
 	curwin->w_p_syt = TRUE;
+	p_bg = strsave((char_u *)"dark");
+	p_colo = strsave((char_u *)"default");
 #endif
 	curbuf->b_p_sw = 8;
 	curbuf->b_p_ts = 8;
@@ -905,6 +912,38 @@ doset(char_u *arg)
 							updateScreen(CLEAR);
 						}
 					}
+#ifdef USE_SYNTAX
+					else if (varp == (char_u *)&p_bg)
+					{
+						if (stricmp((char *)p_bg, "dark") != 0 && stricmp((char *)p_bg, "light") != 0)
+						{
+							emsg(e_invarg);
+							s = alloc(5);
+							if (s != NULL)
+							{
+								free(*(char **)(varp));
+								STRCPY(s, "dark");
+								p_bg = s;
+								*(char_u **)(varp) = s;
+							}
+						}
+						else
+						{
+							if (stricmp((char *)p_bg, "light") == 0)
+							{
+								if (p_colo == NULL || stricmp((char *)p_colo, "default") == 0
+										|| stricmp((char *)p_colo, "default-dark") == 0)
+									docmd_colorscheme((char_u *)"default-light");
+							}
+							else
+							{
+								if (p_colo == NULL || stricmp((char *)p_colo, "default-light") == 0)
+									docmd_colorscheme((char_u *)"default");
+							}
+						}
+					}
+#endif
+
 #ifdef KANJI
 					/* kanji file code */
 					else if (varp == (char_u *)&curbuf->b_p_jc)

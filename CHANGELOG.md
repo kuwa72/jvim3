@@ -186,7 +186,7 @@ repository and would drift within three releases.
   zstd-compressed qcow2: 7.9 GB becomes 1.3 GB, and the download is deleted
   rather than kept for a rebuild that would have to fetch a newer release
   anyway. The tests still run in an overlay on it, the guest is still up in
-  twenty seconds, and all 177 pass on it. `freebsd compact` does the same to a
+  twenty seconds, and all 179 pass on it. `freebsd compact` does the same to a
   guest kept by the older version of the script, without reinstalling it, and
   `clean` now clears the downloads too. The zeroing is why the script wants
   25 GB free while it builds or compacts a guest: the qcow2 grows to the whole
@@ -628,7 +628,7 @@ repository and would drift within three releases.
   ファイルを zstd 圧縮の qcow2 1 つに畳み込みます。7.9 GB が 1.3 GB になり、
   ダウンロードは削除します (作り直すときは、どうせ新しいリリースを取り直すことに
   なります)。テストは今もその上のオーバーレイで走り、ゲストは 20 秒で立ち上がり、
-  177 ケースすべて通ります。古い版が保存したゲストは `freebsd compact` で
+  179 ケースすべて通ります。古い版が保存したゲストは `freebsd compact` で
   再インストールなしに同じ形にできます。`clean` はダウンロードも消します。ゲストを
   作るとき・縮めるときに 25 GB の空きが必要になったのはゼロ埋めのためです。圧縮して
   縮む前に、qcow2 が仮想ディスク全体まで膨らみます。

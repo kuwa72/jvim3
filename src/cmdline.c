@@ -45,11 +45,13 @@ static int			regname;
 static int			quitmore = 0;
 static int  		cmd_numfiles = -1;	  /* number of files found by
 													filename completion */
+static int			sourcing_finished = FALSE;
 
 static void		putcmdline __ARGS((int, char_u *));
 static void		cursorcmd __ARGS((void));
 static int		ccheck_abbr __ARGS((int));
 static char_u	*DoOneCmd __ARGS((char_u *));
+static void		docmd_let __ARGS((char_u *));
 static int		buf_write_all __ARGS((BUF *));
 static int		dowrite __ARGS((char_u *, int));
 static char_u	*getargcmd __ARGS((char_u **));
@@ -1155,7 +1157,7 @@ DoOneCmd(char_u *buff)
 			}
 			else if ((*p == '"' && !(argt & NOTRLCOM)) || *p == '|' || *p == '\n')
 			{
-				if (*(p - 1) == '\\')	/* remove the backslash */
+				if (p > arg && *(p - 1) == '\\')	/* remove the backslash */
 				{
 					STRMOVE(p - 1, p);	/* the ranges overlap by all but one */
 					--p;
@@ -1230,7 +1232,7 @@ DoOneCmd(char_u *buff)
 		{
 			c = *p;
 #ifdef NT
-			if (c == '"' && *(p - 1) != '\\')
+			if (c == '"' && (p == arg || *(p - 1) != '\\'))
 			{
 				if (quote)
 					quote = FALSE;
@@ -1248,7 +1250,7 @@ DoOneCmd(char_u *buff)
 #endif
 			if (c != '%' && c != '#')	/* nothing to expand */
 				continue;
-			if (*(p - 1) == '\\')		/* remove escaped char */
+			if (p > arg && *(p - 1) == '\\')		/* remove escaped char */
 			{
 				STRMOVE(p - 1, p);		/* the ranges overlap by all but one */
 				--p;
@@ -2047,6 +2049,36 @@ doabbr:
 							break;
 				}
 				break;
+		case CMD_colorscheme:
+#ifdef USE_SYNTAX
+				docmd_colorscheme(arg);
+#endif
+				break;
+
+		case CMD_highlight:
+#ifdef USE_SYNTAX
+				++RedrawingDisabled;
+				if (syn_highlight(curwin->w_buffer, arg) != 0)
+					emsg(e_invarg);
+				--RedrawingDisabled;
+#endif
+				break;
+
+		case CMD_let:
+				docmd_let(arg);
+				break;
+
+		case CMD_finish:
+				sourcing_finished = TRUE;
+				break;
+
+		case CMD_if:
+		case CMD_else:
+		case CMD_elseif:
+		case CMD_endif:
+				/* ignored for vim script compatibility */
+				break;
+
 		case CMD_syntax:
 #ifdef USE_SYNTAX
 				++RedrawingDisabled;
@@ -3582,6 +3614,211 @@ addstar(char_u *fname, int len)
 }
 
 /*
+ * docmd_let: handle simple "let" commands, e.g. let g:colors_name = "..."
+ */
+static void
+docmd_let(char_u *arg)
+{
+	char_u buf[256];
+	char_u *p;
+	char_u *varname;
+	char_u *val;
+
+	if (arg == NULL)
+		return;
+	strncpy((char *)buf, (char *)arg, sizeof(buf) - 1);
+	buf[sizeof(buf) - 1] = NUL;
+	p = buf;
+
+	skipspace(&p);
+	if (*p == NUL)
+		return;
+
+	varname = p;
+	while (*p && !iswhite(*p) && *p != '=')
+		p++;
+	if (*p != NUL)
+	{
+		if (*p == '=')
+		{
+			*p++ = NUL;
+		}
+		else
+		{
+			*p++ = NUL;
+			skipspace(&p);
+			if (*p == '=')
+				p++;
+		}
+	}
+	skipspace(&p);
+	val = p;
+
+	if (*val == '"' || *val == '\'')
+	{
+		char_u quote = *val++;
+		p = val;
+		while (*p && *p != quote)
+			p++;
+		*p = NUL;
+	}
+	else
+	{
+		p = val;
+		while (*p && !iswhite(*p))
+			p++;
+		*p = NUL;
+	}
+
+	if (stricmp("g:colors_name", (char *)varname) == 0
+			|| stricmp("colors_name", (char *)varname) == 0)
+	{
+		if (p_colo != NULL)
+			free(p_colo);
+		p_colo = strsave(val);
+	}
+}
+
+/*
+ * docmd_colorscheme: load color scheme by name
+ */
+void
+docmd_colorscheme(char_u *name)
+{
+	char_u		path[MAXPATHL];
+	char_u		colobuf[64];
+	char_u		*vimdir;
+	char_u		*home;
+	int			found = FALSE;
+	FILE		*fp;
+	char_u		*p;
+
+	if (name == NULL)
+	{
+		if (p_colo && *p_colo)
+			msg(p_colo);
+		else
+			msg((char_u *)"default");
+		return;
+	}
+	skipspace(&name);
+	if (*name == NUL)
+	{
+		if (p_colo && *p_colo)
+			msg(p_colo);
+		else
+			msg((char_u *)"default");
+		return;
+	}
+
+	strncpy((char *)colobuf, (char *)name, sizeof(colobuf) - 1);
+	colobuf[sizeof(colobuf) - 1] = NUL;
+	p = colobuf;
+	while (*p && !iswhite(*p))
+		p++;
+	*p = NUL;
+	name = colobuf;
+
+	/* 1. $HOME/.jvim/colors/<name>.vim or .jvsyn */
+	home = vimgetenv((char_u *)"HOME");
+	if (home != NULL && *home != NUL)
+	{
+		snprintf((char *)path, sizeof(path), "%s/.jvim/colors/%s.vim", home, name);
+		if ((fp = fopen((char *)fileconvsto(path), READBIN)) != NULL)
+		{
+			fclose(fp);
+			found = TRUE;
+		}
+		if (!found)
+		{
+			snprintf((char *)path, sizeof(path), "%s/.jvim/colors/%s.jvsyn", home, name);
+			if ((fp = fopen((char *)fileconvsto(path), READBIN)) != NULL)
+			{
+				fclose(fp);
+				found = TRUE;
+			}
+		}
+#ifdef NT
+		if (!found)
+		{
+			snprintf((char *)path, sizeof(path), "%s/_jvim/colors/%s.vim", home, name);
+			if ((fp = fopen((char *)fileconvsto(path), READBIN)) != NULL)
+			{
+				fclose(fp);
+				found = TRUE;
+			}
+		}
+		if (!found)
+		{
+			snprintf((char *)path, sizeof(path), "%s/_jvim/colors/%s.jvsyn", home, name);
+			if ((fp = fopen((char *)fileconvsto(path), READBIN)) != NULL)
+			{
+				fclose(fp);
+				found = TRUE;
+			}
+		}
+#endif
+	}
+
+	/* 2. $VIM/colors/<name>.vim or .jvsyn, or $VIM/syntax/<name>.jvsyn */
+	if (!found)
+	{
+		vimdir = vimgetenv((char_u *)"VIM");
+#ifdef VIMDIR
+		if (vimdir == NULL || *vimdir == NUL)
+			vimdir = (char_u *)VIMDIR;
+#endif
+		if (vimdir != NULL && *vimdir != NUL)
+		{
+			snprintf((char *)path, sizeof(path), "%s/colors/%s.vim", vimdir, name);
+			if ((fp = fopen((char *)fileconvsto(path), READBIN)) != NULL)
+			{
+				fclose(fp);
+				found = TRUE;
+			}
+			if (!found)
+			{
+				snprintf((char *)path, sizeof(path), "%s/colors/%s.jvsyn", vimdir, name);
+				if ((fp = fopen((char *)fileconvsto(path), READBIN)) != NULL)
+				{
+					fclose(fp);
+					found = TRUE;
+				}
+			}
+			if (!found)
+			{
+				snprintf((char *)path, sizeof(path), "%s/syntax/%s.jvsyn", vimdir, name);
+				if ((fp = fopen((char *)fileconvsto(path), READBIN)) != NULL)
+				{
+					fclose(fp);
+					found = TRUE;
+				}
+			}
+		}
+	}
+
+	if (found)
+	{
+		static int in_colorscheme = 0;
+		if (in_colorscheme)
+			return;
+		in_colorscheme = 1;
+		if (p_colo != NULL)
+			free(p_colo);
+		p_colo = strsave(name);
+
+		dosource(path);
+
+		in_colorscheme = 0;
+		updateScreen(CLEAR);
+		flushbuf();
+		return;
+	}
+
+	emsg2((char_u *)"Cannot find color scheme \"%s\"", name);
+}
+
+/*
  * dosource: read the file "fname" and execute its lines as EX commands
  *
  * This function may be called recursively!
@@ -3593,6 +3830,7 @@ dosource(register char_u *fname)
 {
 	register FILE	*fp;
 	register int	len;
+	int				save_finished = sourcing_finished;
 #if defined(KANJI) || defined(FEXRC)
 	char_u			*p;
 #endif
@@ -3612,6 +3850,7 @@ dosource(register char_u *fname)
 	char_u			tailbuf[MAXPATHL];
 #endif
 
+	sourcing_finished = FALSE;
 	expand_env(fname, NameBuff, MAXPATHL);		/* use NameBuff for expanded name */
 #ifdef KANJI
 	if ((p = gettail(NameBuff)) != NULL
@@ -3697,7 +3936,7 @@ dosource(register char_u *fname)
 
 	++dont_sleep;			/* don't call sleep() in emsg() */
 	len = 0;
-	while (fgets((char *)IObuff + len, IOSIZE - len, fp) != NULL && !got_int)
+	while (fgets((char *)IObuff + len, IOSIZE - len, fp) != NULL && !got_int && !sourcing_finished)
 	{
 		len = STRLEN(IObuff) - 1;
 		if (len >= 0 && IObuff[len] == '\n')	/* remove trailing newline */
@@ -3816,6 +4055,7 @@ dosource(register char_u *fname)
 		len = 0;
 	}
 	fclose(fp);
+	sourcing_finished = save_finished;
 	if (got_int)
 		emsg(e_interr);
 	--dont_sleep;
@@ -4167,7 +4407,7 @@ set_one_cmd_context(int firstc, char_u *buff)
 			}
 			else if ((*p == '"' && !(argt & NOTRLCOM)) || *p == '|' || *p == '\n')
 			{
-				if (*(p - 1) != '\\')
+				if (p == arg || *(p - 1) != '\\')
 				{
 					if (*p == '|' || *p == '\n')
 						return p + 1;
