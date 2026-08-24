@@ -1,7 +1,3 @@
-" A tint rather than one of the sixteen: a whole line of saturated green is
-" hard to read the text off, and these two rules match a whole line.
-syntax link			DiffAdd				green on #e6ffe6
-syntax link			DiffDel				red on #ffe6e6
 syntax Statement		n/^diff .*$
 syntax PreProc			n/^index .*$
 syntax Type			n/^--- .*$

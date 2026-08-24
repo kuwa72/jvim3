@@ -109,6 +109,15 @@ repository and would drift within three releases.
   GUI build. Colouring is GUI-only on Windows (`SYN_ON()` is `'syntax'` *and*
   `GuiWin`) and the suite that reads colouring back needs a pty, so nothing
   checked that the engine runs there.
+- The body of an HTML `<script>` or `<style>` is marked off as a block, on the
+  same pale grey a fenced Markdown block gets, with the text left the colour it
+  would have had. It used to be drawn as running text: `var` and `function` got
+  nothing, and any word of a script that happened to sit between a `<` and a
+  `>` got whatever an HTML attribute of that name gets. Colouring the
+  JavaScript as JavaScript is not on offer — one rule set has no way to hand a
+  range of the buffer to another — but the block now reads as a block. Both
+  tags are inside the region, a region being coloured from where its opening
+  pattern starts.
 
 ### Changed
 
@@ -290,6 +299,18 @@ repository and would drift within three releases.
   exe lands in the right place either way, which is the only thing anyone checks
   after unpacking, so nothing else gave a sign. It also says so itself now if the
   rules are missing afterwards, rather than leaving the editor to say it later.
+- A group name that only one rule file uses is a colour in a `.jvsyn` too.
+  `DiffAdd`, `MdHead`, `Url`, `Value`, `Arg` and the rest were defined in the
+  file that used them, which works for every file but a rule file: a `.jvsyn` is
+  opened with `common.jvsyn` and `jvimrc.jvsyn` and nothing else, so `DiffAdd`
+  was not a name the editor knew while `diff.jvsyn` was on screen, and the very
+  line that gives `DiffAdd` its colour came out plain. Twelve names, all in
+  `common.jvsyn` now, where every other group name already was.
+
+  Two of them had been given a colour twice. `Value` was grey in both files, and
+  `Url` was one thing in `html.jvsyn` and another in `text.jvsyn`; it is
+  `text.jvsyn`'s now — a URL in a page is no longer the same colour as the
+  strings around it, and `Url` and `E-Mail` go together as they do in a mail.
 
 ### 日本語
 
@@ -545,6 +566,26 @@ repository and would drift within three releases.
   出るようになっていました。どちらにせよ exe は正しい位置に落ちる — 展開後に
   確認されるのはそれだけ — ので、他に兆候がありませんでした。展開後にルールが
   無ければスクリプト自身がその場で言うようにもしました。
+- HTML の `<script>` `<style>` の中身を 1 つの塊として区切るようにしました。地色は
+  Markdown のフェンス付きブロックと同じ淡い灰色で、文字色はそのままです。これまでは
+  地の文として描かれていたので、`var` や `function` には何も付かず、逆に `<` と `>`
+  の間にたまたま入った語には同名の HTML 属性の色が付いていました。JavaScript を
+  JavaScript として色付けすることはできません — あるルール集合がバッファの範囲を
+  別のルール集合に渡す手段が無いからです — が、塊としては読めるようになりました。
+  開始タグと終了タグは領域の内側です。領域は最初のパターンが始まる位置から
+  色が付くためです。
+- 1 つのルールファイルでしか使わない群名も、`.jvsyn` の中で色が付くようになりました。
+  `DiffAdd`・`MdHead`・`Url`・`Value`・`Arg` などは、それを使うファイルの中で定義して
+  いました。ルールファイル以外なら問題はありませんが、`.jvsyn` を開いたときに読まれる
+  のは `common.jvsyn` と `jvimrc.jvsyn` だけです。つまり `diff.jvsyn` を画面に出して
+  いるあいだ `DiffAdd` はエディタの知らない名前で、`DiffAdd` に色を与えている当の行が
+  無色で表示されていました。12 個の名前を、他のすべての群名と同じ `common.jvsyn` に
+  移しました。
+
+  そのうち 2 つは二重に定義されていました。`Value` はどちらのファイルでも gray で
+  したが、`Url` は `html.jvsyn` と `text.jvsyn` で別の色でした。`text.jvsyn` の側に
+  揃えています — ページ中の URL がまわりの文字列と同じ色ではなくなり、`Url` と
+  `E-Mail` はメールでの組み合わせのまま揃います。
 
 ## 1.0.0 — 2026-08-22
 

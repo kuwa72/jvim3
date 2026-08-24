@@ -1,4 +1,3 @@
-syntax	link			Value				gray
 syntax	Comment			i/REM.*
 " A parameter with modifiers, before the %VAR% rule below: that one matches from
 " any % to the next one on the line, so it takes "%~f1 %" out of "%~f1 %~dp2"

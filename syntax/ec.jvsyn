@@ -1,4 +1,3 @@
-syntax	link			Value				gray
 syntax	Value			w/SQLCODE
 syntax	Label			n/\s*GO\s\+TO\s\+.*;
 syntax	Tag				n/\s*EXEC\s\+SQL\s\+BEGIN\s\+DECLARE\s\+SECTION\s*;

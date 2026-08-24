@@ -1,5 +1,3 @@
-syntax	link			Arg					red
-syntax	link			Attr				olive
 syntax Comment			n/\/\/.*$
 syntax Comment			mp/\/\*/\*\/
 syntax	String			m/\".*\"

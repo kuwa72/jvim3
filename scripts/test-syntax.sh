@@ -203,6 +203,19 @@ case_ 'HTML: a tag over three lines' t.html \
 '1:0-1 Delimiter n/<\n1:1-3 HtmlTag iwt/td\n2:0-5 HtmlArg iwt/width\n2:6-7 Number t/\\d\\+\n3:0-1 Delimiter n/>\n3:2-4 Delimiter n/<\\/\n3:4-6 HtmlTag iwt/td\n3:6-7 Delimiter n/>\n' \
 ':set synlines=1\r'
 
+# What is inside <script> and <style> is not HTML, and there is no way for one
+# rule set to reach inside another, so each is a region of its own -- grey
+# behind it, text the colour it would have had. Both tags are in the region:
+# line 2 is one run from the "<" to the ">", src="app.js" and all, because a
+# region is coloured from where its opening pattern starts.
+#
+# Before this, a script body was drawn as running text: "var" and "color" got
+# nothing, and any word of it that happened to sit between a "<" and a ">" got
+# whatever an HTML attribute of that name gets.
+case_ 'HTML: a script body and a style body' t.html \
+'<p>x</p>\n<script src="app.js">\nvar n = 1;\n</script>\n<style>\n.a { color: red }\n</style>\n' \
+'1:0-1 Delimiter n/<\n1:1-2 HtmlTag iwt/p\n1:2-3 Delimiter n/>\n1:4-6 Delimiter n/<\\/\n1:6-7 HtmlTag iwt/p\n1:7-8 Delimiter n/>\n2:0-21 HtmlEmbed ip/<script\n3:0-10 HtmlEmbed ip/<script\n4:0-9 HtmlEmbed ip/<script\n5:0-7 HtmlEmbed ip/<style\n6:0-17 HtmlEmbed ip/<style\n7:0-8 HtmlEmbed ip/<style\n'
+
 case_ 'XML: declaration, tag, attribute' t.xml \
 '<?xml version="1.0"?>\n<!-- c -->\n<root id="1">\n  <item/>\n</root>\n' \
 '1:0-21 PreProc m/<?.*?>\n2:0-10 Comment p/<!--\n3:0-5 Statement n/<\\/\\=[^ >]\\+\n3:9-12 String m/".*"\n3:12-13 Statement n/\\/\\=>\n4:2-8 Statement n/<\\/\\=[^ >]\\+\n4:8-9 Statement n/\\/\\=>\n5:0-6 Statement n/<\\/\\=[^ >]\\+\n5:6-7 Statement n/\\/\\=>\n'
@@ -277,6 +290,19 @@ case_ 'the sample rc is coloured under its own name' _jvimrc.sample \
 case_ 'a rule file is coloured in the colours it names' t.jvsyn \
 'syntax link Error bolic white on maroon\n" a note\nsyntax Comment n/x\n' \
 '1:0-6 SetSpecial n/^syntax\n1:7-11 SetSpecial w/link\n1:12-17 Error w/Error\n1:18-23 - w/bolic\n1:24-29 - w/white\n1:30-32 SetSpecial w/on\n1:33-39 - w/maroon\n2:0-8 Comment n/^\\s*".*\n3:0-6 SetSpecial n/^syntax\n3:7-14 Comment w/Comment\n'
+
+# The names that belong to one rule file each. A .jvsyn is opened with
+# common.jvsyn and jvimrc.jvsyn and nothing else, so while DiffAdd was defined
+# inside diff.jvsyn it was not a colour on the screen when diff.jvsyn was the
+# file being read, and the line that gave it its colour came out plain. They
+# are all in common.jvsyn now, which is where every other group name is.
+#
+# E-Mail is written out as \< \> rather than as a w rule. A w rule is looked up
+# in an index of the line built one character class at a time, and "E-Mail" is
+# three runs of the line, so the whole of it is never a key to look up.
+case_ 'a rule file colours the names only one rule file uses' t.jvsyn \
+'syntax link DiffAdd green on #e6ffe6\nsyntax HtmlEmbed ip/<script\nsyntax E-Mail n/x\nsyntax Value w/y\n' \
+'1:0-6 SetSpecial n/^syntax\n1:7-11 SetSpecial w/link\n1:12-19 DiffAdd w/DiffAdd\n1:20-25 - w/green\n1:26-28 SetSpecial w/on\n1:29-36 Constant n/#\\x\\x\\x\\x\\x\\x\n2:0-6 SetSpecial n/^syntax\n2:7-16 HtmlEmbed w/HtmlEmbed\n3:0-6 SetSpecial n/^syntax\n3:7-13 E-Mail n/\\<E-Mail\\>\n4:0-6 SetSpecial n/^syntax\n4:7-12 Value w/Value\n'
 
 # A quote on its own line is a comment; a quote inside a pattern is not. Rule
 # files write \" constantly -- this very case is one -- and a comment rule that

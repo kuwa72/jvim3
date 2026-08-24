@@ -1,8 +1,19 @@
-syntax	link			Url			 		fuchsia
-syntax	link			HtmlArg				Type
-syntax	link			HtmlExt				Statement
-syntax	link			HtmlTag				Statement
 syntax	Comment			p/<!--/-->
+" What is between <script> and <\/script> is JavaScript, and between <style>
+" and <\/style> is CSS. Neither is HTML, and the rules below are all a rule
+" file for HTML has: a script body used to be drawn as running text, so a page
+" of JavaScript looked like a page of prose that happened to have no colour in
+" it. These two put it on a grey ground and leave the text the colour it would
+" have had -- the same thing markdown.jvsyn does with a fenced block, and for
+" the same reason, that a region is one colour for all of it and there is no
+" way for one rule set to reach inside another.
+"
+" The opening tag is inside the region, so <script src="app.js"> is drawn as
+" part of the block rather than as a tag with an argument in it. A region is
+" coloured from where its first pattern starts, and there is nothing to say
+" "begin after the match" with.
+syntax	HtmlEmbed		ip/<script/<\/script>
+syntax	HtmlEmbed		ip/<style/<\/style>
 syntax	Number			t/</>/#\x\x\x\x\x\x
 syntax	Number			t/</>/\"#\x\x\x\x\x\x\"
 syntax String			tm/</>/\"[^#].*\"
