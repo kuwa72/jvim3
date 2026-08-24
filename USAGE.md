@@ -15,10 +15,12 @@ working editor.
 - [Encodings](#encodings)
 - [Japanese input](#japanese-input)
 - [Display and fonts](#display-and-fonts)
+- [Colour schemes](#colour-schemes)
 - [What you get beyond vi](#what-you-get-beyond-vi)
 - [What JVim adds](#what-jvim-adds)
 - [What was removed](#what-was-removed)
 - [Where settings live](#where-settings-live)
+- [Known limits](#known-limits)
 - [Troubleshooting](#troubleshooting)
 
 ## Starting it
@@ -300,15 +302,9 @@ Japanese font actually draws and what `'ambiwidth'` set to `double` means in
 later Vim. Letters below U+2000 (Latin-1, IPA, spacing modifiers) are one, since
 a mixed font takes those from its Latin half. Combining marks are zero.
 
-Two known limits, both in the drawing:
-
-- **GDI draws no colour emoji.** Colour glyph layers need DirectWrite; what
-  appears is the fallback font's monochrome outline. Width and editing are
-  correct.
-- **An emoji presentation sequence gets its base character's width.** `⚠️` is
-  U+26A0 (Neutral, so one column) plus a variation selector (zero), and fonts
-  draw it double width, so it leans on its neighbour. Fixing this needs a screen
-  cell that can hold a sequence rather than a single code point.
+Two known limits, both in the drawing, are in [Known limits](#known-limits):
+GDI's lack of colour emoji, and an emoji presentation sequence taking its base
+character's (narrower) width.
 
 `crmark` (`cm`) marks the end of each line, with the character in `crchar`
 (`cc`) — `list` does the same but converts tabs as well, which is often not what
@@ -406,6 +402,73 @@ directory the exe is in, so an unpacked package needs nothing. On a Unix it is
 `/usr/local/lib/jvim3` unless `PREFIX` said otherwise; running out of a build
 tree, set it by hand.
 
+## Colour schemes
+
+`syntax link` above sets one group's colour by editing a rule file. A colour
+scheme does the same thing from a command, and gives the result a name:
+
+| | |
+| --- | --- |
+| `:colorscheme {name}` (`:colo`) | Load `{name}`. With no argument, reports the one that is active. |
+| `:highlight ...` (`:hi`) | Vim's own syntax for setting one group, straight from the command line or a script — this is what a colour scheme file is built from. |
+| `set background=dark\|light` (`bg`) | Only switches anything while the active scheme is `default` or `default-light`: it toggles between those two. A named theme (`dracula`, `nord`, ...) is left as it is. |
+
+Eleven themes are bundled, in `colors/`, packaged and installed the same way
+as `syntax/`: `default` (dark), `default-light`, `dracula`, `nord`,
+`gruvbox`, `monokai`, `one-dark`, `desert`, `tokyonight`, `solarized-dark`,
+`solarized-light`.
+
+```vim
+:colorscheme dracula
+:colo                " with nothing after it, reports "dracula"
+:set background=light   " default <-> default-light; named themes ignore this
+```
+
+**Where a name is looked for**, first match wins:
+
+1. `~/.jvim/colors/{name}.vim`, then `{name}.jvsyn`
+2. Windows only: `%HOME%\_jvim\colors\{name}.vim`, then `{name}.jvsyn`
+3. `$VIM/colors/{name}.vim`, then `{name}.jvsyn`
+4. `$VIM/syntax/{name}.jvsyn`
+
+A found file is simply sourced, so a scheme of your own is
+`~/.jvim/colors/mine.vim`, written as `:hi` lines:
+
+```vim
+set background=dark
+hi clear
+let g:colors_name = "mine"
+
+hi Comment    guifg=#6a9955
+hi Statement  guifg=#c586c0 gui=bold
+hi String     guifg=#ce9178
+hi Error      guifg=#ffffff guibg=#f44747
+hi DiffAdd    guifg=green   on #e6ffe6
+hi link Type  Statement
+```
+
+What `:hi` takes:
+
+| | |
+| --- | --- |
+| `guifg=`, `guibg=` | A colour: `#rrggbb`, or any name `syntax link` already takes (see [Display and fonts](#display-and-fonts) and `syntax/README`). `NONE`, `guifg=bg` or `guibg=fg` clears it. |
+| `gui=bold,italic,underline` | Text attributes. Only one is kept: `bolic` if both bold and italic are given, otherwise whichever of bold, italic, underline came first. |
+| `ctermfg=`, `ctermbg=`, `cterm=` | Read only when the matching `gui*` key is absent — a scheme written for a terminal-only Vim still colours something. |
+| `hi link {Group} {Target}` | `{Group}` takes `{Target}`'s colour, and keeps following it if `{Target}` is relinked later. |
+| `hi clear` | Drop every link and colour, back to plain text. |
+| `hi Normal ...` | Accepted and ignored — there is no group for the base text colour to override. |
+
+**This reads a fixed set of directives, not general Vimscript.** `set`,
+`hi`, `let g:colors_name = "..."`, `finish`, and `if` / `elseif` / `else` /
+`endif` are all recognised — enough for a scheme written the way the eleven
+bundled ones are. The condition on an `if` is never evaluated, though: every
+line inside runs regardless, in file order, so a scheme with one branch for
+`has('gui_running')` and another for a terminal applies both, and whichever
+`hi` came last wins. Anything else in a scheme downloaded from elsewhere —
+functions, loops, anything not in this list — is silently skipped. If a
+theme looks wrong after `:colorscheme`, check it against the bundled ones in
+`colors/` before assuming the bug is here.
+
 ## What you get beyond vi
 
 Vim 3.0 is vi plus a short list, and the short list is why anyone used it:
@@ -482,6 +545,32 @@ the process code page, which is UTF-8 here — so they are misread. Saving the
 settings again from JVim fixes it. Font names in the registry are converted
 automatically.
 
+## Known limits
+
+- **The released Windows build is 32 bit.** The 64 bit one compiles clean but
+  has never been run; there is no Windows runtime test in CI at all. Both
+  Windows builds are checked by compiling, and by the tests running on Unix
+  over the same portable sources.
+- **GDI draws no colour emoji.** A colour glyph needs DirectWrite; what you get
+  is the fallback font's monochrome outline. It is the right width and it edits
+  correctly.
+- **An emoji presentation sequence gets its base character's width.** `⚠️` is
+  allotted one column where a font draws two, so it leans on its neighbour.
+  Fixing it needs a screen cell that can hold a sequence rather than one code
+  point.
+- **Reading a UCS-2 file still pivots through CP932** (see
+  [Encodings](#encodings)), so characters outside CP932 are lost on the way
+  in. Writing UCS-2 is direct and lossless. Convert the file to UTF-8 first.
+- **Saving to EUC-JP, Shift-JIS or ISO-2022-JP keeps only what those encodings
+  have.** Inherent, not a bug. UTF-8 and UCS-2 round trip byte for byte.
+- **Japanese input in console mode is unreliable on Windows** (see
+  [Japanese input](#japanese-input)), and was in 2002 too. Use the GUI.
+- **A colour scheme file is read by a fixed set of directives, not a
+  Vimscript interpreter** — see [Colour schemes](#colour-schemes) for what
+  that means for a theme brought in from elsewhere.
+- **Nothing here has been tried on real hardware with a real IME at length.**
+  CI is runners, ptys and serial consoles. Reports are welcome.
+
 ## Troubleshooting
 
 | | |
@@ -492,6 +581,8 @@ automatically.
 | **Text is soft or uneven on a scaled display** | It should not be; report it. As a workaround, Properties > Compatibility > Change high DPI settings on the exe. |
 | **The font dialog does not offer the font I want** | Only fixed pitch fonts are listed, by design. A proportional font cannot be drawn on a character grid. |
 | **Startup reports an unknown option** | An rc file from an older JVim — `decode` is the usual one; see [above](#what-was-removed). The `_jvimrc.sample` shipped from `v3.0-j2.1b-utf8.5` on no longer does this. |
+| **`:colorscheme` says nothing changed** | `:colo` with no argument reports the active name; if it is not the one expected, the file was not found under any of the paths in [Colour schemes](#colour-schemes). |
+| **A downloaded colour scheme colours only part of the buffer** | It likely branches on `has('gui_running')` or similar — see [Colour schemes](#colour-schemes) for why every branch of an `if` runs. |
 | **Japanese input drops or delays characters** | Console mode on Windows. Use `jvim32w.exe`. |
 | **Cursor keys insert letters, or the screen is wrong** | Unix: `$TERM`. The build links a curses/termcap library if it finds one and otherwise uses its own compiled-in entries, which cover fewer terminals; `./scripts/build-unix.sh` prints which. |
 | **It crashed** | Windows writes a report to `%LOCALAPPDATA%\jvim3\`. `scripts/resolve-crash.sh <report.log>` turns the addresses in it into function names and line numbers, given the matching `.debug` file. Please attach it to an issue. |
