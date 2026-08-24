@@ -135,6 +135,30 @@ repository and would drift within three releases.
 
 ### Fixed
 
+- The Windows package carries Windows line separators. `dosource()` opens a
+  sourced file in binary mode and takes one trailing CR off each line, warning
+  `Wrong line separator, ^M may be missing` when there is none — and the
+  package was built from a Unix checkout, so it warned three times before it
+  had finished starting: once for the rc, once for `filetype.jvsyn`, once for
+  the rules it pulls in. Three messages is enough to make the editor stop at
+  `Press RETURN or enter command to continue`, so every start needed a keypress.
+
+  The warning is not pedantry, though it is nearly always harmless. A CR at the
+  end of a line is the separator and a CR anywhere else is content, so in an LF
+  file a command that *ends* in a real CR — `map q ihello^M`, a mapping that
+  presses Enter — cannot be told from an ordinary line, and the CR is eaten.
+  Measured: the same rc written both ways gives a two-line buffer with CRLF and
+  a one-line buffer with LF. Everything that does not end in a CR behaves
+  identically, and the rule files colour byte-for-byte the same either way.
+
+  Only a *trailing* CR is touched in the conversion. `doc.j/_jvimrc` line 37 is
+  `"map n /^Mz.`, with a real CR in the middle of it, and a first attempt that
+  filtered every CR turned it into `/z.` — which is exactly the breakage the
+  warning is about, introduced while removing it. The build now checks its own
+  output rather than trusting it, because nothing about this shows on a Unix.
+
+  An rc of your own still has to be a CRLF file. Copying the shipped
+  `_jvimrc.sample` gives you one.
 - A rule file is coloured when you open one. `.jvsyn` had no file type at all,
   which is a poor advertisement for a syntax colouring engine: the thirty files
   the editor ships are the ones most likely to be edited by anyone changing the
@@ -326,6 +350,29 @@ repository and would drift within three releases.
   で、探索方式は 0.88〜1.03 秒でした (両者の色付け結果はバイト単位で同一)。`t` を
   使わないルールしか持たないバッファは区切りを 1 つも走査しませんし、領域の両端が
   タグと取り違えられることもありません。
+- Windows パッケージが Windows の改行を持つようになりました。`dosource()` は
+  ソースするファイルをバイナリモードで開き、各行末の CR を 1 つ取り除きます。CR が
+  無ければ `Wrong line separator, ^M may be missing` と警告します。パッケージは
+  Unix のチェックアウトから作っていたため、起動を終える前に 3 回警告が出ていました
+  — rc で 1 回、`filetype.jvsyn` で 1 回、そこから読むルールで 1 回。3 つ出ると
+  `Press RETURN or enter command to continue` で止まるので、**起動のたびにキーを
+  1 回押す必要がありました**。
+
+  この警告は些事ではありません（ただしほぼ常に無害です）。行末の CR は区切りで、
+  それ以外の位置の CR は内容です。したがって LF のファイルでは、**内容が CR で
+  終わるコマンド** — `map q ihello^M` のような Enter を押すマッピング — を
+  普通の行と区別できず、CR が食われます。実測: 同じ rc を両方の改行で書くと、
+  CRLF ではバッファが 2 行、LF では 1 行になります。CR で終わらないものはすべて
+  同一に動き、ルールファイルの色付け結果もバイト単位で同一です。
+
+  変換で触るのは**行末の CR だけ**です。`doc.j/_jvimrc` の 37 行目は
+  `"map n /^Mz.` で、行の途中に本物の CR があります。最初に書いた「CR を全部
+  落とす」版はこれを `/z.` にしてしまいました — 警告が言っているまさにその破壊を、
+  警告を消す作業で持ち込んだわけです。ビルドは自分の出力を信用せず検査するように
+  しました。Unix 側からはこの手の破損が一切見えないためです。
+
+  自分の rc は自分で CRLF にする必要があります。同梱の `_jvimrc.sample` を
+  コピーすればそうなります。
 - ルールファイルを開くと色が付きます。`.jvsyn` にはファイル種別が一切割り当てられて
   いませんでした。シンタックスカラーのエンジンとしては具合の悪い話で、同梱の 30
   ファイルは配色を変えたい人が最も触るものなのに、真っ白で出ていました。中身は rc の
