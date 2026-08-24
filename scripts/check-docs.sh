@@ -274,8 +274,15 @@ elif [ -n "$want_version" ]; then
 			inside { print }' CHANGELOG.md)
 		[ -n "$(printf '%s' "$body" | tr -d ' \t\n')" ] ||
 			bad "CHANGELOG.md: the $want_version section is empty"
-		printf '%s\n' "$body" | grep -q '日本語' ||
-			bad "CHANGELOG.md: the $want_version section has no 日本語 block"
+		# Not "... | grep -q": pipefail plus grep -q's exit-on-first-match can
+		# have grep close its end of the pipe while printf is still writing,
+		# SIGPIPE-killing printf -- and pipefail then reports *that* exit
+		# status, not grep's, so a section that plainly has the word fails
+		# this check anyway. A case pattern needs no pipe to race.
+		case $body in
+		*日本語*)	;;
+		*)		bad "CHANGELOG.md: the $want_version section has no 日本語 block" ;;
+		esac
 	fi
 fi
 
