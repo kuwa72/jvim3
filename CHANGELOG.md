@@ -166,6 +166,37 @@ repository and would drift within three releases.
   `WaitForInputIdle` does not help (it reports idle before the rc is read) and
   `SendMessage` in place of `PostMessage` is worse (the editor stops taking
   keys at all).
+- The BSD guest to keep on your own machine is FreeBSD's, and it is one file of
+  1.3 GB. `scripts/test-bsd-docker.sh` had a NetBSD guest beside it and an
+  `all` target that ran both, and the pair wanted about 12 GB of `~/.cache` for
+  coverage CI already has — every push runs the suites on FreeBSD, NetBSD,
+  OpenBSD and DragonFly. What a local guest is for is not the clock, since a
+  run in it takes about as long as CI's, but finding out without pushing: it
+  builds the tree as it stands and `shell` leaves you in the guest with the
+  failure still there. FreeBSD is where that pays: it builds with clang, which
+  stops where gcc only warns. `netbsd` still installs one for a NetBSD-only
+  failure CI has found; `all` is gone.
+- A kept guest is one compressed file rather than a release image and an
+  overlay on it. Both halves had to stay — 3.6 GB and 4.3 GB for FreeBSD — and
+  most of the overlay was the first boot patching itself: the patches it
+  downloaded, its copy of every file it replaced, and blocks still holding
+  files that had been deleted, since nothing rewrites a block on delete and a
+  block that is not zero has to be stored. So the caches go, the free space is
+  written over with zeros, and the two files are folded into one
+  zstd-compressed qcow2: 7.9 GB becomes 1.3 GB, and the download is deleted
+  rather than kept for a rebuild that would have to fetch a newer release
+  anyway. The tests still run in an overlay on it, the guest is still up in
+  twenty seconds, and all 177 pass on it. `freebsd compact` does the same to a
+  guest kept by the older version of the script, without reinstalling it, and
+  `clean` now clears the downloads too. The zeroing is why the script wants
+  25 GB free while it builds or compacts a guest: the qcow2 grows to the whole
+  virtual disk before it is compressed back down.
+- The FreeBSD CI job runs the strict build after the tests, and the Linux job
+  takes the flags from `build-unix.sh strict` rather than spelling them out a
+  second time. FreeBSD is the only job here that compiles with clang, so it is
+  the only one that can tell whether the set is green on clang — and it was not.
+  Two lists of the same flags could have drifted apart as well; now there is
+  one, and it is the one anybody can run before pushing.
 
 ### Fixed
 
@@ -311,6 +342,43 @@ repository and would drift within three releases.
   `Url` was one thing in `html.jvsyn` and another in `text.jvsyn`; it is
   `text.jvsyn`'s now — a URL in a page is no longer the same colour as the
   strings around it, and `Url` and `E-Mail` go together as they do in a mail.
+- Installing the NetBSD guest gets its packages from where they actually are.
+  `pkg_add` was pointed at `pkgsrc/packages/NetBSD/amd64/10.1/All/`, which the
+  CDN now answers with a redirect to `x86_64/10.0_2026Q2`; the guest's
+  `fetch(3)` does not follow that, so `pkg_add bash` sat there until something
+  killed it, with nothing said. The directory is resolved with curl on the
+  Linux side, which does follow it, and handed over — and if the redirect ever
+  goes away that resolves to the address it started from.
+- A first run of `scripts/test-bsd-docker.sh` that fails in the middle no
+  longer leaves a guest disk behind for later runs to trust. Preparing a guest
+  writes `prepared-<os>.qcow2` as it goes, and the run above stopped with a
+  half-installed system in it; every run after that found the file, skipped
+  preparing, and booted the wreck. The failure is caught now and the file is
+  removed.
+- `scripts/build-unix.sh strict` gets through with clang, not only with gcc. The
+  `-Werror=` set had only ever been checked on Linux, and clang — which FreeBSD
+  builds with — stopped in two places the first time it was asked. Three fixes,
+  none of which change what the editor does:
+
+  `unix.c`'s local `extern void getlinecol();` is a declaration without a
+  prototype. clang refuses that under `-Werror=strict-prototypes`; gcc lets it
+  pass, because a prototype for the same function is already in scope. It is
+  `__ARGS((void))` now, which is what the same declaration in `dos_v.c` has
+  always been.
+
+  The `remove()` that stands in for a libc without one was still a K&R
+  definition, with `const` switched into the middle of it by the preprocessor.
+  clang does not warn about the form, it refuses it — `-Wdeprecated-non-prototype`,
+  and C23 does not have it at all. Both shapes are written out as prototypes now.
+
+  `term.c`'s `TGETSTR` cast the area argument to `char *` for everything except
+  Linux and MSDOS, while the `tgetstr()` declaration a dozen lines above it in
+  the same file says `char **`. A cast to the wrong type is the one thing a cast
+  must not be, and there were 19 of them in `set_term()`. It is one macro now,
+  casting to `char **`, which is what Linux's `<termcap.h>` and the BSDs' curses
+  both declare. This is also what the 58 warnings BUILDING-unix.md recorded for
+  NetBSD were, and it said they were not worth 58 casts to be rid of: they were
+  worth one. The NetBSD guest now builds with no warnings at all.
 
 ### 日本語
 
@@ -542,6 +610,34 @@ repository and would drift within three releases.
   ケースの 2 打目が 1 打目として扱われていました。rc がなければこの隙間は狭く、固定の
   sleep でほぼ隠れていましたが、それが一番たちの悪い状態です。100 回に 1 回落ちて、
   理由が何も残りません。
+- 手元に置く BSD のゲストを FreeBSD だけにしました。1.3 GB の 1 ファイルです。
+  `scripts/test-bsd-docker.sh` には NetBSD のゲストと、両方を走らせる `all` が
+  ありましたが、2 つで `~/.cache` を 12 GB ほど使っていました。しかもその網羅は
+  すでに CI にあります (push ごとに FreeBSD・NetBSD・OpenBSD・DragonFly でスイートを
+  実行しています)。ローカルのゲストの価値は時間ではなく (1 回にかかる時間は CI と
+  だいたい同じです)、push せずに分かることです。今のツリーをそのままビルドし、
+  `shell` なら失敗した状態のゲストに入れます。それが効くのは FreeBSD です。clang で
+  ビルドするので、gcc が警告で済ませるところで止まります。NetBSD は CI が NetBSD 固有の失敗を見つけたときのために `netbsd` で
+  入れられます。`all` は廃止しました。
+- 保存するゲストが、リリースイメージとその上のオーバーレイの 2 つではなく、圧縮した
+  1 ファイルになりました。以前は両方を残す必要があり、FreeBSD では 3.6 GB と
+  4.3 GB でした。しかもオーバーレイのほとんどは初回起動の自己パッチです。
+  ダウンロードしたパッチ、置き換えた全ファイルの控え、そして削除済みファイルが
+  まだ入っているブロック (削除でブロックは書き換わらず、ゼロでないブロックは保存
+  しなければなりません)。そこでキャッシュを消し、空き領域をゼロで埋め、2 つの
+  ファイルを zstd 圧縮の qcow2 1 つに畳み込みます。7.9 GB が 1.3 GB になり、
+  ダウンロードは削除します (作り直すときは、どうせ新しいリリースを取り直すことに
+  なります)。テストは今もその上のオーバーレイで走り、ゲストは 20 秒で立ち上がり、
+  177 ケースすべて通ります。古い版が保存したゲストは `freebsd compact` で
+  再インストールなしに同じ形にできます。`clean` はダウンロードも消します。ゲストを
+  作るとき・縮めるときに 25 GB の空きが必要になったのはゼロ埋めのためです。圧縮して
+  縮む前に、qcow2 が仮想ディスク全体まで膨らみます。
+- CI の FreeBSD ジョブが、テストのあとに strict ビルドも実行します。Linux ジョブは
+  フラグ一覧を書き並べるのをやめ、`build-unix.sh strict` から取ります。ここで clang
+  でコンパイルするジョブは FreeBSD だけなので、この警告セットが clang で緑かどうかを
+  言えるのも FreeBSD だけです。そして緑ではありませんでした。同じフラグの一覧が
+  2 つあれば離れていく恐れもあります。今は 1 つで、push 前に誰でも走らせられる
+  ものです。
 - AddressSanitizer 下でルールファイルを読むと異常終了する問題を修正しました。
   `DoOneCmd()` の 2 か所が `\"` と `\%` の解除に、文字列を 1 バイト左へ自分自身の上に
   `strcpy()` していました。範囲が重なるので未定義動作です。起動のたびに `\"` だらけの
@@ -586,6 +682,40 @@ repository and would drift within three releases.
   したが、`Url` は `html.jvsyn` と `text.jvsyn` で別の色でした。`text.jvsyn` の側に
   揃えています — ページ中の URL がまわりの文字列と同じ色ではなくなり、`Url` と
   `E-Mail` はメールでの組み合わせのまま揃います。
+- NetBSD ゲストのインストールが、パッケージを実際にある場所から取るようになりました。
+  `pkg_add` に渡していた `pkgsrc/packages/NetBSD/amd64/10.1/All/` は、現在 CDN が
+  `x86_64/10.0_2026Q2` へのリダイレクトを返します。ゲストの `fetch(3)` はこれを
+  追わないため、`pkg_add bash` は何も言わずに、誰かが止めるまで待ち続けていました。
+  リダイレクトを追える Linux 側の curl でディレクトリを解決して渡します。将来
+  リダイレクトがなくなれば、元のアドレスがそのまま解決されます。
+- `scripts/test-bsd-docker.sh` の初回実行が途中で失敗したときに、あとの実行が
+  信用してしまうゲストディスクを残さなくなりました。ゲストの用意は
+  `prepared-<os>.qcow2` に書きながら進むため、上記の失敗では中途半端に
+  インストールされた状態のディスクが残り、以降の実行はそれを見つけて用意を飛ばし、
+  その残骸を起動していました。失敗を捕まえてファイルを削除します。
+- `scripts/build-unix.sh strict` が gcc だけでなく clang でも通るようになりました。
+  この `-Werror=` セットはこれまで Linux でしか確かめておらず、FreeBSD がビルドに
+  使う clang に初めて訊いた時点で 2 か所で止まりました。修正は 3 つ、いずれも
+  エディタの動作は変えません。
+
+  `unix.c` の関数内の `extern void getlinecol();` はプロトタイプのない宣言です。
+  clang は `-Werror=strict-prototypes` でこれを拒否します。gcc は同じ関数の
+  プロトタイプがすでにスコープにあるため通します。`dos_v.c` の同じ宣言が昔から
+  そうであるように、`__ARGS((void))` にしました。
+
+  libc に `remove()` がない環境向けの代替定義が K&R 形式のままで、しかも途中に
+  プリプロセッサで `const` を差し込む形でした。clang はこの形を警告ではなく拒否
+  します (`-Wdeprecated-non-prototype`。C23 にはこの形自体がありません)。両方の形を
+  プロトタイプで書き出しました。
+
+  `term.c` の `TGETSTR` は、Linux と MSDOS 以外では area 引数を `char *` に
+  キャストしていました。同じファイルの十数行上にある `tgetstr()` の宣言は
+  `char **` です。誤った型へのキャストはキャストが唯一やってはいけないことで、
+  それが `set_term()` に 19 個ありました。今は 1 つのマクロで `char **` に
+  キャストします。Linux の `<termcap.h>` も BSD の curses もそう宣言しています。
+  BUILDING-unix.md が NetBSD について記録していた 58 個の警告もこれでした。
+  「58 個のキャストを書くほどの価値はない」と書いていましたが、必要だったのは
+  1 個でした。NetBSD ゲストのビルドは警告 0 件になりました。
 
 ## 1.0.0 — 2026-08-22
 

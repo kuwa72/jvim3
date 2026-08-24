@@ -71,14 +71,13 @@ jobs:
       # prototype means nothing is checked. All of those have bitten this
       # codebase. The 236 char/char_u signedness warnings are another matter
       # and stay warnings; see BUILDING-unix.md.
+      # The set itself lives in build-unix.sh's strict target, so that this job
+      # and the FreeBSD one below cannot drift apart, and so that it can be run
+      # by hand before pushing.
       - name: The warnings that have to stay away
         run: |
           ./scripts/build-unix.sh clean
-          EXTRA_CFLAGS="-Wall -Wno-pointer-sign \
-            -Werror=implicit-function-declaration -Werror=implicit-int \
-            -Werror=incompatible-pointer-types -Werror=int-conversion \
-            -Werror=strict-prototypes -Werror=old-style-definition \
-            -Werror=return-type -Werror=uninitialized" ./scripts/build-unix.sh
+          ./scripts/build-unix.sh strict
 
 # No macOS job. It is not a target anybody here can try by hand, so a failure
 # there is a puzzle nobody is in a position to solve -- and one duly turned up:
@@ -89,8 +88,13 @@ jobs:
   # The BSDs run in a VM on the Linux runner, the same idea as
   # scripts/test-bsd-docker.sh but with somebody else's prebuilt guest, which
   # boots in a couple of minutes instead of being installed from scratch.
+  # FreeBSD runs the strict build as well, because it is the one job here that
+  # compiles with clang, and clang stops where gcc only warns: it refuses an
+  # old-style definition outright, and it takes a cast to the wrong pointer
+  # type as an error. Both were in the tree, unseen, while this set was checked
+  # on gcc alone.
   freebsd:
-    name: FreeBSD build and tests
+    name: FreeBSD build, tests and strict warnings
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -99,7 +103,13 @@ jobs:
         with:
           usesh: true
           prepare: pkg install -y bash
-          run: ./scripts/build-unix.sh test
+          # set -e, or the job's status would be the strict build's alone and a
+          # failed test suite would go by unnoticed.
+          run: |
+            set -e
+            ./scripts/build-unix.sh test
+            ./scripts/build-unix.sh clean
+            ./scripts/build-unix.sh strict
 
   netbsd:
     name: NetBSD build and tests
