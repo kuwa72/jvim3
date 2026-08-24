@@ -12,6 +12,7 @@ src/jvim3
 src/grep/grep
 src/mkcmdtab
 src/jptab
+src/.build-stamp
 core
 
 # stray files from test runs

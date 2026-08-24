@@ -17,6 +17,7 @@
 ./scripts/build-unix.sh          # src/jvim3 をビルド
 ./scripts/build-unix.sh test     # ビルドしてテスト 177 ケースを実行
 ./scripts/build-unix.sh strict   # CI がエラー扱いする警告つきでビルド
+./scripts/build-unix.sh install  # PREFIX (既定: /usr/local) へビルド＆インストール
 ./scripts/build-unix.sh clean
 ```
 
@@ -57,12 +58,31 @@ POSIX `sh` で書かれていて `make -C` を使わないので、BSD の `/bin
 | `-DHAVE_MKSTEMP` | `mkstemp()` がリンクできるか。`:!` とワイルドカード展開の一時ファイルはこれで作ります。なければ名前を決めるだけの `mktemp()` にフォールバックします。 |
 | マシン | Linux・BSD・macOS には `-DBSD_UNIX`、BSD と macOS にはさらに `-DBSD4_4` を付けて `unix.c` が `<sgtty.h>` ではなく `<termios.h>` の経路を通るようにします。SunOS と AIX には `-DSYSV_UNIX` 系。 |
 
-インストールは手作業です。ビルド時に埋め込まれるパスに合わせてください。
+### Linux ローカル環境への展開（動作確認・検証用）
+
+ローカルで手軽に動作検証するためにユーザー領域（`~/.local` など）へ展開する場合:
+
+```sh
+tools/deploy-local.sh              # ~/.local へビルド＆インストール
+tools/deploy-local.sh /path/to/dir # 任意のプレフィックスへ展開
+```
+
+`$HOME/.local/bin/jvim3`、シンタックス定義（`$HOME/.local/lib/jvim3/syntax/`）、ヘルプファイル（`$HOME/.local/lib/jvim3.hlp`）等が正しく設定・配置されます。
+
+### システムへのインストール
+
+```sh
+sudo ./scripts/build-unix.sh install
+```
+
+または手動で配置する場合:
 
 ```sh
 sudo install -m 755 src/jvim3           /usr/local/bin/
 sudo install -m 644 doc.j/vim.hlp       /usr/local/lib/jvim3.hlp   # 英語版は doc/vim.hlp
 sudo install -m 644 doc/vim.1           /usr/local/man/man1/jvim3.1
+sudo mkdir -p /usr/local/lib/jvim3/syntax
+sudo install -m 644 syntax/*.jvsyn      /usr/local/lib/jvim3/syntax/
 ```
 
 `/usr/local/etc/jvim3rc` があれば、システム共通の設定として何より先に読まれます。

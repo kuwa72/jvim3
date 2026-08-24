@@ -6,7 +6,17 @@
 ./scripts/build-unix.sh          # build src/jvim3
 ./scripts/build-unix.sh test     # build, then run the three test suites
 ./scripts/build-unix.sh strict   # build with the warnings CI refuses
+./scripts/build-unix.sh install  # build and install to PREFIX (default: /usr/local)
 ./scripts/build-unix.sh clean
+```
+
+### Deploying to local test environment
+
+For local testing without root privileges:
+
+```sh
+tools/deploy-local.sh              # builds and installs to ~/.local
+tools/deploy-local.sh /path/to/dir # deploys to custom prefix
 ```
 
 `strict` is the "warnings that have to stay away" CI job, runnable before the
