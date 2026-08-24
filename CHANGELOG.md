@@ -118,6 +118,21 @@ repository and would drift within three releases.
   range of the buffer to another — but the block now reads as a block. Both
   tags are inside the region, a region being coloured from where its opening
   pattern starts.
+- `:colorscheme` (`:colo`) loads a named theme, and `:highlight` (`:hi`) reads
+  Vim's own `guifg=` / `guibg=` / `gui=` / `link` / `clear` syntax rather than
+  only `syntax link`'s. Eleven themes come bundled in `colors/` — dracula,
+  nord, gruvbox, monokai, one-dark, desert, tokyonight, solarized-dark,
+  solarized-light, and a default pair that `set background=dark|light`
+  switches between. A name is looked for under `~/.jvim/colors/` first, then
+  `$VIM/colors/`, so `:colorscheme mine` finds a file dropped in either. A
+  real Vim colour scheme is Vimscript; this reads only the directives a
+  scheme built the way the bundled ones are needs — `set`, `hi`,
+  `let g:colors_name`, `finish`, `if`/`elseif`/`else`/`endif` — and does not
+  evaluate an `if`'s condition, so every branch of one runs. See
+  [USAGE.md](USAGE.md#colour-schemes).
+- The default palette in `syntax/common.jvsyn` was rebuilt for contrast on a
+  dark terminal background, replacing colours chosen in 2002 for a light GUI
+  window.
 
 ### Changed
 
@@ -682,6 +697,19 @@ repository and would drift within three releases.
   したが、`Url` は `html.jvsyn` と `text.jvsyn` で別の色でした。`text.jvsyn` の側に
   揃えています — ページ中の URL がまわりの文字列と同じ色ではなくなり、`Url` と
   `E-Mail` はメールでの組み合わせのまま揃います。
+- `:colorscheme` (`:colo`) でテーマを名前で読み込めるようになり、`:highlight`
+  (`:hi`) は `syntax link` だけでなく Vim 本来の `guifg=` / `guibg=` / `gui=` /
+  `link` / `clear` 構文も読むようになりました。`colors/` に dracula、nord、
+  gruvbox、monokai、one-dark、desert、tokyonight、solarized-dark、
+  solarized-light と、`set background=dark|light` で切り替わる既定の 2 つを
+  同梱しています。テーマ名はまず `~/.jvim/colors/`、次に `$VIM/colors/` から
+  探すので、`:colorscheme mine` はどちらに置いたファイルも見つけます。本物の
+  Vim のカラースキームは Vimscript ですが、ここで読むのは同梱のテーマが使って
+  いる範囲の命令だけです — `set`、`hi`、`let g:colors_name`、`finish`、
+  `if`/`elseif`/`else`/`endif`。`if` の条件は評価されないため、両方の分岐が
+  実行されます。詳細は [USAGE.ja.md](USAGE.ja.md#配色テーマ)。
+- `syntax/common.jvsyn` の既定パレットを、暗い背景の端末でも読みやすい配色に
+  作り直しました。2002 年当時のものは明るい GUI ウィンドウ向けの配色でした。
 - NetBSD ゲストのインストールが、パッケージを実際にある場所から取るようになりました。
   `pkg_add` に渡していた `pkgsrc/packages/NetBSD/amd64/10.1/All/` は、現在 CDN が
   `x86_64/10.0_2026Q2` へのリダイレクトを返します。ゲストの `fetch(3)` はこれを

@@ -40,6 +40,7 @@ Licence          Public domain — see LICENSE, and uganda.txt for the
 | Builds anywhere Unix-ish | `scripts/build-unix.sh` asks the compiler what the machine has instead of asking you to uncomment three lines in a makefile. `scripts/build-mingw.sh` cross builds the Windows executables with mingw-w64. |
 | 179 tests | 48 encoding cases, 72 editing cases, 50 syntax colouring cases and 9 that read the escapes the terminal is actually sent, driven through a real pty. Every push runs them on five operating systems. |
 | Long standing bugs fixed | Fifteen of them, listed in [BUILDING-mingw.md](BUILDING-mingw.md#bugs-found-along-the-way) — `[あ]` in a regexp also matching `い`, a command line reading `buff[-1]`, encoding detection tipping a whole file over to Shift-JIS because of one emoji, terminal input mangling a character split across two reads. |
+| Colour schemes | `:colorscheme` and a Vim-compatible `:highlight`, eleven bundled themes, on the GUI and over a terminal's SGR alike. [USAGE.md](USAGE.md#colour-schemes) has the reference. |
 | Two features removed | BDF font rendering and editing inside LHA/ZIP/TAR archives are gone, sources and all, because their terms made the tree awkward to redistribute. See [below](#licence). |
 
 ## Get it
@@ -153,28 +154,11 @@ fonts is history now, not instructions.
 
 ## Where it stands
 
-Honest about the edges:
-
-- **The released Windows build is 32 bit.** The 64 bit one compiles clean but
-  has never been run; there is no Windows runtime test in CI at all. Both
-  Windows builds are checked by compiling, and by the tests running on Unix
-  over the same portable sources.
-- **GDI draws no colour emoji.** A colour glyph needs DirectWrite; what you get
-  is the fallback font's monochrome outline. It is the right width and it edits
-  correctly.
-- **An emoji presentation sequence gets its base character's width.** `⚠️` is
-  allotted one column where a font draws two, so it leans on its neighbour.
-  Fixing it needs a screen cell that can hold a sequence rather than one code
-  point.
-- **Reading a UCS-2 file still pivots through CP932**, so characters outside
-  CP932 are lost on the way in. Writing UCS-2 is direct and lossless. Convert
-  the file to UTF-8 first.
-- **Saving to EUC-JP, Shift-JIS or ISO-2022-JP keeps only what those encodings
-  have.** Inherent, not a bug. UTF-8 and UCS-2 round trip byte for byte.
-- **Japanese input in console mode is unreliable on Windows**, and was in 2002
-  too. Use the GUI.
-- **Nothing here has been tried on real hardware with a real IME at length.**
-  CI is runners, ptys and serial consoles. Reports are welcome.
+The released Windows build is 32 bit; the 64 bit one compiles but has never
+been run outside CI. Console mode Japanese input on Windows is unreliable, GDI
+draws no colour emoji, and a couple of encoding conversions are one-way.
+[USAGE.md](USAGE.md#known-limits) has the full list, with what each one means
+for actual use.
 
 ## Tests
 
