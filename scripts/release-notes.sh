@@ -82,14 +82,36 @@ fi
 
 # --- fill the template -------------------------------------------------------
 # awk rather than sed: the replacements hold newlines, slashes and ampersands.
-awk -v changes="$changes" -v version="$version" -v tests="$tests" \
+#
+# Not gsub()/sub(): their replacement argument treats a bare "&" as "the text
+# just matched" and "\" as the start of an escape, so a changelog entry with
+# "K&R" in it -- 1.1.0 has one -- came out as "K{{CHANGES}}R". replace() below
+# does the substitution with substr()/index() instead, where nothing in the
+# replacement text means anything but itself.
+#
+# "-v changes=" has its own, earlier round of escape processing -- the same
+# rules as a string literal in the program, so a lone "\" in front of a
+# character awk does not recognise as an escape is silently dropped ("\_"
+# arrived as "_"). Doubled here so that round undoes it exactly and every
+# backslash in the changelog survives.
+changes_v=$(printf '%s' "$changes" | sed 's/\\/\\\\/g')
+awk -v changes="$changes_v" -v version="$version" -v tests="$tests" \
 	-v platforms="$platforms" -v prev="$prev" -v compare="$compare" '
+function replace(s, pat, rep,    i, out) {
+	out = ""
+	while ((i = index(s, pat)) > 0) {
+		out = out substr(s, 1, i - 1) rep
+		s = substr(s, i + length(pat))
+	}
+	return out s
+}
 {
-	gsub(/\{\{CHANGES\}\}/,     changes)
-	gsub(/\{\{VERSION\}\}/,     version)
-	gsub(/\{\{TESTS\}\}/,       tests)
-	gsub(/\{\{PLATFORMS\}\}/,   platforms)
-	gsub(/\{\{PREV_TAG\}\}/,    prev)
-	gsub(/\{\{COMPARE_URL\}\}/, compare)
-	print
+	line = $0
+	line = replace(line, "{{CHANGES}}",     changes)
+	line = replace(line, "{{VERSION}}",     version)
+	line = replace(line, "{{TESTS}}",       tests)
+	line = replace(line, "{{PLATFORMS}}",   platforms)
+	line = replace(line, "{{PREV_TAG}}",    prev)
+	line = replace(line, "{{COMPARE_URL}}", compare)
+	print line
 }' "$template"

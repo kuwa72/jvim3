@@ -10,8 +10,6 @@ repository and would drift within three releases.
 
 ## Unreleased
 
-## 1.1.0 — 2026-08-24
-
 ### Added
 
 - `hi Normal guifg=... guibg=...` in a colour scheme now overrides the Text
