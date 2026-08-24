@@ -43,10 +43,9 @@ accumulate under `## Unreleased`. If `changelog-draft.sh` comes back with every
 candidate line commented out as build or docs only, there is nothing to release
 yet.
 
-Nine releases went out in three days once, because cutting one was the only way
-to get a testable Windows zip to a person. It is not any more:
-`scripts/fetch-ci-build.sh` downloads the package CI built for any commit. A
-release is for people who are not watching the repository.
+A release is for people who are not watching the repository, not a way to get
+a testable build to someone — `scripts/fetch-ci-build.sh` downloads the
+package CI built for any commit instead.
 
 ## What the version number reaches
 

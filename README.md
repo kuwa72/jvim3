@@ -9,12 +9,11 @@ UTF-8 instead of Shift-JIS**, so text that CP932 has no room for — hangul,
 accented Latin, emoji, anything outside the BMP — survives being read, edited
 and saved.
 
-It is still a 1994 editor. That is the point of it: a single executable of about
-a megabyte, no plugins, no scripting language, no startup delay, vi's own key
-map plus the handful of things Vim 3.0 added — multi level undo, several
-windows, command line history and completion, syntax colouring, IME control
-that knows about command mode. If that is the editor you want, this one runs on
-a machine from this decade.
+It is a 1994 editor: a single executable of about a megabyte, no plugins, no
+scripting language, no startup delay, vi's own key map plus the handful of
+things Vim 3.0 added — multi level undo, several windows, command line
+history and completion, syntax colouring, IME control that knows about
+command mode.
 
 [![Latest release](https://img.shields.io/github/v/release/kuwa72/jvim3?label=latest%20release)](https://github.com/kuwa72/jvim3/releases/latest)
 derived from JVim 3.0-j2.1b (2002 Dec 24)
@@ -90,9 +89,8 @@ configuring for Linux 6.18.33, cc
   X11 title              yes
 ```
 
-macOS builds too, but it is not a target here: nobody has one to try, so it is
-not in CI and not verified. See the unverified list in
-[BUILDING-unix.md](BUILDING-unix.md).
+macOS builds too, but it is not verified and not in CI. See the unverified
+list in [BUILDING-unix.md](BUILDING-unix.md).
 
 To install it by hand:
 
@@ -177,7 +175,7 @@ so they exercise the same input path a person does. Each case is given 20
 seconds before it is killed, so a case that leaves the editor waiting for a key
 fails rather than hanging the suite.
 
-Every push and pull request builds and runs all 110 on Linux, FreeBSD, NetBSD,
+Every push and pull request builds and runs all 179 on Linux, FreeBSD, NetBSD,
 OpenBSD and DragonFly, and cross builds both Windows architectures. A
 tag matching `v*` does the same and then publishes the Windows zips, so a broken
 build cannot become a release. See
@@ -216,9 +214,7 @@ Two directories that were *not* under those terms are gone from this tree —
 `src/bdf/` (required GPL distribution, with no licence header in the files) and
 `src/exfile/` (needed the author's permission, which is not a free licence).
 What is left is Vim 3.0's public domain plus a Japanization whose author gave up
-his claim. Note that "gone" means gone from the working tree, as of
-`8807bbc`: a `git clone` still reaches those files through the history, and
-rewriting it would break the tags and releases already published.
+his claim. They are gone from the working tree, not from the git history.
 
 [LICENSE](LICENSE) is the machine-readable form of all this — the Unlicense,
 which is the closest standard text to what Moolenaar and Tsuchida each actually

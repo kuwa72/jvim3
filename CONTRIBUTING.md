@@ -45,7 +45,7 @@ crashes, `scripts/resolve-crash.sh` turns the report in
 | | |
 | --- | --- |
 | [BUILDING-unix.md](BUILDING-unix.md) | Building on Linux and the BSDs; what the script detects; what CI covers; what is verified and what is not. |
-| [BUILDING-mingw.md](BUILDING-mingw.md) | Building for Windows, and the long version of how UTF-8, the Unicode GUI, DPI awareness and the drawing of a row of text work. Also "Bugs found along the way". |
+| [BUILDING-mingw.md](BUILDING-mingw.md) | Building for Windows, and the long version of how UTF-8, the Unicode GUI, DPI awareness and the drawing of a row of text work. |
 | [USAGE.md](USAGE.md) | Running it, settings, the encoding model, IME, troubleshooting. |
 
 ## Tests
@@ -63,8 +63,8 @@ you if it starts passing.
 ## Commit messages
 
 An English or Japanese sentence saying what the change does, in the imperative,
-with no `fix:` or `feat:` prefix — see `git log`. Around 50 characters. If there
-is a reason worth knowing, put it in the body; most commits here have one.
+with no `fix:` or `feat:` prefix — see `git log`. Around 50 characters. Put a
+reason worth knowing in the body.
 
 There is no CLA and no sign-off. This is public domain (see
 [LICENSE](LICENSE)); by sending a patch you put it in the public domain too.
@@ -83,7 +83,6 @@ documentation work sits on `master` until there is something worth releasing.
 
 ## Security
 
-There is no private disclosure channel, and it would be dishonest to promise
-one: this is a 1994 C codebase with string handling to match, maintained by one
-person. It is a local text editor with no network features. Please open a normal
-public issue.
+There is no private disclosure channel. This is a local text editor with no
+network features, maintained by one person. Please open a normal public
+issue.

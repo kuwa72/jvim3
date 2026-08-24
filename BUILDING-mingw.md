@@ -61,35 +61,17 @@ packages, verifies that no running `.exe` is locked, safely updates the
 destination folders in place, and preserves any custom `_vimrc` / `_jvimrc`.
 
 
-Switching `ARCH`, or turning `warn` on or off, needs no `clean` in between: the
-object directory and the exe names are shared between the two architectures, so
-`obj-mingw` holds a stamp naming what its contents were built for, and a change
-of toolchain or of warning flags rebuilds and relinks everything. Building the
-same way twice still compiles nothing. Without that stamp, a 64 bit build over
-32 bit objects stopped at `file format not recognized`, and going back the other
-way was worse: the objects were up to date, so make left the exe from the other
-architecture where it was.
+Switching `ARCH`, or turning `warn` on or off, needs no `clean` in between:
+`obj-mingw` holds a stamp naming what it was last built for, and a change of
+toolchain or of warning flags rebuilds and relinks everything automatically.
 
 ### 32 bit or 64 bit
 
-**32 bit is what is released**, and it runs fine on Windows 11 x64 under WoW64.
-
-`ARCH=x86_64` used to compile with 37 places where a pointer went through an
-`int` or a `long` and lost half of itself, plus 9 hard errors. Those are gone:
-menu handles and `ShellExecute()` results are `UINT_PTR`/`INT_PTR`, the dialog
-procedures return `INT_PTR` as a 64 bit `DLGPROC` must, `_beginthread()`'s
-result is a `uintptr_t`, and the numbers that used to be dressed up as `char *`
-for a `"%ld"` go through `emsgn()` or an `intptr_t` now.
-
-```
-$ ARCH=i686   ./scripts/build-mingw.sh warn 2>&1 | grep -c warning:   # 37
-$ ARCH=x86_64 ./scripts/build-mingw.sh warn 2>&1 | grep -c warning:   # 37
-$ ARCH=x86_64 ./scripts/build-mingw.sh warn 2>&1 \
-        | grep -cE 'pointer-to-int-cast|int-to-pointer-cast'          # 0
-```
-
-Both are built in CI. What is left in either is 22 `%d` against a `long` or a
-`DWORD` -- the same width on Windows -- and a dozen cosmetic ones.
+Both architectures are built in CI and released; 32 bit also runs on 64 bit
+Windows under WoW64. Both target `UINT_PTR`/`INT_PTR`-correct code throughout
+(menu handles, `ShellExecute()` results, dialog procedures,
+`_beginthread()`), and `-Wpointer-to-int-cast` / `-Wint-to-pointer-cast` are
+clean on both architectures.
 
 **There is no Windows runtime test here at all**, for either architecture --
 compiling, and the Unix suite over the same portable sources, stand in for
@@ -109,19 +91,15 @@ the headers define `_UCRT` or they do not, and `libmingwex` is compiled to match
 is on `PATH`, and the two obvious ways to install one do not agree: Debian's
 `gcc-mingw-w64-*-win32` packages are msvcrt, Homebrew's `mingw-w64` is UCRT.
 
-This is not a detail that stays in the printf corners. msvcrt's `tmpnam()`
-returns a name under `P_tmpdir`, which is `"\\"`, so the file it names is in the
-root of the current drive and cannot be written by an ordinary process; UCRT's
-consults `TEMP` and returns a real path. `:r !cmd` redirects the command's
-output into that file, so it worked in every local build made with a Homebrew
-toolchain and failed in every release, through two releases, until the sources
-stopped using `tmpnam()` at all.
+This is not just a printf detail: msvcrt's `tmpnam()` returns a name under
+`P_tmpdir`, which is `"\\"` — the root of the current drive, unwritable by an
+ordinary process — while UCRT's consults `TEMP` and returns a real path. That
+is why the sources no longer use `tmpnam()` at all.
 
 **Nothing is built against UCRT here, and nothing is in CI.** There is no such
 configuration to choose: `scripts/build-mingw.sh` refuses to build at all unless
-the toolchain it is about to use targets msvcrt, and it refuses a toolchain it
-cannot ask as well, so a compiler that will not answer never passes for the
-right one.
+the toolchain it is about to use targets msvcrt, and refuses a toolchain it
+cannot ask as well.
 
 It finds one itself. With neither `MINGW_BIN` nor `CROSS` set it tries the
 `PATH`, then `/usr/bin`, then a native MSYS2 `gcc`, and takes the first msvcrt
@@ -160,39 +138,14 @@ scripts/test-winkeys.sh                          # src/jvim32.exe, src/jvim32w.e
 scripts/test-winkeys.sh <console.exe> <gui.exe>  # or a pair from a release
 ```
 
-It runs out of sight, so you can keep working through the four minutes it
-takes. The drivers put themselves on a desktop of their own before starting
-anything, and give the console build a console with no window at all —
-`PostMessage` and `WriteConsoleInput` do not care about either, and neither is
-something a person can see. Measured rather than assumed: while the suite runs,
-nothing it starts has a window on the interactive desktop, and the console
-editor has none at all. `WINDESK_OFF=1` puts it back in sight for when
-something has to be watched happening, and `scripts/windesk.h` says why the
-obvious ways — starting the window hidden, or giving it a new console — do
-not work.
+It runs on a desktop of its own and gives the console build a console with no
+window, so it does not take over your screen or keyboard while it runs.
+`WINDESK_OFF=1` puts it back on the interactive desktop if you need to watch
+it happen; `scripts/windesk.h` has the detail on why that is a separate
+desktop rather than a hidden window.
 
-The GUI driver waits for the editor to stop working, then types one Escape
-before the case does anything. The window appears while the editor is still
-reading its rc, and a key posted then is lost — not delayed, lost — so the case
-reads as though its second keystroke were its first. With no rc that window is
-short and a fixed sleep covered it nearly always, which is the worst way to be
-wrong: one run in a hundred failed with nothing to blame. An rc that sources
-the rule files widened it enough to lose the key every time, which is how it
-was found.
-
-Two obvious answers are not answers. `WaitForInputIdle` reports the process
-idle as soon as it has been idle once, and that happens before the rc is read.
-`SendMessage` in place of `PostMessage` — which would wait for the window
-procedure rather than guess — stops the editor taking keys at all: tried,
-measured, three GUI cases produced no output whatever. So the driver polls
-`GetProcessTimes` until the editor's CPU time has not moved for 200 ms, which
-is a real signal and needs no number chosen in advance, and the throwaway
-Escape covers whatever is left. Escape in normal mode does nothing and every
-case starts there, so it cannot affect what follows.
-
-Beyond that, testing on Windows by hand is the only Windows testing there is. A local build is now the same runtime as the
-release, so it counts; to test the exact executable the release page serves,
-take the one CI built:
+To test the exact executable the release page serves, rather than a local
+build:
 
 ```sh
 scripts/fetch-ci-build.sh                 # the newest good run for HEAD
@@ -543,10 +496,10 @@ feel unstable.
 | `getcmdline()` | Inserting a multi-byte character at the start of the command line read and wrote `buff[-1]`. |
 | `sjis2ucs()` (`s2u.c`) | Indexes its table on the two Shift-JIS bytes with no range check, so an invalid pair reads far out of bounds. Callers validate now. |
 | 7 places | `strcpy(p, p + 1)` and friends: the ranges overlap, which is undefined. Replaced with the new `STRMOVE()`. |
-| `msg_outtrans()` / `msg_outstr()` | Message and command line output emitted exactly two bytes per multi-byte character, so a three or four byte one had its tail bytes printed separately as `[XX]`. That is what made a file name with an emoji or halfwidth kana unreadable on the `:` line and in completion. |
-| `mstrjpchr()` | A regexp character class compared only the first two bytes of its members, so `[あ]` also matched `い` (both start e3 81), and consumed two bytes of a three byte character. Classes and ranges compare code points now, and a range no longer needs both ends to be the same width. |
+| `msg_outtrans()` / `msg_outstr()` | Message and command line output emitted exactly two bytes per multi-byte character, so a three or four byte one had its tail bytes printed separately as `[XX]`. |
+| `mstrjpchr()` | A regexp character class compared only the first two bytes of its members, so `[あ]` also matched `い`. Classes and ranges compare code points now. |
 | `check_abbr()` | Counted a multi-byte character as two bytes when working out how much to erase for an abbreviation. |
-| `kanjiconvsfrom()` | Terminal input arrives in chunks of at most `MAXMAPLEN` (50) bytes, so a character can be split across two of them. The UTF-8 path decoded before checking for that, so every byte of a split character became `?` — pasting a line with a character across the boundary produced text like `気難し???指示役`. It checks the length first now and carries the split bytes over in `tail`, which is what that argument is for. |
+| `kanjiconvsfrom()` | Terminal input arrives in chunks of at most `MAXMAPLEN` (50) bytes, so a character could be split across two of them and its bytes turned to `?`. It checks the length first now and carries the split bytes over. |
 | `winjnt.c` | `_beginthread()` was called without a declaration. |
 
 The whole test suite and a set of stress runs over real 113-145 KB files in

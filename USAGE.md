@@ -103,8 +103,8 @@ where to put settings an ordinary vim on the same machine would not understand:
 `%VIM%\vimrc` next to the exe is the simplest, and makes the unpacked directory
 self-contained. Two samples come in the package. `jvimrc.sample` is short and
 works on a Unix build too — copy it to `%HOME%\_jvimrc` and you are done.
-`_jvimrc.sample` is Tsuchida's own from 2002, longer and worth reading, though
-its `tags` lines point at a Visual C++ 6 that is not on your machine.
+`_jvimrc.sample` is Tsuchida's own from 2002; its `tags` lines point at a
+Visual C++ 6 that is not on your machine.
 
 **3. Set the font.** `Global > Font` in the menu. Only fixed pitch fonts are
 offered, because the editor draws on a character grid — a proportional font
@@ -237,9 +237,7 @@ To convert a file: open it (detection gets it right), `:set jc=t`, `:w`.
 **Detection** looks at the whole buffer. If it parses as UTF-8 and holds at least
 one multi-byte character, it is UTF-8 — Shift-JIS and EUC text never passes that
 test, because their trailing bytes are outside the UTF-8 continuation range. A
-character outside the BMP counts as evidence like any other. Both of those were
-wrong before this fork, which is why Japanese UTF-8 used to be read as Shift-JIS
-and why one emoji could tip a whole file over.
+character outside the BMP counts as evidence like any other.
 
 **What round trips, and what does not:**
 
@@ -274,8 +272,8 @@ modern editors mostly do not do:
 | `:set fepkeys=r` (`fo`) | Which **command mode** keys also open the IME. The keys that take text — `a A i I R cw` — always do; this is for the ones that take a single character or a pattern. `r` by default; `/?tTfF` are worth adding. |
 
 **Use the GUI on Windows.** Japanese input in console mode is unreliable — a
-character can sit unshown until you press RETURN — and was in 2002 too. There
-are no known problems in the GUI.
+character can sit unshown until you press RETURN. There are no known problems
+in the GUI.
 
 On Unix, IME control needs `FEPCTRL` compiled in with a `fepseq.c` that speaks
 your input method's protocol; `scripts/build-unix.sh` leaves it out. Without it
@@ -315,29 +313,19 @@ Syntax colouring is its own small language — colours, `syntax link`, regexp
 rules per file type. `doc.j/readme.doc` §6.26 documents it in full, and
 `syntax/README` says how this tree lays the rules out.
 
-It used to be the Win32 GUI only. It now works on a terminal as well: the same
-colour goes out as an SGR escape. Whether it can be asked for exactly depends on
-the terminal, and `$COLORTERM` decides — `truecolor` or `24bit` gets the colour
-itself, anything else the nearest of the sixteen a terminal has always had.
-`set nosyntax` if the terminal you are in cannot colour at all.
+It works on the Win32 GUI and on a terminal alike: the same colour goes out as
+an SGR escape. Whether it can be asked for exactly depends on the terminal,
+and `$COLORTERM` decides — `truecolor` or `24bit` gets the colour itself,
+anything else the nearest of the sixteen a terminal has always had. `set
+nosyntax` if the terminal you are in cannot colour at all.
 
-One thing there is out of date. Two kinds of rule reach past the end of a line:
-a region — the `p` search mode, which is how a C comment is coloured — and the
-delimiters a `t` rule looks between, `<` and `>` for HTML. Both used to be found
-by searching `synlines` lines in each direction from the line being drawn, so a
-comment or a string longer than that lost its colour, one that was never closed
-had none at all, and a tag written over more lines than that had its own name
-and attributes left plain.
+A region (the `p` search mode — how a C comment is coloured) or a tag's
+delimiters (`<` and `>` for HTML) colour correctly regardless of length: an
+unterminated region colours the rest of the file, and the lines below the one
+you are typing on recolour as soon as you type the token that opens or closes
+one. §6.28's `synlines` is still accepted but has no effect.
 
-This tree remembers instead, for each line, which region and which tag were open
-when the line above ended. Length stops mattering, an unterminated region
-colours the rest of the file, and the lines below the one you are typing on
-recolour as soon as you type the token that opens or closes one. §6.28's
-`synlines` is still accepted, so an rc that sets it goes on working, but nothing
-reads it any more.
-
-The other thing §6.26 does not have is a background. A colour can now say what
-goes behind it, with `on` and a second colour:
+A colour can also say what goes behind it, with `on` and a second colour:
 
 ```vim
 syntax link Error   bolic white on maroon
@@ -471,7 +459,7 @@ theme looks wrong after `:colorscheme`, check it against the bundled ones in
 
 ## What you get beyond vi
 
-Vim 3.0 is vi plus a short list, and the short list is why anyone used it:
+Vim 3.0 is vi plus this short list:
 
 - **Multi level undo.** `u` again and again; `CTRL-R` to redo. `undolevels`.
 - **Several windows.** `:split`, `CTRL-W` commands, `:buffers`. See
