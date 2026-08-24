@@ -206,7 +206,7 @@ extern Tcarr term_strings;	/* currently used terminal strings */
 \0\0"
 
 #  define ANSI_TCAP "ansi\0\
-\0\033[2K\0\
+\0\033[K\0\
 \0\033[L\0\
 \0\033[%dL\0\
 \0\033[M\0\
@@ -686,7 +686,7 @@ extern Tcarr term_strings;	/* currently used terminal strings */
 \0\0"
 
 #  define ANSI_TCAP "ansi\0\
-\0\033[2K\0\
+\0\033[K\0\
 \0\033[L\0\
 \0\033[%p1%dL\0\
 \0\033[M\0\
