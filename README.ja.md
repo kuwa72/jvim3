@@ -21,7 +21,7 @@ JVim 3.0-j2.1b (2002 Dec 24) 由来
 ```
 対応環境       Windows 10/11 (Win32 GUI + コンソール)、Linux、
                FreeBSD、NetBSD、OpenBSD、DragonFly
-テスト         177 ケース。上記すべてで CI が実行。Windows のキー入力は
+テスト         179 ケース。上記すべてで CI が実行。Windows のキー入力は
                scripts/test-winkeys.sh の 16 ケース (WSL から実機で実行)
 ライセンス     パブリックドメイン — LICENSE を参照。付随する寄付のお願いは
                uganda.txt にあります
@@ -68,7 +68,7 @@ JVim 3.0-j2.1b (2002 Dec 24) 由来
 ```sh
 git clone https://github.com/kuwa72/jvim3
 cd jvim3
-./scripts/build-unix.sh test        # src/jvim3 をビルドして 177 個のテストを実行
+./scripts/build-unix.sh test        # src/jvim3 をビルドして 179 個のテストを実行
 ```
 
 必要なのは C コンパイラと、組み込みの端末定義ではなく本物の端末データベースを
@@ -180,7 +180,7 @@ Vim 3.0 のマニュアル (`doc/`、1994 年、英語):
 ./scripts/test-editing.sh  src/jvim3   # 72 ケース: 移動、オペレータ、レジスタ、
                                        #   マーク、undo、ex の範囲指定、:g、:s、:!
 ./scripts/test-syntax.sh   src/jvim3   # 50 ケース: syntax/ が実際に何を色付けするか
-./scripts/test-sgr.sh      src/jvim3   # 7 ケース: 端末に実際に送られるエスケープ
+./scripts/test-sgr.sh      src/jvim3   # 9 ケース: 端末に実際に送られるエスケープ
 ```
 
 どちらも本物の pty (`scripts/ptyrun.c`) 越しにエディタを動かしてバイト列を比較
@@ -188,7 +188,7 @@ Vim 3.0 のマニュアル (`doc/`、1994 年、英語):
 キー入力待ちで止まったケースはスイートを固めずに失敗します。
 
 push と pull request のたびに、Linux・FreeBSD・NetBSD・OpenBSD・DragonFly の 5
-環境で 177 ケースすべてを実行し、Windows 版を両アーキテクチャでクロスビルド
+環境で 179 ケースすべてを実行し、Windows 版を両アーキテクチャでクロスビルド
 します。`v*` のタグはそれに加えて Windows の zip を公開するので、壊れたビルドが
 リリースになることはありません
 ([.github/workflows/build.yml](.github/workflows/build.yml))。
