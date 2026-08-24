@@ -123,6 +123,18 @@ VERSION=v3.0-j2.1b-utf8.2 ./scripts/build-mingw.sh release
 `jvim64w.exe`)。makefile がアーキテクチャに関わらずターゲットを `jvim32*.exe` と
 呼ぶためです。リリース時に CI が実行するのもこのコマンドです。
 
+### Windows ローカルへの展開（動作確認用）
+
+WSL から Windows の実機環境にビルド生成物を直接展開して動作確認する場合:
+
+```sh
+tools/deploy-windows.sh              # %USERPROFILE%\Downloads\jvim3-latest に展開
+tools/deploy-windows.sh /mnt/c/path  # 展開先を指定
+```
+
+32bit (`jvim3-win32`) と 64bit (`jvim3-win64`) の両方をビルド・パッケージングし、Windows 側で実行ファイルがロック（起動中）されていないか確認した上で安全にフォルダ内を更新します（自作の `_vimrc` / `_jvimrc` は保護されます）。
+
+
 そのほかのターゲット: `clean`、`warn` (警告を表示してコンパイル)、`split`
 (デバッグ情報を `jvim32w.exe.debug` に分離して exe を strip)。
 
