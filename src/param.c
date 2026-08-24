@@ -402,34 +402,45 @@ set_init(void)
 		p = NULL;
 #  ifdef USE_LOCALE
 		p = setlocale(LC_CTYPE, "");
-		if (p == NULL)
-			p = vimgetenv((char_u *)"LC_CTYPE");
 #  endif
 		if (p == NULL)
-			p = vimgetenv((char_u *)"LANG");
+			p = (char *)vimgetenv((char_u *)"LC_ALL");
+		if (p == NULL)
+			p = (char *)vimgetenv((char_u *)"LC_CTYPE");
+		if (p == NULL)
+			p = (char *)vimgetenv((char_u *)"LANG");
 		if (p != NULL)
 		{
-			if ((STRCMP(p, "ja_JP.JIS") == 0)
-					|| (STRCMP(p, "ja_JP.ISO-2022-JP") == 0)
-					|| (STRCMP(p, "ja_JP.ISO-2022-JP-2") == 0)
-					|| (STRCMP(p, "ja_JP.jis7") == 0))
-				STRCPY(p_jp_init, "JJJ");
-			else if ((STRCMP(p, "ja_JP.eucJP") == 0)
-					|| (STRCMP(p, "ja_JP.EUC") == 0)
-					|| (STRCMP(p, "ja") == 0)
-					|| (STRCMP(p, "japanese") == 0)
-					|| (STRCMP(p, "japanese.euc") == 0)
-					|| (STRCMP(p, "ja_JP.ujis") == 0))
-				STRCPY(p_jp_init, "EEE");
-			else if ((STRCMP(p, "ja_JP.SJIS") == 0)
-					|| (STRCMP(p, "ja_JP.PCK") == 0)
-					|| (STRCMP(p, "ja_JP.mscode") == 0))
-				STRCPY(p_jp_init, "SSS");
 #  ifdef UCODE
-			else if ((STRCMP(p, "en_US.UTF-8") == 0)
-					|| (STRCMP(p, "ja_JP.UTF-8") == 0))
+			if (strstr(p, "UTF-8") != NULL
+					|| strstr(p, "utf-8") != NULL
+					|| strstr(p, "UTF8") != NULL
+					|| strstr(p, "utf8") != NULL)
 				STRCPY(p_jp_init, "TTT");
+			else
 #  endif
+			if (strstr(p, "JIS") != NULL
+					|| strstr(p, "jis") != NULL
+					|| strstr(p, "ISO-2022-JP") != NULL
+					|| strstr(p, "iso-2022-jp") != NULL)
+				STRCPY(p_jp_init, "JJJ");
+			else if (strstr(p, "euc") != NULL
+					|| strstr(p, "EUC") != NULL
+					|| strstr(p, "ujis") != NULL
+					|| strstr(p, "UJIS") != NULL
+					|| STRCMP(p, "ja") == 0
+					|| STRCMP(p, "japanese") == 0
+					|| STRCMP(p, "japanese.euc") == 0)
+				STRCPY(p_jp_init, "EEE");
+			else if (strstr(p, "SJIS") != NULL
+					|| strstr(p, "sjis") != NULL
+					|| strstr(p, "PCK") != NULL
+					|| strstr(p, "pck") != NULL
+					|| strstr(p, "mscode") != NULL
+					|| strstr(p, "MSCODE") != NULL
+					|| strstr(p, "cp932") != NULL
+					|| strstr(p, "CP932") != NULL)
+				STRCPY(p_jp_init, "SSS");
 		}
 # endif
 		if (STRLEN(p_jp_init) == 3)
