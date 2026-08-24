@@ -55,6 +55,22 @@ syntax			tagsTypedef				w/tagsTypedef
 syntax			tagsUnion				w/tagsUnion
 syntax			tagsVariable			w/tagsVariable
 syntax			tagsExternal			w/tagsExternal
+syntax			Arg						w/Arg
+syntax			Attr					w/Attr
+syntax			Value					w/Value
+syntax			Url						w/Url
+" The one name here with a dash in it, and so the one that cannot be a w rule.
+" A w rule is looked up in an index of the line built a character class at a
+" time, and "E-Mail" is three runs of the line -- "E", "-" and "Mail" -- so the
+" whole of it is never a key. Written out, it is the same \< \> a w rule wraps.
+syntax			E-Mail					n/\<E-Mail\>
+syntax			HtmlTag					w/HtmlTag
+syntax			HtmlExt					w/HtmlExt
+syntax			HtmlArg					w/HtmlArg
+syntax			MdHead					w/MdHead
+syntax			MdCode					w/MdCode
+syntax			DiffAdd					w/DiffAdd
+syntax			DiffDel					w/DiffDel
 syntax	Comment			n/\"\".*
 " The block markers take the quote in front of them, so that they beat the
 " comment rule below on the tie: both start at column 0, and the earlier rule

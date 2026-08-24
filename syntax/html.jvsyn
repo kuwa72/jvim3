@@ -1,7 +1,3 @@
-syntax	link			Url			 		fuchsia
-syntax	link			HtmlArg				Type
-syntax	link			HtmlExt				Statement
-syntax	link			HtmlTag				Statement
 syntax	Comment			p/<!--/-->
 syntax	Number			t/</>/#\x\x\x\x\x\x
 syntax	Number			t/</>/\"#\x\x\x\x\x\x\"

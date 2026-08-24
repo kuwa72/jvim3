@@ -278,6 +278,19 @@ case_ 'a rule file is coloured in the colours it names' t.jvsyn \
 'syntax link Error bolic white on maroon\n" a note\nsyntax Comment n/x\n' \
 '1:0-6 SetSpecial n/^syntax\n1:7-11 SetSpecial w/link\n1:12-17 Error w/Error\n1:18-23 - w/bolic\n1:24-29 - w/white\n1:30-32 SetSpecial w/on\n1:33-39 - w/maroon\n2:0-8 Comment n/^\\s*".*\n3:0-6 SetSpecial n/^syntax\n3:7-14 Comment w/Comment\n'
 
+# The names that belong to one rule file each. A .jvsyn is opened with
+# common.jvsyn and jvimrc.jvsyn and nothing else, so while DiffAdd was defined
+# inside diff.jvsyn it was not a colour on the screen when diff.jvsyn was the
+# file being read, and the line that gave it its colour came out plain. They
+# are all in common.jvsyn now, which is where every other group name is.
+#
+# E-Mail is written out as \< \> rather than as a w rule. A w rule is looked up
+# in an index of the line built one character class at a time, and "E-Mail" is
+# three runs of the line, so the whole of it is never a key to look up.
+case_ 'a rule file colours the names only one rule file uses' t.jvsyn \
+'syntax link DiffAdd green on #e6ffe6\nsyntax HtmlArg itw/x\nsyntax E-Mail n/x\nsyntax Value w/y\n' \
+'1:0-6 SetSpecial n/^syntax\n1:7-11 SetSpecial w/link\n1:12-19 DiffAdd w/DiffAdd\n1:20-25 - w/green\n1:26-28 SetSpecial w/on\n1:29-36 Constant n/#\\x\\x\\x\\x\\x\\x\n2:0-6 SetSpecial n/^syntax\n2:7-14 HtmlArg w/HtmlArg\n3:0-6 SetSpecial n/^syntax\n3:7-13 E-Mail n/\\<E-Mail\\>\n4:0-6 SetSpecial n/^syntax\n4:7-12 Value w/Value\n'
+
 # A quote on its own line is a comment; a quote inside a pattern is not. Rule
 # files write \" constantly -- this very case is one -- and a comment rule that
 # took any quote would paint the pattern of every String rule as a comment.

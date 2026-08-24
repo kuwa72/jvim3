@@ -1,5 +1,3 @@
-syntax	link			Url			 		Identifier
-syntax	link			E-Mail		 		Special
 syntax	Delimiter		n/^#* From .* [1-2][0-9][0-9][0-9]$
 syntax Type			i/^[-a-z]*Date: .*$
 syntax Type			i/^[-a-z]*From: .*$

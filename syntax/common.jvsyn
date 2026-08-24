@@ -59,4 +59,24 @@ syntax	link	tagsUnion				tagsClass
 syntax	link	tagsVariable			tagsValue
 syntax	link	tagsExternal			tagsValue
 ""============================================================================
+" Names one rule file each uses. They live here, and not in the file that uses
+" them, because a .jvsyn on screen is coloured by common.jvsyn and jvimrc.jvsyn
+" and nothing else: a name defined inside diff.jvsyn is not a colour when
+" diff.jvsyn is the file being read, so the rule that used it came out plain.
+syntax	link	Arg						red
+syntax	link	Attr					olive
+syntax	link	Value					gray
+syntax	link	Url						Identifier
+syntax	link	E-Mail					Special
+syntax	link	HtmlTag					Statement
+syntax	link	HtmlExt					Statement
+syntax	link	HtmlArg					Type
+syntax	link	MdHead			bold	navy
+" A tint rather than one of the sixteen: a whole line of saturated green is
+" hard to read the text off, and the two rules that use these match a whole
+" line. MdCode names nothing in front of the "on", so the text inside a fenced
+" block keeps the colour it would have had and only the ground changes.
+syntax	link	DiffAdd					green on #e6ffe6
+syntax	link	DiffDel					red on #ffe6e6
+syntax	link	MdCode					on #f0f0f0
 ""============================================================================

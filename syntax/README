@@ -25,6 +25,15 @@ and re-colouring the whole editor is one line in common.jvsyn. A file sourced
 without common.jvsyn having run first reports "Invalid argument" for every rule
 in it, because the names mean nothing yet.
 
+Every group name, down to one that a single rule file uses: Arg and Attr, which
+are rc.jvsyn's; HtmlTag, HtmlExt and HtmlArg; DiffAdd and DiffDel;
+MdHead and MdCode; Url, E-Mail, Value. Defining one in the file that uses it
+works for every file but a .jvsyn, and a .jvsyn is opened with common.jvsyn and
+jvimrc.jvsyn and nothing else -- so DiffAdd was not a colour while diff.jvsyn
+was the file on screen, and the line that gave DiffAdd its colour came out
+plain. A new group name is two lines: the "syntax link" here, and the
+"syntax <name> w/<name>" in jvimrc.jvsyn that draws the name in its own colour.
+
 Adding a file type
 ------------------
 
@@ -130,6 +139,11 @@ Writing rules
     Rewriting every w list in c.jvsyn as one alternation -- 61 words, identical
     colouring -- made a 600-redraw scroll of src/syntax.c 2.4 times slower.
     Keep word lists as w lists; use an alternation for what w cannot say.
+
+    That index is built one character class at a time, so a w rule can only
+    ever match a run of one class. "E-Mail" is three runs -- "E", "-", "Mail"
+    -- and w/E-Mail is a rule that never matches anything, silently. Write it
+    out as n/\<E-Mail\>, which is the \< \> a w rule would have wrapped it in.
 
   o The regexp is vim's "magic": . * [ ^ $ bare, and \+ \= \< \> \( \) with a
     backslash, plus the classes \i \k \f \p \s \d \x \o \w \h \a \l \u and
