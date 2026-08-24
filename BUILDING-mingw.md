@@ -46,6 +46,21 @@ whichever architecture it is building. This is what CI runs for a release.
 Other targets: `clean`, `warn` (compile with warnings shown), `split` (move the
 debug info into `jvim32w.exe.debug` and strip the exe).
 
+### Deploy to Windows for testing
+
+From WSL, you can build, package, and deploy both architectures directly into
+your Windows user environment:
+
+```sh
+tools/deploy-windows.sh              # deploys to %USERPROFILE%\Downloads\jvim3-latest
+tools/deploy-windows.sh /mnt/c/path  # or specify destination
+```
+
+This builds both 32-bit (`jvim3-win32`) and 64-bit (`jvim3-win64`) release
+packages, verifies that no running `.exe` is locked, safely updates the
+destination folders in place, and preserves any custom `_vimrc` / `_jvimrc`.
+
+
 Switching `ARCH`, or turning `warn` on or off, needs no `clean` in between: the
 object directory and the exe names are shared between the two architectures, so
 `obj-mingw` holds a stamp naming what its contents were built for, and a change
