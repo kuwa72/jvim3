@@ -26,7 +26,7 @@ without common.jvsyn having run first reports "Invalid argument" for every rule
 in it, because the names mean nothing yet.
 
 Every group name, down to one that a single rule file uses: Arg and Attr, which
-are rc.jvsyn's; HtmlTag, HtmlExt and HtmlArg; DiffAdd and DiffDel;
+are rc.jvsyn's; HtmlTag, HtmlExt, HtmlArg and HtmlEmbed; DiffAdd and DiffDel;
 MdHead and MdCode; Url, E-Mail, Value. Defining one in the file that uses it
 works for every file but a .jvsyn, and a .jvsyn is opened with common.jvsyn and
 jvimrc.jvsyn and nothing else -- so DiffAdd was not a colour while diff.jvsyn
@@ -102,7 +102,7 @@ notice when the rule stops working.
 Writing rules
 -------------
 
-../doc.j/readme.doc section 6.26 is the reference. Six things it does not say:
+../doc.j/readme.doc section 6.26 is the reference. Seven things it does not say:
 
   o The leftmost match on the line wins, and where two rules match at the same
     column the one earlier in the file does. Put comments and strings at the
@@ -179,3 +179,11 @@ Writing rules
     apart they are does not matter, and 'synlines' -- which is what the window
     of that search was called -- no longer does anything. Every other mode
     matches within one line.
+
+  o One rule set cannot reach inside another. What is between <script> and
+    </script> is JavaScript, and html.jvsyn has no way to hand it to
+    javascript.jvsyn, so it does the one thing a single rule can: a region,
+    HtmlEmbed, that puts the block on a grey ground and leaves the text the
+    colour it would have had. markdown.jvsyn does the same with a fenced block.
+    The opening tag is inside the region -- a region is coloured from where its
+    first pattern starts, and there is nothing that says "begin after it".

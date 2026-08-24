@@ -361,6 +361,13 @@ background, and without one they had been standing in with `bolic red` and
 `reverse` — and reverse is the terminal swapping two colours it already has,
 which is not blue on yellow and is not the same twice on two terminals.
 
+A pale ground is also what marks off a block that is not the language around it:
+the added and removed lines of a diff, a fenced block in Markdown, and the body
+of an HTML `<script>` or `<style>`. The last of those is as far as an HTML rule
+can go — what is between `<script>` and `</script>` is JavaScript, and one rule
+set has no way to hand a range of the buffer to another — but a page of script
+now reads as a block instead of as prose that happens to have no colour in it.
+
 Which file types have rules is a question about the rule files, not about the
 editor. What came with JVim in 2002 was C/C++, Java, VBScript, HTML, `.bat`,
 `.ini`, `.def`, `.rc` and `_vimrc` itself. This tree adds Python,

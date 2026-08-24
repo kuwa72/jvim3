@@ -67,6 +67,7 @@ syntax			E-Mail					n/\<E-Mail\>
 syntax			HtmlTag					w/HtmlTag
 syntax			HtmlExt					w/HtmlExt
 syntax			HtmlArg					w/HtmlArg
+syntax			HtmlEmbed				w/HtmlEmbed
 syntax			MdHead					w/MdHead
 syntax			MdCode					w/MdCode
 syntax			DiffAdd					w/DiffAdd
