@@ -6,6 +6,7 @@
 #   scripts/build-unix.sh clean
 #   scripts/build-unix.sh test         build, then run the three test suites
 #   scripts/build-unix.sh strict       build with the warnings CI refuses
+#   scripts/build-unix.sh install      build and install to PREFIX (default: /usr/local)
 #
 # src/makjunix.mak still expects you to uncomment three lines by hand for your
 # machine. This works out the same answers by asking the compiler, and hands
@@ -195,6 +196,8 @@ if [ "$target" = strict ]; then
 		-Werror=return-type -Werror=uninitialized $EXTRA_CFLAGS"
 fi
 cflags="$OPT $std $fcommon $EXTRA_CFLAGS"
+stamp_file="$src/.build-stamp"
+config_sig="CC=$CC cflags=$cflags defs=$defs PREFIX=$PREFIX machine=$machine libs=$libs"
 
 echo
 case $target in
@@ -202,14 +205,24 @@ clean)
 	(cd "$src" && ${MAKE:-make} -f makjunix.mak clean MACHINE="$machine" \
 		LIBS="$libs" CC="$CC $cflags" DEFS="$defs" \
 		TERMLIB= FEPOBJS= FEPLIBS=)
-	rm -f "$src/jvim3"
+	rm -f "$src/jvim3" "$stamp_file"
 	echo "cleaned"
 	exit 0
 	;;
-all|test|strict)
+all|test|strict|install)
+	if [ -f "$stamp_file" ]; then
+		old_sig=$(cat "$stamp_file" 2>/dev/null || true)
+		if [ "$old_sig" != "$config_sig" ]; then
+			echo "build configuration changed; cleaning previous objects..."
+			(cd "$src" && ${MAKE:-make} -f makjunix.mak clean MACHINE="$machine" \
+				LIBS="$libs" CC="$CC $cflags" DEFS="$defs" \
+				TERMLIB= FEPOBJS= FEPLIBS=)
+			rm -f "$src/jvim3" "$stamp_file"
+		fi
+	fi
 	;;
 *)
-	echo "usage: $0 [all|test|strict|clean]" >&2
+	echo "usage: $0 [all|test|strict|install|clean]" >&2
 	exit 2
 	;;
 esac
@@ -222,9 +235,26 @@ esac
 	DEFS="$defs" \
 	TERMLIB= FEPOPT= FEPOBJS= FEPLIBS=) || exit 1
 
+printf '%s\n' "$config_sig" > "$stamp_file"
+
 echo
 echo "built $src/jvim3"
 "$src/jvim3" -h 2>&1 | head -2 || true
+
+if [ "$target" = install ]; then
+	echo
+	echo "installing to $PREFIX..."
+	(cd "$src" && ${MAKE:-make} -f makjunix.mak install \
+		PREFIX="$PREFIX" \
+		MACHINE="$machine" \
+		LIBS="$libs" \
+		CC="$CC $cflags" \
+		DEFS="$defs" \
+		TERMLIB= FEPOPT= FEPOBJS= FEPLIBS=) || exit 1
+	echo
+	echo "installed successfully to $PREFIX"
+	exit 0
+fi
 
 if [ "$target" = test ]; then
 	rc=0
