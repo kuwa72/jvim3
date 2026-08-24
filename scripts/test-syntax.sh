@@ -207,6 +207,15 @@ case_ 'XML: declaration, tag, attribute' t.xml \
 '<?xml version="1.0"?>\n<!-- c -->\n<root id="1">\n  <item/>\n</root>\n' \
 '1:0-21 PreProc m/<?.*?>\n2:0-10 Comment p/<!--\n3:0-5 Statement n/<\\/\\=[^ >]\\+\n3:9-12 String m/".*"\n3:12-13 Statement n/\\/\\=>\n4:2-8 Statement n/<\\/\\=[^ >]\\+\n4:8-9 Statement n/\\/\\=>\n5:0-6 Statement n/<\\/\\=[^ >]\\+\n5:6-7 Statement n/\\/\\=>\n'
 
+# %VAR%, then the two forms of a parameter, then a parameter with modifiers.
+# The rule for the last of these used to be seventeen rules written after the
+# %VAR% one, so %VAR% -- which matches from any % to the next one -- took "%~f1
+# %" out of line 3 and left the rest plain, and %~dpnx2 was in none of the
+# seventeen anyway. All three lines are one Value per parameter now.
+case_ 'batch: a parameter and its modifiers' t.bat \
+'echo %PATH%\necho %1 %*\necho %~f1 %~dpnx2\necho %~$PATH:3\n' \
+'1:0-4 Keyword iw/echo\n1:5-11 Value m/%.*%\n2:0-4 Keyword iw/echo\n2:5-7 Value n/%[\\d\\*]\n2:8-10 Value n/%[\\d\\*]\n3:0-4 Keyword iw/echo\n3:5-9 Value n/%\\~[fdpnxsatz]*\\($PATH:\\)\\=\\d\n3:10-17 Value n/%\\~[fdpnxsatz]*\\($PATH:\\)\\=\\d\n4:0-4 Keyword iw/echo\n4:5-14 Value n/%\\~[fdpnxsatz]*\\($PATH:\\)\\=\\d\n'
+
 case_ 'batch: REM, a variable, a label' t.bat \
 'REM a note\n@echo off\nset OUT=%TEMP%\nif exist %1 goto done\n:done\n' \
 '1:0-10 Comment i/REM.*\n2:1-5 Keyword iw/echo\n3:0-3 Keyword iw/set\n3:8-14 Value m/%.*%\n4:0-2 Conditional iw/if\n4:9-11 Value n/%[\\d\\*]\n4:12-16 Statement iw/goto\n'
@@ -251,6 +260,37 @@ case_ 'an rc: set, unset, comment' jvimrc \
 '"" c\nset autoindent\nset ts=4\nset noerrorbells\n' \
 '1:0-4 Comment n/"".*\n2:0-3 SetSpecial n/^set\n2:4-14 SetCommand w/autoindent\n3:0-3 SetSpecial n/^set\n3:4-6 SetShortCmd w/ts\n4:0-3 SetSpecial n/^set\n4:4-16 UnsetCommand w/noerrorbells\n'
 
+# The shipped samples are the file most people see an rc in, and their names
+# are not the names an rc is read from, so they need saying separately.
+case_ 'the sample rc is coloured under its own name' _jvimrc.sample \
+'set autoindent\n" a note\n' \
+'1:0-3 SetSpecial n/^set\n1:4-14 SetCommand w/autoindent\n2:0-8 Comment n/^\\s*".*\n'
+
+# A rule file is the same language as the "syntax" lines of an rc, so it reads
+# the rc rules. Every group name is drawn in its own group and every colour
+# name in its own colour, which is what makes a rule file worth looking at:
+# "Error" is red here because Error is red.
+#
+# "white" is drawn on grey. It is the one colour name that cannot be shown in
+# itself on the window's own background, and a rule can say what goes behind it
+# now, so it does.
+case_ 'a rule file is coloured in the colours it names' t.jvsyn \
+'syntax link Error bolic white on maroon\n" a note\nsyntax Comment n/x\n' \
+'1:0-6 SetSpecial n/^syntax\n1:7-11 SetSpecial w/link\n1:12-17 Error w/Error\n1:18-23 - w/bolic\n1:24-29 - w/white\n1:30-32 SetSpecial w/on\n1:33-39 - w/maroon\n2:0-8 Comment n/^\\s*".*\n3:0-6 SetSpecial n/^syntax\n3:7-14 Comment w/Comment\n'
+
+# A quote on its own line is a comment; a quote inside a pattern is not. Rule
+# files write \" constantly -- this very case is one -- and a comment rule that
+# took any quote would paint the pattern of every String rule as a comment.
+case_ 'a quote inside a pattern does not start a comment' t.jvsyn \
+'syntax String m/\\".*[^\\\\]\\"\n' \
+'1:0-6 SetSpecial n/^syntax\n1:7-13 String w/String\n'
+
+# The block markers keep the quote in front of them, so they win the tie with
+# the comment rule: both start at column 0, and the earlier rule takes it.
+case_ 'a begin block is not swallowed by the comment rule' t.jvsyn \
+'"begin suffixes=.c\n"source $VIM/syntax/c.jvsyn\n"end   suffixes\n' \
+'1:0-18 PreCondit n/^"\\=begin\\s\\+suffixes\\s*=.*\n2:0-27 Comment n/^\\s*".*\n3:0-15 PreCondit n/^"\\=end\\s\\+suffixes\n'
+
 # The rule language itself. A mode letter nobody handles used to be dropped in
 # silence, so the rule went in and matched the wrong thing; now it is refused,
 # and the dump is the way to see which of the two happened.
@@ -277,6 +317,40 @@ case_ 'reverse is refused as a thing to go behind text' t.unknown \
 'def x\n' \
 '' \
 ':syntax red on reverse w/def\r'
+
+# How many backslashes reach the regexp, which is the whole of what "|" does in
+# a rule. ":syntax" is an ex command and the ex line eats one backslash, so the
+# three forms are three different rules. The README claimed the last of them
+# was impossible until someone tried two backslashes.
+#
+# None: the command stops at the pipe. The rule is n/aaa and "ccc" is run as a
+# command of its own, which is not one, so it does nothing and says so.
+case_ 'a bare pipe ends the command, not the pattern' t.unknown \
+'aaa bbb ccc\n' \
+'1:0-3 - n/aaa\n' \
+':syntax red n/aaa|ccc\r'
+
+# One: the regexp gets a plain pipe and matches a pipe.
+case_ 'one backslash before a pipe matches a pipe' t.unknown \
+'a|b zz\n' \
+'1:0-3 - n/a|b\n' \
+':syntax red n/a\\|b\r'
+
+# Two: the regexp gets \| and branches. Both ends match, and the "bbb" between
+# them does not.
+case_ 'two backslashes before a pipe make an alternation' t.unknown \
+'aaa bbb ccc\n' \
+'1:0-3 - n/aaa\\|ccc\n1:8-11 - n/aaa\\|ccc\n' \
+':syntax red n/aaa\\\\|ccc\r'
+
+# A w rule wraps its pattern in \< \>, so an alternation inside one groups as
+# "\<a" or "b\>" and colours the a in "ab". The list notation is what w is for,
+# and it is also the faster of the two: each word becomes a rule looked up in a
+# per-line index, where an alternation has to be run at every position.
+case_ 'a w list does not colour the halves of a longer word' t.unknown \
+'a b ab\n' \
+'1:0-1 - w/a\n1:2-3 - w/b\n' \
+':syntax red w/a/b\r'
 
 if [ -n "$count_only" ]; then
 	printf 'cases %d\n' "$cases"

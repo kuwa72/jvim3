@@ -100,6 +100,34 @@ runtyped() {
 	verdict "$name" "$expect"
 }
 
+# runrc <name> <expect> <rc> <keys> <input> <wanted output>
+#
+# The same again, with an rc read first. Some of what an rc can say cannot be
+# typed on the ":" line at all: getcmdline() takes CTRL-V for itself, and a
+# real carriage return ends the command rather than going into it. A mapping
+# that holds either can only come from a file, which is where it always came
+# from and where the line separator used to decide what it meant.
+#
+# The rc is written with Unix separators deliberately.
+runrc() {
+	counted && return
+	local name=$1 expect=$2 rc=$3 keys=$4 data=$5 want=$6
+
+	keys=${keys//%/%%}
+	data=${data//%/%%}
+	want=${want//%/%%}
+
+	printf "$rc" > "$tmp/.jvimrc"
+	printf "$data" > "$tmp/in"
+	printf "$want" > "$tmp/want"
+	rm -f "$tmp/out"
+	printf "$keys:w! %s/out\r:q!\r" "$tmp" > "$tmp/keys"
+	pty "TERM=xterm $jvim -T xterm -s $tmp/keys $tmp/in" >/dev/null 2>&1
+	rm -f "$tmp/.jvimrc"			# every other case runs without one
+
+	verdict "$name" "$expect"
+}
+
 verdict() {
 	local name=$1 expect=$2
 
@@ -216,6 +244,38 @@ runtyped "typed cursor in insert" ok 'i\033OC\033'        'abc\n'     'abc\n'
 runtyped "typed shift-right"    ok '0\033Ovx'             'one two\n' 'one wo\n'
 runtyped "typed up on the : line" ok ':1d\r:\033OA\r'     "$ABC"      'c\nd\ne\n'
 runtyped "typed CTRL-@"         ok 'iabc\033i\000'        'X\n'       'ababccX\n'
+
+# The characters a mapping names rather than holds. Before these, a mapping
+# that pressed Enter had to carry a real carriage return, which made the line
+# separator of the rc part of what the rc meant: dosource() takes one CR off
+# the end of every line, so in a file with Unix separators the CR of
+# "ihello^M" cannot be told from the end of the line and is eaten. The same rc
+# could not be written for a Unix and for Windows. A name has nothing at the
+# end of a line to lose.
+run "<CR> in a mapping"         ok ':map q ihello<CR>\rq\033' ''      'hello\n\n'
+run "<Esc> in a mapping"        ok ':map q ihello<Esc>x\rq'   ''      'hell\n'
+run "<Tab> in a mapping"        ok ':map q i<Tab>x<Esc>\rq'   ''      '\tx\n'
+# The keys and the argument are told apart before either is expanded, or a
+# <Space> in the keys would become the space that ends them and swallow the
+# argument.
+run "<Space> as the key"        ok ':map <Space> ihello<Esc>\r '  ''  'hello\n'
+# A '<' that starts nothing known stays a '<', so a mapping that types "<div>"
+# still says so; one that must not be read as a name is held off with CTRL-V,
+# the way any other character is.
+run "an unknown name is left alone" ok ':map q i<Foo><Esc>\rq' ''     '<Foo>\n'
+
+# From a file with Unix separators, which is the case that could not be written
+# before: the mapping presses Enter and nothing about the end of the line says
+# so.
+runrc "<CR> from an rc with LF endings" ok 'map q ihello<CR><Esc>\n' \
+	'q' '' 'hello\n\n'
+# CTRL-V and a real CR reach domap() only from a file, so these two are here
+# rather than typed on the ":" line.
+runrc "CTRL-V holds a name off"  ok 'map q i\026<CR><Esc>\n' \
+	'q' '' '<CR>\n'
+# The old way still works: a real CR in the argument is still a real CR.
+runrc "a real CR still works"    ok 'map q ihello\015\033\n' \
+	'q' '' 'hello\n\n'
 
 if [ -n "$count_only" ]; then
 	printf 'cases %d\n' "$cases"

@@ -1,22 +1,14 @@
 syntax	link			Value				gray
 syntax	Comment			i/REM.*
-syntax	Value			m/%.*%
+" A parameter with modifiers, before the %VAR% rule below: that one matches from
+" any % to the next one on the line, so it takes "%~f1 %" out of "%~f1 %~dp2"
+" unless what starts with %~ is claimed first. The modifiers are any of fdpnxsatz
+" in any order, optionally then $PATH:, then the digit -- this used to be
+" seventeen rules for particular spellings of that, which between being written
+" after the %VAR% rule and not listing dpnx never coloured anything.
+syntax	Value			n/%\~[fdpnxsatz]*\($PATH:\)\=\d
 syntax	Value			n/%[\d\*]
-syntax	Value			n/%\~1\d
-syntax	Value			n/%\~f\d
-syntax	Value			n/%\~d\d
-syntax	Value			n/%\~p\d
-syntax	Value			n/%\~n\d
-syntax	Value			n/%\~x\d
-syntax	Value			n/%\~s\d
-syntax	Value			n/%\~a\d
-syntax	Value			n/%\~t\d
-syntax	Value			n/%\~z\d
-syntax	Value			n/%\~$PATH:\d
-syntax	Value			n/%\~dp\d
-syntax	Value			n/%\~nx\d
-syntax	Value			n/%\~dp$PATH:\d
-syntax	Value			n/%\~ftza\d
+syntax	Value			m/%.*%
 syntax	Statement		iw/goto/call/exit
 syntax	Conditional		iw/if/else
 syntax	Repeat			iw/for

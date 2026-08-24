@@ -3593,9 +3593,6 @@ dosource(register char_u *fname)
 {
 	register FILE	*fp;
 	register int	len;
-#ifdef MSDOS
-	int				error = FALSE;
-#endif
 #if defined(KANJI) || defined(FEXRC)
 	char_u			*p;
 #endif
@@ -3706,14 +3703,22 @@ dosource(register char_u *fname)
 		if (len >= 0 && IObuff[len] == '\n')	/* remove trailing newline */
 		{
 #ifdef MSDOS
-			if (len > 0 && IObuff[len - 1] == '\r') /* trailing CR-LF */
+			/*
+			 * A CR before the LF is the other half of the separator and goes
+			 * with it. There is no complaint when there is none.
+			 *
+			 * There used to be: "Wrong line separator, ^M may be missing",
+			 * once per file, because a line whose content ended in a real CR
+			 * -- ":map xx yy^M" -- cannot be told from one that does not in a
+			 * file with Unix separators, and loses it. That was true, and it
+			 * meant an rc could not be written for both systems. It is not the
+			 * way to write that mapping any more: ":map xx yy<CR>" says it in
+			 * characters that no line ending can take away. So the warning had
+			 * nothing left to warn about except the file's provenance, and it
+			 * cost three messages and a "Press RETURN" on every start.
+			 */
+			if (len > 0 && IObuff[len - 1] == '\r')
 				--len;
-			else
-			{
-				if (!error)
-					EMSG("Warning: Wrong line separator, ^M may be missing");
-				error = TRUE;		/* lines like ":map xx yy^M" will fail */
-			}
 #endif
 				/* escaped newline, read more */
 			if (len > 0 && len < IOSIZE && IObuff[len - 1] == Ctrl('V'))

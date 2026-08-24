@@ -56,10 +56,19 @@ syntax			tagsUnion				w/tagsUnion
 syntax			tagsVariable			w/tagsVariable
 syntax			tagsExternal			w/tagsExternal
 syntax	Comment			n/\"\".*
-syntax	PreCondit		n/begin\s\+files\s*=.*
-syntax	PreCondit		n/end\s\+files
-syntax	PreCondit		n/begin\s\+suffixes\s*=.*
-syntax	PreCondit		n/end\s\+suffixes
+" The block markers take the quote in front of them, so that they beat the
+" comment rule below on the tie: both start at column 0, and the earlier rule
+" wins one of those.
+syntax	PreCondit		n/^\"\=begin\s\+files\s*=.*
+syntax	PreCondit		n/^\"\=end\s\+files
+syntax	PreCondit		n/^\"\=begin\s\+suffixes\s*=.*
+syntax	PreCondit		n/^\"\=end\s\+suffixes
+" A comment on a line of its own. Only that: a rule file writes \" inside its
+" patterns all the time -- m/\".*[^\\]\" is an ordinary String rule -- and a
+" rule that took any quote for the start of a comment would paint every one of
+" those as one. 154 of the comments in syntax/ are on their own line and 18 are
+" not, so this is the side to be wrong on.
+syntax	Comment			n/^\s*\".*
 syntax bolic	text	w/bolic
 syntax uline	text	w/uline
 syntax italic	text	w/italic
@@ -82,6 +91,14 @@ syntax			teal	w/teal
 syntax			yellow	w/yellow
 syntax			text	w/text
 syntax			reverse	w/reverse
+" Every other colour is drawn in itself, and white cannot be -- on the window's
+" own background it would be the one name in the list that is invisible. Now
+" that a rule can say what goes behind it, it can be drawn in itself after all.
+syntax	white on gray	w/white
+" A colour written out rather than named. #rrggbb is what the rule files use
+" for a background, none of the sixteen names being pale enough to read a line
+" of text off.
+syntax	Constant		n/#\x\x\x\x\x\x
 " rc files color define
 syntax	link			SetSpecial			bold	text
 syntax	link			ColonCommand				red
@@ -94,6 +111,13 @@ syntax	link			UnsetShortCmd		bold	maroon
 syntax	link			SetTerminal			bold	gold
 syntax	link			SetKeyboard			bold	silver
 syntax	SetSpecial		w/SetSpecial
+" What follows "syntax": the commands, and the "on" that introduces a
+" background. Below the link above, because a rule naming a group the editor
+" has not been given yet is refused. "link" is also an HTML tag and an HTML
+" attribute, so two lines of html.jvsyn get it as well -- the same bargain the
+" group names here already make, and worth it for the same reason.
+syntax	SetSpecial		w/link/clear/load/color/dump/crchar
+syntax	SetSpecial		w/on
 syntax	ColonCommand	w/ColonCommand
 syntax	SetParam		w/SetParam
 syntax	SetShortParam	w/SetShortParam

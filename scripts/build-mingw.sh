@@ -36,6 +36,32 @@ dist=$root/dist/$ARCH
 #
 # With neither, the candidates below are tried in order and the first msvcrt one
 # wins, so a UCRT toolchain earlier in PATH does not get to decide.
+# Copy a text file into the package with the line separator Windows uses.
+#
+# dosource() (cmdline.c) warns "Wrong line separator, ^M may be missing" for
+# every sourced file whose lines end in a bare LF, and it means it: a mapping
+# that ends in a real ^M loses it. The repository is a Unix one and stores LF,
+# so the package used to carry LF into Windows and the editor said so three
+# times before it had finished starting -- once for the rc, once for
+# filetype.jvsyn, once for the rules it pulls in.
+#
+# Only a CR at the end of a line is a separator, and only that one may be
+# touched. A CR in the middle of a line is content: doc.j/_jvimrc line 37 is
+#
+#     "map    n /^Mz.
+#
+# where the ^M is a real carriage return in the middle of the mapping. A first
+# pass of "tr -d '\r'" ate it and left "/z." behind, which is the whole reason
+# a rule file may not simply be run through a CR filter.
+#
+# awk rather than "sed -e s/\r$//": \r in a sed expression is a GNU extension
+# and this script runs on macOS too. \015 rather than \r for the same reason.
+# Stripping the trailing one first makes this idempotent, so a file that
+# already has CRLF does not come out with two CRs.
+cp_crlf() {
+	awk '{ sub(/\015$/, ""); printf "%s\r\n", $0 }' < "$1" > "$2"
+}
+
 crt_of() {				# prefix -> msvcrt | ucrt | unknown
 	local defs
 	# Captured rather than piped into grep: under pipefail, grep exiting at its
@@ -238,14 +264,35 @@ done
 # and $VIM with nothing set is the directory the exe is in, so ":help" works in
 # an unpacked package without a _vimrc.
 cp -p "$root/doc.j/vim.hlp" "$dist/vim.hlp"
-cp -p "$root/doc.j/_jvimrc" "$dist/_jvimrc.sample"
+cp_crlf "$root/doc.j/_jvimrc" "$dist/_jvimrc.sample"
 # The short one that also works on a Unix; _jvimrc.sample is the long Windows
 # one. Copied to %HOME%\_jvimrc, which is read before _vimrc.
-cp -p "$root/jvimrc.sample" "$dist/jvimrc.sample"
+cp_crlf "$root/jvimrc.sample" "$dist/jvimrc.sample"
 # The rules an rc reaches with "source $VIM/syntax/...", and $VIM with nothing
 # set is this directory, so they are where the sample expects them already.
 rm -rf "$dist/syntax"
-cp -pR "$root/syntax" "$dist/syntax"
+mkdir -p "$dist/syntax"
+for f in "$root"/syntax/*; do
+	[ -f "$f" ] && cp_crlf "$f" "$dist/syntax/$(basename "$f")"
+done
+
+# vim.hlp is deliberately not converted: ":help" opens it as a buffer, where a
+# bare LF costs nothing but a "[notextmode]" on the message line. Only what
+# gets sourced has to be CRLF.
+#
+# Checked rather than assumed, because the failure is quiet -- the editor still
+# works, it just complains on the way up, and whoever added a file to syntax/
+# would not see it from a Unix.
+lf_only=
+for f in "$dist"/_jvimrc.sample "$dist"/jvimrc.sample "$dist"/syntax/*; do
+	[ -f "$f" ] || continue
+	grep -q $'\r$' "$f" || lf_only="$lf_only $(basename "$f")"
+done
+if [ -n "$lf_only" ]; then
+	echo "these go into the package with Unix line separators:$lf_only" >&2
+	echo "the editor sources them and warns once for each; see cp_crlf()." >&2
+	exit 1
+fi
 
 echo
 echo "built for $ARCH (${CROSS:-native}, $crt) -> $dist"

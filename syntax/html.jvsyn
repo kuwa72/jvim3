@@ -40,7 +40,7 @@ syntax	HtmlArg			itw/</>/http-equiv/href/title
 syntax	HtmlExt			itw/</>/frame/noframes/frameset/nobr/blink
 syntax	HtmlExt			itw/</>/layer/ilayer/nolayer/spacer
 syntax	HtmlArg			itw/</>/frameborder/noresize/pagex/pagey/above/below
-syntax	HtmlArg			itw/</>/left/top/visibility/clip/id/noshade
+syntax	HtmlArg			itw/</>/left/top/visibility/clip/noshade
 syntax	HtmlArg			itw/</>/z-index
 " Microsoft extensions
 syntax	HtmlExt			itw/</>/marquee

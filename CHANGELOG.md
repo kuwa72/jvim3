@@ -12,6 +12,31 @@ repository and would drift within three releases.
 
 ### Added
 
+- A mapping can name the characters it could not hold: `<CR>` `<NL>` `<LF>`
+  `<Esc>` `<Tab>` `<Space>` `<BS>` `<Nul>`, in either half, in any case.
+
+      map q ihello<CR>
+      map <Space> :w<CR>
+
+  Pressing Enter from a mapping used to mean putting a real carriage return in
+  the rc, which made the file's line separator part of what the file meant:
+  `dosource()` takes one CR off the end of every line and cannot tell that one
+  from a separator, so in a file with Unix endings the mapping quietly lost it.
+  **The same rc could not be written for a Unix and for Windows.** A name has
+  nothing at the end of a line to lose, so now it can.
+
+  Only characters. `#[UP]`, `#[F01]` and `#1` already name the keys, and a
+  second spelling for those would be two tables to keep in step for no new
+  ability. A `<` that starts nothing in the list stays a `<`, so a mapping that
+  types `<div>` still says so, and `CTRL-V` holds off one that would otherwise
+  be read as a name — the expansion and the `CTRL-V` removal are one pass over
+  each half, so neither can undo the other. The two halves are told apart
+  first, or a `<Space>` among the keys would become the space that ends them.
+
+  With this, the startup warning `Wrong line separator, ^M may be missing` has
+  nothing left to warn about and is gone. An rc with Unix line endings now
+  starts silently on Windows, which is what a dotfile shared with a Unix looks
+  like. The trailing CR of a CRLF file is still taken off, so those still work.
 - `:syntax dump <file>` writes what the rules did to the buffer, as text: one
   line per coloured run, with the group and the rule that made it. A rule that
   matches the wrong thing had no other way of saying so — the screen came out a
@@ -135,6 +160,80 @@ repository and would drift within three releases.
 
 ### Fixed
 
+- The Windows package carries Windows line separators. `dosource()` opens a
+  sourced file in binary mode and takes one trailing CR off each line, warning
+  `Wrong line separator, ^M may be missing` when there is none — and the
+  package was built from a Unix checkout, so it warned three times before it
+  had finished starting: once for the rc, once for `filetype.jvsyn`, once for
+  the rules it pulls in. Three messages is enough to make the editor stop at
+  `Press RETURN or enter command to continue`, so every start needed a keypress.
+
+  The warning is not pedantry, though it is nearly always harmless. A CR at the
+  end of a line is the separator and a CR anywhere else is content, so in an LF
+  file a command that *ends* in a real CR — `map q ihello^M`, a mapping that
+  presses Enter — cannot be told from an ordinary line, and the CR is eaten.
+  Measured: the same rc written both ways gives a two-line buffer with CRLF and
+  a one-line buffer with LF. Everything that does not end in a CR behaves
+  identically, and the rule files colour byte-for-byte the same either way.
+
+  Only a *trailing* CR is touched in the conversion. `doc.j/_jvimrc` line 37 is
+  `"map n /^Mz.`, with a real CR in the middle of it, and a first attempt that
+  filtered every CR turned it into `/z.` — which is exactly the breakage the
+  warning is about, introduced while removing it. The build now checks its own
+  output rather than trusting it, because nothing about this shows on a Unix.
+
+  An rc of your own still has to be a CRLF file. Copying the shipped
+  `_jvimrc.sample` gives you one.
+- A rule file is coloured when you open one. `.jvsyn` had no file type at all,
+  which is a poor advertisement for a syntax colouring engine: the thirty files
+  the editor ships are the ones most likely to be edited by anyone changing the
+  colours, and they came up plain. They are the same language as the `syntax`
+  lines of an rc, so they read `jvimrc.jvsyn`, which already draws every group
+  name in its own group and every colour name in its own colour — `Error` is red
+  there because `Error` is red.
+
+  That file had not been told about the notation added since, either: `white`
+  was missing from the colour list, and so were `link`, `clear`, `load`,
+  `color`, `dump`, `crchar`, the `on` that introduces a background, and
+  `#rrggbb`. `white` is the one name that cannot be drawn in itself on the
+  window's own background — it is drawn on grey, which a rule can ask for now.
+
+  A quote on a line of its own is a comment. Only that one: a rule file writes
+  `\"` inside its patterns constantly, and a rule that took any quote for the
+  start of a comment would paint the pattern of every `String` rule as one. The
+  `begin`/`end` block markers keep the quote in front of them so they still win
+  the tie against it.
+- The shipped `_jvimrc.sample` and `jvimrc.sample` are coloured. They are the
+  file most people first see an rc in, and `.sample` is not one of the names an
+  rc is read from, so nothing matched them.
+- A rule can hold an alternation, and `syntax/README` said it could not. The ex
+  command line eats one backslash, so `\|` reaches the regexp as a plain pipe
+  and matches a pipe — but `\\|` reaches it as `\|`, which is the alternation
+  the engine has always had. Nobody had tried two. Written down now, along with
+  what a bare `|` does (ends the command, so `n/aaa|ccc` quietly becomes the
+  rule `n/aaa` and a command `ccc`), and pinned by four cases so it cannot go
+  back to being folklore.
+
+  Not in a `w` rule: that one wraps its pattern in `\< \>`, so `w/a\\|b`
+  compiles as `\<a` or `b\>` and colours the `a` in `ab`. A `w` list is also
+  much the faster of the two, which is not the way round it looks — each word
+  becomes its own rule, but a word rule is looked up in an index of the line
+  built once per line, so a keyword that is not there costs nothing to rule
+  out. Rewriting every `w` list in `c.jvsyn` as one alternation — 61 words,
+  identical colouring — made a 600-redraw scroll 2.4 times slower.
+- `syntax/make.jvsyn` was the same nine rules written out twice. Every Makefile
+  walked a doubled list, and could not have coloured anything differently for
+  it. `scripts/check-docs.sh` refuses a repeated rule now, and a repeated or
+  empty word inside a `w` list with it: `rc.jvsyn` had `CURSOR` and
+  `IDI_WINLOGO` twice and a stray `//` that built a rule for the empty word,
+  and `java`, `vbs` and `html` each repeated a word the list above already had.
+  None of it showed on the screen, which is why it accumulated.
+- A batch parameter with modifiers is coloured. `bat.jvsyn` had seventeen rules
+  for particular spellings of `%~…`, all of them written *after* the `%VAR%`
+  rule — which matches from any `%` to the next one on the line, so it took
+  `%~f1 %` out of `%~f1 %~dp2` and left the rest plain. The seventeen never
+  coloured anything, and did not list `dpnx` in any case. One rule that takes
+  the modifiers in any order, before `%VAR%`, replaces them.
 - A cell the cursor stepped over on its way to the next one was retyped in the
   wrong colour. Moving a few columns along a row, jvim types the cells in
   between rather than positioning the cursor, which is faster — but it types
@@ -183,9 +282,43 @@ repository and would drift within three releases.
 - `scripts/check-docs.sh` sees a case count that a paragraph wrapped between the
   number and the word. It reads one line at a time, and "All 100\ntests on each"
   sat in BUILDING-unix.md through two suites growing.
+- `scripts/fetch-ci-build.sh` unpacks the package with its directories. It used
+  `unzip -j`, which junks paths — that was how the version-named top directory
+  was stripped, and it was harmless while the package was flat. Once the rules
+  were split out of the rc it poured `syntax/`'s thirty files in beside the exe,
+  and the editor said `can't open file …\syntax\filetype.jvsyn` on startup. The
+  exe lands in the right place either way, which is the only thing anyone checks
+  after unpacking, so nothing else gave a sign. It also says so itself now if the
+  rules are missing afterwards, rather than leaving the editor to say it later.
 
 ### 日本語
 
+- マッピングが、そのままでは持てなかった文字を名前で書けるようになりました。
+  `<CR>` `<NL>` `<LF>` `<Esc>` `<Tab>` `<Space>` `<BS>` `<Nul>` の 8 つで、
+  キー側・引数側の両方、大文字小文字を問いません。
+
+      map q ihello<CR>
+      map <Space> :w<CR>
+
+  マッピングから Enter を押すには、これまで rc に生の復帰文字を置くしか
+  ありませんでした。そのため**ファイルの改行コードがファイルの意味の一部**に
+  なっていました。`dosource()` は各行末の CR を 1 つ取り除きますが、それが
+  区切りなのか内容なのか区別できないので、Unix 改行のファイルではマッピングが
+  黙って CR を失います。**同じ rc を Unix と Windows の両方では書けませんでした。**
+  名前なら行末に失うものが何もありません。
+
+  対象は文字だけです。キーは `#[UP]`・`#[F01]`・`#1` が既に名前を持っており、
+  綴りを 2 通りにしても新しくできることは無く、同期を取る表が 2 つに増えるだけ
+  です。一覧に無い名前で始まる `<` はそのまま `<` なので、`<div>` と打つ
+  マッピングはそのまま動きます。名前として読ませたくない場合は `CTRL-V` で
+  抑えられます — 展開と `CTRL-V` の除去は各半分につき 1 パスで行うので、
+  片方がもう片方を打ち消すことはありません。キーと引数は展開前に分離します。
+  さもないとキー側の `<Space>` がキーの終わりを示す空白になってしまいます。
+
+  これにより起動時の警告 `Wrong line separator, ^M may be missing` は警告する
+  対象が無くなったので削除しました。Unix 改行の rc が Windows でも静かに起動
+  します（Unix と共有している dotfile はまさにこの形です）。CRLF ファイルの
+  行末 CR は従来どおり取り除くので、そちらも変わらず動きます。
 - `:syntax dump <file>` を追加しました。ルールがバッファに何をしたかをテキストで
   書き出します (色の付いた範囲ごとに1行、グループ名と該当ルール付き)。これまで
   ルールの間違いは「画面の色が足りない」以外に現れず、原因のルールを特定するには
@@ -268,6 +401,76 @@ repository and would drift within three releases.
   で、探索方式は 0.88〜1.03 秒でした (両者の色付け結果はバイト単位で同一)。`t` を
   使わないルールしか持たないバッファは区切りを 1 つも走査しませんし、領域の両端が
   タグと取り違えられることもありません。
+- Windows パッケージが Windows の改行を持つようになりました。`dosource()` は
+  ソースするファイルをバイナリモードで開き、各行末の CR を 1 つ取り除きます。CR が
+  無ければ `Wrong line separator, ^M may be missing` と警告します。パッケージは
+  Unix のチェックアウトから作っていたため、起動を終える前に 3 回警告が出ていました
+  — rc で 1 回、`filetype.jvsyn` で 1 回、そこから読むルールで 1 回。3 つ出ると
+  `Press RETURN or enter command to continue` で止まるので、**起動のたびにキーを
+  1 回押す必要がありました**。
+
+  この警告は些事ではありません（ただしほぼ常に無害です）。行末の CR は区切りで、
+  それ以外の位置の CR は内容です。したがって LF のファイルでは、**内容が CR で
+  終わるコマンド** — `map q ihello^M` のような Enter を押すマッピング — を
+  普通の行と区別できず、CR が食われます。実測: 同じ rc を両方の改行で書くと、
+  CRLF ではバッファが 2 行、LF では 1 行になります。CR で終わらないものはすべて
+  同一に動き、ルールファイルの色付け結果もバイト単位で同一です。
+
+  変換で触るのは**行末の CR だけ**です。`doc.j/_jvimrc` の 37 行目は
+  `"map n /^Mz.` で、行の途中に本物の CR があります。最初に書いた「CR を全部
+  落とす」版はこれを `/z.` にしてしまいました — 警告が言っているまさにその破壊を、
+  警告を消す作業で持ち込んだわけです。ビルドは自分の出力を信用せず検査するように
+  しました。Unix 側からはこの手の破損が一切見えないためです。
+
+  自分の rc は自分で CRLF にする必要があります。同梱の `_jvimrc.sample` を
+  コピーすればそうなります。
+- ルールファイルを開くと色が付きます。`.jvsyn` にはファイル種別が一切割り当てられて
+  いませんでした。シンタックスカラーのエンジンとしては具合の悪い話で、同梱の 30
+  ファイルは配色を変えたい人が最も触るものなのに、真っ白で出ていました。中身は rc の
+  `syntax` 行と同じ言語なので `jvimrc.jvsyn` を読ませます。あちらは既に群名を
+  その群の色で、色名をその色そのもので描いています — `Error` が赤いのは `Error` が
+  赤だからです。
+
+  その `jvimrc.jvsyn` にも、以降に増えた記法が入っていませんでした。色名の一覧に
+  `white` が無く、`link`・`clear`・`load`・`color`・`dump`・`crchar`、背景を導く
+  `on`、`#rrggbb` も同様です。`white` は窓の地色の上では唯一「自分自身の色では
+  描けない」名前なので、灰色を敷いて描いています — ルールが背景を言えるように
+  なったので。
+
+  行頭の `"` はコメントとして色が付きます。**行頭のものだけ**です。ルールファイルは
+  パターンの中に `\"` を常時書くので、どの `"` でもコメント開始とみなすルールにすると
+  `String` ルールのパターンが軒並みコメント色になってしまいます。`begin`/`end` の
+  ブロック行は `"` を own の一部として取り込んであるので、同じ 0 桁目で競合しても
+  そちらが勝ちます。
+- 同梱の `_jvimrc.sample` と `jvimrc.sample` に色が付きます。多くの人が rc を最初に
+  目にするのはこのファイルですが、`.sample` は rc として読まれる名前ではないため、
+  どの種別にも一致していませんでした。
+- ルールに選択肢 (alternation) を書けます。`syntax/README` は「書けない」と
+  断言していましたが、間違いでした。ex のコマンド行はバックスラッシュを 1 つ食べる
+  ので、`\|` は正規表現にはただのパイプとして届いてパイプに一致します。しかし
+  `\\|` なら `\|` として届き、これは正規表現エンジンが最初から持っている選択肢です。
+  誰も 2 つ書いて試していませんでした。素の `|` が何をするか (コマンドがそこで
+  終わるので、`n/aaa|ccc` は黙ってルール `n/aaa` とコマンド `ccc` になる) と
+  合わせて文書化し、ケース 4 本で固定したので、もう口伝には戻りません。
+
+  ただし `w` ルールの中では使えません。`w` はパターン全体を `\< \>` で包むので、
+  `w/a\\|b` は `\<a` または `b\>` になり、`ab` の `a` に色が付きます。そして
+  `w` のリストは選択肢よりずっと高速です — 見た目に反しますが、1 単語が 1 ルールに
+  なる代わりに、単語ルールは行ごとに 1 回作る索引で引かれるので、その行に無い
+  キーワードを外すコストがゼロだからです。`c.jvsyn` の `w` リスト全部 (61 語) を
+  1 本の選択肢に書き換えたところ、色付け結果は完全に同一のまま、600 回再描画の
+  スクロールが 2.4 倍遅くなりました。
+- `syntax/make.jvsyn` は同じ 9 ルールを 2 回書いたファイルでした。Makefile を開く
+  たびに倍の長さのリストを走査していて、そのぶん色が変わることはありません。
+  `scripts/check-docs.sh` がルールの重複を弾くようになり、`w` リスト内の重複語と
+  空語も一緒に見ます: `rc.jvsyn` には `CURSOR` と `IDI_WINLOGO` が 2 回ずつと、
+  空語のルールを作る `//` があり、`java`・`vbs`・`html` にもそれぞれ上の行と重複した
+  語がありました。どれも画面には出ないので溜まっていたものです。
+- バッチの修飾子付きパラメータに色が付きます。`bat.jvsyn` には `%~…` の個別の綴りに
+  対するルールが 17 本ありましたが、すべて `%VAR%` のルールより**後ろ**にありました。
+  `%VAR%` は行内の任意の `%` から次の `%` までに一致するので、`%~f1 %~dp2` からは
+  `%~f1 %` が取られ、残りは無色でした。17 本は何も塗っておらず、そもそも `dpnx` は
+  どれにも載っていません。修飾子を任意の順で取る 1 本を `%VAR%` の前に置きました。
 - カーソルが通り過ぎるセルが間違った色で打ち直されていました。同じ行を数桁動くとき、
   jvim はカーソルを位置決めせず間のセルを打ち直します (そのほうが速い)。ところが
   打ち直すのは文字だけで、色は直前のエスケープが指定したまま — つまり「これから
@@ -334,6 +537,14 @@ repository and would drift within three releases.
 - `scripts/check-docs.sh` が、数字と単語の間で折り返されたケース数を見落とさなくなり
   ました。1 行ずつ読んでいたため、"All 100\ntests on each" が BUILDING-unix.md に
   スイート 2 回分の増加をまたいで残っていました。
+- `scripts/fetch-ci-build.sh` がパッケージをディレクトリ構造ごと展開するように
+  なりました。`unzip -j` を使っていたためパスが潰れていました。バージョン名の
+  トップディレクトリを剥がす手段としてはそれでよく、パッケージが平坦なあいだは
+  無害でしたが、ルールを rc から分離して以降は `syntax/` の 30 ファイルが exe と
+  同じ場所にばら撒かれ、起動時に `can't open file …\syntax\filetype.jvsyn` と
+  出るようになっていました。どちらにせよ exe は正しい位置に落ちる — 展開後に
+  確認されるのはそれだけ — ので、他に兆候がありませんでした。展開後にルールが
+  無ければスクリプト自身がその場で言うようにもしました。
 
 ## 1.0.0 — 2026-08-22
 
