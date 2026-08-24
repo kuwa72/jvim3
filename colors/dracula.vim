@@ -3,6 +3,7 @@ set background=dark
 hi clear
 let g:colors_name = "dracula"
 
+hi Normal       guifg=#f8f8f2 guibg=#282a36
 hi Comment      guifg=#6272a4
 hi Constant     guifg=#f1fa8c
 hi String       guifg=#f1fa8c

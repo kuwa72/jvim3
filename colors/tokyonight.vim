@@ -3,6 +3,7 @@ set background=dark
 hi clear
 let g:colors_name = "tokyonight"
 
+hi Normal       guifg=#c0caf5 guibg=#1a1b26
 hi Comment      guifg=#565f89
 hi Constant     guifg=#ff9e64
 hi String       guifg=#9ece6a

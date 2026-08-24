@@ -239,6 +239,8 @@ static int				v_ychar		= 0;
 static int				v_lspace	= 0;
 static int				v_cspace	= 0;
 static int				v_trans		= 0;
+static DWORD			scheme_fgcolor;	/* "hi Normal guifg=", RGB() of syn_normal_fg */
+static DWORD			scheme_bgcolor;	/* "hi Normal guibg=", RGB() of syn_normal_bg */
 static DWORD		*	v_fgcolor	= &config_fgcolor;
 static DWORD		*	v_bgcolor	= &config_bgcolor;
 static DWORD		*	v_tbcolor	= &config_tbcolor;
@@ -1317,6 +1319,38 @@ SaveConfig(void)
 error:
 	if (openkey)
 		RegCloseKey(hKey);
+}
+
+/*
+ * Called by syn_highlight() (syntax.c) whenever a colour scheme sets or
+ * clears "hi Normal". Repoints v_fgcolor/v_bgcolor at the scheme's own
+ * colours -- the same trick already used to switch v_tbcolor etc. between a
+ * solid colour and a bitmap -- so the Text/Back Color the user configured is
+ * used unless and until a scheme overrides it, and is never itself changed by
+ * one. The caller still has to trigger the redraw (updateScreen(CLEAR)).
+ */
+void
+syn_win_apply_normal(void)
+{
+	if (syn_normal_fg >= 0)
+	{
+		scheme_fgcolor = RGB((syn_normal_fg >> 16) & 0xff,
+							 (syn_normal_fg >> 8)  & 0xff,
+							  syn_normal_fg		   & 0xff);
+		v_fgcolor = &scheme_fgcolor;
+	}
+	else
+		v_fgcolor = &config_fgcolor;
+
+	if (syn_normal_bg >= 0)
+	{
+		scheme_bgcolor = RGB((syn_normal_bg >> 16) & 0xff,
+							 (syn_normal_bg >> 8)  & 0xff,
+							  syn_normal_bg		   & 0xff);
+		v_bgcolor = &scheme_bgcolor;
+	}
+	else
+		v_bgcolor = &config_bgcolor;
 }
 
 static BOOL

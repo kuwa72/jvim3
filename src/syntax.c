@@ -24,6 +24,12 @@
 #include "kanji.h"
 #include "regexp.h"
 
+#ifdef NT
+/* winjnt.c: repoints v_fgcolor/v_bgcolor at syn_normal_fg/syn_normal_bg, or
+ * back at the configured Text/Back Color, per their current -1-ness. */
+extern void syn_win_apply_normal(void);
+#endif
+
 #define MAX_COLS		0x7fffffff
 
 #define SYNTAX_CACHE	1
@@ -2756,6 +2762,7 @@ syn_highlight(BUF *buf, char_u *arg)
 	int			is_italic = FALSE;
 	int			is_uline = FALSE;
 	int			rc;
+	int			nrgb;
 
 	if (arg == NULL)
 		return 0;
@@ -2788,6 +2795,11 @@ syn_highlight(BUF *buf, char_u *arg)
 		if (*p == NUL)
 		{
 			syn_clr_links(buf);
+			syn_normal_fg = -1;
+			syn_normal_bg = -1;
+#ifdef NT
+			syn_win_apply_normal();
+#endif
 			updateScreen(CLEAR);
 			return 0;
 		}
@@ -2879,8 +2891,34 @@ syn_highlight(BUF *buf, char_u *arg)
 	else
 		attr[0] = NUL;
 
+	/*
+	 * "hi Normal" cannot join the rule table below the way every other group
+	 * does -- there is no buffer text coloured "Normal" to point a rule at.
+	 * On the Windows GUI it instead overrides the Text/Back Color the user
+	 * configured, for as long as this scheme keeps asking for it; a scheme
+	 * that never sets Normal, or clears it, leaves that setting alone.
+	 * Elsewhere (plain terminals) there is still nothing to override it with.
+	 */
 	if (stricmp("Normal", group) == 0)
+	{
+		if (guifg[0] != NUL)
+		{
+			if (stricmp("text", guifg) == 0)
+				syn_normal_fg = -1;
+			else if (syn_hexcolor(guifg, &nrgb))
+				syn_normal_fg = nrgb;
+		}
+		if (guibg[0] != NUL)
+		{
+			if (syn_hexcolor(guibg, &nrgb))
+				syn_normal_bg = nrgb;
+		}
+#ifdef NT
+		syn_win_apply_normal();
+#endif
+		updateScreen(CLEAR);
 		return 0;
+	}
 
 	if (guifg[0] != NUL && guibg[0] != NUL)
 		snprintf((char *)cmd, sizeof(cmd), "%s %s%s on %s", group, attr, guifg, guibg);

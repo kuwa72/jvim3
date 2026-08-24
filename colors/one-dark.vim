@@ -3,6 +3,7 @@ set background=dark
 hi clear
 let g:colors_name = "one-dark"
 
+hi Normal       guifg=#abb2bf guibg=#282c34
 hi Comment      guifg=#5c6370
 hi Constant     guifg=#e5c07b
 hi String       guifg=#98c379

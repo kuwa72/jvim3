@@ -283,3 +283,14 @@ EXTERN int		NoResize	INIT(= FALSE);	/* fexrc is doset() call */
 EXTERN long_u	BenchTime	INIT(= 0);		/* bench mark time */
 EXTERN int		NoMap		INIT(= FALSE);	/* no mapping input mode */
 #endif
+
+/*
+ * 0xRRGGBB from the active colour scheme's "hi Normal", or -1 if it did not
+ * set one. syntax.c (all platforms) fills these in; on NT only, it also calls
+ * syn_win_apply_normal() (winjnt.c) so the GUI's own Text/Back Color choice is
+ * overridden for as long as the scheme keeps setting Normal. "hi clear" puts
+ * both back to -1. Kept outside #ifdef NT so syntax.c does not need one
+ * around every place it sets them.
+ */
+EXTERN int		syn_normal_fg	INIT(= -1);
+EXTERN int		syn_normal_bg	INIT(= -1);

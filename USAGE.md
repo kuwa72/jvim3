@@ -456,7 +456,7 @@ What `:hi` takes:
 | `ctermfg=`, `ctermbg=`, `cterm=` | Read only when the matching `gui*` key is absent — a scheme written for a terminal-only Vim still colours something. |
 | `hi link {Group} {Target}` | `{Group}` takes `{Target}`'s colour, and keeps following it if `{Target}` is relinked later. |
 | `hi clear` | Drop every link and colour, back to plain text. |
-| `hi Normal ...` | Accepted and ignored — there is no group for the base text colour to override. |
+| `hi Normal ...` | On the Windows GUI/console, `guifg`/`guibg` here override the Text Color / Back Color the user configured, for as long as the scheme keeps setting them; `hi clear` (or a scheme that never sets `Normal`) puts the configured colours back. Accepted but with nothing to override on a plain terminal. |
 
 **This reads a fixed set of directives, not general Vimscript.** `set`,
 `hi`, `let g:colors_name = "..."`, `finish`, and `if` / `elseif` / `else` /

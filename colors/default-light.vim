@@ -3,6 +3,7 @@ set background=light
 hi clear
 let g:colors_name = "default-light"
 
+hi Normal       guifg=#000000 guibg=#ffffff
 hi Comment      guifg=#0000ff
 hi Constant     guifg=#a020f0
 hi String       guifg=#a020f0
