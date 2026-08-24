@@ -12,6 +12,31 @@ repository and would drift within three releases.
 
 ### Added
 
+- A mapping can name the characters it could not hold: `<CR>` `<NL>` `<LF>`
+  `<Esc>` `<Tab>` `<Space>` `<BS>` `<Nul>`, in either half, in any case.
+
+      map q ihello<CR>
+      map <Space> :w<CR>
+
+  Pressing Enter from a mapping used to mean putting a real carriage return in
+  the rc, which made the file's line separator part of what the file meant:
+  `dosource()` takes one CR off the end of every line and cannot tell that one
+  from a separator, so in a file with Unix endings the mapping quietly lost it.
+  **The same rc could not be written for a Unix and for Windows.** A name has
+  nothing at the end of a line to lose, so now it can.
+
+  Only characters. `#[UP]`, `#[F01]` and `#1` already name the keys, and a
+  second spelling for those would be two tables to keep in step for no new
+  ability. A `<` that starts nothing in the list stays a `<`, so a mapping that
+  types `<div>` still says so, and `CTRL-V` holds off one that would otherwise
+  be read as a name — the expansion and the `CTRL-V` removal are one pass over
+  each half, so neither can undo the other. The two halves are told apart
+  first, or a `<Space>` among the keys would become the space that ends them.
+
+  With this, the startup warning `Wrong line separator, ^M may be missing` has
+  nothing left to warn about and is gone. An rc with Unix line endings now
+  starts silently on Windows, which is what a dotfile shared with a Unix looks
+  like. The trailing CR of a CRLF file is still taken off, so those still work.
 - `:syntax dump <file>` writes what the rules did to the buffer, as text: one
   line per coloured run, with the group and the rule that made it. A rule that
   matches the wrong thing had no other way of saying so — the screen came out a
@@ -268,6 +293,32 @@ repository and would drift within three releases.
 
 ### 日本語
 
+- マッピングが、そのままでは持てなかった文字を名前で書けるようになりました。
+  `<CR>` `<NL>` `<LF>` `<Esc>` `<Tab>` `<Space>` `<BS>` `<Nul>` の 8 つで、
+  キー側・引数側の両方、大文字小文字を問いません。
+
+      map q ihello<CR>
+      map <Space> :w<CR>
+
+  マッピングから Enter を押すには、これまで rc に生の復帰文字を置くしか
+  ありませんでした。そのため**ファイルの改行コードがファイルの意味の一部**に
+  なっていました。`dosource()` は各行末の CR を 1 つ取り除きますが、それが
+  区切りなのか内容なのか区別できないので、Unix 改行のファイルではマッピングが
+  黙って CR を失います。**同じ rc を Unix と Windows の両方では書けませんでした。**
+  名前なら行末に失うものが何もありません。
+
+  対象は文字だけです。キーは `#[UP]`・`#[F01]`・`#1` が既に名前を持っており、
+  綴りを 2 通りにしても新しくできることは無く、同期を取る表が 2 つに増えるだけ
+  です。一覧に無い名前で始まる `<` はそのまま `<` なので、`<div>` と打つ
+  マッピングはそのまま動きます。名前として読ませたくない場合は `CTRL-V` で
+  抑えられます — 展開と `CTRL-V` の除去は各半分につき 1 パスで行うので、
+  片方がもう片方を打ち消すことはありません。キーと引数は展開前に分離します。
+  さもないとキー側の `<Space>` がキーの終わりを示す空白になってしまいます。
+
+  これにより起動時の警告 `Wrong line separator, ^M may be missing` は警告する
+  対象が無くなったので削除しました。Unix 改行の rc が Windows でも静かに起動
+  します（Unix と共有している dotfile はまさにこの形です）。CRLF ファイルの
+  行末 CR は従来どおり取り除くので、そちらも変わらず動きます。
 - `:syntax dump <file>` を追加しました。ルールがバッファに何をしたかをテキストで
   書き出します (色の付いた範囲ごとに1行、グループ名と該当ルール付き)。これまで
   ルールの間違いは「画面の色が足りない」以外に現れず、原因のルールを特定するには

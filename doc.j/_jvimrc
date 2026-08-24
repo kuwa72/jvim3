@@ -34,7 +34,7 @@ set     wildchar=9
 "set    window=80,25
 set     option=1
 set     foption=0
-"map	n /z.
+"map	n /<CR>z.
 noremap				gX
 noremap				gC
 noremap!		gV

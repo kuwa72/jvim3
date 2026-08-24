@@ -124,6 +124,8 @@ static int		show_special __ARGS((char_u *, int));
 static char_u * put_special __ARGS((char_u *));
 static int		convert_special __ARGS((char_u *));
 #endif
+static int		convert_ctrlname __ARGS((char_u *));
+static void		map_expand __ARGS((char_u *, int));
 
 /*
  * free and clear a buffer
@@ -1162,8 +1164,14 @@ domap(int maptype, char_u *keys, int mode)
 	p = keys;
 	while (*p && (maptype == 1 || !iswhite(*p)))
 	{
+		/*
+		 * Step over what a CTRL-V holds rather than taking the CTRL-V off
+		 * here. The two halves have to be told apart before either is
+		 * expanded: "<Space>" becomes a space, and a space is what ends the
+		 * keys, so expanding as we go would swallow the argument into them.
+		 */
 		if (*p == Ctrl('V') && p[1] != NUL)
-			STRMOVE(p, p + 1);			/* remove CTRL-V */
+			++p;
 		++p;
 	}
 	if (*p != NUL)
@@ -1174,23 +1182,16 @@ domap(int maptype, char_u *keys, int mode)
 	haskey = (*keys != NUL);
 
 		/* check for :unmap without argument */
-	if (maptype == 1 && !haskey)	
+	if (maptype == 1 && !haskey)
 		return 1;
 
 /*
- * remove CTRL-Vs from argument
+ * now that the two are apart: CTRL-Vs out, named characters in
  */
-	while (*p)
-	{
-#ifdef KANJI
-		if (convert_special(p))
-			p++;
-		else
-#endif
-		if (*p == Ctrl('V') && p[1] != NUL)
-			STRMOVE(p, p + 1);			/* remove CTRL-V */
-		++p;
-	}
+	map_expand(keys, FALSE);
+	map_expand(arg, TRUE);
+	hasarg = (*arg != NUL);
+	haskey = (*keys != NUL);
 
 /*
  * check arguments and translate function keys
@@ -1609,6 +1610,106 @@ putescstr(FILE *fd, char_u *str, int set)
 			return FAIL;
 	}
 	return OK;
+}
+
+/*
+ * The characters a mapping cannot hold as themselves, and the names it can
+ * hold them by. "map q ihello<CR>" rather than a mapping with a real carriage
+ * return in it.
+ *
+ * A real one used to be the only way, and it made the line separator of the rc
+ * part of its meaning: dosource() takes one CR off the end of every line, so
+ * in a file with Unix separators the CR of "ihello^M" is indistinguishable
+ * from the end of the line and is eaten. The same rc could not be written for
+ * both systems. With a name there is nothing at the end of the line to lose.
+ *
+ * <Nul> is K_ZERO rather than 0 for the reason keymap.h gives: the mapping is
+ * a C string and cannot hold a NUL, so the editor carries CTRL-@ as K_ZERO
+ * everywhere else too.
+ *
+ * Only characters, not keys. "#[UP]" and "#1" below already name those, and
+ * giving them a second spelling would be two things to keep in step for no
+ * new ability.
+ */
+static struct {
+	char			*	name;
+	int					key;
+} ctrl_names[] = {
+	{	"CR",			'\r'		},
+	{	"NL",			'\n'		},
+	{	"LF",			'\n'		},
+	{	"Esc",			ESC			},
+	{	"Tab",			'\t'		},
+	{	"Space",		' '			},
+	{	"BS",			'\b'		},
+	{	"Nul",			K_ZERO		},
+	{	NULL,			0			},
+};
+
+/*
+ * If a name stands at 'keys', put the character it names there instead and
+ * close the gap. Returns TRUE if it did.
+ *
+ * A '<' that starts nothing this knows is left alone, so a mapping that types
+ * "<div>" keeps saying so. One that must not be read as a name at all is held
+ * off with CTRL-V, as any other character is -- map_expand() steps over what
+ * follows a CTRL-V rather than looking at it.
+ */
+static int
+convert_ctrlname(char_u *keys)
+{
+	int					i;
+	size_t				len;
+
+	if (*keys != '<')
+		return(FALSE);
+	for (i = 0; ctrl_names[i].name != NULL; i++)
+	{
+		len = STRLEN(ctrl_names[i].name);
+		if (vim_strnicmp(keys + 1, (char_u *)ctrl_names[i].name, len) == 0
+				&& keys[len + 1] == '>')
+		{
+			*keys = ctrl_names[i].key;
+			STRMOVE(keys + 1, keys + len + 2);
+			return(TRUE);
+		}
+	}
+	return(FALSE);
+}
+
+/*
+ * Take the CTRL-Vs out of one half of a :map and put the named characters in,
+ * in a single pass -- they have to be one pass, or "^V<CR>" would lose its
+ * CTRL-V to the first and be read as a name by the second.
+ *
+ * 'special' is for the argument only. The keys have had convert_special()
+ * applied to their first character alone since 1998, and running it over all
+ * of them here would quietly change what an existing mapping means.
+ */
+static void
+map_expand(char_u *keys, int special)
+{
+#ifndef KANJI
+	special = special;			/* nothing else reads it in this build */
+#endif
+	while (*keys)
+	{
+#ifdef KANJI
+		if (special && convert_special(keys))
+		{
+			keys += 2;
+			continue;
+		}
+#endif
+		if (*keys == Ctrl('V') && keys[1] != NUL)
+		{
+			STRMOVE(keys, keys + 1);	/* remove CTRL-V, keep what follows */
+			++keys;
+			continue;
+		}
+		convert_ctrlname(keys);
+		++keys;
+	}
 }
 
 #ifdef KANJI
