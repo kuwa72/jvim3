@@ -11,6 +11,7 @@ int		syn_decode __ARGS((int, int *));
 int		syn_bgcolor __ARGS((int, int *));
 void	syn_clr __ARGS((BUF *));
 int		syn_add __ARGS((BUF *, char_u *));
+int		syn_highlight __ARGS((BUF *, char_u *));
 void	syn_changed __ARGS((BUF *, linenr_t));
 void	syn_inschar __ARGS((char_u *, colnr_t));
 void	syn_delchar __ARGS((char_u *, colnr_t));

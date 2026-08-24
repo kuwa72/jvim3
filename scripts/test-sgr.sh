@@ -80,11 +80,11 @@ normalise() {
 # nearest of the sixteen a terminal has always had.
 case_() {
 	counted && return
-	local name=$1 file=$2 src=$3 want=$4 ct=${5:-truecolor}
+	local name=$1 file=$2 src=$3 want=$4 ct=${5:-truecolor} pre=${6:-}
 
 	printf '%b' "$src" > "$tmp/$file"
 	printf '%b' "$want" > "$tmp/want"
-	printf ':q!\r' > "$tmp/keys"
+	printf '%b:q!\r' "$pre" > "$tmp/keys"
 	# To a file and then through the filter, rather than down a pipe: an empty
 	# result is otherwise two questions at once, and the byte count below
 	# answers the first of them.
@@ -118,7 +118,7 @@ fi
 # "1:8-9 Number w/\d\+" -- so it must not be typed in the Number colour.
 case_ 'C: a run is coloured, and only the run' t.c \
 'int x = 1;\n' \
-'[0;1;38;2;46;139;87m|int\n[m| x =\n[0;38;2;255;0;255m|1\n[m|;\n'
+'[0;1;38;2;255;184;108m|int\n[m| x =\n[0;38;2;241;250;140m|1\n[m|;\n'
 
 # A comment reaching to the end of the line, and the line after it plain again.
 #
@@ -131,53 +131,49 @@ case_ 'C: a run is coloured, and only the run' t.c \
 # steps over it. Before run_iscolor() it was retyped, in the wrong colour.
 case_ 'C: a comment ends where the line does' t.c \
 '/* c */\nint y;\n' \
-'[0;38;2;0;0;255m|/* c */\n[m|\n[0;1;38;2;46;139;87m|int\n[m|\n[0m|y;\n[m|\n'
+'[0;38;2;122;162;247m|/* c */\n[m|\n[0;1;38;2;255;184;108m|int\n[m|\n[0m|y;\n[m|\n'
 
 # Without a terminal that says it can take a colour, the nearest of the sixteen.
 # 38;2 must not appear at all: a terminal that cannot read it prints it.
-#
-# 90 for SeaGreen (#2e8b57) is not a typo. sgr_nearest() measures plain
-# distance in RGB and xterm's bright black (#7f7f7f) really is nearer to it
-# than any of the greens. A desaturated colour reduced that way goes grey; the
-# comment on sgr_nearest() says what it does and this is it.
 case_ 'a terminal with no COLORTERM gets one of sixteen' t.c \
 'int x;\n' \
-'[0;1;90m|int\n[m|\n[0m|x;\n[m|\n' \
+'[0;1;33m|int\n[m|\n[0m|x;\n[m|\n' \
 'xterm-256color'
 
 # ---------------------------------------------------------- what is behind it
 #
 # 48;2 is 38;2 with a background instead of a foreground, and it goes in the
 # same escape: one run of text, one escape, both of its colours.
-#
-# The tints are written into diff.jvsyn as "#e6ffe6" and "#ffe6e6". None of the
-# sixteen named colours is pale enough to read text off, and these two rules
-# match a whole line.
 case_ 'diff: the added and the removed line are tinted' t.diff \
 '-gone\n+added\n' \
-'[0;38;2;255;0;0;48;2;255;230;230m|-gone\n[m|\n[0;38;2;0;128;0;48;2;230;255;230m|+added\n[m|\n'
+'[0;38;2;255;85;85;48;2;58;30;30m|-gone\n[m|\n[0;38;2;80;250;123;48;2;30;58;30m|+added\n[m|\n'
 
-# The same two SGR numbers ten higher, which is the whole of the difference
-# between a foreground and a background. 47 is white: #e6ffe6 reduced to the
-# sixteen is nearer white than any green, and a pale tint always will be.
 case_ 'a background falls back to one of sixteen too' t.diff \
 '+added\n' \
-'[0;32;47m|+added\n[m|\n' \
+'[0;36;40m|+added\n[m|\n' \
 'xterm-256color'
 
-# What "syntax link Todo bold navy on yellow" is for. The rule said "reverse"
-# before, because a background was the one thing a rule could not ask for, and
-# reverse is the terminal swapping two colours it already has -- which is not
-# blue on yellow and is not the same twice on two different terminals.
+# What Todo highlight is for.
 case_ 'Todo is drawn on a colour, not by swapping two' t.md \
 'x TODO x\n' \
-'|x\n[0;1;38;2;0;0;128;48;2;255;255;0m|TODO\n[m|\n[0m|x\n[m|\n'
+'|x\n[0;1;38;2;40;42;54;48;2;241;250;140m|TODO\n[m|\n[0m|x\n[m|\n'
 
 # A group with a background and no foreground at all: the text keeps the colour
 # it would have had, and only what is behind it changes.
 case_ 'a fenced block changes only what is behind it' t.md \
 'a\n```\nc\n```\n' \
-'|a\n[0;48;2;240;240;240m|```\n[m|\n[0;48;2;240;240;240m|c\n[m|\n[0;48;2;240;240;240m|```\n[m|\n'
+'|a\n[0;48;2;40;42;54m|```\n[m|\n[0;48;2;40;42;54m|c\n[m|\n[0;48;2;40;42;54m|```\n[m|\n'
+
+# :colorscheme switches theme dynamically
+case_ 'colorscheme switches to dracula' t.c \
+'/* c */\n' \
+'[0;38;2;98;114;164m|/* c */\n[m|\n' \
+'truecolor' ':colorscheme dracula\r'
+
+case_ 'highlight command overrides syntax color' t.c \
+'/* c */\n' \
+'[0;38;2;255;0;255m|/* c */\n[m|\n' \
+'truecolor' ':hi Comment guifg=#ff00ff\r'
 
 if [ -z "$count_only" ]; then
 	echo
@@ -186,3 +182,4 @@ echo "cases $cases"
 [ -n "$count_only" ] && exit 0
 echo "pass $pass  fail $fail"
 [ "$fail" -eq 0 ]
+

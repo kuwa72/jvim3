@@ -264,4 +264,6 @@ EXTERN char_u *p_synt	INIT(= "cdefgmnpstuvx");
  * working rather than stopping on an unknown option.
  */
 EXTERN long p_synl		INIT(= 0);			/* no longer used */
+EXTERN char_u *p_bg		INIT(= NULL);		/* background: "dark" or "light" */
+EXTERN char_u *p_colo	INIT(= NULL);		/* active color scheme name */
 #endif

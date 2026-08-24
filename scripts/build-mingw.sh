@@ -203,6 +203,7 @@ if [ "$TARGET" = release ]; then
 		cp -p "$root/dist/$arch/vim.hlp" "$root/dist/$arch/_jvimrc.sample" \
 			"$root/dist/$arch/jvimrc.sample" "$rel/$name/"
 		cp -pR "$root/dist/$arch/syntax" "$rel/$name/syntax"
+		cp -pR "$root/dist/$arch/colors" "$rel/$name/colors"
 		# makefile.mingw calls its targets jvim32*.exe whatever the architecture
 		# is; the name in the package says which one it actually is.
 		cp -p "$root/dist/$arch/jvim32w.exe" "$rel/$name/jvim${bits}w.exe"
@@ -275,6 +276,12 @@ mkdir -p "$dist/syntax"
 for f in "$root"/syntax/*; do
 	[ -f "$f" ] && cp_crlf "$f" "$dist/syntax/$(basename "$f")"
 done
+rm -rf "$dist/colors"
+mkdir -p "$dist/colors"
+for f in "$root"/colors/*; do
+	[ -f "$f" ] && cp_crlf "$f" "$dist/colors/$(basename "$f")"
+done
+
 
 # vim.hlp is deliberately not converted: ":help" opens it as a buffer, where a
 # bare LF costs nothing but a "[notextmode]" on the message line. Only what

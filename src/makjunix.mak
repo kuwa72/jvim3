@@ -483,11 +483,14 @@ install: $(TARGET)
 	-mkdir -p $(HELPLOC)
 	cp $(HELPFILE) $(HELPLOC)/jvim3.hlp
 	chmod $(HELPMOD) $(HELPLOC)/jvim3.hlp
-# The syntax rules, where $VIM points: an rc reaches them by that name, and the
-# build compiled the same path in as the default for $VIM.
+# The syntax rules and color schemes, where $VIM points: an rc reaches them by
+# that name, and the build compiled the same path in as the default for $VIM.
 	-mkdir -p $(HELPLOC)/jvim3/syntax
 	cp ../syntax/* $(HELPLOC)/jvim3/syntax/
 	chmod $(HELPMOD) $(HELPLOC)/jvim3/syntax/*
+	-mkdir -p $(HELPLOC)/jvim3/colors
+	cp ../colors/* $(HELPLOC)/jvim3/colors/
+	chmod $(HELPMOD) $(HELPLOC)/jvim3/colors/*
 # An rc to start from, for copying to ~/.jvimrc.
 	cp ../jvimrc.sample $(HELPLOC)/jvim3/jvimrc.sample
 	chmod $(HELPMOD) $(HELPLOC)/jvim3/jvimrc.sample
