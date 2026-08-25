@@ -248,6 +248,7 @@ static DWORD		*	v_socolor	= &config_socolor;
 static DWORD		*	v_ticolor	= &config_ticolor;
 static BOOL				v_ttfont;
 static HFONT			v_font;
+static HFONT			hSystemUIFont	= NULL;
 static INT			*	v_space		= NULL;
 static short		*	v_char		= NULL;
 static INT				v_ssize		= 0;
@@ -268,6 +269,8 @@ static INT_PTR CALLBACK	BitmapDialog(HWND, UINT, WPARAM, LPARAM);
 static INT_PTR CALLBACK	WaveDialog(HWND, UINT, WPARAM, LPARAM);
 static INT_PTR CALLBACK	CommandDialog(HWND, UINT, WPARAM, LPARAM);
 static INT_PTR CALLBACK	LoadDialog(HWND, UINT, WPARAM, LPARAM);
+static INT_PTR CALLBACK	QuitConfirmDialog(HWND, UINT, WPARAM, LPARAM);
+static void				SetDialogSystemFont(HWND);
 static void				LoadCommand();
 static void				UnloadCommand();
 static char *			DisplayPathName(char *, unsigned int);
@@ -3101,6 +3104,11 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		return(0);
 	case WM_DESTROY:
 		DragAcceptFiles(hWnd, FALSE);
+		if (hSystemUIFont != NULL)
+		{
+			DeleteObject(hSystemUIFont);
+			hSystemUIFont = NULL;
+		}
 		DeleteObject(v_font);
 		PostQuitMessage(0);
 		return(0);
@@ -5302,7 +5310,7 @@ get_clipdata:
 		{
 			if (buf->b_changed && (autowrite(buf) == FAIL))
 			{
-				i = MessageBox(hWnd, "No write since last change. Write quit ?", szAppName, MB_YESNOCANCEL|MB_DEFBUTTON2);
+				i = (int)DialogBoxParamW(hInst, L"QUITCONFIRM", hWnd, QuitConfirmDialog, 0L);
 				switch (i) {
 				case IDYES:
 					i = 0;
@@ -7416,6 +7424,30 @@ SetDlgItemTextU8(HWND hWnd, int id, char_u *text)
 	free(w);
 }
 
+/*
+ * Use the system UI font (NONCLIENTMETRICS.lfMessageFont) in a dialog.
+ * Applied at WM_INITDIALOG so dialogs keep their resource layouts but
+ * render with the same font as other Windows message boxes.
+ */
+	static void
+SetDialogSystemFont(HWND hWnd)
+{
+	NONCLIENTMETRICSW	ncm;
+	HWND				hCtrl;
+
+	if (hSystemUIFont == NULL)
+	{
+		ncm.cbSize = sizeof(ncm);
+		if (SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0))
+			hSystemUIFont = CreateFontIndirectW(&ncm.lfMessageFont);
+	}
+	if (hSystemUIFont == NULL)
+		return;
+	for (hCtrl = GetWindow(hWnd, GW_CHILD); hCtrl != NULL;
+									hCtrl = GetWindow(hCtrl, GW_HWNDNEXT))
+		SendMessage(hCtrl, WM_SETFONT, (WPARAM)hSystemUIFont, TRUE);
+}
+
 	static int
 GetDlgItemTextU8(HWND hWnd, int id, char_u *buf, int len)
 {
@@ -9189,6 +9221,7 @@ PrinterDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	switch (uMsg) {
 	case WM_INITDIALOG:
+		SetDialogSystemFont(hWnd);
 		if (strlen(config_printer))
 			SetDlgItemTextU8(hWnd, 1000, (char_u *)config_printer);
 		return(TRUE);
@@ -9279,6 +9312,7 @@ BitmapHookProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	switch (uMsg) {
 	case WM_INITDIALOG:
+		SetDialogSystemFont(hwnd);
 		hwndBrush = GetDlgItem(hwnd, 1010);
 		return(TRUE);
 	case WM_NOTIFY:
@@ -9312,6 +9346,7 @@ BitmapDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	switch (uMsg) {
 	case WM_INITDIALOG:
+		SetDialogSystemFont(hWnd);
 		if (strlen(config_bitmapfile))
 			SetDlgItemTextU8(hWnd, 1000, (char_u *)config_bitmapfile);
 		bUse = config_bitmap;
@@ -9459,6 +9494,7 @@ WaveHookProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	switch (uMsg) {
 	case WM_INITDIALOG:
+		SetDialogSystemFont(hwnd);
 		return(TRUE);
 	case WM_NOTIFY:
 		pofn = (LPOFNOTIFY)lParam;
@@ -9490,6 +9526,7 @@ WaveDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	switch (uMsg) {
 	case WM_INITDIALOG:
+		SetDialogSystemFont(hWnd);
 		if (strlen(config_wavefile))
 			SetDlgItemTextU8(hWnd, 1000, (char_u *)config_wavefile);
 		bUse = config_wave;
@@ -9586,6 +9623,7 @@ CommandDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	switch (uMsg) {
 	case WM_INITDIALOG:
+		SetDialogSystemFont(hWnd);
 		SendDlgItemMessage(hWnd, 1001, EM_SETLIMITTEXT, 0, (LPARAM)sizeof(config_load));
 		SendDlgItemMessage(hWnd, 1002, EM_SETLIMITTEXT, 0, (LPARAM)sizeof(config_unload));
 		SetDlgItemTextU8(hWnd, 1001, (char_u *)"");
@@ -9681,6 +9719,7 @@ LoadDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg) {
 	case WM_INITDIALOG:
+		SetDialogSystemFont(hWnd);
 		SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE	| SWP_NOSIZE);
 		return(TRUE);
 	default:
@@ -10090,6 +10129,7 @@ LineSpaceDialogEx(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	switch (uMsg) {
 	case WM_INITDIALOG:
+		SetDialogSystemFont(hWnd);
 		cspace = v_cspace;
 		lspace = v_lspace;
 		tspace = v_trans;
@@ -10193,6 +10233,7 @@ LineSpaceDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	switch (uMsg) {
 	case WM_INITDIALOG:
+		SetDialogSystemFont(hWnd);
 		cspace = v_cspace;
 		lspace = v_lspace;
 		if (pCreateUpDownControl != NULL)
@@ -10556,6 +10597,43 @@ isbitmap(LPTSTR szFileName, HWND hwnd)
 	return(TRUE);
 }
 
+/*------------------------------------------------------------------------------
+ *  quit confirmation dialog
+ *----------------------------------------------------------------------------*/
+static INT_PTR CALLBACK
+QuitConfirmDialog(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	int		wmId;
+
+	switch (uMsg) {
+	case WM_INITDIALOG:
+		SetDialogSystemFont(hWnd);
+#ifdef KANJI
+		SetDlgItemTextU8(hWnd, 1000, (char_u *)"保存されていない変更があります。\r\n終了方法を選択してください。");
+		SetDlgItemTextU8(hWnd, IDYES, (char_u *)"保存して終了");
+		SetDlgItemTextU8(hWnd, IDNO, (char_u *)"保存せず終了");
+		SetDlgItemTextU8(hWnd, IDCANCEL, (char_u *)"キャンセル");
+#else
+		SetDlgItemTextU8(hWnd, 1000, (char_u *)"There are unsaved changes.\r\nChoose how to quit.");
+		SetDlgItemTextU8(hWnd, IDYES, (char_u *)"Save and Quit");
+		SetDlgItemTextU8(hWnd, IDNO, (char_u *)"Discard and Quit");
+		SetDlgItemTextU8(hWnd, IDCANCEL, (char_u *)"Cancel");
+#endif
+		return TRUE;
+	case WM_COMMAND:
+		wmId = LOWORD(wParam);
+		switch (wmId) {
+		case IDYES:
+		case IDNO:
+		case IDCANCEL:
+			EndDialog(hWnd, wmId);
+			return TRUE;
+		}
+		break;
+	}
+	return FALSE;
+}
+
 #ifdef KANJI
 /*------------------------------------------------------------------------------
  *
@@ -10570,6 +10648,7 @@ FontDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	switch (uMsg) {
 	case WM_INITDIALOG:
+		SetDialogSystemFont(hWnd);
 		memcpy(&logfont, &config_font, sizeof(logfont));
 		memcpy(&jlogfont, &config_jfont, sizeof(jlogfont));
 		SetDlgItemTextW(hWnd, 2000, config_font.lfFaceName);
