@@ -145,6 +145,15 @@ static syncolor			usercolor[] = {
  */
 static syntax		*	syn_hit = NULL;
 
+/*
+ * Group name -> colour. One theme is active at a time for the whole editor,
+ * not one per buffer: a colour scheme is a look the user picked, not a
+ * property of the file being edited, so a second buffer must see whatever the
+ * first just set. What still varies per buffer is which rule files it has
+ * loaded (b_syn_ptr) -- that follows the file's type, same as 'autoindent'.
+ */
+static synlink		*	syn_link_table = NULL;
+
 #if SYNTAX_CACHE
 typedef struct {
 	char_u			*	idx;
@@ -161,12 +170,7 @@ syn_clr(BUF *buf)
 	syntax			*	tnp;
 	syntag			*	gwp;
 	syntag			*	gnp;
-	synlink			*	lwp;
-	synlink			*	lnp;
-	int					no;
 
-	for (no = 0; no < sizeof(usercolor) / sizeof(syncolor); no++)
-		usercolor[no].rgb = 0x00000000;
 	twp = (syntax *)buf->b_syn_ptr;
 	buf->b_syn_ptr = NULL;
 	while (twp)
@@ -204,16 +208,6 @@ syn_clr(BUF *buf)
 		free(gwp);
 		gwp = gnp;
 	}
-	lwp = (synlink *)buf->b_syn_link;
-	while (lwp)
-	{
-		lnp = lwp->next;
-		if (lwp->name)
-			free(lwp->name);
-		free(lwp);
-		lwp = lnp;
-	}
-	buf->b_syn_link		= NULL;
 	buf->b_syn_line		= 0;
 	buf->b_syn_match	= NULL;
 	buf->b_syn_matchend	= NULL;
@@ -226,8 +220,14 @@ syn_clr(BUF *buf)
 	buf->b_syn_stateval	= 0;
 	buf->b_syn_pairs	= 0;
 	buf->b_syn_tags		= 0;
-	/* the rules that asked for these colours are gone with them */
-	synbgcnt			= 0;
+	/*
+	 * The colour table (syn_link_table, usercolor, synbg) is not this
+	 * buffer's to clear -- it is the one active theme, shared by every
+	 * buffer. "syntax clear" only throws out this buffer's rule set, the
+	 * same way loading a different file type does; ":hi clear" (what a
+	 * colour scheme file opens with) is what resets the theme itself, in
+	 * syn_clr_links().
+	 */
 }
 
 static int
@@ -837,7 +837,7 @@ syn_get_color(BUF *buf, char_u *name, char_u **p, char_u **lname)
 
 	if (lname != NULL)
 		*lname = NULL;
-	lwp = (synlink *)buf->b_syn_link;
+	lwp = syn_link_table;
 	while (lwp)
 	{
 		if (stricmp(name, lwp->name) == 0)
@@ -987,12 +987,13 @@ syn_clr_links(BUF *buf)
 {
 	synlink		*lwp;
 	syntax		*twp;
+	BUF			*bp;
 	int			no;
 
 	for (no = 0; no < sizeof(usercolor) / sizeof(syncolor); no++)
 		usercolor[no].rgb = 0x00000000;
 
-	lwp = (synlink *)buf->b_syn_link;
+	lwp = syn_link_table;
 	while (lwp)
 	{
 		lwp->color = 'A';
@@ -1000,12 +1001,18 @@ syn_clr_links(BUF *buf)
 	}
 	synbgcnt = 0;
 
-	/* Reset rules color to default text until re-linked */
-	twp = (syntax *)buf->b_syn_ptr;
-	while (twp)
+	/*
+	 * Reset every buffer's rules to default text until re-linked, not just
+	 * this one's: the theme just cleared is shared by all of them.
+	 */
+	for (bp = firstbuf; bp != NULL; bp = bp->b_next)
 	{
-		twp->color = 'A';
-		twp = twp->next;
+		twp = (syntax *)bp->b_syn_ptr;
+		while (twp)
+		{
+			twp->color = 'A';
+			twp = twp->next;
+		}
 	}
 }
 
@@ -1053,12 +1060,12 @@ syn_link(BUF *buf, char_u *name)
 			return(1);
 		color |= bg;
 	}
-	lwp = (synlink *)buf->b_syn_link;
+	lwp = syn_link_table;
 	while (lwp)
 	{
 		if (stricmp(name, lwp->name) == 0)
 		{
-			syntax			*twp;
+			BUF				*bp;
 			synlink			*tlp;
 			int				changed;
 			int				depth = 0;
@@ -1070,12 +1077,12 @@ syn_link(BUF *buf, char_u *name)
 			/* Propagate new color to all dependent links non-recursively */
 			do {
 				changed = 0;
-				for (tlp = (synlink *)buf->b_syn_link; tlp; tlp = tlp->next)
+				for (tlp = syn_link_table; tlp; tlp = tlp->next)
 				{
 					if (tlp->lname != NULL)
 					{
 						synlink *tgt;
-						for (tgt = (synlink *)buf->b_syn_link; tgt; tgt = tgt->next)
+						for (tgt = syn_link_table; tgt; tgt = tgt->next)
 						{
 							if (tgt != tlp && stricmp(tlp->lname, tgt->name) == 0 && tlp->color != tgt->color)
 							{
@@ -1089,13 +1096,22 @@ syn_link(BUF *buf, char_u *name)
 					break;
 			} while (changed);
 
-			/* Update all syntax rules to match link colors */
-			for (tlp = (synlink *)buf->b_syn_link; tlp; tlp = tlp->next)
+			/*
+			 * Update every buffer's syntax rules to match link colors, not
+			 * just this one's -- the link table they are keyed against is
+			 * shared by all of them.
+			 */
+			for (tlp = syn_link_table; tlp; tlp = tlp->next)
 			{
-				for (twp = (syntax *)buf->b_syn_ptr; twp; twp = twp->next)
+				for (bp = firstbuf; bp != NULL; bp = bp->b_next)
 				{
-					if (twp->name && stricmp(twp->name, tlp->name) == 0)
-						twp->color = tlp->color;
+					syntax	*twp;
+
+					for (twp = (syntax *)bp->b_syn_ptr; twp; twp = twp->next)
+					{
+						if (twp->name && stricmp(twp->name, tlp->name) == 0)
+							twp->color = tlp->color;
+					}
 				}
 			}
 
@@ -1119,22 +1135,28 @@ syn_link(BUF *buf, char_u *name)
 	lp->name	= strsave(name);
 	lp->lname	= lname;
 	lp->color	= color;
-	if (buf->b_syn_link == NULL)
-		buf->b_syn_link = (unsigned char *)lp;
+	if (syn_link_table == NULL)
+		syn_link_table = lp;
 	else
 	{
-		lwp = (synlink *)buf->b_syn_link;
+		lwp = syn_link_table;
 		while (lwp->next)
 			lwp = lwp->next;
 		lwp->next = lp;
 	}
 	{
-		syntax			*twp = (syntax *)buf->b_syn_ptr;
-		while (twp)
+		BUF		*bp;
+
+		for (bp = firstbuf; bp != NULL; bp = bp->b_next)
 		{
-			if (twp->name && stricmp(twp->name, name) == 0)
-				twp->color = color;
-			twp = twp->next;
+			syntax	*twp = (syntax *)bp->b_syn_ptr;
+
+			while (twp)
+			{
+				if (twp->name && stricmp(twp->name, name) == 0)
+					twp->color = color;
+				twp = twp->next;
+			}
 		}
 	}
 	return(0);

@@ -20,6 +20,7 @@ working editor.
 - [What JVim adds](#what-jvim-adds)
 - [What was removed](#what-was-removed)
 - [Where settings live](#where-settings-live)
+- [Setting scope: buffer, window, or the whole editor](#setting-scope-buffer-window-or-the-whole-editor)
 - [Known limits](#known-limits)
 - [Troubleshooting](#troubleshooting)
 
@@ -190,6 +191,15 @@ source $VIM/syntax/filetype.jvsyn
 opening `main.c` reads `.vimrc.c` if that exists, so tab width can follow the
 file type. `doc.j/readme.doc` §6.13 has the details, including how to put
 per-suffix blocks inside one `.vimrc`.
+
+**No such file, and it reads the plain rc instead — not nothing.** `main.py`
+with no `.vimrc.py` around does not skip the per-suffix step; `open_buffer()`
+falls back to sourcing `~/.jvimrc` itself, in full, for every file that opens
+this way — not only the first. `set autoindent` and the rest of [a `_vimrc` to
+start from](#a-_vimrc-to-start-from) are unaffected by running twice: the same
+line sets the same value. A theme picked with `:colorscheme` partway through
+the session is a different case, covered under
+[Colour schemes](#colour-schemes).
 
 ## Encodings
 
@@ -412,6 +422,19 @@ as `syntax/`: `default` (dark), `default-light`, `dracula`, `nord`,
 :set background=light   " default <-> default-light; named themes ignore this
 ```
 
+**The theme is one setting for the whole editor, not one per file.** `set
+autoindent`, `tabstop` and the like are each buffer's own — a new buffer starts
+from whatever the current one has, and the two can then be set differently
+without either noticing (see [Setting
+scope](#setting-scope-buffer-window-or-the-whole-editor)). Colour is not:
+`:colorscheme dracula` in one window is `:colorscheme dracula` everywhere,
+including a file opened afterwards with `:split` or `:e`, because
+it is a choice about how the editor looks rather than about the file in the
+window. What does vary per file is which groups a buffer's rules can colour at
+all — a `.py` only has the group names `python.jvsyn` uses — but the colour
+behind a given group name is the same one theme, in every buffer, all the
+time.
+
 **Where a name is looked for**, first match wins:
 
 1. `~/.jvim/colors/{name}.vim`, then `{name}.jvsyn`
@@ -532,6 +555,33 @@ by it has its non-ASCII values in CP932, and Windows reads a BOM-less ini throug
 the process code page, which is UTF-8 here — so they are misread. Saving the
 settings again from JVim fixes it. Font names in the registry are converted
 automatically.
+
+## Setting scope: buffer, window, or the whole editor
+
+`:set` covers all three, and nothing here says which is which. Three groups:
+
+| | |
+| --- | --- |
+| Per buffer | `autoindent`, `tabstop`, `shiftwidth`, `expandtab`, `binary`, `endofline`, `modeline`, `readonly`, `list`, `number`, `jcode`, and most of what a rule file or a per-suffix rc would plausibly want to change per file type. |
+| Per window | Whether syntax colouring is drawn at all (`syntax`/`syt`) — two windows on the same buffer can differ. |
+| The whole editor | The active colour scheme and every `:highlight` group in it (see [Colour schemes](#colour-schemes)), `backup`, and anything else that is a plain global rather than a per-buffer or per-window one. |
+
+**A buffer option is not read from the rc again for a new buffer — it is
+copied from whichever buffer is current** the moment the new one is created
+(`buf_copy_options()`). Two files opened from the same session normally end up
+with the same `tabstop` only because they both trace back to the same `set
+tabstop=4` in `~/.jvimrc`; `:set shiftwidth=2` in one buffer and then `:e`
+another file does not carry the 2 across, because the new buffer copies
+whatever was current at that moment, which was 2 — it is not going back to the
+rc file at all. `fexrc`, covered under [a `_vimrc` to start
+from](#a-_vimrc-to-start-from), then runs on top of that copy, so a per-suffix
+rc's own `set` lines are the last word for that one buffer.
+
+A colour scheme is the odd one out precisely because it looks like a per-buffer
+thing — `:highlight` reads a rule file's group names — but is stored once, for
+every buffer, the same way `backup` is. That is also why it does not need
+copying into a new buffer the way `tabstop` does: there is only one copy to
+begin with.
 
 ## Known limits
 
