@@ -559,7 +559,6 @@ set_init(void)
 	curbuf->b_syn_matchend	= NULL;
 	curbuf->b_syn_curp		= NULL;
 	curbuf->b_syn_line		= -1;
-	curbuf->b_syn_link		= NULL;
 	curbuf->b_syn_state		= NULL;
 	curbuf->b_syn_statelen	= 0;
 	curbuf->b_syn_stateval	= 0;

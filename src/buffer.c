@@ -128,6 +128,24 @@ open_buffer(void)
 # ifdef NT
 			NoResize = FALSE;
 # endif
+# ifdef USE_SYNTAX
+			/*
+			 * What was just sourced may have re-run common.jvsyn, which
+			 * resets colours to its own hard-coded defaults (see
+			 * syntax/README) -- undoing whatever theme was active. The theme
+			 * is global, not this buffer's (unlike the rule set fexrc just
+			 * loaded, which does belong to this buffer), so put it back.
+			 *
+			 * Not for "default": that is what p_colo already reads before
+			 * anyone has asked for a theme (param.c), and common.jvsyn's own
+			 * palette -- not colors/default.vim, which is close but not
+			 * identical -- is what a file has always opened to until a
+			 * ":colorscheme" actually ran.
+			 */
+			if (p_colo != NULL && *p_colo != NUL
+					&& stricmp((char *)p_colo, "default") != 0)
+				docmd_colorscheme(p_colo);
+# endif
 		}
 #endif
 		if (readfile(curbuf->b_filename, curbuf->b_sfilename, (linenr_t)0,

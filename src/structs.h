@@ -414,7 +414,6 @@ struct buffer
 	char_u		   *b_syn_matchend;
 	char_u		   *b_syn_curp;
 	linenr_t		b_syn_line;
-	char_u		   *b_syn_link;
 	/*
 	 * What a region or a tag leaves open at the start of each line, so that a
 	 * line can be coloured without searching the ones around it: entry i is the
