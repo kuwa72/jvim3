@@ -1,0 +1,16 @@
+syntax Comment			n/;.*$
+syntax Comment			p/#\|/\|#
+syntax String			m/\".*[^\\]\"
+syntax	Float			n/\d*\.\d\+
+syntax	Number			w/0x\x\+
+syntax	Number			w/\d\+
+syntax	Statement		w/defun/defmacro/defvar/defparameter/lambda/let
+syntax	Statement		w/progn/setf/setq/quote
+syntax	Conditional		w/if/cond/case/when/unless
+syntax	Repeat			w/loop/dolist/dotimes
+syntax	Structure		w/defclass/defmethod/defgeneric/defstruct
+syntax	StorageClass	w/declare/the
+syntax	Include			w/in-package
+syntax	Operator		w/and/or/not
+syntax	Boolean			w/nil/t
+syntax	Todo			w/TODO/FIXME/XXX/NOTE

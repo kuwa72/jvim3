@@ -15,7 +15,7 @@
 
 ```sh
 ./scripts/build-unix.sh          # src/jvim3 をビルド
-./scripts/build-unix.sh test     # ビルドしてテスト 179 ケースを実行
+./scripts/build-unix.sh test     # ビルドしてテスト 202 ケースを実行
 ./scripts/build-unix.sh strict   # CI がエラー扱いする警告つきでビルド
 ./scripts/build-unix.sh install  # PREFIX (既定: /usr/local) へビルド＆インストール
 ./scripts/build-unix.sh clean
@@ -192,7 +192,7 @@ Windows でも WoW64 で問題なく動きます。ポインタが `int`/`long` 
 ./scripts/build-unix.sh test           # 4 つのスイート
 ./scripts/test-encoding.sh src/jvim3   # 48 ケース
 ./scripts/test-editing.sh  src/jvim3   # 72 ケース
-./scripts/test-syntax.sh   src/jvim3   # 50 ケース
+./scripts/test-syntax.sh   src/jvim3   # 73 ケース
 ./scripts/test-sgr.sh      src/jvim3   # 9 ケース
 ```
 
@@ -201,7 +201,7 @@ Windows でも WoW64 で問題なく動きます。ポインタが `int`/`long` 
 ワイルドカード展開を見ます。`scripts/test-syntax.sh` は syntax/ のルールが実際に
 何を色付けするかを `:syntax dump` 越しに見ます（`syntax/` の全ファイルに 1 つ
 以上）。`scripts/test-sgr.sh` は端末に実際に送られるエスケープを見ます — ルール
-ではなく描画側を見る唯一のスイートです。合わせて 179 ケースです。
+ではなく描画側を見る唯一のスイートです。合わせて 202 ケースです。
 
 必要なのは bash と C コンパイラです。jvim に端末を与えるために `scripts/ptyrun.c`
 をビルドします。以前は `script(1)` を使っていましたが、あれは Linux と NetBSD と
@@ -272,7 +272,7 @@ BSD は Linux ランナー上の VM で動きます。数分で起動する既�
 あります。要点は次のとおりです。
 
 - Linux (Ubuntu 24.04 / gcc)、FreeBSD (clang)、NetBSD、OpenBSD、DragonFly で
-  179 テスト全件通過。Linux ではエンコーディングの 48 ケースを
+  202 テスト全件通過。Linux ではエンコーディングの 48 ケースを
   AddressSanitizer 下でも通しています。
 - macOS は 2026-08 まで CI で通っていましたが、今は対象ではありません。
 - 実機・実端末・本物の IME での確認はしていません。すべてシリアルコンソール、

@@ -1,0 +1,12 @@
+syntax Comment			n/#.*$
+syntax Comment			n/\/\/.*$
+syntax Comment			p/\/\*/\*\/
+syntax String			m/\".*[^\\]\"
+syntax	Float			n/\d*\.\d\+
+syntax	Number			w/\d\+
+syntax	Structure		w/resource/data/variable/output/module/provider/locals
+syntax	Structure		w/terraform/provisioner
+syntax	StorageClass	w/for_each/count/depends_on/lifecycle
+syntax	Boolean			w/true/false
+syntax	Constant		w/null
+syntax	Todo			w/TODO/FIXME/XXX/NOTE

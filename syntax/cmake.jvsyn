@@ -1,0 +1,12 @@
+syntax Comment			n/#.*$
+syntax String			m/\".*[^\\]\"
+syntax Identifier		n/\${[^}]*}
+syntax	Number			w/\d\+
+syntax	Conditional		iw/if/elseif/else/endif
+syntax	Repeat			iw/foreach/endforeach/while/endwhile
+syntax	Statement		iw/function/endfunction/macro/endmacro/return/break/continue
+syntax	Statement		iw/set/unset/include/find_package/message/option
+syntax	Structure		iw/add_executable/add_library/add_subdirectory
+syntax	Structure		iw/target_link_libraries/target_include_directories
+syntax	Boolean			iw/true/false/on/off
+syntax	Todo			w/TODO/FIXME/XXX/NOTE

@@ -1,0 +1,16 @@
+syntax Comment			n/--.*$
+syntax Comment			p/{-/-}
+syntax String			m/\".*[^\\]\"
+syntax	Float			n/\d*\.\d\+
+syntax	Number			w/0x\x\+
+syntax	Number			w/\d\+
+syntax	Include			w/module/import/where/qualified/hiding/as
+syntax	Conditional		w/if/then/else/case/of
+syntax	Statement		w/let/in/do
+syntax	Structure		w/data/type/newtype/class/instance/deriving
+syntax	StorageClass	w/infixl/infixr/infix
+syntax	Boolean			w/True/False
+syntax	Constant		w/Nothing/Just/Left/Right
+syntax	Type			w/Int/Integer/Float/Double/Char/String/Bool
+syntax	Type			w/Maybe/Either/IO
+syntax	Todo			w/TODO/FIXME/XXX/NOTE

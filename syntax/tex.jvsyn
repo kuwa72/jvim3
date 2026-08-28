@@ -1,0 +1,6 @@
+syntax Comment			n/%.*$
+syntax String			p/\$/\$
+syntax PreProc			n/\\begin\>
+syntax PreProc			n/\\end\>
+syntax Statement		n/\\\i\+
+syntax Todo				w/TODO/FIXME/XXX/NOTE

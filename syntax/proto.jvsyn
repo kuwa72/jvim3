@@ -1,0 +1,15 @@
+syntax Comment			n/\/\/.*$
+syntax Comment			p/\/\*/\*\/
+syntax String			m/\".*[^\\]\"
+syntax String			m/'.*[^\\]'
+syntax	Number			w/0x\x\+
+syntax	Number			w/\d\+
+syntax	Include			w/syntax/package/import/option
+syntax	Structure		w/message/enum/service/rpc/oneof/extend
+syntax	Statement		w/returns
+syntax	StorageClass	w/repeated/optional/required/reserved/map/extensions/to
+syntax	Boolean			w/true/false
+syntax	Constant		w/default
+syntax	Type			w/double/float/int32/int64/uint32/uint64/sint32/sint64
+syntax	Type			w/fixed32/fixed64/sfixed32/sfixed64/bool/string/bytes
+syntax	Todo			w/TODO/FIXME/XXX/NOTE

@@ -1,0 +1,14 @@
+syntax Comment			n/^\s*\".*
+syntax String			m/\".*[^\\]\"
+syntax String			m/'.*[^\\]'
+syntax Identifier		n/[bgstwl]:\i\+
+syntax	Number			w/\d\+
+syntax	Conditional		w/if/elseif/else/endif
+syntax	Repeat			w/while/endwhile/for/endfor
+syntax	Statement		w/function/endfunction/return/call/let/unlet
+syntax	Statement		w/echo/execute/normal
+syntax	Exception		w/try/catch/finally/endtry/throw
+syntax	Include			w/source/runtime
+syntax	StorageClass	w/set/autocmd/augroup/command/map/nmap/vmap/imap
+syntax	StorageClass	w/nnoremap/inoremap/vnoremap/highlight
+syntax	Todo			w/TODO/FIXME/XXX/NOTE

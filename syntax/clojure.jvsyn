@@ -1,0 +1,14 @@
+syntax Comment			n/;.*$
+syntax String			m/\".*[^\\]\"
+syntax	Constant		n/:\i\+
+syntax	Float			n/\d*\.\d\+
+syntax	Number			w/0x\x\+
+syntax	Number			w/\d\+
+syntax	Statement		w/def/defn/fn/let/loop/recur/quote
+syntax	Conditional		w/if/cond/case/when/do
+syntax	Structure		w/defmacro/defprotocol/defrecord/deftype/reify
+syntax	Include			w/ns/require/import
+syntax	Operator		w/and/or/not
+syntax	Boolean			w/true/false
+syntax	Constant		w/nil
+syntax	Todo			w/TODO/FIXME/XXX/NOTE

@@ -183,6 +183,104 @@ case_ 'C#: keywords, types, number' t.cs \
 'using System;\n// c\npublic class A {\n    public static int F(string s) { return 0x1f; }\n}\n' \
 '1:0-5 Include w/using\n2:0-4 Comment n/\\/\\/.*$\n3:0-6 StorageClass w/public\n3:7-12 Structure w/class\n4:4-10 StorageClass w/public\n4:11-17 StorageClass w/static\n4:18-21 Type w/int\n4:24-30 Type w/string\n4:36-42 Statement w/return\n4:43-47 Number w/0x\\x\\+\n'
 
+case_ 'OCaml: comment, keywords, number' t.ml \
+'(* c *)\nlet rec f x =\n  if x > 0 then x else 0\n' \
+'1:0-7 Comment p/(\\*\n2:0-3 Statement w/let\n2:4-7 Statement w/rec\n3:2-4 Conditional w/if\n3:9-10 Number w/\\d\\+\n3:11-15 Conditional w/then\n3:18-22 Conditional w/else\n3:23-24 Number w/\\d\\+\n'
+
+case_ 'SML: comment, keywords, number' t.sml \
+'(* c *)\nfun f x =\n  if x > 0 then x else 0\n' \
+'1:0-7 Comment p/(\\*\n2:0-3 Statement w/fun\n3:2-4 Conditional w/if\n3:9-10 Number w/\\d\\+\n3:11-15 Conditional w/then\n3:18-22 Conditional w/else\n3:23-24 Number w/\\d\\+\n'
+
+case_ 'D: comment, import, type, number' t.d \
+'// c\nimport std.stdio;\nint main() {\n  return 0x1f;\n}\n' \
+'1:0-4 Comment n/\\/\\/.*$\n2:0-6 Include w/import\n3:0-3 Type w/int\n4:2-8 Statement w/return\n4:9-13 Number w/0x\\x\\+\n'
+
+case_ 'Scheme: comment, define, booleans' t.scm \
+'; c\n(define (f x)\n  (if (> x 0) #t #f))\n' \
+'1:0-3 Comment n/;.*$\n2:1-7 Statement w/define\n3:3-5 Conditional w/if\n3:11-12 Number w/\\d\\+\n3:14-16 Boolean n/#t\n3:17-19 Boolean n/#f\n'
+
+case_ 'Common Lisp: comment, defun, nil' t.lisp \
+'; c\n(defun f (x)\n  (if (> x 0) t nil))\n' \
+'1:0-3 Comment n/;.*$\n2:1-6 Statement w/defun\n3:3-5 Conditional w/if\n3:11-12 Number w/\\d\\+\n3:14-15 Boolean w/t\n3:16-19 Boolean w/nil\n'
+
+case_ 'Clojure: comment, defn, keyword literal' t.clj \
+'; c\n(defn f [x]\n  (if (> x 0) :ok nil))\n' \
+'1:0-3 Comment n/;.*$\n2:1-5 Statement w/defn\n3:3-5 Conditional w/if\n3:11-12 Number w/\\d\\+\n3:14-17 Constant n/:\\i\\+\n3:18-21 Constant w/nil\n'
+
+case_ 'Kotlin: package, fun, types, number' t.kt \
+'package a\n// c\nfun f(n: Int): Boolean {\n  return n > 0x1f\n}\n' \
+'1:0-7 Include w/package\n2:0-4 Comment n/\\/\\/.*$\n3:0-3 Statement w/fun\n3:9-12 Type w/Int\n3:15-22 Type w/Boolean\n4:2-8 Statement w/return\n4:13-17 Number w/0x\\x\\+\n'
+
+case_ 'Perl: sigils, my/sub, comment' t.pl \
+'# c\nmy $x = 1;\nsub f { return $x; }\n' \
+'1:0-3 Comment n/#.*$\n2:0-2 StorageClass w/my\n2:3-5 Identifier n/[$@%]\\i\\+\n2:8-9 Number w/\\d\\+\n3:0-3 Statement w/sub\n3:8-14 Statement w/return\n3:15-17 Identifier n/[$@%]\\i\\+\n'
+
+case_ 'Swift: func, types, comment' t.swift \
+'// c\nfunc f(x: Int) -> Bool {\n  return x > 0\n}\n' \
+'1:0-4 Comment n/\\/\\/.*$\n2:0-4 Statement w/func\n2:10-13 Type w/Int\n2:18-22 Type w/Bool\n3:2-8 Statement w/return\n3:13-14 Number w/\\d\\+\n'
+
+# \begin and \end are their own PreProc rule, ahead of the generic "any command"
+# rule, the same way a narrower rule always goes before the wider one in here.
+case_ 'TeX: comment, begin/end, a command' t.tex \
+'% c\n\\begin{document}\nHello \\textbf{world}\n\\end{document}\n' \
+'1:0-3 Comment n/%.*$\n2:0-6 PreProc n/\\\\begin\\>\n3:6-13 Statement n/\\\\\\i\\+\n4:0-4 PreProc n/\\\\end\\>\n'
+
+case_ 'Haskell: comment, module/where, types' t.hs \
+'-- c\nmodule Main where\nf :: Int -> Bool\nf x = x > 0\n' \
+'1:0-4 Comment n/--.*$\n2:0-6 Include w/module\n2:12-17 Include w/where\n3:5-8 Type w/Int\n3:12-16 Type w/Bool\n4:10-11 Number w/\\d\\+\n'
+
+case_ 'Protocol Buffers: message, field type, string' t.proto \
+'syntax = "proto3";\nmessage M {\n  int32 id = 1;\n}\n' \
+'1:0-6 Include w/syntax\n1:9-17 String m/".*[^\\\\]"\n2:0-7 Structure w/message\n3:2-7 Type w/int32\n3:13-14 Number w/\\d\\+\n'
+
+case_ 'Terraform: resource, strings, count' t.tf \
+'resource "aws_instance" "x" {\n  count = 1\n}\n' \
+'1:0-8 Structure w/resource\n1:9-23 String m/".*[^\\\\]"\n1:24-27 String m/".*[^\\\\]"\n2:2-7 StorageClass w/count\n2:10-11 Number w/\\d\\+\n'
+
+case_ 'CMake: commands are matched either case' t.cmake \
+'# c\nif(X)\n  message("hi")\nendif()\n' \
+'1:0-3 Comment n/#.*$\n2:0-2 Conditional iw/if\n3:2-9 Statement iw/message\n3:10-14 String m/".*[^\\\\]"\n4:0-5 Conditional iw/endif\n'
+
+case_ 'Vim script: comment, function, let' t.vim \
+'" c\nfunction! F()\n  let x = 1\n  return x\nendfunction\n' \
+'1:0-3 Comment n/^\\s*".*\n2:0-8 Statement w/function\n3:2-5 Statement w/let\n3:10-11 Number w/\\d\\+\n4:2-8 Statement w/return\n5:0-11 Statement w/endfunction\n'
+
+case_ 'awk: BEGIN, print, a field' t.awk \
+'BEGIN { print "hi" }\n{ print $1 }\n' \
+'1:0-5 Statement w/BEGIN\n1:8-13 Function w/print\n1:14-18 String m/".*[^\\\\]"\n2:2-7 Function w/print\n2:8-10 Identifier n/\\$\\d\\+\n'
+
+case_ 'Assembler: comment, label, instructions' t.asm \
+'; c\nmain:\n  mov eax, 1\n  ret\n' \
+'1:0-3 Comment n/;.*$\n2:0-5 Label m/^[_a-zA-Z.][_a-zA-Z0-9.]*\\s*:\n3:2-5 Statement iw/mov\n3:6-9 Type iw/eax\n3:11-12 Number w/\\d\\+\n4:2-5 Statement iw/ret\n'
+
+# .pro is a C prototype header -- one more suffix on the block c.jvsyn already
+# had, and no new rule file.
+case_ '.pro is C, not a rule file of its own' t.pro \
+'int f(void);\n' \
+'1:0-3 Type w/int\n1:4-5 Function -/[_a-zA-Z][_a-zA-Z0-9]*\\s*(\n1:6-10 Type w/void\n'
+
+case_ '.jsonc points at json.jvsyn' t.jsonc \
+'{\n  "a": 1\n}\n' \
+'2:2-5 Identifier m-/".*[^\\\\]":\n2:7-8 Number n/-\\=\\d\\+\n'
+
+case_ '.cfg points at ini.jvsyn' t.cfg \
+'[a]\nb = 1\n' \
+'1:0-3 Tag n/\\[.*\\]\n2:0-2 Identifier m-/^\\s*[^ ;=]\\+\\s*=\n'
+
+case_ '.gitconfig is matched by name, and points at ini.jvsyn' .gitconfig \
+'[user]\n\tname = me\n' \
+'1:0-6 Tag n/\\[.*\\]\n2:0-6 Identifier m-/^\\s*[^ ;=]\\+\\s*=\n'
+
+case_ '.bashrc is matched by name, and points at sh.jvsyn' .bashrc \
+'# c\nexport PATH=$PATH\n' \
+'1:0-3 Comment n/#.*$\n2:0-6 StorageClass w/export\n'
+
+# .gitignore has no name before its leading dot, so the whole file name is
+# what "begin suffixes=" is matched against -- see the note in filetype.jvsyn.
+case_ '.gitignore has nothing before its dot, and still matches' .gitignore \
+'# c\n*.o\n' \
+'1:0-3 Comment n/#.*$\n'
+
 # HTML is the only type using "t", where the rule names three patterns: the tag
 # to look inside, the one that ends it, and what to match in between. A "t" rule
 # is dumped by the third -- a dozen of these begin "t/<" and the first would

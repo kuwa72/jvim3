@@ -21,7 +21,7 @@ derived from JVim 3.0-j2.1b (2002 Dec 24)
 ```
 Platforms        Windows 10/11 (Win32 GUI + console), Linux,
                  FreeBSD, NetBSD, OpenBSD, DragonFly
-Tests            179 cases, run on all of the above in CI. The Windows
+Tests            202 cases, run on all of the above in CI. The Windows
                  keyboard has 16 more in scripts/test-winkeys.sh, typed on
                  the real thing from WSL
 Licence          Public domain — see LICENSE, and uganda.txt for the
@@ -37,7 +37,7 @@ Licence          Public domain — see LICENSE, and uganda.txt for the
 | File names outside CP932 | The manifest asks for UTF-8 as the process code page, so the `...A` file APIs take UTF-8 and a file called `🍣.txt` opens. |
 | Display scaling | The process is per-monitor DPI aware, and the stored font and window sizes are restated for the DPI in front of them, so text is sharp at 125% and 150% and stays that way when the window is dragged between monitors. |
 | Builds anywhere Unix-ish | `scripts/build-unix.sh` asks the compiler what the machine has instead of asking you to uncomment three lines in a makefile. `scripts/build-mingw.sh` cross builds the Windows executables with mingw-w64. |
-| 179 tests | 48 encoding cases, 72 editing cases, 50 syntax colouring cases and 9 that read the escapes the terminal is actually sent, driven through a real pty. Every push runs them on five operating systems. |
+| 202 tests | 48 encoding cases, 72 editing cases, 73 syntax colouring cases and 9 that read the escapes the terminal is actually sent, driven through a real pty. Every push runs them on five operating systems. |
 | Long standing bugs fixed | Fifteen of them, listed in [BUILDING-mingw.md](BUILDING-mingw.md#bugs-found-along-the-way) — `[あ]` in a regexp also matching `い`, a command line reading `buff[-1]`, encoding detection tipping a whole file over to Shift-JIS because of one emoji, terminal input mangling a character split across two reads. |
 | Colour schemes | `:colorscheme` and a Vim-compatible `:highlight`, eleven bundled themes, on the GUI and over a terminal's SGR alike. [USAGE.md](USAGE.md#colour-schemes) has the reference. |
 | Two features removed | BDF font rendering and editing inside LHA/ZIP/TAR archives are gone, sources and all, because their terms made the tree awkward to redistribute. See [below](#licence). |
@@ -71,7 +71,7 @@ doing.
 ```sh
 git clone https://github.com/kuwa72/jvim3
 cd jvim3
-./scripts/build-unix.sh test        # build src/jvim3, then run the 179 tests
+./scripts/build-unix.sh test        # build src/jvim3, then run the 202 tests
 ```
 
 You need a C compiler and, for the real terminal database rather than the
@@ -166,7 +166,7 @@ for actual use.
 ./scripts/test-encoding.sh src/jvim3   # 48 cases: encodings, multi-byte editing
 ./scripts/test-editing.sh  src/jvim3   # 72 cases: motions, operators, registers,
                                        #   marks, undo, ex ranges, :g, :s, :!
-./scripts/test-syntax.sh   src/jvim3   # 50 cases: what syntax/ actually colours
+./scripts/test-syntax.sh   src/jvim3   # 73 cases: what syntax/ actually colours
 ./scripts/test-sgr.sh      src/jvim3   # 9 cases: the escapes a terminal is sent
 ```
 
@@ -175,7 +175,7 @@ so they exercise the same input path a person does. Each case is given 20
 seconds before it is killed, so a case that leaves the editor waiting for a key
 fails rather than hanging the suite.
 
-Every push and pull request builds and runs all 179 on Linux, FreeBSD, NetBSD,
+Every push and pull request builds and runs all 202 on Linux, FreeBSD, NetBSD,
 OpenBSD and DragonFly, and cross builds both Windows architectures. A
 tag matching `v*` does the same and then publishes the Windows zips, so a broken
 build cannot become a release. See

@@ -1,0 +1,14 @@
+syntax Comment			n/;.*$
+syntax Comment			p/#\|/\|#
+syntax String			m/\".*[^\\]\"
+syntax	Boolean			n/#t
+syntax	Boolean			n/#f
+syntax	Float			n/\d*\.\d\+
+syntax	Number			w/0x\x\+
+syntax	Number			w/\d\+
+syntax	Statement		w/define/lambda/let/letrec/begin/set/do
+syntax	Statement		w/quote/quasiquote/unquote
+syntax	Conditional		w/if/cond/case/when/unless/else
+syntax	Operator		w/and/or/not
+syntax	Include			w/import
+syntax	Todo			w/TODO/FIXME/XXX/NOTE

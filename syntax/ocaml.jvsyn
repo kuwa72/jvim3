@@ -1,0 +1,17 @@
+syntax Comment			p/(\*/\*)
+syntax String			m/\".*[^\\]\"
+syntax	Float			n/\d*\.\d\+
+syntax	Number			w/0x\x\+
+syntax	Number			w/\d\+
+syntax	Statement		w/let/rec/and/fun/function/in/begin/end/assert
+syntax	Conditional		w/if/then/else/match/when
+syntax	Repeat			w/for/while/do/done/to/downto
+syntax	Structure		w/type/module/struct/sig/functor/class/object
+syntax	Structure		w/method/val/virtual/inherit/initializer/constraint
+syntax	Exception		w/exception/try/raise
+syntax	StorageClass	w/mutable/external/private/nonrec/lazy
+syntax	Include			w/open/include
+syntax	Operator		w/or
+syntax	Boolean			w/true/false
+syntax	Constant		w/None/Some
+syntax	Todo			w/TODO/FIXME/XXX/NOTE

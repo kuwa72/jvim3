@@ -25,6 +25,24 @@ repository and would drift within three releases.
   background — the mismatch that made those regions read as low-contrast.
   Still nothing to override on a plain terminal, where there was never a
   configured base colour to begin with.
+- `syntax/` colours the file types tracked in #5, plus a further batch asked
+  for directly: OCaml (`.ml`, `.mli`), Standard ML (`.sml`, `.sig`, `.fun`), D
+  (`.d`), Scheme (`.scm`, `.ss`), Common Lisp (`.lisp`, `.lsp`, `.cl`),
+  Clojure (`.clj`, `.cljs`, `.cljc`), Kotlin (`.kt`, `.kts`), Perl (`.pl`,
+  `.pm`, `.t`), Swift (`.swift`), TeX/LaTeX (`.tex`, `.sty`, `.cls`), Haskell
+  (`.hs`), Protocol Buffers (`.proto`), Terraform (`.tf`, `.tfvars`), CMake
+  (`.cmake`, and the name `CMakeLists.txt`), Vim script (`.vim`), awk
+  (`.awk`), and assembler (`.s`, `.S`, `.asm`) each get their own
+  `syntax/<name>.jvsyn`. `.pro` — the third most common file type in this
+  repository, at 41 files — joins the suffix list `c.jvsyn` already had,
+  rather than getting a rule file of its own: they are C prototype headers.
+  `.jsonc`/`.jsonl`/`.json5` point at `json.jvsyn`; `.cnf`/`.conf`/`.cfg`/
+  `.properties`/`.editorconfig` and the bare names `.gitconfig`/
+  `.gitmodules` point at `ini.jvsyn`; `.bashrc`/`.zshrc`/`.profile`/
+  `.bash_profile`, the `.env` family, and `.gitignore`/`.dockerignore`/
+  `.npmignore` point at `sh.jvsyn`. `scripts/test-syntax.sh` gained a case for
+  most of the new files, checked against the real binary's `:syntax dump`
+  rather than by eye.
 
 ### 日本語
 
@@ -41,6 +59,24 @@ repository and would drift within three releases.
   食い違い — 見た目上そこだけコントラストが低く見えていた原因 — が
   なくなります。プレーンな端末では、そもそも上書き対象となる設定色が
   無いため従来どおり何も起きません。
+- `syntax/` が Issue #5 に挙がっていたファイル種別と、それに加えて直接
+  依頼のあった一群に対応しました: OCaml (`.ml`、`.mli`)、Standard ML
+  (`.sml`、`.sig`、`.fun`)、D (`.d`)、Scheme (`.scm`、`.ss`)、Common Lisp
+  (`.lisp`、`.lsp`、`.cl`)、Clojure (`.clj`、`.cljs`、`.cljc`)、Kotlin
+  (`.kt`、`.kts`)、Perl (`.pl`、`.pm`、`.t`)、Swift (`.swift`)、TeX/LaTeX
+  (`.tex`、`.sty`、`.cls`)、Haskell (`.hs`)、Protocol Buffers (`.proto`)、
+  Terraform (`.tf`、`.tfvars`)、CMake (`.cmake`、および名前 `CMakeLists.txt`)、
+  Vim script (`.vim`)、awk (`.awk`)、アセンブラ (`.s`、`.S`、`.asm`) —
+  それぞれに `syntax/<name>.jvsyn` を用意しました。`.pro`（このリポジトリで
+  3 番目に多いファイル種別、41 ファイル）は独自のルールファイルではなく、
+  `c.jvsyn` が既に持っていたサフィックス一覧に加わっただけです — C の
+  プロトタイプヘッダだからです。`.jsonc`/`.jsonl`/`.json5` は `json.jvsyn`
+  を、`.cnf`/`.conf`/`.cfg`/`.properties`/`.editorconfig` と裸の名前
+  `.gitconfig`/`.gitmodules` は `ini.jvsyn` を、`.bashrc`/`.zshrc`/
+  `.profile`/`.bash_profile`、`.env` 系、`.gitignore`/`.dockerignore`/
+  `.npmignore` は `sh.jvsyn` を指すようにしました。`scripts/test-syntax.sh`
+  に新しいファイルのほとんどに対応するケースを追加し、目視ではなく
+  実際のバイナリの `:syntax dump` と突き合わせて確認しています。
 
 ## 1.1.0 — 2026-08-24
 
