@@ -51,6 +51,13 @@ repository and would drift within three releases.
   worth doing. The two `STRCPY()` calls in the same function that were given
   overlapping strings — undefined, and the sort of thing AddressSanitizer stops
   on — are `memmove()` now. (#22)
+- Seven `malloc()` calls whose result was used without being checked now go
+  through `alloc()` and handle failure: five in `src/syntax.c`, four of them
+  followed immediately by `memset()` on what would have been NULL, and two in
+  `src/tag.c` written through the same way. Out of memory is a message now
+  rather than a crash, and only the rule or the tag being added is lost. The
+  32 bit Windows build is where a long-lived editor can genuinely run out of
+  address space. (#24)
 - A syntax rule that asks for both `w` and a pair — `syntax Group wp/BEG/END` —
   built its end pattern from the pointer past the pattern rather than from the
   pattern, so it compiled as `\<\>`, the region never closed, and everything
@@ -121,6 +128,12 @@ is the `:s` fix above. The other two are open issues rather than silence:
   ファイルであり、それがこの修正の理由です。同じ関数で重なった文字列を
   渡していた `STRCPY()` 2 箇所（未定義動作で、AddressSanitizer が止まる類の
   もの）も `memmove()` にしました。(#22)
+- 戻り値を確認せずに使っていた `malloc()` 7 箇所を `alloc()` 経由にして、失敗を
+  処理するようにしました。`src/syntax.c` に 5 箇所（うち 4 箇所は NULL に対して
+  そのまま `memset()`）、`src/tag.c` に同じ書き方の 2 箇所です。メモリ不足が
+  クラッシュではなくメッセージになり、失われるのは追加しようとしたルールか
+  タグだけになります。長時間動かしたときにアドレス空間を本当に使い切りうるのは
+  32bit の Windows 版です。(#24)
 - `w` とペアを同時に指定したシンタックスルール（`syntax Group wp/BEG/END`）が、
   終了パターンをパターン自身ではなくその先を指すポインタから作っていました。
   `\<\>` としてコンパイルされるため領域が閉じず、開始トークン以降がファイル末尾
