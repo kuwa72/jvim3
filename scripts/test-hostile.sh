@@ -201,12 +201,12 @@ case_ '2 MB in one line: G$x' ok \
 	'repnl:x:2000000' 'repnl:x:1999999' \
 	'G$x:w! %s/out\r:q!\r'
 
-# KNOWN-FAIL: quadratic in the length of the line -- 100k characters take about
-# four seconds and 400k about 53 -- so this does not finish in the ten seconds
-# it is given. #22. Not a hang: breakcheck() runs every 16 substitutions, so
-# CTRL-C stops it. It simply cannot be finished.
-T=10 case_ '400k in one line: :s/x/y/g finishes' knownfail \
-	'repnl:x:400000' 'repnl:y:400000' \
+# Two million substitutions on one line, in half a second, and the ten second
+# cap is the assertion. Before #22 this was quadratic: 400k characters took 53
+# seconds and this size would have taken about twenty minutes, so the case is
+# what says the quadratic has not come back.
+T=10 case_ '2 MB in one line: :s/x/y/g finishes' ok \
+	'repnl:x:2000000' 'repnl:y:2000000' \
 	':s/x/y/g\r:w! %s/out\r:q!\r'
 
 # ------------------------------------------------------------ not text at all
