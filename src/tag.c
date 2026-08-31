@@ -771,13 +771,29 @@ findtagex(char_u *tag)
 
 				if (chk == NULL)
 				{
+					_tags		*newtag;
+
+					/*
+					 * alloc(), not malloc(), and checked: this was written
+					 * through without looking, so out of memory was a crash
+					 * rather than a message. Allocated before "count" goes up,
+					 * so that the count and the list cannot disagree. m is
+					 * cleared because alloc() has already said "Out of memory"
+					 * and erret would otherwise print "No tags file" over it.
+					 */
+					if ((newtag = (_tags *)alloc((unsigned)sizeof(_tags)))
+																	== NULL)
+					{
+						m = NULL;
+						goto erret;
+					}
 					count++;
 					if (top == NULL)
-						now = top = malloc(sizeof(_tags));
+						now = top = newtag;
 					else
 					{
-						now->next = malloc(sizeof(_tags));
-						now = now->next;
+						now->next = newtag;
+						now = newtag;
 					}
 					now->next		= NULL;
 					now->filename	= strsave(fname);

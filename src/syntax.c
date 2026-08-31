@@ -559,7 +559,13 @@ syn_addtag(BUF *buf, char_u *string_l, char_u *string_r, int ic, int jic,
 	}
 	if (gwp == NULL)
 	{
-		gwp = malloc(sizeof(syntag));
+		/*
+		 * alloc(), not malloc(): it retries after releasing what it can and
+		 * says "Out of memory" if it still cannot. The memset() below would
+		 * have been the crash.
+		 */
+		if ((gwp = (syntag *)alloc((unsigned)sizeof(syntag))) == NULL)
+			return(0);		/* the pair is not kept; the header says what that means */
 		memset(gwp, 0, sizeof(syntag));
 		gwp->string_l	= strsave(string_l);
 		gwp->string_r	= strsave(string_r);
@@ -1130,7 +1136,13 @@ syn_link(BUF *buf, char_u *name)
 	else if (stricmp("crchar", name) == 0) return(1);
 	else ;
 
-	lp = malloc(sizeof(synlink));
+	/*
+	 * 0 rather than 1 on failure: alloc() has already said "Out of memory", and
+	 * 1 would have the caller print "Invalid argument" over the top of it. The
+	 * alias is simply not added.
+	 */
+	if ((lp = (synlink *)alloc((unsigned)sizeof(synlink))) == NULL)
+		return(0);
 	memset(lp, 0, sizeof(synlink));
 	lp->name	= strsave(name);
 	lp->lname	= lname;
@@ -1326,7 +1338,9 @@ syn_loadtag(BUF *buf, char_u *fname)
 		if (*p == NUL)
 			break;
 		*p++ = '\0';
-		r = malloc(sizeof(syntax));
+		/* the same as the strsave() below: skip this tag, keep the rest */
+		if ((r = (syntax *)alloc((unsigned)sizeof(syntax))) == NULL)
+			continue;
 		memset(r, 0, sizeof(syntax));
 		r->name		= lname;
 		r->color	= color;
@@ -1418,7 +1432,10 @@ syn_crchar(BUF *buf, char_u *name)
 		}
 		w = w->next;
 	}
-	r = malloc(sizeof(syntax));
+	/* 0, so that alloc()'s "Out of memory" is the message the user is left
+	 * with rather than "Invalid argument" over the top of it */
+	if ((r = (syntax *)alloc((unsigned)sizeof(syntax))) == NULL)
+		return(0);
 	memset(r, 0, sizeof(syntax));
 	r->name		= lname;
 	r->color	= color;
@@ -1688,7 +1705,16 @@ syn_add(BUF *buf, char_u *reg)
 	reg_magic = TRUE;
 	while (*p)
 	{
-		r = malloc(sizeof(syntax));
+		/*
+		 * 0 and not 2: 2 puts "Invalid string" over the "Out of memory"
+		 * alloc() has just printed, and the pattern was not invalid. Rules
+		 * already added by this command stay.
+		 */
+		if ((r = (syntax *)alloc((unsigned)sizeof(syntax))) == NULL)
+		{
+			p_magic = magic;
+			return(0);
+		}
 		memset(r, 0, sizeof(syntax));
 		r->name		= lname;
 		r->color	= color;
