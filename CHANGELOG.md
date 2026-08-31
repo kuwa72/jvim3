@@ -10,6 +10,49 @@ repository and would drift within three releases.
 
 ## Unreleased
 
+### Added
+
+- `scripts/build-unix.sh asan` and `scripts/build-unix.sh ubsan` build with
+  AddressSanitizer or UndefinedBehaviorSanitizer and then run the same suites
+  the `test` target does, and CI runs both on every push. ASan had only ever
+  been used through a line of environment variables typed from memory, and
+  UBSan had never been run at all. Both targets point the sanitizer at
+  `log_path` and collect the reports afterwards: every suite sends the editor's
+  stderr to `/dev/null`, because what they compare is the bytes it writes, so a
+  report would otherwise vanish with it — and UBSan carries on after a finding
+  and exits 0, which would have made the job green while it was finding things.
+
+### Fixed
+
+- Two pieces of undefined behaviour in `src/memline.c`, found by the first UBSan
+  run and reported 244 times over one pass of the test suites, with all 202
+  cases passing throughout. `DB_MARKED` shifted a plain `int` into its own sign
+  bit (`1 << 31`) on every line fetched for the screen and every line appended;
+  it is `(unsigned)1` now, as it is in Vim's own memline.c. And `ml_add_stack()`
+  called `memmove()` with a NULL source and a length of zero the first time a
+  buffer's stack grew — permitted-looking, undefined in fact, and enough licence
+  for a compiler to drop a NULL check elsewhere.
+
+### 日本語
+
+- `scripts/build-unix.sh asan` と `scripts/build-unix.sh ubsan` を追加しました。
+  AddressSanitizer / UndefinedBehaviorSanitizer つきでビルドし、`test` と同じ
+  スイートを実行します。CI でも push ごとに両方走ります。ASan はこれまで
+  記憶を頼りに環境変数を並べて実行するだけのもので、UBSan は一度も走らせて
+  いませんでした。どちらもサニタイザの出力を `log_path` でファイルに落として
+  後から集めます。各スイートはエディタが書いたバイト列を比較するもので
+  stderr は `/dev/null` に捨てているため、そのままではレポートも一緒に消える
+  うえ、UBSan は検出しても実行を続けて 0 で終わるので、ジョブが緑のまま何かを
+  見つけ続けることになります。
+- `src/memline.c` の未定義動作 2 件を修正しました。初回の UBSan 実行で、
+  テスト 1 周につき 244 回報告されたものです（その間 202 ケースはすべて
+  通っていました）。`DB_MARKED` が `int` を符号ビットまでシフトして
+  (`1 << 31`) おり、画面に表示する行の取得と行の追加のたびに踏んでいました。
+  Vim 本家の memline.c と同じく `(unsigned)1` にしました。もう 1 件は
+  `ml_add_stack()` で、バッファのスタックを最初に伸ばすときに `memmove()` を
+  NULL・長さ 0 で呼んでいたものです。問題なさそうに見えて未定義であり、
+  コンパイラが別の場所の NULL チェックを削る根拠になります。
+
 ## 1.2.0 — 2026-08-28
 
 ### Added

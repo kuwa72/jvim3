@@ -4,8 +4,10 @@
 
 ```sh
 ./scripts/build-unix.sh          # build src/jvim3
-./scripts/build-unix.sh test     # build, then run the three test suites
+./scripts/build-unix.sh test     # build, then run the test suites
 ./scripts/build-unix.sh strict   # build with the warnings CI refuses
+./scripts/build-unix.sh asan     # build with AddressSanitizer, then test
+./scripts/build-unix.sh ubsan    # build with UndefinedBehaviorSanitizer, then test
 ./scripts/build-unix.sh install  # build and install to PREFIX (default: /usr/local)
 ./scripts/build-unix.sh clean
 ```
@@ -143,8 +145,11 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 - Distribution hardening: `-D_FORTIFY_SOURCE=2 -Werror=format-security
   -fstack-protector-strong`
 - `/bin/sh` being dash
-- All 202 tests, and the same again under AddressSanitizer
-  (`OPT="-O1 -g -fsanitize=address" EXTRA_LIBS=-fsanitize=address`)
+- All 202 tests, and the same again under both sanitizers
+  (`./scripts/build-unix.sh asan`, `./scripts/build-unix.sh ubsan`; CI runs
+  both). Each points the sanitizer at `log_path` and collects the reports when
+  the suites are done, because the suites throw the editor's stderr away — and
+  UBSan keeps going after a finding and exits 0, so nothing else would notice.
 - `./scripts/build-unix.sh strict`, the `-Werror=` set CI refuses to build without
 - 64 bit: no `-Wpointer-to-int-cast` anywhere in the portable sources. The three
   `-Wint-to-pointer-cast` left are `long` values passed to `emsg2()` for a `%ld`,

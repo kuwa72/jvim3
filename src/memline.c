@@ -135,7 +135,13 @@ struct data_block
  * The mark has to be in this place to keep it with the correct line when other
  * lines are inserted or deleted.
  */
-#define DB_MARKED		(1 << ((sizeof(unsigned) * 8) - 1))
+/*
+ * (unsigned)1, not 1: db_index is unsigned, and shifting a plain int into its
+ * own sign bit is undefined. Every use of these two macros was a
+ * -fsanitize=undefined finding, 244 of them in one test run, while all the
+ * tests passed.
+ */
+#define DB_MARKED		((unsigned)1 << ((sizeof(unsigned) * 8) - 1))
 #define DB_INDEX_MASK	(~DB_MARKED)
 
 #define INDEX_SIZE	(sizeof(unsigned))		/* size of one db_index entry */
@@ -2230,7 +2236,15 @@ ml_add_stack(BUF *buf)
 		newstack = (IPTR *)alloc((unsigned)sizeof(IPTR) * (buf->b_ml.ml_stack_size + STACK_INCR));
 		if (newstack == NULL)
 			return -1;
-		memmove((char *)newstack, (char *)buf->b_ml.ml_stack, (size_t)top * sizeof(IPTR));
+		/*
+		 * The first time round ml_stack is NULL and top is 0. Copying nothing
+		 * from nowhere is still undefined -- memmove's source is declared
+		 * nonnull, and a compiler may take that as licence to drop a NULL
+		 * check somewhere else -- so do not make the call at all.
+		 */
+		if (top > 0)
+			memmove((char *)newstack, (char *)buf->b_ml.ml_stack,
+													(size_t)top * sizeof(IPTR));
 		free(buf->b_ml.ml_stack);
 		buf->b_ml.ml_stack = newstack;
 		buf->b_ml.ml_stack_size += STACK_INCR;
