@@ -7,7 +7,7 @@ welcome as English, in issues, pull requests and commit messages.
 
 ## What makes a change easy to take
 
-Two things:
+Three things:
 
 1. `./scripts/build-unix.sh test` passes — 202 cases, and they run in about a
    minute.
@@ -16,6 +16,12 @@ Two things:
    prototype, a missing return, an implicit `int`, an uninitialised variable —
    run before the push rather than after it. Several of those are only warnings
    under gcc and stop clang, which is what the FreeBSD job builds with.
+3. `./scripts/build-unix.sh asan` and `./scripts/build-unix.sh ubsan` pass. They
+   run the same cases against a build that stops on the errors a test cannot
+   see: a read one byte past a buffer changes nothing about what the editor
+   writes, so every case passes and the bug ships. Both are CI jobs, and both
+   collect their reports from `log_path` rather than from stderr, which the
+   suites discard.
 
 `-Wpointer-sign` warnings are expected and stay — the sources mix `char` and
 `unsigned char` deliberately (`char_u`), and there are 236 of them.

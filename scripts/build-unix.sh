@@ -4,8 +4,10 @@
 #
 #   scripts/build-unix.sh              build src/jvim3
 #   scripts/build-unix.sh clean
-#   scripts/build-unix.sh test         build, then run the three test suites
+#   scripts/build-unix.sh test         build, then run the test suites
 #   scripts/build-unix.sh strict       build with the warnings CI refuses
+#   scripts/build-unix.sh asan         build with AddressSanitizer, then test
+#   scripts/build-unix.sh ubsan        build with UndefinedBehaviorSanitizer, then test
 #   scripts/build-unix.sh install      build and install to PREFIX (default: /usr/local)
 #
 # src/makjunix.mak still expects you to uncomment three lines by hand for your
@@ -29,6 +31,26 @@ CC=${CC:-cc}
 EXTRA_CFLAGS=${EXTRA_CFLAGS:-}
 EXTRA_LIBS=${EXTRA_LIBS:-}
 PREFIX=${PREFIX:-/usr/local}
+
+# asan and ubsan are the test target with a sanitizer switched on. They are
+# here, rather than in a line of environment variables typed from memory, so
+# that what CI runs and what anybody can run before a push are the same command.
+#
+# The flags go into EXTRA_CFLAGS and EXTRA_LIBS and not into OPT, because the
+# little configure below compiles and links its probes with those two: a probe
+# built unlike the editor answers a question nobody asked. -O1 rather than -O2
+# because a sanitizer report is only useful if the frame it names is real.
+sanitize=
+case $target in
+asan)	sanitize=address ;;
+ubsan)	sanitize=undefined ;;
+esac
+if [ -n "$sanitize" ]; then
+	OPT=${OPT:--O1 -g}
+	EXTRA_CFLAGS="-fsanitize=$sanitize -fno-omit-frame-pointer $EXTRA_CFLAGS"
+	EXTRA_LIBS="-fsanitize=$sanitize $EXTRA_LIBS"
+	target=test
+fi
 
 # --- little configure ------------------------------------------------------
 # try_cc <flags> <source>   : does this compile?
@@ -222,7 +244,7 @@ all|test|strict|install)
 	fi
 	;;
 *)
-	echo "usage: $0 [all|test|strict|install|clean]" >&2
+	echo "usage: $0 [all|test|strict|asan|ubsan|install|clean]" >&2
 	exit 2
 	;;
 esac
@@ -258,6 +280,20 @@ fi
 
 if [ "$target" = test ]; then
 	rc=0
+	if [ -n "$sanitize" ]; then
+		# Every suite sends the editor's stderr to /dev/null -- they compare
+		# the bytes it writes, not what it says -- so a sanitizer report would
+		# go the same way and the run would look clean. log_path writes each
+		# report to a file instead, one per process, and they are collected
+		# below. detect_leaks=0 because this editor exits without freeing, on
+		# purpose, and LeakSanitizer would bury the real findings.
+		sanlog=${TMPDIR:-/tmp}/jvim-$sanitize.$$
+		rm -rf "$sanlog"
+		mkdir -p "$sanlog" || exit 1
+		ASAN_OPTIONS="detect_leaks=0:log_path=$sanlog/report"
+		UBSAN_OPTIONS="print_stacktrace=1:log_path=$sanlog/report"
+		export ASAN_OPTIONS UBSAN_OPTIONS
+	fi
 	echo
 	"$root/scripts/test-encoding.sh" "$src/jvim3" || rc=1
 	echo
@@ -266,5 +302,16 @@ if [ "$target" = test ]; then
 	"$root/scripts/test-syntax.sh" "$src/jvim3" || rc=1
 	echo
 	"$root/scripts/test-sgr.sh" "$src/jvim3" || rc=1
+	if [ -n "$sanitize" ]; then
+		echo
+		if [ -n "$(find "$sanlog" -name 'report.*' -print -quit)" ]; then
+			echo "$sanitize reported:"
+			cat "$sanlog"/report.*
+			rc=1
+		else
+			echo "$sanitize: nothing reported"
+		fi
+		rm -rf "$sanlog"
+	fi
 	exit $rc
 fi

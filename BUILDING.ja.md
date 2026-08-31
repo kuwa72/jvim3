@@ -17,6 +17,8 @@
 ./scripts/build-unix.sh          # src/jvim3 をビルド
 ./scripts/build-unix.sh test     # ビルドしてテスト 202 ケースを実行
 ./scripts/build-unix.sh strict   # CI がエラー扱いする警告つきでビルド
+./scripts/build-unix.sh asan     # AddressSanitizer つきでビルドしてテスト
+./scripts/build-unix.sh ubsan    # UndefinedBehaviorSanitizer つきでビルドしてテスト
 ./scripts/build-unix.sh install  # PREFIX (既定: /usr/local) へビルド＆インストール
 ./scripts/build-unix.sh clean
 ```
@@ -272,8 +274,9 @@ BSD は Linux ランナー上の VM で動きます。数分で起動する既�
 あります。要点は次のとおりです。
 
 - Linux (Ubuntu 24.04 / gcc)、FreeBSD (clang)、NetBSD、OpenBSD、DragonFly で
-  202 テスト全件通過。Linux ではエンコーディングの 48 ケースを
-  AddressSanitizer 下でも通しています。
+  202 テスト全件通過。Linux では AddressSanitizer と
+  UndefinedBehaviorSanitizer の下でも全件通しており、CI でも毎回走ります
+  (`./scripts/build-unix.sh asan` / `ubsan`)。
 - macOS は 2026-08 まで CI で通っていましたが、今は対象ではありません。
 - 実機・実端末・本物の IME での確認はしていません。すべてシリアルコンソール、
   pty、CI ランナー上です。

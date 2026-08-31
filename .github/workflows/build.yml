@@ -63,7 +63,7 @@ jobs:
           sudo apt-get -o DPkg::Lock::Timeout=300 update
           sudo apt-get -o DPkg::Lock::Timeout=300 install -y --no-install-recommends \
             libncurses-dev
-      - name: Build and run both test suites
+      - name: Build and run all the test suites
         run: ./scripts/build-unix.sh test
       # The classes of warning that actually break things: an implicit
       # declaration truncates a returned pointer on 64 bit, a mismatched
@@ -78,6 +78,46 @@ jobs:
         run: |
           ./scripts/build-unix.sh clean
           ./scripts/build-unix.sh strict
+
+  # The sanitizers, one job each so that a failure says which. Both run the same
+  # suites the job above does, against a build that stops on the memory errors a
+  # test cannot see: a read one byte past a buffer changes nothing about what the
+  # editor writes, so every suite passes and the bug ships. ASan in this shape
+  # has already found two overlapping strcpy() in DoOneCmd().
+  #
+  # The suites send the editor's stderr to /dev/null, so build-unix.sh points
+  # both sanitizers at log_path and collects the files afterwards. Without that
+  # the reports go where the stderr goes and the job is decoration -- UBSan in
+  # particular carries on after a finding and exits 0.
+  asan:
+    name: AddressSanitizer
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install the terminal library
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get -o DPkg::Lock::Timeout=300 update
+          sudo apt-get -o DPkg::Lock::Timeout=300 install -y --no-install-recommends \
+            libncurses-dev
+      - run: ./scripts/build-unix.sh asan
+
+  ubsan:
+    name: UndefinedBehaviorSanitizer
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install the terminal library
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get -o DPkg::Lock::Timeout=300 update
+          sudo apt-get -o DPkg::Lock::Timeout=300 install -y --no-install-recommends \
+            libncurses-dev
+      - run: ./scripts/build-unix.sh ubsan
 
 # No macOS job. It is not a target anybody here can try by hand, so a failure
 # there is a puzzle nobody is in a position to solve -- and one duly turned up:
@@ -192,7 +232,7 @@ jobs:
 
   release:
     name: Publish the release
-    needs: [docs, unix, freebsd, netbsd, openbsd, dragonfly, windows]
+    needs: [docs, unix, asan, ubsan, freebsd, netbsd, openbsd, dragonfly, windows]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:

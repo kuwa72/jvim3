@@ -138,6 +138,10 @@ else
 		openbsd)	oses="$oses OpenBSD" ;;
 		dragonfly)	oses="$oses DragonFly" ;;
 		windows|docs|release)	;;
+		# Not systems: they run on the Linux runner and say something about the
+		# build rather than about a platform, so they gate a release without
+		# adding to the count of operating systems the documents claim.
+		asan|ubsan)	;;
 		*)			bad ".github/workflows/build.yml: job '$job' has no name in $0" ;;
 		esac
 	done
