@@ -142,6 +142,77 @@ static void sig_winch __ARGS((int, int, struct sigcontext *));
 # endif
 #endif
 
+/*
+ * The signals that mean the editor is not going to carry on: a fault, or the
+ * session going away. Nothing here was caught before, so a crash -- or an ssh
+ * session closing, which sends SIGHUP and is not a crash at all -- took
+ * whatever had not reached the swap file with it, left the terminal in raw
+ * mode, and said nothing about "-r". Windows has had src/w32crash.c since
+ * 1.0.0; this is the same idea for a Unix, minus the addresses, which a core
+ * file has anyway.
+ *
+ * The editor cannot keep running through any of these. What it can do is put
+ * the work on disk and say where it is.
+ *
+ * SIGSEGV and SIGBUS are left alone under AddressSanitizer: it installs its own
+ * handler for those and its report is worth more than this message, and
+ * scripts/build-unix.sh asan is a CI job.
+ */
+/*
+ * gcc says __SANITIZE_ADDRESS__; clang says __has_feature(address_sanitizer)
+ * and nothing else, and clang is the default cc on the BSDs, so a
+ * "build-unix.sh asan" there would otherwise have this handler swallow the
+ * fault that ASan was built to report.
+ */
+#if defined(__SANITIZE_ADDRESS__)
+# define JVIM_ASAN
+#elif defined(__has_feature)
+# if __has_feature(address_sanitizer)
+#  define JVIM_ASAN
+# endif
+#endif
+
+static struct
+{
+	int			sig;
+	char	   *name;
+} deadly_signals[] =
+{
+#ifdef SIGHUP
+	{SIGHUP,	"HUP: the terminal or the session went away"},
+#endif
+#ifdef SIGQUIT
+	{SIGQUIT,	"QUIT"},
+#endif
+#ifdef SIGILL
+	{SIGILL,	"ILL: an illegal instruction"},
+#endif
+#ifdef SIGTRAP
+	{SIGTRAP,	"TRAP"},
+#endif
+#ifdef SIGABRT
+	{SIGABRT,	"ABRT: something inside gave up"},
+#endif
+#ifdef SIGFPE
+	{SIGFPE,	"FPE: an arithmetic fault"},
+#endif
+#ifndef JVIM_ASAN
+# ifdef SIGBUS
+	{SIGBUS,	"BUS: a bad memory access"},
+# endif
+# ifdef SIGSEGV
+	{SIGSEGV,	"SEGV: a bad memory access"},
+# endif
+#endif
+#ifdef SIGTERM
+	{SIGTERM,	"TERM: something asked this process to stop"},
+#endif
+	{0,			NULL}
+};
+
+static void deathtrap __ARGS((int));
+static void catch_signals __ARGS((void));
+
 static int do_resize = FALSE;
 static char_u *oldtitle = NULL;
 static char_u *oldicon = NULL;
@@ -301,6 +372,81 @@ sig_winch(int sig, int code, struct sigcontext *scp)
 }
 
 /*
+ * A signal the editor cannot carry on through. Put the terminal back, write
+ * the swap files out, say where they are, and go.
+ *
+ * Nothing here allocates, and nothing goes back to where the fault happened.
+ * ml_preserve() and not ml_close_all(): closing a memfile deletes its swap
+ * file, which is the one thing that must not happen here -- what is written is
+ * what "jvim3 -r" reads back.
+ */
+	static void
+deathtrap(int sig)
+{
+	static int		entered = FALSE;
+	BUF			   *buf;
+	int				i;
+	int				preserved = FALSE;
+	char		   *name = "";
+
+	/*
+	 * Twice means the preserving itself faulted. Leave at once rather than go
+	 * round again: the swap files are as good as they are going to get.
+	 */
+	if (entered)
+		_exit(8);
+	entered = TRUE;
+
+	for (i = 0; deadly_signals[i].name != NULL; i++)
+		if (deadly_signals[i].sig == sig)
+			name = deadly_signals[i].name;
+
+	/*
+	 * The terminal first, or the user is left holding a shell in raw mode with
+	 * no cursor, which looks like a second failure.
+	 */
+	settmode(0);
+	stoptermcap();
+	flushbuf();
+
+	fprintf(stderr, "\r\njvim3: caught signal %d, %s\r\n", sig, name);
+
+	for (buf = firstbuf; buf != NULL; buf = buf->b_next)
+	{
+		if (buf->b_ml.ml_mfp == NULL || buf->b_ml.ml_mfp->mf_fname == NULL
+														|| !buf->b_changed)
+			continue;
+		ml_preserve(buf, FALSE);
+		fprintf(stderr, "jvim3: kept the changes to %s in %s\r\n",
+				buf->b_filename == NULL ? "a file with no name"
+										: (char *)buf->b_filename,
+				(char *)buf->b_ml.ml_mfp->mf_fname);
+		preserved = TRUE;
+	}
+	if (preserved)
+		fprintf(stderr,
+			"jvim3: read them back with  jvim3 -r <file>  and delete the swap file after\r\n");
+	else
+		fprintf(stderr, "jvim3: nothing was unsaved.\r\n");
+
+	_exit(sig == SIGTERM || sig == SIGHUP ? 1 : 2);
+}
+
+/*
+ * Called once, from mch_windinit(). signal() and not sigaction(): it is what
+ * the rest of this file uses, and every one of these handlers ends in _exit(),
+ * so the System V "reset to SIG_DFL on delivery" difference cannot matter.
+ */
+	static void
+catch_signals(void)
+{
+	int		i;
+
+	for (i = 0; deadly_signals[i].name != NULL; i++)
+		signal(deadly_signals[i].sig, deathtrap);
+}
+
+/*
  * If the machine has job control, use it to suspend the program,
  * otherwise fake it by starting a new shell.
  */
@@ -332,6 +478,7 @@ mch_windinit(void)
 #if defined(SIGWINCH)
 	signal(SIGWINCH, (void (*)(int))sig_winch);
 #endif
+	catch_signals();
 }
 
 /*

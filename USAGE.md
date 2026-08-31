@@ -623,4 +623,5 @@ begin with.
 | **Japanese input drops or delays characters** | Console mode on Windows. Use `jvim32w.exe`. |
 | **Cursor keys insert letters, or the screen is wrong** | Unix: `$TERM`. The build links a curses/termcap library if it finds one and otherwise uses its own compiled-in entries, which cover fewer terminals; `./scripts/build-unix.sh` prints which. |
 | **It crashed** | Windows writes a report to `%LOCALAPPDATA%\jvim3\`. `scripts/resolve-crash.sh <report.log>` turns the addresses in it into function names and line numbers, given the matching `.debug` file. Please attach it to an issue. |
+| **It crashed, or the connection dropped, on Unix** | It says which signal it caught, writes the swap files out and names them. `jvim3 -r <file>` reads your work back; delete the `.swp` afterwards. Please quote the line it printed in an issue. A closed terminal or a dropped ssh session (SIGHUP) is the same path, and not a crash. |
 | **Something else** | <https://github.com/kuwa72/jvim3/issues>. What you typed, what happened, which build, and `:set jm? jc?` if it involves text. |

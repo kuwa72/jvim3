@@ -47,17 +47,20 @@ the `:!` filter and wildcard expansion), `scripts/test-syntax.sh` (75 cases
 — what the rules in `syntax/` actually colour, read back with `:syntax dump`,
 one for every file in `syntax/`), `scripts/test-sgr.sh` (9 cases — the
 escapes the terminal is actually sent, which is the only check of the painter
-rather than the rules) and `scripts/test-hostile.sh` (15 cases — input nobody
+rather than the rules) and `scripts/test-hostile.sh` (17 cases — input nobody
 intended: 2 MB on one line, every byte value there is, a multi-byte sequence cut
 in half by the end of the file, a regexp deep enough to exhaust a recursive
-matcher). 223 cases in all.
+matcher, and the session dropping mid-edit). 225 cases in all.
 
 The hostile suite is the one that can report a case as failed without anything
-having crashed: three of its cases are KNOWN-FAIL because the editor does not
-finish them, which is the only way a test can say "this became too slow to use".
-Its input files come from `scripts/hostilegen.c` rather than from awk or dd,
-because five operating systems run this and their awks disagree about a zero
-byte.
+having crashed: a case there is KNOWN-FAIL when the editor does not finish it,
+which is the only way a test can say "this became too slow to use". Its input
+files come from `scripts/hostilegen.c` rather than from awk or dd, because five
+operating systems run this and their awks disagree about a zero byte. Its last
+two cases have `ptyrun` send the editor a SIGHUP through `PTYRUN_SIGNAL` and
+then reopen the file with `-r`: a command started in the background cannot have
+the pty as its controlling terminal, so that is the only way to test what
+happens when the session goes away.
 
 They need bash and a C compiler: they build `scripts/ptyrun.c` to give jvim a
 terminal. That used to be `script(1)`, which is a different program on Linux,
@@ -155,7 +158,7 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 - Distribution hardening: `-D_FORTIFY_SOURCE=2 -Werror=format-security
   -fstack-protector-strong`
 - `/bin/sh` being dash
-- All 223 tests, and the same again under both sanitizers
+- All 225 tests, and the same again under both sanitizers
   (`./scripts/build-unix.sh asan`, `./scripts/build-unix.sh ubsan`; CI runs
   both). Each points the sanitizer at `log_path` and collects the reports when
   the suites are done, because the suites throw the editor's stderr away — and
@@ -169,7 +172,7 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 Verified on FreeBSD 14.3-RELEASE-p16, clang 19.1.7, amd64, in the QEMU guest
 `scripts/test-bsd-docker.sh` builds:
 
-- All 223 tests
+- All 225 tests
 - `./scripts/build-unix.sh strict` with clang 19, which is what the FreeBSD CI
   job runs after the tests
 - `-DTERMCAP` against base ncurses, found as `-ltinfo`
@@ -180,7 +183,7 @@ Verified on FreeBSD 14.3-RELEASE-p16, clang 19.1.7, amd64, in the QEMU guest
 
 Verified on NetBSD 10.1, gcc 10.5.0, amd64, the same way:
 
-- All 223 tests, and `-DTERMCAP` against base curses (found as `-lcurses`),
+- All 225 tests, and `-DTERMCAP` against base curses (found as `-lcurses`),
   with no warnings
 
 Verified in CI, on whatever release the VM images carry — FreeBSD 15.1,

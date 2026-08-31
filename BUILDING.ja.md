@@ -15,7 +15,7 @@
 
 ```sh
 ./scripts/build-unix.sh          # src/jvim3 をビルド
-./scripts/build-unix.sh test     # ビルドしてテスト 223 ケースを実行
+./scripts/build-unix.sh test     # ビルドしてテスト 225 ケースを実行
 ./scripts/build-unix.sh strict   # CI がエラー扱いする警告つきでビルド
 ./scripts/build-unix.sh asan     # AddressSanitizer つきでビルドしてテスト
 ./scripts/build-unix.sh ubsan    # UndefinedBehaviorSanitizer つきでビルドしてテスト
@@ -196,7 +196,7 @@ Windows でも WoW64 で問題なく動きます。ポインタが `int`/`long` 
 ./scripts/test-editing.sh  src/jvim3   # 76 ケース
 ./scripts/test-syntax.sh   src/jvim3   # 75 ケース
 ./scripts/test-sgr.sh      src/jvim3   # 9 ケース
-./scripts/test-hostile.sh  src/jvim3   # 15 ケース
+./scripts/test-hostile.sh  src/jvim3   # 17 ケース
 ```
 
 `test-encoding.sh` は漢字・UTF-8・マルチバイト編集を、`test-editing.sh` は移動、
@@ -205,15 +205,18 @@ Windows でも WoW64 で問題なく動きます。ポインタが `int`/`long` 
 何を色付けするかを `:syntax dump` 越しに見ます（`syntax/` の全ファイルに 1 つ
 以上）。`scripts/test-sgr.sh` は端末に実際に送られるエスケープを見ます — ルール
 ではなく描画側を見る唯一のスイートです。`scripts/test-hostile.sh` は誰も意図して
-いない入力を与えます — 1 行 2 MB、あらゆるバイト値、ファイル末尾で切れた
-マルチバイト列、再帰的なマッチャを使い切るほど入れ子にした正規表現。合わせて
-223 ケースです。
+いない入力と終わり方を与えます — 1 行 2 MB、あらゆるバイト値、ファイル末尾で
+切れたマルチバイト列、再帰的なマッチャを使い切るほど入れ子にした正規表現、
+編集中にセッションが切れる。合わせて 225 ケースです。
 
 敵性入力スイートは、何もクラッシュしていないのにケースを失敗として報告できる
-唯一のスイートです。KNOWN-FAIL が 3 件あり、エディタがそれを終えられない
-ことを意味します。「使えないほど遅くなった」をテストが言える唯一の形です。
-入力ファイルは awk や dd ではなく `scripts/hostilegen.c` が作ります。5 つの OS で
-走るのに、それぞれの awk がゼロバイトの扱いで一致しないからです。
+唯一のスイートです。エディタがそのケースを終えられないとき KNOWN-FAIL になり、
+「使えないほど遅くなった」をテストが言える唯一の形です。入力ファイルは awk や
+dd ではなく `scripts/hostilegen.c` が作ります。5 つの OS で走るのに、それぞれの
+awk がゼロバイトの扱いで一致しないからです。最後の 2 件は `PTYRUN_SIGNAL`
+経由で `ptyrun` にエディタへ SIGHUP を送らせ、そのあと `-r` で開き直します。
+バックグラウンドで起動したコマンドは pty を制御端末にできないので、セッションが
+切れたときの挙動を試すにはこれしかありません。
 
 必要なのは bash と C コンパイラです。jvim に端末を与えるために `scripts/ptyrun.c`
 をビルドします。以前は `script(1)` を使っていましたが、あれは Linux と NetBSD と
@@ -284,7 +287,7 @@ BSD は Linux ランナー上の VM で動きます。数分で起動する既�
 あります。要点は次のとおりです。
 
 - Linux (Ubuntu 24.04 / gcc)、FreeBSD (clang)、NetBSD、OpenBSD、DragonFly で
-  223 テスト全件通過。Linux では AddressSanitizer と
+  225 テスト全件通過。Linux では AddressSanitizer と
   UndefinedBehaviorSanitizer の下でも全件通しており、CI でも毎回走ります
   (`./scripts/build-unix.sh asan` / `ubsan`)。
 - macOS は 2026-08 まで CI で通っていましたが、今は対象ではありません。
