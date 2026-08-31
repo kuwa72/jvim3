@@ -282,12 +282,18 @@ case_ 'all 256 byte values: text mode takes an append' ok \
 
 # --------------------------------------------------------------- broken UTF-8
 #
-# KNOWN-FAIL, and the one worth reading. A file that is UTF-8 apart from a few
-# bytes that are not comes back with those bytes rewritten as "?" -- and the
-# valid character in front of them damaged as well, while a sequence truncated
-# by the end of the file has its high bit stripped and turns into an ASCII
-# letter. -b round trips the same file exactly, so what is lost is lost in the
-# text mode conversion. #30.
+# A KNOWN-FAIL that is staying: it asks for byte-for-byte preservation of bytes
+# that are not characters, and kanjiconvsfrom() says why it will not do that --
+# "replacing anything malformed so the buffer only ever holds valid UTF-8". Every
+# width calculation, cursor motion and utf_len() in the tree leans on that
+# invariant. What a file like this loses is written down in USAGE.md's known
+# limits, along with the answer, which is -b: the twin case below round trips the
+# same file exactly, today, and has to keep doing so. #30.
+#
+# In a file this broken -- half of it is not UTF-8 -- the valid character before
+# a bad byte is damaged too, and a sequence cut off by the end of the file comes
+# back as an ASCII letter. In a file that is mostly UTF-8 with one bad byte in
+# it, everything valid survives; test-encoding.sh has that case.
 ENV_=LANG=ja_JP.UTF-8 case_ 'broken UTF-8: written back as it came in' knownfail \
 	'badutf' 'same' \
 	':w! %s/out\r:q!\r'

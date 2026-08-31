@@ -600,6 +600,15 @@ begin with.
   in. Writing UCS-2 is direct and lossless. Convert the file to UTF-8 first.
 - **Saving to EUC-JP, Shift-JIS or ISO-2022-JP keeps only what those encodings
   have.** Inherent, not a bug. UTF-8 and UCS-2 round trip byte for byte.
+- **A byte that is not valid text is replaced by `?` on the way in, and saving
+  writes the `?`.** The buffer holds only valid UTF-8 — every width
+  calculation, cursor motion and character length in the editor is built on
+  that — so bytes that are not characters cannot be carried through it. In a
+  file that is mostly text with one bad byte, that byte is all that is lost. In
+  a file that is mostly not text, the character before a bad byte can go with
+  it, and a multi-byte sequence cut off by the end of the file comes back as an
+  ASCII letter. **`jvim3 -b file` round trips any file byte for byte**, and is
+  the answer whenever the bytes matter more than the text.
 - **Japanese input in console mode is unreliable on Windows** (see
   [Japanese input](#japanese-input)), and was in 2002 too. Use the GUI.
 - **A colour scheme file is read by a fixed set of directives, not a

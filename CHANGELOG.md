@@ -49,7 +49,11 @@ repository and would drift within three releases.
   exits with are both collected. It is the only way to test what the editor does
   when the session goes away — a command started in the background cannot have
   the pty as its controlling terminal, and the editor will not start without
-  one. 225 cases in all.
+  one.
+- Two cases in `scripts/test-encoding.sh` for autodetection where the file is
+  not perfectly one thing: a UTF-8 file with one byte that is not, and a
+  Shift-JIS file that has to stay Shift-JIS. They pin what happens today rather
+  than fixing anything; see the note below. 227 cases in all.
 - `scripts/build-unix.sh asan` and `scripts/build-unix.sh ubsan` build with
   AddressSanitizer or UndefinedBehaviorSanitizer and then run the same suites
   the `test` target does, and CI runs both on every push. ASan had only ever
@@ -107,13 +111,20 @@ repository and would drift within three releases.
 ### Known, and now written down
 
 The hostile suite arrived with three cases the editor does not pass. Two of them
-are the `:s` and `>>` fixes above. The last is an open issue rather than
-silence:
+are the `:s` and `>>` fixes above. The third turned out not to be a bug, and is
+written into the known limits instead (#30):
 
-- A file that is UTF-8 apart from a few bytes that are not comes back with those
-  bytes rewritten as `?`, the valid character in front of them damaged, and a
-  sequence truncated by the end of the file turned into an ASCII letter. `-b`
-  round trips the same file exactly (#30).
+- **A byte that is not valid text is replaced by `?` on the way in, and saving
+  writes the `?`.** The buffer holds only valid UTF-8, and every width
+  calculation, cursor motion and character length in the editor is built on
+  that, so bytes that are not characters cannot be carried through it. In a file
+  that is mostly text with one bad byte, that byte is all that is lost — there
+  is a case for that in `test-encoding.sh` now. In a file that is mostly not
+  text, the character before a bad byte can go with it, and a sequence cut off
+  by the end of the file comes back as an ASCII letter. `-b` round trips any
+  file byte for byte and is the answer when the bytes matter more than the text;
+  the hostile suite's KNOWN-FAIL and its passing `-b` twin are the two halves of
+  that, and the KNOWN-FAIL stays.
 
 ### 日本語
 
@@ -154,13 +165,25 @@ silence:
   続けるので、コマンドが終わる際に出力した内容と終了ステータスの両方が
   取れます。セッションが切れたときのエディタの挙動を試す唯一の方法です
   （バックグラウンドで起動したコマンドは pty を制御端末にできず、エディタは
-  制御端末なしでは起動しません）。合わせて 225 ケースになりました。
+  制御端末なしでは起動しません）。
+- `scripts/test-encoding.sh` にケースを 2 件追加しました。ファイルが完全に
+  1 つの符号ではない場合の自動判別で、不正なバイトが 1 個ある UTF-8 ファイルと、
+  Shift-JIS のままであるべき Shift-JIS ファイルです。何かを直したのではなく、
+  現在の挙動を固定するものです（下記の注記を参照）。合わせて 227 ケースに
+  なりました。
 - 敵性入力スイートは、エディタが通らない 3 件を持って入りました。うち 2 件は
-  下記の `:s` と `>>` の修正です。残る 1 件は黙って飛ばすのではなく issue に
-  してあります。
-  UTF-8 のファイルに不正なバイトが数個あると、そのバイトが `?` に
-  書き換えられ、直前の正しい文字まで壊れ、ファイル末尾で切れたシーケンスは
-  ASCII 文字に変わる（`-b` なら同じファイルが完全に往復する、#30）。
+  下記の `:s` と `>>` の修正です。残る 1 件は調べた結果バグではなく、既知の
+  制限として書き下しました (#30)。**テキストとして正しくないバイトは読み込み時に
+  `?` に置き換えられ、保存するとその `?` が書かれます。** バッファが持つのは
+  妥当な UTF-8 だけで、幅の計算・カーソル移動・文字長のすべてがその前提の上に
+  あるため、文字ではないバイトをそのまま通すことはできません。ほぼテキストの
+  ファイルに不正なバイトが 1 個ある場合、失われるのはそのバイトだけです
+  （`test-encoding.sh` にケースを追加しました）。ほぼテキストでないファイルでは、
+  直前の文字まで一緒に失われることがあり、ファイル末尾で切れたシーケンスは
+  ASCII 文字になります。バイトのほうが重要なときの答えは `-b` で、どんな
+  ファイルでもバイト単位で往復します。敵性入力スイートの KNOWN-FAIL と、
+  それに対応して通っている `-b` 版のケースがその両面で、KNOWN-FAIL は
+  残します。
 - `scripts/build-unix.sh asan` と `scripts/build-unix.sh ubsan` を追加しました。
   AddressSanitizer / UndefinedBehaviorSanitizer つきでビルドし、`test` と同じ
   スイートを実行します。CI でも push ごとに両方走ります。ASan はこれまで
