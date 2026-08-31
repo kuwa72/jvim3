@@ -15,7 +15,7 @@
 
 ```sh
 ./scripts/build-unix.sh          # src/jvim3 をビルド
-./scripts/build-unix.sh test     # ビルドしてテスト 219 ケースを実行
+./scripts/build-unix.sh test     # ビルドしてテスト 221 ケースを実行
 ./scripts/build-unix.sh strict   # CI がエラー扱いする警告つきでビルド
 ./scripts/build-unix.sh asan     # AddressSanitizer つきでビルドしてテスト
 ./scripts/build-unix.sh ubsan    # UndefinedBehaviorSanitizer つきでビルドしてテスト
@@ -194,7 +194,7 @@ Windows でも WoW64 で問題なく動きます。ポインタが `int`/`long` 
 ./scripts/build-unix.sh test           # 5 つのスイート
 ./scripts/test-encoding.sh src/jvim3   # 48 ケース
 ./scripts/test-editing.sh  src/jvim3   # 74 ケース
-./scripts/test-syntax.sh   src/jvim3   # 73 ケース
+./scripts/test-syntax.sh   src/jvim3   # 75 ケース
 ./scripts/test-sgr.sh      src/jvim3   # 9 ケース
 ./scripts/test-hostile.sh  src/jvim3   # 15 ケース
 ```
@@ -207,7 +207,7 @@ Windows でも WoW64 で問題なく動きます。ポインタが `int`/`long` 
 ではなく描画側を見る唯一のスイートです。`scripts/test-hostile.sh` は誰も意図して
 いない入力を与えます — 1 行 2 MB、あらゆるバイト値、ファイル末尾で切れた
 マルチバイト列、再帰的なマッチャを使い切るほど入れ子にした正規表現。合わせて
-219 ケースです。
+221 ケースです。
 
 敵性入力スイートは、何もクラッシュしていないのにケースを失敗として報告できる
 唯一のスイートです。KNOWN-FAIL が 3 件あり、エディタがそれを終えられない
@@ -284,7 +284,7 @@ BSD は Linux ランナー上の VM で動きます。数分で起動する既�
 あります。要点は次のとおりです。
 
 - Linux (Ubuntu 24.04 / gcc)、FreeBSD (clang)、NetBSD、OpenBSD、DragonFly で
-  219 テスト全件通過。Linux では AddressSanitizer と
+  221 テスト全件通過。Linux では AddressSanitizer と
   UndefinedBehaviorSanitizer の下でも全件通しており、CI でも毎回走ります
   (`./scripts/build-unix.sh asan` / `ubsan`)。
 - macOS は 2026-08 まで CI で通っていましたが、今は対象ではありません。

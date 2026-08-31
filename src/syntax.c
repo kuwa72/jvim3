@@ -1743,8 +1743,16 @@ syn_add(BUF *buf, char_u *reg)
 					strcpy(pattern, p);
 					if (l_word && l_type != TYPE_TAG)
 					{
+						/*
+						 * p, not nextp. p is this end pattern; nextp points
+						 * past it, at whatever follows, which is usually
+						 * nothing -- so a "w" pair rule used to compile its end
+						 * pattern as "\<\>" and the region never closed. The
+						 * two sibling sites, for the begin pattern and for a
+						 * word list, both use p.
+						 */
 						strcpy(pattern, "\\<");
-						strcat(pattern, nextp);
+						strcat(pattern, p);
 						strcat(pattern, "\\>");
 					}
 					if ((r->progend = syn_regcomp(l_ic, l_jic, pattern)) == NULL)
