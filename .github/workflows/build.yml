@@ -230,9 +230,59 @@ jobs:
           path: release/*.zip
           if-no-files-found: error
 
+  # The first job here that ever *runs* a Windows executable. Everything before
+  # it compiled them and tested the same portable sources on a Unix, so
+  # everything Windows-only -- the console it starts in, the shell it calls, the
+  # ANSI file APIs it opens names through -- was covered by nothing, and
+  # ":r !cmd" shipped broken twice.
+  #
+  # It takes the package the job above built rather than compiling its own: that
+  # is the binary the release page serves, and a runner-built one would be a
+  # different C runtime (BUILDING-mingw.md, "Which C runtime").
+  #
+  # scripts/test-winrun.sh drives the editor with -s, which cannot reach a
+  # cursor key or CTRL-@ -- script input returns from inchar() before the
+  # keyboard conversion. scripts/test-winkeys.sh covers those by typing for
+  # real, and needs a Windows machine with a compiler, so it stays a by-hand
+  # check.
+  windows-runtime:
+    name: Windows runtime tests (32 and 64 bit)
+    needs: [windows]
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          name: windows
+          path: release
+      - name: Unpack both packages
+        run: |
+          cd release
+          for z in *.zip; do
+            case $z in
+            *win32*) unzip -q -o "$z" -d win32 ;;
+            *win64*) unzip -q -o "$z" -d win64 ;;
+            esac
+          done
+          find . -name 'jvim*.exe' | sort
+      # Both architectures, and the console executable of each: -nw keeps it in
+      # the console, and a runner has no desktop session to put a window on.
+      - name: Run the suite against each
+        run: |
+          rc=0
+          for exe in $(find release -name 'jvim32.exe' -o -name 'jvim64.exe' | sort); do
+            echo "=== $exe"
+            ./scripts/test-winrun.sh "$exe" || rc=1
+          done
+          exit $rc
+
   release:
     name: Publish the release
-    needs: [docs, unix, asan, ubsan, freebsd, netbsd, openbsd, dragonfly, windows]
+    needs: [docs, unix, asan, ubsan, freebsd, netbsd, openbsd, dragonfly, windows, windows-runtime]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
