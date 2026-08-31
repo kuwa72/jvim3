@@ -12,6 +12,16 @@ repository and would drift within three releases.
 
 ### Added
 
+- `scripts/test-hostile.sh`, a fifth suite: 15 cases that hand the editor input
+  nobody intended, where the other four hand it input it is meant to accept.
+  2 MB on one line, every byte value there is, invalid and truncated UTF-8, a
+  1015 character pattern to `:syntax` (`pattern[1024]` on the stack is as close
+  as the command line can get to it), 60 nested groups in `:s`, a tabstop of two
+  billion, 200k lines through `:g`, and a colour scheme whose every token is
+  longer than the command line can hold. Twelve of them pass; three are
+  KNOWN-FAIL and are the issues below. Input files come from
+  `scripts/hostilegen.c` rather than from awk or dd, because five operating
+  systems run this and their awks disagree about a zero byte. 217 cases in all.
 - `scripts/build-unix.sh asan` and `scripts/build-unix.sh ubsan` build with
   AddressSanitizer or UndefinedBehaviorSanitizer and then run the same suites
   the `test` target does, and CI runs both on every push. ASan had only ever
@@ -25,16 +35,49 @@ repository and would drift within three releases.
 ### Fixed
 
 - Two pieces of undefined behaviour in `src/memline.c`, found by the first UBSan
-  run and reported 244 times over one pass of the test suites, with all 202
-  cases passing throughout. `DB_MARKED` shifted a plain `int` into its own sign
+  run and reported 244 times over one pass of the test suites, with every case
+  passing throughout. `DB_MARKED` shifted a plain `int` into its own sign
   bit (`1 << 31`) on every line fetched for the screen and every line appended;
   it is `(unsigned)1` now, as it is in Vim's own memline.c. And `ml_add_stack()`
   called `memmove()` with a NULL source and a length of zero the first time a
   buffer's stack grew — permitted-looking, undefined in fact, and enough licence
   for a compiler to drop a NULL check elsewhere.
 
+### Known, and now written down
+
+The hostile suite arrived with three cases the editor does not pass. They are
+open issues rather than silence:
+
+- `:s///g` on one 400k character line does not finish: the work is quadratic in
+  the length of the line (#22).
+- `>>` with `sw` set to ten million does not finish either, and unlike the
+  above cannot be interrupted, because the loop that builds the indent has no
+  `breakcheck()` in it (#29).
+- A file that is UTF-8 apart from a few bytes that are not comes back with those
+  bytes rewritten as `?`, the valid character in front of them damaged, and a
+  sequence truncated by the end of the file turned into an ASCII letter. `-b`
+  round trips the same file exactly (#30).
+
 ### 日本語
 
+- `scripts/test-hostile.sh` を追加しました。5 つ目のスイートで、誰も意図して
+  いない入力を与える 15 ケースです（他の 4 つは、受け付けるべき入力を与えます）。
+  1 行 2 MB、あらゆるバイト値、不正な・途中で切れた UTF-8、`:syntax` への
+  1015 文字のパターン（スタック上の `pattern[1024]` にコマンドラインから
+  最も近づける長さ）、`:s` の 60 重ネストしたグループ、タブ幅 20 億、
+  20 万行への `:g`、全トークンがコマンドラインに収まらない長さの配色スキーム。
+  12 件が通り、KNOWN-FAIL が 3 件、それぞれ下記の issue に対応します。
+  入力ファイルは awk や dd ではなく `scripts/hostilegen.c` が作ります。5 つの
+  OS で走るのに、それぞれの awk がゼロバイトの扱いで一致しないからです。
+  合わせて 217 ケースになりました。
+- 敵性入力スイートは、エディタが通らない 3 件を持って入りました。黙って
+  飛ばすのではなく、issue にしてあります。400k 文字 1 行への `:s///g` が
+  終わらない（行長に対して二次、#22）。`sw` を 1000 万にしての `>>` も
+  終わらず、しかもインデントを作るループに `breakcheck()` がないため
+  中断もできない（#29）。UTF-8 のファイルに不正なバイトが数個あると、その
+  バイトが `?` に書き換えられ、直前の正しい文字まで壊れ、ファイル末尾で切れた
+  シーケンスは ASCII 文字に変わる（`-b` なら同じファイルが完全に往復する、
+  #30）。
 - `scripts/build-unix.sh asan` と `scripts/build-unix.sh ubsan` を追加しました。
   AddressSanitizer / UndefinedBehaviorSanitizer つきでビルドし、`test` と同じ
   スイートを実行します。CI でも push ごとに両方走ります。ASan はこれまで
@@ -45,7 +88,7 @@ repository and would drift within three releases.
   うえ、UBSan は検出しても実行を続けて 0 で終わるので、ジョブが緑のまま何かを
   見つけ続けることになります。
 - `src/memline.c` の未定義動作 2 件を修正しました。初回の UBSan 実行で、
-  テスト 1 周につき 244 回報告されたものです（その間 202 ケースはすべて
+  テスト 1 周につき 244 回報告されたものです（その間、全ケースが
   通っていました）。`DB_MARKED` が `int` を符号ビットまでシフトして
   (`1 << 31`) おり、画面に表示する行の取得と行の追加のたびに踏んでいました。
   Vim 本家の memline.c と同じく `(unsigned)1` にしました。もう 1 件は
