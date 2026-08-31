@@ -275,12 +275,11 @@ case_ 'a tabstop of two billion' ok \
 	'lit:one\ntwo\n' 'same' \
 	':set ts=2000000000\r\r:w! %s/out\r:q!\r'
 
-# KNOWN-FAIL. set_indent() inserts the indent one character at a time with
-# inschar(), and each of those rewrites the line, so the work is quadratic in
-# the size of the indent: 1M takes 0.85s and 10M does not finish. Worse than
-# #22, because the loop has no breakcheck() in it and CTRL-C cannot stop it.
-# #30.
-T=10 case_ 'a shiftwidth of ten million, then >>' knownfail \
+# A 1.25 MB indent, built in one piece, in about a tenth of a second. It used to
+# be one inschar() per character with each of those rewriting the line, so this
+# did not finish at all -- and could not be interrupted either, the loop having
+# no breakcheck() in it. #29. The ten second cap is the assertion.
+T=10 case_ 'a shiftwidth of ten million, then >>' ok \
 	'lit:\tone\n' 'nonempty' \
 	':set sw=10000000\r>>:w! %s/out\r:q!\r'
 

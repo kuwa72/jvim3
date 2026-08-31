@@ -55,34 +55,72 @@ get_indent(void)
 set_indent(register int size, int delete)
 {
 	int				oldstate = State;
-	register int	c;
+	char_u		   *line;
+	char_u		   *newline;
+	int				ind = 0;			/* bytes of old indent to drop */
+	int				ntabs = 0;
+	int				nspaces;
+	long_u			taillen;
 
 	State = INSERT;		/* don't want REPLACE for State */
 	curwin->w_cursor.col = 0;
-	if (delete)							/* delete old indent */
-	{
-		while ((c = gchar_cursor()), iswhite(c))
-			(void)delchar(FALSE);
-	}
+
+	/*
+	 * The whole indent is built here and put in place with one ml_replace().
+	 * This used to call inschar() once per character of the new indent and
+	 * delchar() once per character of the old one, and each of those rewrites
+	 * the line, so the work was quadratic in the size of the indent: ":set
+	 * sw=1000000" then ">>" took 0.85 seconds and ten million did not finish at
+	 * all. Neither loop called breakcheck(), so it could not be interrupted
+	 * either, which is what made a mistyped ":set sw=" a lock-up rather than a
+	 * wait.
+	 */
+	if (size < 0)			/* nothing asks for this, and it used to spin */
+		size = 0;
+
+	line = ml_get(curwin->w_cursor.lnum);
+	if (delete)							/* drop the old indent */
+		while (iswhite(line[ind]))
+			++ind;
+
 	if (!curbuf->b_p_et)			/* if 'expandtab' is set, don't use TABs */
-		while (size >= (int)curbuf->b_p_ts)
-		{
-#ifdef KANJI
-			inschar1(TAB);
-#else
-			inschar(TAB);
-#endif
-			size -= (int)curbuf->b_p_ts;
-		}
-	while (size)
 	{
-#ifdef KANJI
-		inschar1(' ');
-#else
-		inschar(' ');
-#endif
-		--size;
+		ntabs = size / (int)curbuf->b_p_ts;
+		size -= ntabs * (int)curbuf->b_p_ts;
 	}
+	nspaces = size;
+
+	taillen = (long_u)STRLEN(line + ind);
+	newline = lalloc((long_u)ntabs + (long_u)nspaces + taillen + 1, TRUE);
+	if (newline == NULL)
+	{
+		State = oldstate;
+		return;
+	}
+	if (ntabs > 0)
+		memset((char *)newline, TAB, (size_t)ntabs);
+	if (nspaces > 0)
+		memset((char *)newline + ntabs, ' ', (size_t)nspaces);
+	memmove((char *)newline + ntabs + nspaces, (char *)line + ind,
+													(size_t)taillen + 1);
+
+#ifdef USE_SYNTAX
+	if (SYN_ON(curwin))
+		syn_inschar(line, 0);
+#endif
+	ml_replace(curwin->w_cursor.lnum, newline, FALSE);
+	/*
+	 * With 'revins' inschar() leaves the cursor where it is, so this did too;
+	 * otherwise it ends up on the first non-blank, which is what the comment
+	 * above this function has always promised.
+	 */
+	if (!p_ri)
+		curwin->w_cursor.col = (colnr_t)(ntabs + nspaces);
+#ifdef USE_SYNTAX
+	if (SYN_ON(curwin))
+		syn_inschar(newline, 0);
+#endif
+	CHANGED;
 	State = oldstate;
 }
 

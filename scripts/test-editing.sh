@@ -178,6 +178,11 @@ run "p line"                ok "yyp"       'a\nb\n'            'a\na\nb\n'
 run "P line"                ok "yyP"       'a\nb\n'            'a\na\nb\n'
 run ">> and <<"             ok ":set sw=4\r>>"  'a\n'          '    a\n'
 run "<< removes indent"     ok ":set sw=4\r<<"  '        a\n'  '    a\n'
+# An indent wider than a tabstop is tabs and then the remainder in spaces,
+# unless 'expandtab' says spaces throughout. Both come out of set_indent(),
+# which builds the whole indent at once.
+run ">> fills with tabs"     ok ":set sw=12\r>>"    'a\n'      '\t    a\n'
+run ">> with et uses spaces" ok ":set sw=12 et\r>>" 'a\n'      '            a\n'
 
 echo
 echo "registers, marks and undo:"
