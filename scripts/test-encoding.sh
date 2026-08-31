@@ -66,17 +66,25 @@ roundtrip() {
 	counted && return
 	local name=$1 expect=$2 opts=$3 data=$4
 	printf "$data" > "$tmp/in"
+	cp "$tmp/in" "$tmp/want"		# the file itself is the expectation
 	rm -f "$tmp/out"
 	pty "TERM=xterm $jvim -T xterm $opts -s $tmp/cmds $tmp/in" >/dev/null 2>&1
+	verdict "$name" "$expect"
+}
+
+# $tmp/want against $tmp/out, shared by every helper here. The hex dump on
+# failure is the only useful thing to print for a file of bytes.
+verdict() {
+	local name=$1 expect=$2
 	local got
-	if cmp -s "$tmp/in" "$tmp/out"; then got=ok; else got=bad; fi
+	if cmp -s "$tmp/want" "$tmp/out"; then got=ok; else got=bad; fi
 
 	if [ "$expect" = ok ] && [ "$got" = ok ]; then
 		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
 	elif [ "$expect" = ok ]; then
 		printf '  FAIL        %s\n' "$name"
-		printf '                in  %s\n' "$(hex "$tmp/in")"
-		printf '                out %s\n' "$(hex "$tmp/out")"
+		printf '                want %s\n' "$(hex "$tmp/want")"
+		printf '                got  %s\n' "$(hex "$tmp/out")"
 		fail=$((fail+1))
 	elif [ "$got" = bad ]; then
 		printf '  KNOWN-FAIL  %s\n' "$name"; xfail=$((xfail+1))
@@ -84,6 +92,23 @@ roundtrip() {
 		printf '  NOW PASSES  %s  <- update the expectation\n' "$name"
 		xpass=$((xpass+1))
 	fi
+}
+
+# detects <name> <expect> <input bytes> <expected bytes>
+#
+# What judge_jcode() decided, read off the bytes that come back: no -k, so
+# autodetection runs, and a UTF-8 file taken for Shift-JIS comes back as
+# mojibake rather than as itself. roundtrip() above is the same thing where the
+# answer is "unchanged"; this is for the cases where a byte is expected to be
+# lost and everything else is expected to survive.
+detects() {
+	counted && return
+	local name=$1 expect=$2 data=$3 want=$4
+	printf "$data" > "$tmp/in"
+	printf "$want" > "$tmp/want"
+	rm -f "$tmp/out"
+	pty "TERM=xterm $jvim -T xterm -s $tmp/cmds $tmp/in" >/dev/null 2>&1
+	verdict "$name" "$expect"
 }
 
 ASCII='abc\n'
@@ -115,6 +140,23 @@ roundtrip "UTF-8 emoji (non-BMP)"    ok        "-k T" "$ASCII$NIHONGO$EMOJI"
 roundtrip "UTF-8 emoji, autodetect"  ok        ""     "$ASCII$NIHONGO$EMOJI"
 roundtrip "UTF-8 emoji, BOM"         ok        ""     "\xef\xbb\xbf$ASCII$NIHONGO$EMOJI"
 
+echo
+echo "autodetection, where the file is not perfectly one thing:"
+# A file that is UTF-8 apart from one byte that is not. Everything valid in it
+# survives and the bad byte comes back as "?", which is what USAGE.md's known
+# limits say and is not going to change without teaching the whole multi-byte
+# layer about byte sequences that are not characters. -b round trips the same
+# file exactly; the case below and the one in test-hostile.sh are the two halves
+# of that. #30.
+detects "UTF-8 with one bad byte keeps the rest" ok \
+	"$NIHONGO$NIHONGO$NIHONGO$NIHONGO$NIHONGO$NIHONGO\xff\n" \
+	"$NIHONGO$NIHONGO$NIHONGO$NIHONGO$NIHONGO$NIHONGO?\n"
+# And the other direction, so that a change to the detection cannot quietly
+# start reading Shift-JIS files as something else.
+detects "Shift-JIS is still Shift-JIS" ok \
+	"$SJIS_NIHONGO$SJIS_NIHONGO$SJIS_NIHONGO$SJIS_NIHONGO" \
+	"$SJIS_NIHONGO$SJIS_NIHONGO$SJIS_NIHONGO$SJIS_NIHONGO"
+
 # edit <name> <expect: ok|knownfail> <keys> <input bytes> <expected bytes>
 # Keys and text are fed as a script, so the key code is forced to UTF-8 too.
 edit() {
@@ -127,22 +169,7 @@ edit() {
 	printf "$keys:w! %s/out\r:q!\r" "$tmp" > "$tmp/ecmds"
 	pty "TERM=xterm $jvim -T xterm -K TTT -k t -s $tmp/ecmds $tmp/in" \
 		>/dev/null 2>&1
-	local got
-	if cmp -s "$tmp/want" "$tmp/out"; then got=ok; else got=bad; fi
-
-	if [ "$expect" = ok ] && [ "$got" = ok ]; then
-		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
-	elif [ "$expect" = ok ]; then
-		printf '  FAIL        %s\n' "$name"
-		printf '                want %s\n' "$(hex "$tmp/want")"
-		printf '                got  %s\n' "$(hex "$tmp/out")"
-		fail=$((fail+1))
-	elif [ "$got" = bad ]; then
-		printf '  KNOWN-FAIL  %s\n' "$name"; xfail=$((xfail+1))
-	else
-		printf '  NOW PASSES  %s  <- update the expectation\n' "$name"
-		xpass=$((xpass+1))
-	fi
+	verdict "$name" "$expect"
 }
 
 NIHON='\xe6\x97\xa5\xe6\x9c\xac'						# 日本
