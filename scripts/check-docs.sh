@@ -52,20 +52,21 @@ edt=$(COUNT_ONLY=1 ./scripts/test-editing.sh  2>/dev/null | sed -n 's/^cases //p
 win=$(COUNT_ONLY=1 ./scripts/test-winkeys.sh  2>/dev/null | sed -n 's/^cases //p')
 syn=$(COUNT_ONLY=1 ./scripts/test-syntax.sh   2>/dev/null | sed -n 's/^cases //p')
 sgr=$(COUNT_ONLY=1 ./scripts/test-sgr.sh      2>/dev/null | sed -n 's/^cases //p')
-case ${enc:-x}${edt:-x}${syn:-x}${sgr:-x} in
-*x*)	bad "cannot get the case counts from the test suites (enc='$enc' edt='$edt' syn='$syn' sgr='$sgr')"
-		enc=0; edt=0; syn=0; sgr=0 ;;
+hos=$(COUNT_ONLY=1 ./scripts/test-hostile.sh  2>/dev/null | sed -n 's/^cases //p')
+case ${enc:-x}${edt:-x}${syn:-x}${sgr:-x}${hos:-x} in
+*x*)	bad "cannot get the case counts from the test suites (enc='$enc' edt='$edt' syn='$syn' sgr='$sgr' hos='$hos')"
+		enc=0; edt=0; syn=0; sgr=0; hos=0 ;;
 esac
 # What "build-unix.sh test" runs, which is what a document saying "the tests"
 # means. The Windows suite is not in it: it needs Windows.
-total=$((enc + edt + syn + sgr))
+total=$((enc + edt + syn + sgr + hos))
 
-echo "suites say: encoding $enc, editing $edt, syntax $syn, sgr $sgr, total $total${win:+, winkeys $win}"
+echo "suites say: encoding $enc, editing $edt, syntax $syn, sgr $sgr, hostile $hos, total $total${win:+, winkeys $win}"
 
 # Every "<n> cases" / "<n> tests" / "<n> ケース" / "<n> 個のテスト" in the prose
 # has to be one of those numbers, and where the line names a particular suite it
 # has to be that suite's number.
-allowed=" $enc $edt $syn $sgr $total ${win:-} "
+allowed=" $enc $edt $syn $sgr $hos $total ${win:-} "
 # The first released heading in the CHANGELOG. Anything at or below it is a
 # record of what that release shipped, and stays true by not being touched --
 # adding a test today does not change how many 1.0.0 had.
@@ -97,10 +98,13 @@ while IFS=: read -r file line text; do
 	*test-sgr*)
 		[ -z "$sgr" ] || [ "$n" = "$sgr" ] ||
 			bad "$file:$line: says $n, should be $sgr (the SGR suite)" ;;
+	*test-hostile*)
+		[ -z "$hos" ] || [ "$n" = "$hos" ] ||
+			bad "$file:$line: says $n, should be $hos (the hostile-input suite)" ;;
 	*)
 		case $allowed in
 		*" $n "*)	;;
-		*)			bad "$file:$line: says $n, which is not $enc, $edt, $syn, $sgr or $total" ;;
+		*)			bad "$file:$line: says $n, which is not $enc, $edt, $syn, $sgr, $hos or $total" ;;
 		esac ;;
 	esac
 done < <(grep -nE '[0-9]+ *(cases|tests|ケース|個のテスト)' $docs 2>/dev/null)

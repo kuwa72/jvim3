@@ -302,6 +302,8 @@ if [ "$target" = test ]; then
 	"$root/scripts/test-syntax.sh" "$src/jvim3" || rc=1
 	echo
 	"$root/scripts/test-sgr.sh" "$src/jvim3" || rc=1
+	echo
+	"$root/scripts/test-hostile.sh" "$src/jvim3" || rc=1
 	if [ -n "$sanitize" ]; then
 		echo
 		if [ -n "$(find "$sanlog" -name 'report.*' -print -quit)" ]; then
