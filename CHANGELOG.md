@@ -27,7 +27,11 @@ repository and would drift within three releases.
   which puts a real CR in the text. Both halves of that branch in `dosub()` were
   rewritten below and neither had ever been run by a test.
 - Two cases in `scripts/test-syntax.sh` for a pair rule and for the same rule
-  with `w` as well, which is the bug below. 221 cases in all.
+  with `w` as well, which is the bug below.
+- Two more in `scripts/test-editing.sh` for an indent wider than a tabstop —
+  tabs and then the remainder in spaces, or spaces throughout under
+  `expandtab` — which is what `set_indent()` builds, rewritten below.
+  223 cases in all.
 - `scripts/build-unix.sh asan` and `scripts/build-unix.sh ubsan` build with
   AddressSanitizer or UndefinedBehaviorSanitizer and then run the same suites
   the `test` target does, and CI runs both on every push. ASan had only ever
@@ -51,6 +55,16 @@ repository and would drift within three releases.
   worth doing. The two `STRCPY()` calls in the same function that were given
   overlapping strings — undefined, and the sort of thing AddressSanitizer stops
   on — are `memmove()` now. (#22)
+- **`>>` with a large `shiftwidth` no longer locks the editor up.** `:set
+  sw=10000000` then `>>` did not finish and could not be interrupted; it takes
+  about a tenth of a second now. `set_indent()` inserted the indent one
+  character at a time with `inschar()`, and deleted the old one a character at a
+  time with `delchar()`, each of which rewrites the whole line — so the work was
+  quadratic in the size of the indent, and neither loop called `breakcheck()`,
+  which is what made a mistyped `:set sw=` unrecoverable rather than slow. The
+  indent is built in one piece and put in place with one `ml_replace()` now.
+  Ordinary `>>` was never affected: the work is quadratic in the indent, not in
+  the file. (#29)
 - Seven `malloc()` calls whose result was used without being checked now go
   through `alloc()` and handle failure: five in `src/syntax.c`, four of them
   followed immediately by `memset()` on what would have been NULL, and two in
@@ -74,12 +88,10 @@ repository and would drift within three releases.
 
 ### Known, and now written down
 
-The hostile suite arrived with three cases the editor does not pass. One of them
-is the `:s` fix above. The other two are open issues rather than silence:
+The hostile suite arrived with three cases the editor does not pass. Two of them
+are the `:s` and `>>` fixes above. The last is an open issue rather than
+silence:
 
-- `>>` with `sw` set to ten million does not finish, and unlike the `:s` case it
-  cannot be interrupted either, because the loop that builds the indent has no
-  `breakcheck()` in it (#29).
 - A file that is UTF-8 apart from a few bytes that are not comes back with those
   bytes rewritten as `?`, the valid character in front of them damaged, and a
   sequence truncated by the end of the file turned into an ASCII letter. `-b`
@@ -101,11 +113,13 @@ is the `:s` fix above. The other two are open issues rather than silence:
   入る）です。下記で `dosub()` のその分岐を書き換えましたが、どちらも
   テストが一度も通っていませんでした。
 - `scripts/test-syntax.sh` にケースを 2 件追加しました。ペアのルールと、それに
-  `w` を足したルール（下記のバグ）です。合わせて 221 ケースになりました。
-- 敵性入力スイートは、エディタが通らない 3 件を持って入りました。うち 1 件は
-  下記の `:s` の修正です。残る 2 件は黙って飛ばすのではなく issue に
-  してあります。`sw` を 1000 万にしての `>>` が終わらず、しかも `:s` と違って
-  インデントを作るループに `breakcheck()` がないため中断もできない（#29）。
+  `w` を足したルール（下記のバグ）です。
+- `scripts/test-editing.sh` にもう 2 件。タブ幅より広いインデント（タブを並べ、
+  残りをスペースで埋める。`expandtab` ならすべてスペース）を見ます。下記で
+  書き換えた `set_indent()` が作るものです。合わせて 223 ケースになりました。
+- 敵性入力スイートは、エディタが通らない 3 件を持って入りました。うち 2 件は
+  下記の `:s` と `>>` の修正です。残る 1 件は黙って飛ばすのではなく issue に
+  してあります。
   UTF-8 のファイルに不正なバイトが数個あると、そのバイトが `?` に
   書き換えられ、直前の正しい文字まで壊れ、ファイル末尾で切れたシーケンスは
   ASCII 文字に変わる（`-b` なら同じファイルが完全に往復する、#30）。
@@ -128,6 +142,16 @@ is the `:s` fix above. The other two are open issues rather than silence:
   ファイルであり、それがこの修正の理由です。同じ関数で重なった文字列を
   渡していた `STRCPY()` 2 箇所（未定義動作で、AddressSanitizer が止まる類の
   もの）も `memmove()` にしました。(#22)
+- **大きな `shiftwidth` での `>>` がエディタを固めなくなりました。**
+  `:set sw=10000000` のあと `>>` すると終わらず、中断もできませんでしたが、
+  0.1 秒ほどで終わります。`set_indent()` は新しいインデントを `inschar()` で
+  1 文字ずつ入れ、古いインデントを `delchar()` で 1 文字ずつ消していました。
+  どちらも行全体を書き直すので、インデントの大きさに対して二次オーダーでした。
+  さらにどちらのループにも `breakcheck()` がなく、`:set sw=` の打ち間違いが
+  「遅い」ではなく「戻れない」になっていました。インデントを一度に組み立てて
+  `ml_replace()` 1 回で置くようにしました。通常の `>>` は元から影響ありません
+  （二次になるのはインデントの大きさに対してで、ファイルの大きさではない）。
+  (#29)
 - 戻り値を確認せずに使っていた `malloc()` 7 箇所を `alloc()` 経由にして、失敗を
   処理するようにしました。`src/syntax.c` に 5 箇所（うち 4 箇所は NULL に対して
   そのまま `memset()`）、`src/tag.c` に同じ書き方の 2 箇所です。メモリ不足が
