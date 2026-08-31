@@ -25,7 +25,9 @@ repository and would drift within three releases.
 - Two cases in `scripts/test-editing.sh` for a `:s` whose replacement holds a
   carriage return, which breaks the line there, and one held off by a CTRL-V,
   which puts a real CR in the text. Both halves of that branch in `dosub()` were
-  rewritten below and neither had ever been run by a test. 219 cases in all.
+  rewritten below and neither had ever been run by a test.
+- Two cases in `scripts/test-syntax.sh` for a pair rule and for the same rule
+  with `w` as well, which is the bug below. 221 cases in all.
 - `scripts/build-unix.sh asan` and `scripts/build-unix.sh ubsan` build with
   AddressSanitizer or UndefinedBehaviorSanitizer and then run the same suites
   the `test` target does, and CI runs both on every push. ASan had only ever
@@ -49,6 +51,11 @@ repository and would drift within three releases.
   worth doing. The two `STRCPY()` calls in the same function that were given
   overlapping strings — undefined, and the sort of thing AddressSanitizer stops
   on — are `memmove()` now. (#22)
+- A syntax rule that asks for both `w` and a pair — `syntax Group wp/BEG/END` —
+  built its end pattern from the pointer past the pattern rather than from the
+  pattern, so it compiled as `\<\>`, the region never closed, and everything
+  after the opening token was coloured to the end of the file. One word. No rule
+  file in `syntax/` combines the two, so nothing bundled was affected. (#23)
 - Two pieces of undefined behaviour in `src/memline.c`, found by the first UBSan
   run and reported 244 times over one pass of the test suites, with every case
   passing throughout. `DB_MARKED` shifted a plain `int` into its own sign
@@ -85,7 +92,9 @@ is the `:s` fix above. The other two are open issues rather than silence:
 - `scripts/test-editing.sh` にケースを 2 件追加しました。置換文字列に改行を含む
   `:s`（そこで行が分かれる）と、CTRL-V で押さえた改行（本物の CR が本文に
   入る）です。下記で `dosub()` のその分岐を書き換えましたが、どちらも
-  テストが一度も通っていませんでした。合わせて 219 ケースになりました。
+  テストが一度も通っていませんでした。
+- `scripts/test-syntax.sh` にケースを 2 件追加しました。ペアのルールと、それに
+  `w` を足したルール（下記のバグ）です。合わせて 221 ケースになりました。
 - 敵性入力スイートは、エディタが通らない 3 件を持って入りました。うち 1 件は
   下記の `:s` の修正です。残る 2 件は黙って飛ばすのではなく issue に
   してあります。`sw` を 1000 万にしての `>>` が終わらず、しかも `:s` と違って
@@ -112,6 +121,11 @@ is the `:s` fix above. The other two are open issues rather than silence:
   ファイルであり、それがこの修正の理由です。同じ関数で重なった文字列を
   渡していた `STRCPY()` 2 箇所（未定義動作で、AddressSanitizer が止まる類の
   もの）も `memmove()` にしました。(#22)
+- `w` とペアを同時に指定したシンタックスルール（`syntax Group wp/BEG/END`）が、
+  終了パターンをパターン自身ではなくその先を指すポインタから作っていました。
+  `\<\>` としてコンパイルされるため領域が閉じず、開始トークン以降がファイル末尾
+  まで色付けされていました。修正は 1 語です。`syntax/` の同梱ルールにこの
+  組み合わせはないので、同梱分への影響はありません。(#23)
 - `src/memline.c` の未定義動作 2 件を修正しました。初回の UBSan 実行で、
   テスト 1 周につき 244 回報告されたものです（その間、全ケースが
   通っていました）。`DB_MARKED` が `int` を符号ビットまでシフトして

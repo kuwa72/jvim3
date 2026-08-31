@@ -476,6 +476,20 @@ case_ 'a w list does not colour the halves of a longer word' t.unknown \
 '1:0-1 - w/a\n1:2-3 - w/b\n' \
 ':syntax red w/a/b\r'
 
+# A pair rule and the same rule with "w" as well. The second used to build its
+# end pattern from the pointer past the pattern rather than the pattern, so it
+# compiled as "\<\>", the region never closed, and it coloured to the end of the
+# file. The plain pair beside it is the control: both have to stop at END.
+case_ 'a pair rule colours from begin to end' t.unknown \
+'aa BEG bb END cc\ndd ee\n' \
+'1:3-13 - p/BEG\n' \
+':syntax red p/BEG/END\r'
+
+case_ 'a w pair rule stops where it should' t.unknown \
+'aa BEG bb END cc\ndd ee\n' \
+'1:3-13 - wp/BEG\n' \
+':syntax red wp/BEG/END\r'
+
 if [ -n "$count_only" ]; then
 	printf 'cases %d\n' "$cases"
 	exit 0
