@@ -18,10 +18,14 @@ repository and would drift within three releases.
   1015 character pattern to `:syntax` (`pattern[1024]` on the stack is as close
   as the command line can get to it), 60 nested groups in `:s`, a tabstop of two
   billion, 200k lines through `:g`, and a colour scheme whose every token is
-  longer than the command line can hold. Twelve of them pass; three are
+  longer than the command line can hold. Thirteen of them pass; two are
   KNOWN-FAIL and are the issues below. Input files come from
   `scripts/hostilegen.c` rather than from awk or dd, because five operating
-  systems run this and their awks disagree about a zero byte. 217 cases in all.
+  systems run this and their awks disagree about a zero byte.
+- Two cases in `scripts/test-editing.sh` for a `:s` whose replacement holds a
+  carriage return, which breaks the line there, and one held off by a CTRL-V,
+  which puts a real CR in the text. Both halves of that branch in `dosub()` were
+  rewritten below and neither had ever been run by a test. 219 cases in all.
 - `scripts/build-unix.sh asan` and `scripts/build-unix.sh ubsan` build with
   AddressSanitizer or UndefinedBehaviorSanitizer and then run the same suites
   the `test` target does, and CI runs both on every push. ASan had only ever
@@ -34,6 +38,17 @@ repository and would drift within three releases.
 
 ### Fixed
 
+- **`:s///g` on a long line is no longer quadratic.** Two million substitutions
+  on one line now take half a second where they took about twenty minutes; 400k
+  characters went from 53 seconds to 0.11. `dosub()` allocated exactly what the
+  next match needed and copied everything substituted so far into it, once per
+  match, and measured the length of that with `STRLEN()` twice more. It now
+  keeps the length and the allocated size and doubles the buffer, so the copying
+  happens a handful of times instead of once per match. A minified `.js` or a
+  one-line JSON dump is an ordinary file to be handed, which is what made this
+  worth doing. The two `STRCPY()` calls in the same function that were given
+  overlapping strings — undefined, and the sort of thing AddressSanitizer stops
+  on — are `memmove()` now. (#22)
 - Two pieces of undefined behaviour in `src/memline.c`, found by the first UBSan
   run and reported 244 times over one pass of the test suites, with every case
   passing throughout. `DB_MARKED` shifted a plain `int` into its own sign
@@ -45,13 +60,11 @@ repository and would drift within three releases.
 
 ### Known, and now written down
 
-The hostile suite arrived with three cases the editor does not pass. They are
-open issues rather than silence:
+The hostile suite arrived with three cases the editor does not pass. One of them
+is the `:s` fix above. The other two are open issues rather than silence:
 
-- `:s///g` on one 400k character line does not finish: the work is quadratic in
-  the length of the line (#22).
-- `>>` with `sw` set to ten million does not finish either, and unlike the
-  above cannot be interrupted, because the loop that builds the indent has no
+- `>>` with `sw` set to ten million does not finish, and unlike the `:s` case it
+  cannot be interrupted either, because the loop that builds the indent has no
   `breakcheck()` in it (#29).
 - A file that is UTF-8 apart from a few bytes that are not comes back with those
   bytes rewritten as `?`, the valid character in front of them damaged, and a
@@ -66,18 +79,20 @@ open issues rather than silence:
   1015 文字のパターン（スタック上の `pattern[1024]` にコマンドラインから
   最も近づける長さ）、`:s` の 60 重ネストしたグループ、タブ幅 20 億、
   20 万行への `:g`、全トークンがコマンドラインに収まらない長さの配色スキーム。
-  12 件が通り、KNOWN-FAIL が 3 件、それぞれ下記の issue に対応します。
+  13 件が通り、KNOWN-FAIL が 2 件、それぞれ下記の issue に対応します。
   入力ファイルは awk や dd ではなく `scripts/hostilegen.c` が作ります。5 つの
   OS で走るのに、それぞれの awk がゼロバイトの扱いで一致しないからです。
-  合わせて 217 ケースになりました。
-- 敵性入力スイートは、エディタが通らない 3 件を持って入りました。黙って
-  飛ばすのではなく、issue にしてあります。400k 文字 1 行への `:s///g` が
-  終わらない（行長に対して二次、#22）。`sw` を 1000 万にしての `>>` も
-  終わらず、しかもインデントを作るループに `breakcheck()` がないため
-  中断もできない（#29）。UTF-8 のファイルに不正なバイトが数個あると、その
-  バイトが `?` に書き換えられ、直前の正しい文字まで壊れ、ファイル末尾で切れた
-  シーケンスは ASCII 文字に変わる（`-b` なら同じファイルが完全に往復する、
-  #30）。
+- `scripts/test-editing.sh` にケースを 2 件追加しました。置換文字列に改行を含む
+  `:s`（そこで行が分かれる）と、CTRL-V で押さえた改行（本物の CR が本文に
+  入る）です。下記で `dosub()` のその分岐を書き換えましたが、どちらも
+  テストが一度も通っていませんでした。合わせて 219 ケースになりました。
+- 敵性入力スイートは、エディタが通らない 3 件を持って入りました。うち 1 件は
+  下記の `:s` の修正です。残る 2 件は黙って飛ばすのではなく issue に
+  してあります。`sw` を 1000 万にしての `>>` が終わらず、しかも `:s` と違って
+  インデントを作るループに `breakcheck()` がないため中断もできない（#29）。
+  UTF-8 のファイルに不正なバイトが数個あると、そのバイトが `?` に
+  書き換えられ、直前の正しい文字まで壊れ、ファイル末尾で切れたシーケンスは
+  ASCII 文字に変わる（`-b` なら同じファイルが完全に往復する、#30）。
 - `scripts/build-unix.sh asan` と `scripts/build-unix.sh ubsan` を追加しました。
   AddressSanitizer / UndefinedBehaviorSanitizer つきでビルドし、`test` と同じ
   スイートを実行します。CI でも push ごとに両方走ります。ASan はこれまで
@@ -87,6 +102,16 @@ open issues rather than silence:
   stderr は `/dev/null` に捨てているため、そのままではレポートも一緒に消える
   うえ、UBSan は検出しても実行を続けて 0 で終わるので、ジョブが緑のまま何かを
   見つけ続けることになります。
+- **長い 1 行に対する `:s///g` が二次オーダーではなくなりました。** 1 行
+  200 万文字の全置換が、およそ 20 分から 0.5 秒になりました。40 万文字では
+  53 秒から 0.11 秒です。`dosub()` は次のマッチに必要な分だけを確保して、
+  それまでに置換した全体をそこへコピーする、というのをマッチごとに行い、
+  さらにその長さを `STRLEN()` で 2 回測っていました。長さと確保済みサイズを
+  持ち回り、バッファを倍々に伸ばすようにしたので、コピーはマッチごとではなく
+  数回で済みます。minified な `.js` や 1 行の JSON ダンプは普通に開く
+  ファイルであり、それがこの修正の理由です。同じ関数で重なった文字列を
+  渡していた `STRCPY()` 2 箇所（未定義動作で、AddressSanitizer が止まる類の
+  もの）も `memmove()` にしました。(#22)
 - `src/memline.c` の未定義動作 2 件を修正しました。初回の UBSan 実行で、
   テスト 1 周につき 244 回報告されたものです（その間、全ケースが
   通っていました）。`DB_MARKED` が `int` を符号ビットまでシフトして

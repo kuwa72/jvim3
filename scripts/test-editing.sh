@@ -206,6 +206,12 @@ run ":%s"                   ok ":%s/a/X/\r" 'ab\nba\n'         'Xb\nbX\n'
 run ":s with a range"       ok ":2,3s/a/X/\r" 'a\na\na\n'      'a\nX\nX\n'
 run "& repeats a subst"     ok ":s/a/X/\rj&"      'a\na\n'      'X\nX\n'
 run ":s with ^ and \$"      ok ":s/^/> /\r" 'a\n'              '> a\n'
+# A CR in the replacement breaks the line there, and a CTRL-V in front of it
+# says to put a real CR in the text instead -- the two halves of the same
+# branch in dosub(), and \026 is the CTRL-V that gets each of them past
+# getcmdline(): once for the CR, three times over for a CTRL-V and then a CR.
+run ":s with a CR splits"   ok ":s/b/X\026\015Y/\r" 'ab\ncd\n' 'aX\nY\ncd\n'
+run ":s with CTRL-V CR"     ok ":s/b/X\026\026\026\015Y/\r" 'ab\ncd\n' 'aX\rY\ncd\n'
 run ":d into a register"    ok ':1d a\r:$put a\r' 'a\nb\n'     'b\na\n'
 run ":put"                  ok 'yy:$put\r' 'a\nb\n'            'a\nb\na\n'
 run ":normal ex range join" ok ':1,2j\r'   'a\nb\nc\n'         'a b\nc\n'

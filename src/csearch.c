@@ -19,6 +19,59 @@
 /* we use modified Henry Spencer's regular expression routines */
 #include "regexp.h"
 
+static int sub_grow __ARGS((char_u **, long_u *, long_u, long_u));
+
+/*
+ * sub_grow: make room for "needed" bytes, NUL included, in the buffer dosub()
+ * builds a line up in, keeping the "used" bytes already there.
+ *
+ * It doubles rather than fitting, and that is the whole point of it. dosub()
+ * used to allocate exactly what the next match needed and copy everything
+ * substituted so far into it, once per match, which made a substitution cost
+ * time quadratic in the length of the line: 100k characters of "x" through
+ * :s/x/y/g took 4 seconds, 400k took 53, and a 2 MB minified .js -- one line,
+ * and an ordinary file to be handed -- would have taken twenty minutes.
+ *
+ * Returns TRUE, or FALSE with the buffer untouched if there is no memory;
+ * lalloc() has said so by then.
+ */
+	static int
+sub_grow(char_u **bufp, long_u *sizep, long_u used, long_u needed)
+{
+	long_u		size = *sizep;
+	char_u	   *p;
+
+	if (size >= needed)
+		return TRUE;
+
+	if (size < 128)
+		size = 128;
+	while (size < needed)
+	{
+		long_u		twice = size * 2;
+
+		if (twice <= size)		/* overflowed: ask for exactly what is wanted */
+		{
+			size = needed;
+			break;
+		}
+		size = twice;
+	}
+
+	if ((p = lalloc(size, TRUE)) == NULL)
+		return FALSE;
+	if (*bufp != NULL)
+	{
+		if (used > 0)
+			memmove((char *)p, (char *)*bufp, (size_t)used);
+		free(*bufp);
+	}
+	p[used] = NUL;
+	*bufp = p;
+	*sizep = size;
+	return TRUE;
+}
+
 /* dosub(lp, up, cmd)
  *
  * Perform a substitution from line 'lp' to line 'up' using the
@@ -213,11 +266,21 @@ dosub(linenr_t lp, linenr_t up, char_u *cmd, char_u **nextcommand, int use_old)
 			char_u		*p1;
 			int			did_sub = FALSE;
 			int			match, lastone;
+			/*
+			 * How much of new_start is in use, and how much was allocated.
+			 * Kept rather than measured with STRLEN(): measuring it once per
+			 * match is one of the two things that made a long line quadratic.
+			 * new_len never counts the NUL, which is always at new_start[
+			 * new_len].
+			 */
+			long_u		new_len = 0, new_size = 0;
+			long_u		old_line_len;
 
 			/* make a copy of the line, so it won't be taken away when updating
 				the screen */
 			if ((old_line = strsave(ptr)) == NULL)
 				continue;
+			old_line_len = (long_u)STRLEN(old_line);
 			regexec(prog, old_line, TRUE);  /* match again on this line to update the pointers. TODO: remove extra regexec() */
 			if (!got_match)
 			{
@@ -276,30 +339,17 @@ dosub(linenr_t lp, linenr_t up, char_u *cmd, char_u **nextcommand, int use_old)
 
 						/* get length of substitution part */
 				sublen = regsub(prog, sub, old_line, 0, (int)p_magic);
-				if (new_start == NULL)
-				{
-					/*
-					 * Get some space for a temporary buffer to do the substitution
-					 * into.
-					 */
-					if ((new_start = alloc((unsigned)(STRLEN(old_line) + sublen + 5))) == NULL)
-						goto outofmem;
-					*new_start = NUL;
-				}
-				else
-				{
-					/*
-					 * extend the temporary buffer to do the substitution into.
-					 */
-					if ((p1 = alloc((unsigned)(STRLEN(new_start) + STRLEN(old_copy) + sublen + 1))) == NULL)
-						goto outofmem;
-					STRCPY(p1, new_start);
-					free(new_start);
-					new_start = p1;
-				}
+				/*
+				 * Room for what is there, the text between the last match and
+				 * this one, and the replacement. sublen counts the NUL, so it
+				 * is both the bytes regsub() will write and the one to spare.
+				 */
+				if (!sub_grow(&new_start, &new_size, new_len,
+						new_len + (long_u)(prog->startp[0] - old_copy)
+												+ (long_u)sublen))
+					goto outofmem;
 
-				for (new_end = new_start; *new_end; new_end++)
-					;
+				new_end = new_start + new_len;
 				/*
 				 * copy up to the part that matched
 				 */
@@ -307,6 +357,8 @@ dosub(linenr_t lp, linenr_t up, char_u *cmd, char_u **nextcommand, int use_old)
 					*new_end++ = *old_copy++;
 
 				regsub(prog, sub, new_end, 1, (int)p_magic);
+				/* regsub() wrote sublen bytes counting the NUL it ended with */
+				new_len = (long_u)(new_end - new_start) + (long_u)sublen - 1;
 				nsubs++;
 				did_sub = TRUE;
 
@@ -323,18 +375,32 @@ dosub(linenr_t lp, linenr_t up, char_u *cmd, char_u **nextcommand, int use_old)
 					{
 						if (u_inssub(lnum))				/* prepare for undo */
 						{
+							long_u		rest;
+
 							*p1 = NUL;					/* truncate up to the CR */
 							mark_adjust(lnum, MAXLNUM, 1L);
 							ml_append(lnum - 1, new_start, (colnr_t)(p1 - new_start + 1), FALSE);
 							++lnum;
 							++up;					/* number of lines increases */
-							STRCPY(new_start, p1 + 1);	/* copy the rest */
+							/*
+							 * Move what came after the CR to the front. memmove
+							 * and not STRCPY: the two overlap, which STRCPY is
+							 * not allowed to be given, and the length is known
+							 * here anyway.
+							 */
+							rest = new_len - (long_u)(p1 - new_start) - 1;
+							memmove((char *)new_start, (char *)p1 + 1,
+														(size_t)rest + 1);
+							new_len = rest;
 							new_end = new_start;
 						}
 					}
 					else							/* remove CTRL-V */
 					{
-						STRCPY(p1 - 1, p1);
+						/* Overlapping again, and one byte shorter after it. */
+						memmove((char *)(p1 - 1), (char *)p1,
+									(size_t)(new_len - (long_u)(p1 - new_start)) + 1);
+						--new_len;
 						new_end = p1;
 					}
 				}
@@ -352,21 +418,40 @@ skip:
 				{
 					if (new_start)
 					{
+						long_u		tail;
+
 						/*
 						 * Copy the rest of the line, that didn't match.
 						 * Old_match has to be adjusted, we use the end of the line
 						 * as reference, because the substitute may have changed
 						 * the number of characters.
+						 *
+						 * old_copy points into old_line, so how much is left of
+						 * it is known without looking, and so is where the NUL
+						 * is: this used to be a STRCAT and two STRLEN, which
+						 * with ":s///gc" ran once per match.
 						 */
-						STRCAT(new_start, old_copy);
-						i = old_line + STRLEN(old_line) - old_match;
+						tail = old_line_len - (long_u)(old_copy - old_line);
+						if (!sub_grow(&new_start, &new_size, new_len,
+													new_len + tail + 1))
+							goto outofmem;
+						memmove((char *)(new_start + new_len), (char *)old_copy,
+													(size_t)tail + 1);
+						new_len += tail;
+
+						i = (long)(old_line_len - (long_u)(old_match - old_line));
 						if (u_savesub(lnum))
 							ml_replace(lnum, new_start, TRUE);
 
 						free(old_line);			/* free the temp buffer */
 						old_line = new_start;
+						old_line_len = new_len;
 						new_start = NULL;
-						old_match = old_line + STRLEN(old_line) - i;
+						new_size = 0;
+						new_len = 0;
+						/* signed, so that the check below can still catch a
+						 * count that came out too large */
+						old_match = old_line + (long)old_line_len - i;
 						if (old_match < old_line)		/* safety check */
 						{
 							EMSG("dosub internal error: old_match < old_line");
