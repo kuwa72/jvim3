@@ -12,16 +12,28 @@ repository and would drift within three releases.
 
 ### Added
 
-- `scripts/test-hostile.sh`, a fifth suite: 15 cases that hand the editor input
-  nobody intended, where the other four hand it input it is meant to accept.
+- **A Unix build now catches the signals it cannot carry on through**, and does
+  what Windows has done since 1.0.0 through `src/w32crash.c`: says which signal
+  it was, writes the swap files out and names them, and points at `jvim3 -r`.
+  SIGHUP, SIGQUIT, SIGILL, SIGTRAP, SIGABRT, SIGFPE, SIGBUS, SIGSEGV and
+  SIGTERM. Before this, `grep SIGSEGV src/*.c` found nothing: a fault, or an ssh
+  session closing — SIGHUP, which is not a crash at all — took whatever had not
+  reached the swap file with it, left the terminal in raw mode, and said nothing
+  about `-r`. The terminal is put back first, the swap files are preserved and
+  **not** deleted, and a second signal during that exits at once rather than
+  going round again. SIGSEGV and SIGBUS are left to AddressSanitizer under
+  `build-unix.sh asan`, whose report is worth more than the message.
+- `scripts/test-hostile.sh`, a fifth suite: 17 cases that hand the editor input
+  nobody intended, or a hostile end, where the other four hand it input it is
+  meant to accept.
   2 MB on one line, every byte value there is, invalid and truncated UTF-8, a
   1015 character pattern to `:syntax` (`pattern[1024]` on the stack is as close
   as the command line can get to it), 60 nested groups in `:s`, a tabstop of two
-  billion, 200k lines through `:g`, and a colour scheme whose every token is
-  longer than the command line can hold. Thirteen of them pass; two are
-  KNOWN-FAIL and are the issues below. Input files come from
-  `scripts/hostilegen.c` rather than from awk or dd, because five operating
-  systems run this and their awks disagree about a zero byte.
+  billion, 200k lines through `:g`, a colour scheme whose every token is
+  longer than the command line can hold, and the session dropping mid-edit.
+  Sixteen of them pass; one is KNOWN-FAIL and is the issue below. Input files
+  come from `scripts/hostilegen.c` rather than from awk or dd, because five
+  operating systems run this and their awks disagree about a zero byte.
 - Two cases in `scripts/test-editing.sh` for a `:s` whose replacement holds a
   carriage return, which breaks the line there, and one held off by a CTRL-V,
   which puts a real CR in the text. Both halves of that branch in `dosub()` were
@@ -31,7 +43,13 @@ repository and would drift within three releases.
 - Two more in `scripts/test-editing.sh` for an indent wider than a tabstop —
   tabs and then the remainder in spaces, or spaces throughout under
   `expandtab` — which is what `set_indent()` builds, rewritten below.
-  223 cases in all.
+- `PTYRUN_SIGNAL` in `scripts/ptyrun.c`: the signal to send when the timeout
+  expires, instead of the SIGKILL it has always sent, with the copying carried
+  on afterwards so that what the command prints on its way out and the status it
+  exits with are both collected. It is the only way to test what the editor does
+  when the session goes away — a command started in the background cannot have
+  the pty as its controlling terminal, and the editor will not start without
+  one. 225 cases in all.
 - `scripts/build-unix.sh asan` and `scripts/build-unix.sh ubsan` build with
   AddressSanitizer or UndefinedBehaviorSanitizer and then run the same suites
   the `test` target does, and CI runs both on every push. ASan had only ever
@@ -99,13 +117,27 @@ silence:
 
 ### 日本語
 
+- **Unix 版が、そのまま続行できないシグナルを捕まえるようになりました。**
+  Windows が 1.0.0 から `src/w32crash.c` でしていたのと同じことをします。
+  どのシグナルだったかを表示し、スワップファイルを書き出して場所を示し、
+  `jvim3 -r` を案内します。対象は SIGHUP・SIGQUIT・SIGILL・SIGTRAP・SIGABRT・
+  SIGFPE・SIGBUS・SIGSEGV・SIGTERM です。これまでは `grep SIGSEGV src/*.c` が
+  1 件も返さない状態で、異常終了や ssh セッションの切断（SIGHUP。これは
+  クラッシュではありません）が、スワップファイルに届いていなかった分を
+  持ち去り、端末を raw モードのまま残し、`-r` について何も言いませんでした。
+  端末を先に戻し、スワップファイルは保全して**削除しません**。処理中に
+  2 度目のシグナルが来たら、やり直さずその場で終了します。SIGSEGV と SIGBUS は
+  `build-unix.sh asan` では AddressSanitizer に譲ります（そのレポートのほうが
+  このメッセージより価値があります）。
 - `scripts/test-hostile.sh` を追加しました。5 つ目のスイートで、誰も意図して
-  いない入力を与える 15 ケースです（他の 4 つは、受け付けるべき入力を与えます）。
+  いない入力や終わり方を与える 17 ケースです（他の 4 つは、受け付けるべき入力を
+  与えます）。
   1 行 2 MB、あらゆるバイト値、不正な・途中で切れた UTF-8、`:syntax` への
   1015 文字のパターン（スタック上の `pattern[1024]` にコマンドラインから
   最も近づける長さ）、`:s` の 60 重ネストしたグループ、タブ幅 20 億、
-  20 万行への `:g`、全トークンがコマンドラインに収まらない長さの配色スキーム。
-  13 件が通り、KNOWN-FAIL が 2 件、それぞれ下記の issue に対応します。
+  20 万行への `:g`、全トークンがコマンドラインに収まらない長さの配色スキーム、
+  編集中のセッション切断。
+  16 件が通り、KNOWN-FAIL は 1 件で、下記の issue に対応します。
   入力ファイルは awk や dd ではなく `scripts/hostilegen.c` が作ります。5 つの
   OS で走るのに、それぞれの awk がゼロバイトの扱いで一致しないからです。
 - `scripts/test-editing.sh` にケースを 2 件追加しました。置換文字列に改行を含む
@@ -116,7 +148,13 @@ silence:
   `w` を足したルール（下記のバグ）です。
 - `scripts/test-editing.sh` にもう 2 件。タブ幅より広いインデント（タブを並べ、
   残りをスペースで埋める。`expandtab` ならすべてスペース）を見ます。下記で
-  書き換えた `set_indent()` が作るものです。合わせて 223 ケースになりました。
+  書き換えた `set_indent()` が作るものです。
+- `scripts/ptyrun.c` に `PTYRUN_SIGNAL` を追加しました。タイムアウト時に
+  これまでの SIGKILL ではなく指定のシグナルを送り、そのあとも出力のコピーを
+  続けるので、コマンドが終わる際に出力した内容と終了ステータスの両方が
+  取れます。セッションが切れたときのエディタの挙動を試す唯一の方法です
+  （バックグラウンドで起動したコマンドは pty を制御端末にできず、エディタは
+  制御端末なしでは起動しません）。合わせて 225 ケースになりました。
 - 敵性入力スイートは、エディタが通らない 3 件を持って入りました。うち 2 件は
   下記の `:s` と `>>` の修正です。残る 1 件は黙って飛ばすのではなく issue に
   してあります。

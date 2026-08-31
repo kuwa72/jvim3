@@ -149,6 +149,16 @@ case_() {
 	# reason. Cleared here so that it cannot depend on how bash was started.
 	ARGS=; ENV_=; T=
 
+	verdict "$name" "$expect" "$want_spec"
+}
+
+# verdict <name> <expect> <want spec>
+#
+# $tmp/out against $tmp/want, or just "it wrote something" when the case only
+# claims that much. Shared with case_hup() below.
+verdict() {
+	local name=$1 expect=$2 want_spec=$3
+
 	local got=bad
 	if [ "$want_spec" = nonempty ]; then
 		[ -s "$tmp/out" ] && got=ok
@@ -180,6 +190,50 @@ case_() {
 		printf '  NOW PASSES  %s  <- update the expectation\n' "$name"
 		xpass=$((xpass+1))
 	fi
+}
+
+# case_hup <name> <expect> <what: recovered|message>
+#
+# The session going away. On a Unix that is SIGHUP, and it is not a crash at
+# all -- it is how an ssh connection ends and how a terminal window closing
+# reaches the program inside it. The editor is given a change it has not
+# written, then the signal, and then the same file is opened again with -r: what
+# comes back is what the swap file kept.
+#
+# ptyrun sends the signal, through PTYRUN_SIGNAL. It has to: a command started
+# in the background cannot have the pty as its controlling terminal, and the
+# editor will not start without one -- "VIM: no controlling terminal" is as far
+# as it gets.
+case_hup() {
+	counted && return
+	local name=$1 expect=$2 what=$3
+
+	printf 'one\n' > "$tmp/in"
+	rm -f "$tmp/out" "$tmp/want" "$tmp/in.swp"
+	printf 'ihello \033' > "$tmp/keys"
+	PTYRUN_TIMEOUT=2 PTYRUN_SIGNAL=HUP "$tmp/ptyrun" /bin/sh -c \
+		"HOME=$tmp TERM=xterm $jvim -T xterm -s $tmp/keys $tmp/in" \
+		> "$tmp/said" 2>&1
+
+	if [ "$what" = message ]; then
+		# What a bug report will contain, so it is worth holding still: which
+		# signal, which swap file, and how to read it back.
+		printf 'signal, swap file, and how to recover\n' > "$tmp/want"
+		if grep -q 'signal 1' "$tmp/said" &&
+		   grep -q 'in\.swp' "$tmp/said" &&
+		   grep -q 'jvim3 -r' "$tmp/said"; then
+			cp "$tmp/want" "$tmp/out"
+		fi
+	else
+		printf 'hello one\n' > "$tmp/want"
+		printf ':w! %s/out\r:q!\r' "$tmp" > "$tmp/keys"
+		"$tmp/ptyrun" /bin/sh -c \
+			"HOME=$tmp TERM=xterm $jvim -T xterm -r -s $tmp/keys $tmp/in" \
+			>/dev/null 2>&1
+	fi
+	rm -f "$tmp/in.swp"
+
+	verdict "$name" "$expect" "exact"
 }
 
 if [ -z "$count_only" ]; then
@@ -321,6 +375,14 @@ fi
 case_ 'a colour scheme of 3000 character tokens' ok \
 	'lit:hello\n' 'same' \
 	':colorscheme junk\r\r\r\r\r\r:w! %s/out\r:q!\r'
+
+# ------------------------------------------------------- the session going away
+#
+# Not hostile input so much as a hostile end. Until this was caught, a SIGHUP
+# took whatever had not reached the swap file with it, left the terminal in raw
+# mode, and said nothing about -r.
+case_hup 'SIGHUP keeps the unwritten change' ok recovered
+case_hup 'SIGHUP says which signal, which swap file, and how to recover' ok message
 
 if [ -n "$count_only" ]; then
 	printf 'cases %d\n' "$cases"

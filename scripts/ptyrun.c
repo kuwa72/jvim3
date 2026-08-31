@@ -37,6 +37,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <string.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -46,15 +47,56 @@
  * PTYRUN_TIMEOUT seconds (20 by default, 0 to wait for ever) and the child is
  * killed and 124 returned, the way timeout(1) does it -- which macOS does not
  * have.
+ *
+ * PTYRUN_SIGNAL turns that into something a test can use on purpose: the named
+ * signal (HUP, TERM, INT, QUIT, or a number) is sent instead of SIGKILL, and
+ * then the copying carries on so that what the command prints on its way out
+ * and the status it exits with are both collected. That is the only way to test
+ * what the editor does when the session goes away, since a command started in
+ * the background cannot have the pty as its controlling terminal.
  */
 static pid_t	child = 0;
+static int		alarm_sig = SIGKILL;
 
 	static void
 on_alarm(int sig)
 {
 	if (child > 0)
-		kill(child, SIGKILL);
-	_exit(124);
+		kill(child, alarm_sig);
+	if (alarm_sig == SIGKILL)
+		_exit(124);
+	/*
+	 * A signal the command is expected to act on rather than die of. Let the
+	 * loop below run on, and arm a hard kill behind it in case it does not go
+	 * after all.
+	 */
+	alarm_sig = SIGKILL;
+	signal(SIGALRM, on_alarm);
+	alarm(10);
+}
+
+/* PTYRUN_SIGNAL, as a name or a number. 0 for anything not recognised, so a
+ * typo behaves like the default rather than sending something unintended. */
+	static int
+signal_named(const char *s)
+{
+	static const struct { const char *name; int sig; } names[] =
+	{
+		{"HUP", SIGHUP}, {"INT", SIGINT}, {"QUIT", SIGQUIT},
+		{"TERM", SIGTERM}, {"USR1", SIGUSR1}, {NULL, 0}
+	};
+	int		i;
+
+	if (s == NULL || *s == '\0')
+		return 0;
+	if (s[0] >= '0' && s[0] <= '9')
+		return (int)strtol(s, NULL, 10);
+	if (strncmp(s, "SIG", 3) == 0)
+		s += 3;
+	for (i = 0; names[i].name != NULL; i++)
+		if (strcmp(s, names[i].name) == 0)
+			return names[i].sig;
+	return 0;
 }
 
 int
@@ -145,7 +187,10 @@ main(int argc, char **argv)
 	{
 		const char	*t = getenv("PTYRUN_TIMEOUT");
 		unsigned	secs = 20;
+		int			named = signal_named(getenv("PTYRUN_SIGNAL"));
 
+		if (named > 0)
+			alarm_sig = named;
 		if (t != NULL)
 			secs = (unsigned)strtoul(t, NULL, 10);
 		if (secs > 0)

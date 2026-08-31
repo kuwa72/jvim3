@@ -20,7 +20,7 @@ JVim 3.0-j2.1b (2002 Dec 24) 由来
 ```
 対応環境       Windows 10/11 (Win32 GUI + コンソール)、Linux、
                FreeBSD、NetBSD、OpenBSD、DragonFly
-テスト         223 ケース。上記すべてで CI が実行。Windows のキー入力は
+テスト         225 ケース。上記すべてで CI が実行。Windows のキー入力は
                scripts/test-winkeys.sh の 16 ケース (WSL から実機で実行)
 ライセンス     パブリックドメイン — LICENSE を参照。付随する寄付のお願いは
                uganda.txt にあります
@@ -35,7 +35,7 @@ JVim 3.0-j2.1b (2002 Dec 24) 由来
 | CP932 外のファイル名 | マニフェストでプロセスのコードページを UTF-8 に指定しているので、`...A` 系のファイル API が UTF-8 を受け取り、`🍣.txt` が開けます。 |
 | 画面スケーリング | プロセスをモニタ単位 DPI 対応にし、保存済みのフォントサイズ・ウィンドウサイズを目の前の DPI に読み替えます。125%・150% でも文字がぼやけず、別倍率のモニタへ移動しても保たれます。 |
 | Unix 系ならビルドできる | `scripts/build-unix.sh` が、makefile の 3 行をコメントアウトさせる代わりに、コンパイラに環境を問い合わせます。`scripts/build-mingw.sh` は mingw-w64 で Windows 版をクロスビルドします。 |
-| 223 個のテスト | エンコーディング 48 ケース、編集 76 ケース、シンタックスカラー 75 ケース、端末に実際に送られるエスケープを見る 9 ケース、そして誰も意図していない入力を与える 15 ケース（1 行 2 MB、あらゆるバイト値、ファイル末尾で切れたマルチバイト列）。いずれも本物の pty 越しです。push ごとに 5 つの OS で実行され、さらに AddressSanitizer と UndefinedBehaviorSanitizer の下でも走ります。 |
+| 225 個のテスト | エンコーディング 48 ケース、編集 76 ケース、シンタックスカラー 75 ケース、端末に実際に送られるエスケープを見る 9 ケース、そして誰も意図していない入力や終わり方を与える 17 ケース（1 行 2 MB、あらゆるバイト値、ファイル末尾で切れたマルチバイト列、編集中にセッションが切れる）。いずれも本物の pty 越しです。push ごとに 5 つの OS で実行され、さらに AddressSanitizer と UndefinedBehaviorSanitizer の下でも走ります。 |
 | 長年のバグを修正 | 15 件。一覧は [BUILDING-mingw.md](BUILDING-mingw.md#bugs-found-along-the-way) にあります。正規表現の `[あ]` が `い` にもマッチする、コマンドラインが `buff[-1]` を読む、絵文字 1 個でファイル全体が Shift-JIS と誤判定される、端末入力で 2 回の読み込みにまたがった文字が化ける、など。 |
 | 配色テーマ | `:colorscheme` と Vim 互換の `:highlight`、同梱の 11 テーマ。GUI でも端末の SGR でも使えます。詳細は [USAGE.ja.md](USAGE.ja.md#配色テーマ)。 |
 | 削除した機能 2 つ | BDF フォント描画と、書庫 (LHA/ZIP/TAR) 内のファイル編集をソースごと削除しました。再配布の条件が扱いにくかったためです。[後述](#ライセンス)。 |
@@ -68,7 +68,7 @@ JVim 3.0-j2.1b (2002 Dec 24) 由来
 ```sh
 git clone https://github.com/kuwa72/jvim3
 cd jvim3
-./scripts/build-unix.sh test        # src/jvim3 をビルドして 223 個のテストを実行
+./scripts/build-unix.sh test        # src/jvim3 をビルドして 225 個のテストを実行
 ```
 
 必要なのは C コンパイラと、組み込みの端末定義ではなく本物の端末データベースを
@@ -165,7 +165,7 @@ Windows 版はどちらも CI に実行時テストがなく、コンパイル�
                                        #   マーク、undo、ex の範囲指定、:g、:s、:!
 ./scripts/test-syntax.sh   src/jvim3   # 75 ケース: syntax/ が実際に何を色付けするか
 ./scripts/test-sgr.sh      src/jvim3   # 9 ケース: 端末に実際に送られるエスケープ
-./scripts/test-hostile.sh  src/jvim3   # 15 ケース: 誰も意図していない入力
+./scripts/test-hostile.sh  src/jvim3   # 17 ケース: 誰も意図していない入力
 ```
 
 いずれも本物の pty (`scripts/ptyrun.c`) 越しにエディタを動かしてバイト列を比較
@@ -174,7 +174,7 @@ Windows 版はどちらも CI に実行時テストがなく、コンパイル�
 終わらないほど遅くなったことを敵性入力スイートが検出する仕組みでもあります。
 
 push と pull request のたびに、Linux・FreeBSD・NetBSD・OpenBSD・DragonFly の 5
-環境で 223 ケースすべてを実行し、Windows 版を両アーキテクチャでクロスビルド
+環境で 225 ケースすべてを実行し、Windows 版を両アーキテクチャでクロスビルド
 します。`v*` のタグはそれに加えて Windows の zip を公開するので、壊れたビルドが
 リリースになることはありません
 ([.github/workflows/build.yml](.github/workflows/build.yml))。
