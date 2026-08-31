@@ -50,6 +50,7 @@ done
 enc=$(COUNT_ONLY=1 ./scripts/test-encoding.sh 2>/dev/null | sed -n 's/^cases //p')
 edt=$(COUNT_ONLY=1 ./scripts/test-editing.sh  2>/dev/null | sed -n 's/^cases //p')
 win=$(COUNT_ONLY=1 ./scripts/test-winkeys.sh  2>/dev/null | sed -n 's/^cases //p')
+wrn=$(COUNT_ONLY=1 ./scripts/test-winrun.sh   2>/dev/null | sed -n 's/^cases //p')
 syn=$(COUNT_ONLY=1 ./scripts/test-syntax.sh   2>/dev/null | sed -n 's/^cases //p')
 sgr=$(COUNT_ONLY=1 ./scripts/test-sgr.sh      2>/dev/null | sed -n 's/^cases //p')
 hos=$(COUNT_ONLY=1 ./scripts/test-hostile.sh  2>/dev/null | sed -n 's/^cases //p')
@@ -61,12 +62,12 @@ esac
 # means. The Windows suite is not in it: it needs Windows.
 total=$((enc + edt + syn + sgr + hos))
 
-echo "suites say: encoding $enc, editing $edt, syntax $syn, sgr $sgr, hostile $hos, total $total${win:+, winkeys $win}"
+echo "suites say: encoding $enc, editing $edt, syntax $syn, sgr $sgr, hostile $hos, total $total${win:+, winkeys $win}${wrn:+, winrun $wrn}"
 
 # Every "<n> cases" / "<n> tests" / "<n> ケース" / "<n> 個のテスト" in the prose
 # has to be one of those numbers, and where the line names a particular suite it
 # has to be that suite's number.
-allowed=" $enc $edt $syn $sgr $hos $total ${win:-} "
+allowed=" $enc $edt $syn $sgr $hos $total ${win:-} ${wrn:-} "
 # The first released heading in the CHANGELOG. Anything at or below it is a
 # record of what that release shipped, and stays true by not being touched --
 # adding a test today does not change how many 1.0.0 had.
@@ -92,6 +93,9 @@ while IFS=: read -r file line text; do
 	*test-winkeys*)
 		[ -z "$win" ] || [ "$n" = "$win" ] ||
 			bad "$file:$line: says $n, should be $win (the Windows key suite)" ;;
+	*test-winrun*)
+		[ -z "$wrn" ] || [ "$n" = "$wrn" ] ||
+			bad "$file:$line: says $n, should be $wrn (the Windows runtime suite)" ;;
 	*test-syntax*)
 		[ -z "$syn" ] || [ "$n" = "$syn" ] ||
 			bad "$file:$line: says $n, should be $syn (the syntax suite)" ;;
@@ -129,7 +133,13 @@ done)
 # ------------------------------------------------------------ platform claims
 # The release job's "needs:" is the definition of what gates a release, so it is
 # the definition of what CI covers.
-needs=$(sed -n 's/^ *needs: *\[\(.*\)\].*/\1/p' .github/workflows/build.yml | head -1)
+# The release job's needs:, and not merely the first needs: in the file -- other
+# jobs have one too now, and taking the first of them said "0 systems run the
+# suites" and marked both READMEs wrong.
+needs=$(awk '/^  release:/ { in_release = 1 }
+	in_release && /^ *needs: *\[/ {
+		sub(/^ *needs: *\[/, ""); sub(/\].*/, ""); print; exit
+	}' .github/workflows/build.yml)
 if [ -z "$needs" ]; then
 	bad ".github/workflows/build.yml: cannot find the release job's needs: list"
 else
@@ -146,6 +156,10 @@ else
 		# build rather than about a platform, so they gate a release without
 		# adding to the count of operating systems the documents claim.
 		asan|ubsan)	;;
+		# Windows, and it runs the executable rather than building it, so it is
+		# not one of the systems that "run the suites" in the sense the prose
+		# below means -- those are the ones the whole suite runs on.
+		windows-runtime)	;;
 		*)			bad ".github/workflows/build.yml: job '$job' has no name in $0" ;;
 		esac
 	done

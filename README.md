@@ -21,9 +21,10 @@ derived from JVim 3.0-j2.1b (2002 Dec 24)
 ```
 Platforms        Windows 10/11 (Win32 GUI + console), Linux,
                  FreeBSD, NetBSD, OpenBSD, DragonFly
-Tests            227 cases, run on all of the above in CI. The Windows
-                 keyboard has 16 more in scripts/test-winkeys.sh, typed on
-                 the real thing from WSL
+Tests            227 cases, run on all of the above in CI, plus 6 that run
+                 the Windows executables there. The Windows keyboard has 16
+                 more in scripts/test-winkeys.sh, typed on the real thing
+                 from WSL
 Licence          Public domain — see LICENSE, and uganda.txt for the
                  charity request that comes with it
 ```
@@ -152,10 +153,11 @@ fonts is history now, not instructions.
 
 ## Where it stands
 
-Neither Windows build has an automated runtime test in CI — both are checked
-by compiling, and by the tests running on Unix over the same portable
-sources. Console mode Japanese input on Windows is unreliable, GDI draws no
-colour emoji, and a couple of encoding conversions are one-way.
+Nothing types at the Windows builds in CI: both are run there now, but only
+through script input, which cannot reach a cursor key — the suite that types
+for real needs a Windows machine and is run by hand. Console mode Japanese
+input on Windows is unreliable, GDI draws no colour emoji, and a couple of
+encoding conversions are one-way.
 [USAGE.md](USAGE.md#known-limits) has the full list, with what each one means
 for actual use.
 

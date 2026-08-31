@@ -125,8 +125,21 @@ the check being fooled instead of doing its job.
 
 ### Testing the release artifact itself
 
-There is no Windows runtime test in CI, but there is one to run by hand:
-`scripts/test-winkeys.sh` types into both builds for real -- console key events
+CI runs the executables now, through `scripts/test-winrun.sh`: 6 cases driven by
+script input, on `windows-latest`, against the packages the `windows` job built
+rather than anything the runner compiles for itself -- a runner-built one would
+be the other C runtime. It runs by hand too, from WSL or from Git Bash on
+Windows:
+
+```sh
+scripts/test-winrun.sh                       # src/jvim32.exe
+scripts/test-winrun.sh <some jvim.exe>       # or one out of a release
+```
+
+What it cannot reach is keys: script input comes back from `inchar()` before the
+keyboard conversion. That needs a Windows machine, and there is a suite for it
+to run by hand: `scripts/test-winkeys.sh` types into both builds for real --
+console key events
 for one, window messages for the other -- and covers the cursor keys, the
 function keys, CTRL-@, the file name cases that only Windows has, and whether
 the syntax rules colour anything at all in the GUI build, which is the only

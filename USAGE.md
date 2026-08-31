@@ -585,9 +585,11 @@ begin with.
 
 ## Known limits
 
-- **Neither Windows build has an automated runtime test in CI.** Both are
-  checked by compiling, and by the tests running on Unix over the same
-  portable sources.
+- **Nothing types at the Windows builds in CI.** Both are now *run* there, by
+  `scripts/test-winrun.sh` — 6 cases through script input, on the packages the
+  release page serves — but script input cannot reach a cursor key or CTRL-@,
+  and the 16 cases in `scripts/test-winkeys.sh` that do need a Windows machine
+  with a compiler and are run by hand.
 - **GDI draws no colour emoji.** A colour glyph needs DirectWrite; what you get
   is the fallback font's monochrome outline. It is the right width and it edits
   correctly.

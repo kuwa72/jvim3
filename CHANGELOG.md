@@ -12,6 +12,18 @@ repository and would drift within three releases.
 
 ### Added
 
+- **CI runs the Windows executables now**, which nothing automatic had ever
+  done: they were compiled, and the same portable sources were tested on a Unix.
+  Everything Windows-only — the console it starts in, the shell `:r !` calls, the
+  ANSI file APIs it opens names through — was covered by nothing, and `:r !cmd`
+  shipped broken twice. `scripts/test-winrun.sh` drives the editor through
+  script input: the ordinary operators, `:r !echo`, a UTF-8 round trip and a
+  Japanese file name, 6 cases, against both architectures of the package the
+  `windows` job built — not something the runner compiles, which would be the
+  other C runtime. It runs by hand as well, from WSL or from Git Bash on
+  Windows, and gates a release. What it cannot reach is keys: script input comes
+  back from `inchar()` before the keyboard conversion, so
+  `scripts/test-winkeys.sh` and its 16 typed cases still need a Windows machine.
 - **A Unix build now catches the signals it cannot carry on through**, and does
   what Windows has done since 1.0.0 through `src/w32crash.c`: says which signal
   it was, writes the swap files out and names them, and points at `jvim3 -r`.
@@ -128,6 +140,19 @@ written into the known limits instead (#30):
 
 ### 日本語
 
+- **CI が Windows の実行ファイルを実行するようになりました。** これまで自動で
+  実行するものは一つもなく、コンパイルと、同じ移植部分のソースを Unix で
+  テストするだけでした。起動するコンソール、`:r !` が呼ぶシェル、名前を開く
+  ANSI ファイル API といった Windows 固有の部分は何にも守られておらず、
+  `:r !cmd` は 2 回壊れたまま出荷されました。`scripts/test-winrun.sh` は
+  スクリプト入力でエディタを動かします。通常のオペレータ、`:r !echo`、UTF-8 の
+  往復、日本語のファイル名の 6 ケースで、対象は `windows` ジョブが作った
+  パッケージの両アーキテクチャです（ランナー側でコンパイルしたものではなく。
+  それは C ランタイムが別物になります）。手元でも WSL や Windows の Git Bash
+  から実行でき、リリースのゲートにもなっています。届かないのはキー入力です。
+  スクリプト入力はキーボードの符号変換より前に `inchar()` から戻るため、
+  `scripts/test-winkeys.sh` の 16 ケース（実際にキーを打つ）は今も Windows 実機
+  が必要です。
 - **Unix 版が、そのまま続行できないシグナルを捕まえるようになりました。**
   Windows が 1.0.0 から `src/w32crash.c` でしていたのと同じことをします。
   どのシグナルだったかを表示し、スワップファイルを書き出して場所を示し、
