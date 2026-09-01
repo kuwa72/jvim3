@@ -16,7 +16,30 @@ syntax	HtmlEmbed		ip/<script/<\/script>
 syntax	HtmlEmbed		ip/<style/<\/style>
 syntax	Number			t/</>/#\x\x\x\x\x\x
 syntax	Number			t/</>/\"#\x\x\x\x\x\x\"
-syntax String			tm/</>/\"[^#].*\"
+" An attribute value: from the "=" that introduces it, and not from any quote
+" that happens to come first.
+"
+" Written as \"[^#].*\" it matched at whichever quote the search reached, which
+" is the opening one only while the quotes on the line pair up from the left.
+" A value that takes no quote of its own -- the "#rrggbb" the rule above wants
+" left to it, an empty "", a value a tag broke a line inside of -- puts every
+" quote after it one out, and the rule then matched from the *end* of one value
+" to the *start* of the next: on a page of <div class="..."> that meant the
+" class list was drawn as HTML and the ">", "<div" and "class" between the two
+" values were drawn as nothing at all. The "=" cannot be a closing quote, so
+" anchoring there is what makes an opening quote recognisable as one.
+"
+" [^#\"] and not [^#]: the first excludes the "#rrggbb" above, the second keeps
+" ="" from reaching over the empty value to the next one's quote.
+"
+" The "=" is coloured with the value it introduces, since there is no way to
+" match text without colouring it -- no \zs, and no lookbehind.
+"
+" A value the tag breaks a line inside of is still not coloured over the break,
+" and a word in it that is also a tag name is coloured as one. Reaching across
+" the break needs a region, and a region cannot be told to open only inside a
+" tag; see the known limits in USAGE.md.
+syntax String			tm/</>/=[ \t]*\"[^#\"].*\"
 syntax	HtmlTag			itw/</>/noscript
 syntax	HtmlTag			itw/</>/script/style
 " tag names
@@ -81,7 +104,12 @@ syntax	silver			itw/</>/silver
 syntax	teal			itw/</>/teal
 syntax	yellow			itw/</>/yellow
 " other param
-syntax	Character		m/\'.*\'
+" A single quoted value, anchored at its "=" for the reason the double quoted one
+" above is. Written as \'.*\' and not confined to a tag it also matched from any
+" apostrophe to the next: "It's a test, isn't it" came out coloured from the
+" first apostrophe to the second. HTML gives a quote outside a tag no meaning, so
+" there is nothing there for this rule to find.
+syntax	Character		tm/</>/=[ \t]*\'[^\']*\'
 syntax	Number			t/</>/\d\+
 syntax	Delimiter		t/</>/\"
 syntax	Delimiter		n/<\//</>

@@ -59,6 +59,17 @@ typedef struct _syntax {
 	int					tagno;
 	linenr_t			startpos;
 	linenr_t			endpos;
+	/*
+	 * Where this rule's next match is, as fs_search() last worked it out: the
+	 * scan that answer belongs to, the offset the search was made from, and the
+	 * match it found -- or, with scanhit false, no match as far as scanstop.
+	 */
+	long				scangen;
+	linenr_t			scanfrom;
+	linenr_t			scanstart;
+	linenr_t			scanend;
+	linenr_t			scanstop;
+	int					scanhit;
 	char_u			*	str;
 	regexp			*	prog;
 	regexp			*	progend;
@@ -115,6 +126,28 @@ typedef struct _synlink {
  * it, which clang refuses and gcc only warns about.
  */
 static syntax			defcolor	= {NULL, NULL, NULL, 'A'};
+
+/*
+ * Which scan the rules' "next match" answers belong to.
+ *
+ * fwd_search() asks every rule where its next match is, and is asked again at
+ * every match in the line, so a line with a thousand matches used to be a
+ * thousand searches of the whole line by every rule. The answers do not change
+ * while the drawing walks forward -- the first match at or after some byte is
+ * still the first match at or after any byte before it, until the walk passes
+ * where that match begins -- so each rule keeps its last answer and searches
+ * again only once the walk has gone past it. See fs_search().
+ *
+ * This number is what says an answer is still about the text it was found in.
+ * It goes up when the drawing moves to another line and when a line is written
+ * to (syn_changed()), which between them cover everything that can make one
+ * wrong. Rules are allocated zeroed and this starts at 1, so a rule that has
+ * never been asked has no answer.
+ */
+static long				syn_scangen		= 1;
+static BUF			*	syn_scanbuf		= NULL;
+static linenr_t			syn_scanline	= 0;
+static char_u		*	syn_scantop		= NULL;
 
 /*
  * The colours rules have asked to be drawn on, one entry per distinct RGB. A
@@ -212,6 +245,10 @@ syn_clr(BUF *buf)
 	buf->b_syn_match	= NULL;
 	buf->b_syn_matchend	= NULL;
 	buf->b_syn_curp		= NULL;
+	/* The rules that were holding "next match" answers have just been freed. */
+	syn_scangen++;
+	syn_scanbuf			= NULL;
+	syn_scantop			= NULL;
 	/* The rules the line states were worked out from are gone with them. */
 	if (buf->b_syn_state != NULL)
 		free(buf->b_syn_state);
@@ -1907,11 +1944,24 @@ syn_add(BUF *buf, char_u *reg)
 	return(0);
 }
 
+/*
+ * Where this rule's next match at or after 'ptr' is, as an offset left in
+ * synp->startpos and synp->endpos, or NULL for none.
+ *
+ * 'stopp', when it is given, comes back as how far the search really looked:
+ * MAX_COLS when it read the rest of the line, and the offset it gave up at
+ * otherwise. Only a word rule matched as a string gives up early -- it stops at
+ * the first place the letters appear whether or not that is a word -- and
+ * fs_search() needs to know, or it would remember "no match on this line" from
+ * a rule that had barely looked.
+ */
 static syntax *
-ps_search(syntax *synp, char_u *top, char_u *ptr, int find)
+ps_search(syntax *synp, char_u *top, char_u *ptr, int find, linenr_t *stopp)
 {
 	int					rc;
 
+	if (stopp != NULL)
+		*stopp = MAX_COLS;
 	if (ptr == NULL)
 		ptr = top;
 	if (synp->type == TYPE_TAG && syn_isregstr(synp->str))
@@ -1940,6 +1990,10 @@ ps_search(syntax *synp, char_u *top, char_u *ptr, int find)
 		}
 		else
 		{
+			/* Not a search at all: this asks about 'ptr' and nowhere else, so
+			 * the rest of the line is not what a "no" here is about. */
+			if (stopp != NULL)
+				*stopp = ptr - top;
 			if (ISkanji(*ptr) || ISkana(*ptr))
 				rc = *ptr == synp->str[0] ? 0 : 1;
 			else if (synp->ic)
@@ -1960,19 +2014,32 @@ ps_search(syntax *synp, char_u *top, char_u *ptr, int find)
 			int			sclass;
 			int			oclass;
 
+			/*
+			 * The letters are here. If they are part of a longer word the
+			 * search stops here rather than going on to the next place they
+			 * appear, so this is as far as it looked.
+			 */
 			if (top != ptr)
 			{
 				sclass = syn_cls(utf_prev(top, ptr));
 				oclass = syn_cls(ptr);
 				if (sclass == oclass)
+				{
+					if (stopp != NULL)
+						*stopp = ptr - top;
 					return(NULL);
+				}
 			}
 			if (ptr[strlen(synp->str) + 0] != '\0')
 			{
 				sclass = syn_cls(utf_prev(ptr, ptr + strlen(synp->str)));
 				oclass = syn_cls(ptr + strlen(synp->str));
 				if (sclass == oclass)
+				{
+					if (stopp != NULL)
+						*stopp = ptr - top;
 					return(NULL);
+				}
 			}
 		}
 		synp->startpos	= ptr - top;
@@ -2156,6 +2223,57 @@ syn_tagchk(BUF *buf, syntax *synp, int open, char_u *top)
 	return(inside);
 }
 
+/*
+ * ps_search() with the previous answer remembered: where this rule's first
+ * match at or after 'ptr' is.
+ *
+ * A remembered answer serves for any position between the one it was found
+ * from and the match itself, which is what keeps fwd_search() from searching
+ * the whole line again at every match in it. Once the walk reaches the match,
+ * or goes past it, the rule searches again -- from there, so each rule still
+ * only covers the line once however many matches it has in it.
+ *
+ * A "no" is only kept as far as the search that produced it actually looked.
+ * A word rule matched as a string stops at the first place its letters appear
+ * and gives up if that one is inside a longer word, without going on to look
+ * for the next, so its "no" says nothing about the text past that place: kept
+ * any further, it loses a second "var" that is a word of its own -- which is
+ * what it did to a page of minified HTML.
+ */
+static syntax *
+fs_search(syntax *synp, char_u *top, char_u *ptr)
+{
+	linenr_t			off		= ptr - top;
+	linenr_t			stop;
+
+	if (synp->scangen == syn_scangen && synp->scanfrom <= off)
+	{
+		if (synp->scanhit)
+		{
+			if (synp->scanstart >= off)
+			{
+				synp->startpos	= synp->scanstart;
+				synp->endpos	= synp->scanend;
+				return(synp);
+			}
+		}
+		else if (synp->scanstop >= off)
+			return(NULL);			/* nothing up to there, which is past here */
+	}
+	synp->scangen	= syn_scangen;
+	synp->scanfrom	= off;
+	if (ps_search(synp, top, ptr, TRUE, &stop) == NULL)
+	{
+		synp->scanhit	= FALSE;
+		synp->scanstop	= stop;
+		return(NULL);
+	}
+	synp->scanhit	= TRUE;
+	synp->scanstart	= synp->startpos;
+	synp->scanend	= synp->endpos;
+	return(synp);
+}
+
 static syntax *
 fwd_search(BUF *buf, int tagopen, char_u *top, char_u *ptr, linenr_t *ftop)
 {
@@ -2179,7 +2297,7 @@ fwd_search(BUF *buf, int tagopen, char_u *top, char_u *ptr, linenr_t *ftop)
 		if (synp->word && synp->str && synhash[synp->hash].cnt == 0)
 			continue;
 #endif
-		if (ps_search(synp, top, ptr, TRUE) != NULL)
+		if (fs_search(synp, top, ptr) != NULL)
 		{
 			int				covers = synp->startpos <= (ptr - top)
 										&& (ptr - top) < synp->endpos;
@@ -2339,7 +2457,7 @@ syn_linestate(BUF *buf, syntax *open, char_u *line)
 			{
 				if (synp->type != TYPE_PAIR)
 					continue;
-				if (ps_search(synp, line, p, TRUE) == NULL)
+				if (ps_search(synp, line, p, TRUE, NULL) == NULL)
 					continue;
 				if (synp->startpos < bestpos)
 				{
@@ -2350,7 +2468,7 @@ syn_linestate(BUF *buf, syntax *open, char_u *line)
 			if (best == NULL)
 				return(NULL);			/* nothing else opens on this line */
 			/* the loop above left the other rules' positions on top */
-			(void)ps_search(best, line, p, TRUE);
+			(void)ps_search(best, line, p, TRUE, NULL);
 			p = line + best->endpos;
 			open = best;
 		}
@@ -2461,6 +2579,15 @@ syn_changed(BUF *buf, linenr_t lnum)
 {
 	if (lnum < 1)
 		lnum = 1;
+	/*
+	 * The buffer is about to be written to, so every "next match" the rules
+	 * are holding stops being an answer. Not only the ones about this line: an
+	 * inserted or deleted line moves the others' numbers, and the line the
+	 * answers were about can end up at this same address under another number.
+	 */
+	syn_scangen++;
+	syn_scanbuf	 = NULL;
+	syn_scantop	 = NULL;
 	if (buf->b_syn_stateval > lnum)
 	{
 		buf->b_syn_stateval = lnum;
@@ -2696,6 +2823,18 @@ is_syntax(WIN *wp, linenr_t lnum, char_u **top, char_u **ptr)
 		/* syn_state() fetched other lines, which moves the one being drawn */
 		*top = ml_get_buf(buf, lnum, FALSE);
 		*ptr = *top + off;
+	}
+	/*
+	 * A different line, or the same line somewhere else in memory: what the
+	 * rules remember about where their next match is was about the line before
+	 * this one, and is no longer an answer to anything.
+	 */
+	if (buf != syn_scanbuf || lnum != syn_scanline || *top != syn_scantop)
+	{
+		syn_scanbuf		= buf;
+		syn_scanline	= lnum;
+		syn_scantop		= *top;
+		syn_scangen++;
 	}
 	if (*top == *ptr)
 	{

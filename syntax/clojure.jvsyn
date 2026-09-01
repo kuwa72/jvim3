@@ -1,5 +1,5 @@
 syntax Comment			n/;.*$
-syntax String			m/\".*[^\\]\"
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
 syntax	Constant		n/:\i\+
 syntax	Float			n/\d*\.\d\+
 syntax	Number			w/0x\x\+

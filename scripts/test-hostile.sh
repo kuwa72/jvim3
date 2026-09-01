@@ -122,32 +122,47 @@ expand_keys() {
 #   ARGS=-b     extra arguments to jvim, e.g. binary mode
 #   ENV_=...    environment for it, e.g. ENV_=LANG=ja_JP.UTF-8
 #   T=10        seconds this case is allowed; ptyrun's default is 20
+#   SYN=.html   the colouring is part of what is being tested: name the input
+#               file with this suffix, and give the editor an rc that loads the
+#               rules for it, the way test-syntax.sh does
 #
 # HOME is $tmp, which holds no rc unless the case put one there: a ~/.jvimrc
 # belonging to whoever is running this must not be able to change the answer.
 case_() {
 	counted && return
 	local name=$1 expect=$2 in_spec=$3 want_spec=$4 keys=$5
+	local in=$tmp/in${SYN:-} vim=
 
-	write_spec "$in_spec" "$tmp/in"
+	write_spec "$in_spec" "$in"
 	case $want_spec in
-	same)		cp "$tmp/in" "$tmp/want" ;;
+	same)		cp "$in" "$tmp/want" ;;
 	nonempty)	rm -f "$tmp/want" ;;
 	*)			write_spec "$want_spec" "$tmp/want" ;;
 	esac
+
+	# The rules as they are in the tree, reached through the file's suffix. The
+	# rc is written for the cases that ask for it and removed again, so that the
+	# cases that do not ask are still run with nothing sourced at all.
+	if [ -n "${SYN:-}" ]; then
+		printf 'set fexrc\nset syntax\nsource $VIM/syntax/filetype.jvsyn\n' \
+				> "$tmp/.jvimrc"
+		vim="VIM=$root"
+	else
+		rm -f "$tmp/.jvimrc"
+	fi
 
 	rm -f "$tmp/out"
 	# shellcheck disable=SC2059  # the keys are a format on purpose
 	printf "$(expand_keys "$keys")" "$tmp" > "$tmp/keys"
 	PTYRUN_TIMEOUT=${T:-20} "$tmp/ptyrun" /bin/sh -c \
-		"HOME=$tmp TERM=xterm ${ENV_:-} $jvim -T xterm ${ARGS:-} -s $tmp/keys $tmp/in" \
+		"HOME=$tmp TERM=xterm $vim ${ENV_:-} $jvim -T xterm ${ARGS:-} -s $tmp/keys $in" \
 		>/dev/null 2>&1
 
 	# bash drops an assignment made in front of a function call when the
 	# function returns -- but not in POSIX mode, where it would leak into every
 	# case after this one, and "-b" leaking is a case that passes for the wrong
 	# reason. Cleared here so that it cannot depend on how bash was started.
-	ARGS=; ENV_=; T=
+	ARGS=; ENV_=; T=; SYN=
 
 	verdict "$name" "$expect" "$want_spec"
 }
@@ -262,6 +277,18 @@ case_ '2 MB in one line: G$x' ok \
 T=10 case_ '2 MB in one line: :s/x/y/g finishes' ok \
 	'repnl:x:2000000' 'repnl:y:2000000' \
 	':s/x/y/g\r:w! %s/out\r:q!\r'
+
+# The same shape with the colouring turned on, which is how anybody actually
+# meets it: a minified page is one line, and one line of it is thousands of
+# things to colour. "$" is the assertion as much as the cap is -- it sends the
+# drawing to the far end of the line, so the whole line is walked.
+#
+# 17 kB in one line, and before the rules kept where their next match is this
+# took 73 seconds; it takes about one. The searches behind the colouring were
+# each starting again from the top at every match in the line.
+T=10 SYN=.html case_ '17 kB of tags in one line: colouring finishes' ok \
+	'repnl:<div class="a">x</div>:800' 'same' \
+	'$:w! %s/out\r:q!\r'
 
 # ------------------------------------------------------------ not text at all
 #

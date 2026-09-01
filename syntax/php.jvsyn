@@ -1,8 +1,8 @@
 syntax Comment			n/\/\/.*$
 syntax Comment			n/#.*$
 syntax Comment			p/\/\*/\*\/
-syntax String			m/\".*[^\\]\"
-syntax String			m/'.*[^\\]'
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
+syntax String			n/'\([^'\\]\\|\\.\)*'
 syntax PreProc			n/<?php
 syntax PreProc			n/?>
 syntax Identifier		n/\$\i\+

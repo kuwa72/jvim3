@@ -1,5 +1,5 @@
 syntax Comment			p/(\*/\*)
-syntax String			m/\".*[^\\]\"
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
 syntax	Float			n/\d*\.\d\+
 syntax	Number			w/0x\x\+
 syntax	Number			w/\d\+

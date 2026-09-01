@@ -15,7 +15,7 @@
 
 ```sh
 ./scripts/build-unix.sh          # src/jvim3 をビルド
-./scripts/build-unix.sh test     # ビルドしてテスト 230 ケースを実行
+./scripts/build-unix.sh test     # ビルドしてテスト 235 ケースを実行
 ./scripts/build-unix.sh strict   # CI がエラー扱いする警告つきでビルド
 ./scripts/build-unix.sh asan     # AddressSanitizer つきでビルドしてテスト
 ./scripts/build-unix.sh ubsan    # UndefinedBehaviorSanitizer つきでビルドしてテスト
@@ -194,9 +194,9 @@ Windows でも WoW64 で問題なく動きます。ポインタが `int`/`long` 
 ./scripts/build-unix.sh test           # 5 つのスイート
 ./scripts/test-encoding.sh src/jvim3   # 51 ケース
 ./scripts/test-editing.sh  src/jvim3   # 78 ケース
-./scripts/test-syntax.sh   src/jvim3   # 75 ケース
+./scripts/test-syntax.sh   src/jvim3   # 79 ケース
 ./scripts/test-sgr.sh      src/jvim3   # 9 ケース
-./scripts/test-hostile.sh  src/jvim3   # 17 ケース
+./scripts/test-hostile.sh  src/jvim3   # 18 ケース
 ```
 
 `test-encoding.sh` は漢字・UTF-8・マルチバイト編集を、`test-editing.sh` は移動、
@@ -207,7 +207,7 @@ Windows でも WoW64 で問題なく動きます。ポインタが `int`/`long` 
 ではなく描画側を見る唯一のスイートです。`scripts/test-hostile.sh` は誰も意図して
 いない入力と終わり方を与えます — 1 行 2 MB、あらゆるバイト値、ファイル末尾で
 切れたマルチバイト列、再帰的なマッチャを使い切るほど入れ子にした正規表現、
-編集中にセッションが切れる。合わせて 230 ケースです。
+編集中にセッションが切れる。合わせて 235 ケースです。
 
 敵性入力スイートは、何もクラッシュしていないのにケースを失敗として報告できる
 唯一のスイートです。エディタがそのケースを終えられないとき KNOWN-FAIL になり、

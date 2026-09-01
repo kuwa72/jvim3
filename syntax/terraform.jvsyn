@@ -1,7 +1,7 @@
 syntax Comment			n/#.*$
 syntax Comment			n/\/\/.*$
 syntax Comment			p/\/\*/\*\/
-syntax String			m/\".*[^\\]\"
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
 syntax	Float			n/\d*\.\d\+
 syntax	Number			w/\d\+
 syntax	Structure		w/resource/data/variable/output/module/provider/locals

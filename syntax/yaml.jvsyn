@@ -3,7 +3,7 @@ syntax PreProc			n/^---
 syntax PreProc			n/^\.\.\.$
 syntax Identifier		-m/^\s*[^ #]\+:
 syntax Identifier		-m/^\s*-\s\+[^ #]\+:
-syntax String			m/\".*[^\\]\"
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
 syntax String			m/'.*'
 syntax Constant		n/[&*]\i\+
 syntax Statement		n/^\s*-\s

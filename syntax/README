@@ -40,7 +40,7 @@ Adding a file type
 Write syntax/zig.jvsyn:
 
     syntax Comment			n/\/\/.*$
-    syntax String			m/\".*[^\\]\"
+    syntax String			n/\"\([^\"\\]\\|\\.\)*\"
     syntax Statement		w/fn/return/defer/comptime
 
 and add the block to filetype.jvsyn that reaches it:
@@ -148,6 +148,25 @@ Writing rules
   o The regexp is vim's "magic": . * [ ^ $ bare, and \+ \= \< \> \( \) with a
     backslash, plus the classes \i \k \f \p \s \d \x \o \w \h \a \l \u and
     their upper case complements. There is no \{n,m} and nothing non-greedy.
+
+  o A string is written  n/\"\([^\"\\]\\|\\.\)*\"  -- a quote, then any number
+    of (one character that is neither a quote nor a backslash, or a backslash
+    and whatever follows it), then a quote. Copy it; do not simplify it.
+
+    Every rule file said  m/\".*[^\\]\"  until 2026-09-01: a quote, anything,
+    one character that is not a backslash, a quote. That reads as "ends at a
+    quote that is not escaped" and is not: an empty "" has no character between
+    its quotes and "C:\\" has a backslash there, so neither could end where it
+    does, and the match ran on to the next quote on the line with everything in
+    between drawn as string. The line  textmode ? "" : "[notextmode] "  in this
+    tree's own fileio.c came out as one run from the first quote to the last. The form above cannot
+    reach past a closing quote, because neither branch of the alternation matches
+    one. It is also faster -- 8 times, on a 33 kB minified .js on one line --
+    since it gives up at the first character that cannot be in a string instead
+    of scanning to the end of the line from every quote.
+
+    Single quoted: the same with ' for ". A language whose strings have no
+    escapes at all (sh, sql, make) can use  n/'[^']*'  instead.
 
   o A colour can say what goes behind it, with "on" and a second colour:
 
