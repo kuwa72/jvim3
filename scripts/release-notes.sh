@@ -44,17 +44,30 @@ if [ -z "$(printf '%s' "$changes" | tr -d ' \t\n')" ]; then
 fi
 
 # --- the facts the template asks for -----------------------------------------
-enc=$(COUNT_ONLY=1 ./scripts/test-encoding.sh 2>/dev/null | sed -n 's/^cases //p')
-edt=$(COUNT_ONLY=1 ./scripts/test-editing.sh  2>/dev/null | sed -n 's/^cases //p')
-if [ -z "$enc" ] || [ -z "$edt" ]; then
-	echo "cannot get the case counts from the test suites" >&2
-	exit 1
-fi
-tests=$((enc + edt))
+#
+# Every suite the "test" target runs, not two of them: this said enc + edt back
+# when those were all there were, and went on saying it -- 129 -- while three
+# more suites brought the answer to 235. Adding a suite means adding it here,
+# the same as in check-docs.sh and build-unix.sh.
+tests=0
+for suite in encoding editing syntax sgr hostile; do
+	n=$(COUNT_ONLY=1 ./scripts/test-$suite.sh 2>/dev/null | sed -n 's/^cases //p')
+	if [ -z "$n" ]; then
+		echo "cannot get the case count from scripts/test-$suite.sh" >&2
+		exit 1
+	fi
+	tests=$((tests + n))
+done
 
 # The platforms that gate a release are the release job's needs:, minus the
 # ones that are not an operating system the suites run on.
-needs=$(sed -n 's/^ *needs: *\[\(.*\)\].*/\1/p' .github/workflows/build.yml | head -1)
+#
+# The release job's, and not the first needs: in the file: windows-runtime is
+# written above it and needs only [windows], so head -1 answered with a list
+# holding no operating system at all and the notes said "passed on ." Read the
+# block that begins with the job id instead.
+needs=$(sed -n '/^  release:/,/^  [a-z]/{s/^ *needs: *\[\(.*\)\].*/\1/p;}' \
+			.github/workflows/build.yml | head -1)
 oses=""
 for job in $(printf '%s\n' "$needs" | tr ',' ' '); do
 	case $job in

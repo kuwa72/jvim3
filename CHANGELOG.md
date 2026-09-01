@@ -131,6 +131,13 @@ repository and would drift within three releases.
   worth doing. The two `STRCPY()` calls in the same function that were given
   overlapping strings — undefined, and the sort of thing AddressSanitizer stops
   on — are `memmove()` now. (#22)
+- The release notes said "the build and 129 tests passed on ." — a count from
+  when the encoding and editing suites were the only two, and no platform at all.
+  `release-notes.sh` adds up every suite the `test` target runs now, and reads
+  the `needs:` of the release job rather than the first one in the workflow:
+  `windows-runtime` is written above it and needs only `[windows]`, so the list
+  it was given held no operating system. The header of that script says it exists
+  because the notes used to be a heredoc that drifted exactly this way.
 - **Syntax colouring made a long line quadratic, which is a minified page.**
   Opening a 31 kB `.html` with 17 kB of it on one line took 2.0 seconds; sending
   the cursor to the far end of that line took 19.5; dumping the colouring of the
@@ -380,6 +387,14 @@ written into the known limits instead (#30):
   ファイルであり、それがこの修正の理由です。同じ関数で重なった文字列を
   渡していた `STRCPY()` 2 箇所（未定義動作で、AddressSanitizer が止まる類の
   もの）も `memmove()` にしました。(#22)
+- リリースノートが「the build and 129 tests passed on .」と書いていました。129 は
+  エンコーディングと編集の 2 スイートしかなかった頃の数で、プラットフォーム名は
+  空でした。`release-notes.sh` は `test` ターゲットが走らせる全スイートを合計し、
+  ワークフローの最初の `needs:` ではなく release ジョブの `needs:` を読むように
+  しました。`windows-runtime` がその上に書かれていて `[windows]` しか必要と
+  しないため、渡されていたリストには OS が 1 つも入っていませんでした。この
+  スクリプトの冒頭には、ノートがまさにこうしてずれていく heredoc だったから
+  これがある、と書かれています。
 - **シンタックスカラーが長い 1 行に対して二次オーダーで、それは minified な
   ページそのものでした。** 17 kB が 1 行に入った 31 kB の `.html` を開くのに
   2.0 秒、その行の末尾へカーソルを送るのに 19.5 秒、ファイル全体の色を
