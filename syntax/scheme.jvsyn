@@ -1,6 +1,6 @@
 syntax Comment			n/;.*$
 syntax Comment			p/#\|/\|#
-syntax String			m/\".*[^\\]\"
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
 syntax	Boolean			n/#t
 syntax	Boolean			n/#f
 syntax	Float			n/\d*\.\d\+

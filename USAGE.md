@@ -611,6 +611,24 @@ begin with.
   it, and a multi-byte sequence cut off by the end of the file comes back as an
   ASCII letter. **`jvim3 -b file` round trips any file byte for byte**, and is
   the answer whenever the bytes matter more than the text.
+- **Colouring a line with thousands of things to colour on it still costs more
+  than the line is long.** A minified page or bundle is one line, and one
+  ordinary one is fine now: 17 kB of tags on a line draws in about a second,
+  where it took 73. But two of the searches behind the colouring still start
+  from the top of the line at every match — the word index the `w` rules are
+  looked up in, and the walk that says whether a byte is inside a `<`…`>` — so a
+  line dense enough to hold twelve thousand coloured runs takes about two
+  seconds to draw rather than the tenth of one it should. `:set nosyntax` is
+  instant on any of them.
+- **An HTML tag with a line break inside a quoted value is not coloured over the
+  break.** `<div class="a` / `b" id="c">` is what a page written with a long list
+  of classes looks like, and the value is left plain on the lines the break
+  separates — with any word in it that is also a tag name, `a` or `center` or
+  `var`, coloured as a tag name. What comes after the value is right: the
+  attribute names and values that follow the break keep their colours. Reaching
+  across the break needs a region, and the rule language has no way to say
+  "a region, but only inside a tag" — the same missing idea that leaves a
+  `<script>` body one grey block instead of JavaScript.
 - **Japanese input in console mode is unreliable on Windows** (see
   [Japanese input](#japanese-input)), and was in 2002 too. Use the GUI.
 - **A colour scheme file is read by a fixed set of directives, not a

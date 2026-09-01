@@ -546,7 +546,6 @@ ISdisp(int code)
 ISkanjiPosition(char_u *ptr, int pos)
 {
 	char_u	*p;
-	char_u	*head;
 
 	if (ptr == NULL || pos <= 0)
 		return 0;
@@ -554,6 +553,28 @@ ISkanjiPosition(char_u *ptr, int pos)
 	for (p = ptr; pos > 1; pos--, p++)
 		if (*p == NUL)
 			return 0;
+	return ISkanjiPointer(ptr, p);
+}
+
+/*
+ * The same question asked with a pointer, which is what all but a handful of
+ * the callers already have.
+ *
+ * This does not go through the offset form, and that is the point: that walks
+ * the string to reach the byte, so asking about one byte after another costs
+ * the length of the line each time. A regexp backing a "*" off over a long
+ * match asks once per character, which made colouring a line of minified HTML
+ * quadratic -- 17 kB in one line took twenty seconds. Looking at the byte and
+ * at the three before it is all the question needs.
+ */
+	int
+ISkanjiPointer(char_u *ptr, char_u *p)
+{
+	char_u	*head;
+	char_u	*from;
+
+	if (ptr == NULL || p == NULL || p < ptr)
+		return 0;
 	if (*p == NUL)
 		return 0;
 	if (UTF8_ISLEAD(*p))
@@ -563,19 +584,20 @@ ISkanjiPosition(char_u *ptr, int pos)
 	/*
 	 * A trailing byte only counts as one if it really belongs to a character
 	 * that starts earlier; a stray 0x80 byte is a single byte of its own.
+	 *
+	 * The search for that start reaches back UTF8_MAXLEN - 1 bytes and no
+	 * further, since nothing longer is accepted, and so a run of stray
+	 * trailing bytes -- which a "-b" buffer may well hold -- is not walked to
+	 * its beginning. utf_head() stops at a NUL as well, so a byte reached past
+	 * the end of a string is never joined to a character before it.
 	 */
-	head = utf_head(ptr, p);
+	from = (p - ptr >= UTF8_MAXLEN) ? p - (UTF8_MAXLEN - 1) : ptr;
+	head = utf_head(from, p);
 	if (head == p || !UTF8_ISLEAD(*head))
 		return 0;
 	if ((int)(p - head) >= utf_len(*head))
 		return 0;
 	return 2;
-}
-
-	int
-ISkanjiPointer(char_u *ptr, char_u *p)
-{
-	return(ISkanjiPosition(ptr, p - ptr + 1));
 }
 
 	int

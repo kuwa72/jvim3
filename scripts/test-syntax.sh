@@ -91,7 +91,25 @@ fi
 
 case_ 'C: comment, string, type' c.c \
 'int main(void)\n{\n\t/* two\n\t   lines */\n\tchar *s = "hi";\n}\n' \
-'1:0-3 Type w/int\n1:4-8 Function -/[_a-zA-Z][_a-zA-Z0-9]*\\s*(\n1:9-13 Type w/void\n3:1-7 Comment p/\\/\\*\n4:0-12 Comment p/\\/\\*\n5:1-5 Type w/char\n5:11-15 String m/".*[^\\\\]"\n'
+'1:0-3 Type w/int\n1:4-8 Function -/[_a-zA-Z][_a-zA-Z0-9]*\\s*(\n1:9-13 Type w/void\n3:1-7 Comment p/\\/\\*\n4:0-12 Comment p/\\/\\*\n5:1-5 Type w/char\n5:11-15 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n'
+
+# An empty string, and one that ends in an escaped backslash.
+#
+# The rule was \".*[^\\\\]\" -- a quote, anything, one character that is not a
+# backslash, a quote -- which is how it let a string hold an escaped quote. But
+# an empty "" has no character between its quotes, and "C:\\\\" has a backslash
+# there, so neither could end where it does: the match ran on to the next quote
+# on the line, and everything in between was drawn as string. In this tree's own
+# source `textmode ? "" : "[notextmode] "` was one run from the empty string to
+# the second quote of the second one.
+#
+# The pattern now names what may be inside a string -- any run of characters that
+# are neither a quote nor a backslash, then any number of (backslash, anything,
+# another such run) -- so it cannot reach past the closing quote at all. Line 3
+# is what the old one was written for and still works.
+case_ 'C: an empty string, and one ending in a backslash' c.c \
+'char *a = "", *b = "x";\nchar *p = "C:\\\\", *q = "y";\nchar *r = "say \\"hi\\"";\n' \
+'1:0-4 Type w/char\n1:10-12 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n1:19-22 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n2:0-4 Type w/char\n2:10-16 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n2:23-26 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n3:0-4 Type w/char\n3:10-22 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n'
 
 case_ 'C: a comment that never closes' c.c \
 'int a;\n/* open\nstill\n' \
@@ -111,7 +129,7 @@ case_ 'Go: package, string, type' t.go \
 
 case_ 'Rust: attribute and macro' t.rs \
 '#[derive(Debug)]\nfn main() {\n    println!("hi");\n}\n' \
-'1:0-16 PreProc n/^\\s*#!\\=\\[.*\\]\n2:0-2 Statement w/fn\n3:4-12 Macro -/\\i\\+![({[]\n3:13-17 String m/".*[^\\\\]"\n'
+'1:0-16 PreProc n/^\\s*#!\\=\\[.*\\]\n2:0-2 Statement w/fn\n3:4-12 Macro -/\\i\\+![({[]\n3:13-17 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n'
 
 case_ 'shell: shebang beats the comment rule' t.sh \
 '#!/bin/sh\n# a comment\nfor f in x; do :; done\n' \
@@ -119,7 +137,7 @@ case_ 'shell: shebang beats the comment rule' t.sh \
 
 case_ 'YAML: key, string, boolean' t.yml \
 'name: jvim\nok: true\nquoted: "x"\n' \
-'1:0-4 Identifier m-/^\\s*[^ #]\\+:\n2:0-2 Identifier m-/^\\s*[^ #]\\+:\n2:4-8 Boolean w/true\n3:0-6 Identifier m-/^\\s*[^ #]\\+:\n3:8-11 String m/".*[^\\\\]"\n'
+'1:0-4 Identifier m-/^\\s*[^ #]\\+:\n2:0-2 Identifier m-/^\\s*[^ #]\\+:\n2:4-8 Boolean w/true\n3:0-6 Identifier m-/^\\s*[^ #]\\+:\n3:8-11 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n'
 
 case_ 'Markdown: heading, code fence, inline code' t.md \
 '# Title\n\n`code` here\n\n```sh\nnot markdown\n```\n' \
@@ -127,7 +145,7 @@ case_ 'Markdown: heading, code fence, inline code' t.md \
 
 case_ 'JSON: a key is not a value' t.json \
 '{\n  "name": "jvim",\n  "n": 3\n}\n' \
-'2:2-8 Identifier m-/".*[^\\\\]":\n2:10-16 String m/".*[^\\\\]"\n3:2-5 Identifier m-/".*[^\\\\]":\n3:7-8 Number n/-\\=\\d\\+\n'
+'2:2-8 Identifier -/"\\([^"\\\\]\\|\\\\.\\)*":\n2:10-16 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n3:2-5 Identifier -/"\\([^"\\\\]\\|\\\\.\\)*":\n3:7-8 Number n/-\\=\\d\\+\n'
 
 case_ 'a file type with no rules is left alone' t.unknown \
 'nothing here is coloured\n' \
@@ -135,7 +153,7 @@ case_ 'a file type with no rules is left alone' t.unknown \
 
 case_ 'Japanese in a rule matches' t.py \
 'x = "\343\201\202"  # \343\201\202\n' \
-'1:4-9 String m/".*[^\\\\]"\n1:11-16 Comment n/#.*$\n'
+'1:4-9 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n1:11-16 Comment n/#.*$\n'
 
 case_ 'JavaScript: template literal, keywords' t.js \
 'const x = 42;  // c\nclass A { async run() { return `t${x}`; } }\n' \
@@ -143,7 +161,7 @@ case_ 'JavaScript: template literal, keywords' t.js \
 
 case_ 'Ruby: instance variable, keywords' t.rb \
 '# c\nrequire "json"\nclass Foo\n  def run\n    @n = nil\n  end\nend\n' \
-'1:0-3 Comment n/#.*$\n2:0-7 Include w/require\n2:8-14 String m/".*[^\\\\]"\n3:0-5 Structure w/class\n4:2-5 Statement w/def\n5:4-6 Identifier n/@@\\=\\i\\+\n5:9-12 Constant w/nil\n6:2-5 Statement w/end\n7:0-3 Statement w/end\n'
+'1:0-3 Comment n/#.*$\n2:0-7 Include w/require\n2:8-14 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n3:0-5 Structure w/class\n4:2-5 Statement w/def\n5:4-6 Identifier n/@@\\=\\i\\+\n5:9-12 Constant w/nil\n6:2-5 Statement w/end\n7:0-3 Statement w/end\n'
 
 # The last line is the reason the property rule wants an indent: "a:hover" is a
 # name before a colon as much as "color" is, and is expected to stay plain.
@@ -161,7 +179,7 @@ case_ 'Lua: a comment is two dashes' t.lua \
 
 case_ 'PHP: variables and types' t.php \
 '<?php\n$x = "a";\nfunction f(int $n): string { return null; }\n' \
-'1:0-5 PreProc n/<?php\n2:0-2 Identifier n/\\$\\i\\+\n2:5-8 String m/".*[^\\\\]"\n3:0-8 Statement iw/function\n3:11-14 Type iw/int\n3:15-17 Identifier n/\\$\\i\\+\n3:20-26 Type iw/string\n3:29-35 Statement iw/return\n3:36-40 Constant iw/null\n'
+'1:0-5 PreProc n/<?php\n2:0-2 Identifier n/\\$\\i\\+\n2:5-8 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n3:0-8 Statement iw/function\n3:11-14 Type iw/int\n3:15-17 Identifier n/\\$\\i\\+\n3:20-26 Type iw/string\n3:29-35 Statement iw/return\n3:36-40 Constant iw/null\n'
 
 case_ 'diff: the added and removed lines' t.diff \
 'diff --git a/x b/x\n@@ -1 +1 @@\n-old\n+new\n' \
@@ -169,7 +187,7 @@ case_ 'diff: the added and removed lines' t.diff \
 
 case_ 'TOML: table, key, value' t.toml \
 '# c\nname = "jvim"\n\n[deps]\nok = true\n' \
-'1:0-3 Comment n/#.*$\n2:0-5 Identifier m-/^\\s*[^ #=]\\+\\s*=\n2:7-13 String m/".*[^\\\\]"\n4:0-6 Tag n/^\\s*\\[.*\\]\n5:0-3 Identifier m-/^\\s*[^ #=]\\+\\s*=\n5:5-9 Boolean w/true\n'
+'1:0-3 Comment n/#.*$\n2:0-5 Identifier m-/^\\s*[^ #=]\\+\\s*=\n2:7-13 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n4:0-6 Tag n/^\\s*\\[.*\\]\n5:0-3 Identifier m-/^\\s*[^ #=]\\+\\s*=\n5:5-9 Boolean w/true\n'
 
 case_ 'Makefile: assignment, target, variable' t.mk \
 'CC = gcc\nall: prog\n\t$(CC) -o prog\n' \
@@ -177,7 +195,7 @@ case_ 'Makefile: assignment, target, variable' t.mk \
 
 case_ 'Dockerfile: matched by name, not by suffix' Dockerfile \
 '# c\nFROM debian:12 AS build\nRUN echo "hi"\n' \
-'1:0-3 Comment n/#.*$\n2:0-4 Statement iw/FROM\n2:15-17 Operator iw/AS\n3:0-3 Statement iw/RUN\n3:9-13 String m/".*[^\\\\]"\n'
+'1:0-3 Comment n/#.*$\n2:0-4 Statement iw/FROM\n2:15-17 Operator iw/AS\n3:0-3 Statement iw/RUN\n3:9-13 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n'
 
 case_ 'C#: keywords, types, number' t.cs \
 'using System;\n// c\npublic class A {\n    public static int F(string s) { return 0x1f; }\n}\n' \
@@ -231,15 +249,15 @@ case_ 'Haskell: comment, module/where, types' t.hs \
 
 case_ 'Protocol Buffers: message, field type, string' t.proto \
 'syntax = "proto3";\nmessage M {\n  int32 id = 1;\n}\n' \
-'1:0-6 Include w/syntax\n1:9-17 String m/".*[^\\\\]"\n2:0-7 Structure w/message\n3:2-7 Type w/int32\n3:13-14 Number w/\\d\\+\n'
+'1:0-6 Include w/syntax\n1:9-17 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n2:0-7 Structure w/message\n3:2-7 Type w/int32\n3:13-14 Number w/\\d\\+\n'
 
 case_ 'Terraform: resource, strings, count' t.tf \
 'resource "aws_instance" "x" {\n  count = 1\n}\n' \
-'1:0-8 Structure w/resource\n1:9-23 String m/".*[^\\\\]"\n1:24-27 String m/".*[^\\\\]"\n2:2-7 StorageClass w/count\n2:10-11 Number w/\\d\\+\n'
+'1:0-8 Structure w/resource\n1:9-23 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n1:24-27 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n2:2-7 StorageClass w/count\n2:10-11 Number w/\\d\\+\n'
 
 case_ 'CMake: commands are matched either case' t.cmake \
 '# c\nif(X)\n  message("hi")\nendif()\n' \
-'1:0-3 Comment n/#.*$\n2:0-2 Conditional iw/if\n3:2-9 Statement iw/message\n3:10-14 String m/".*[^\\\\]"\n4:0-5 Conditional iw/endif\n'
+'1:0-3 Comment n/#.*$\n2:0-2 Conditional iw/if\n3:2-9 Statement iw/message\n3:10-14 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n4:0-5 Conditional iw/endif\n'
 
 case_ 'Vim script: comment, function, let' t.vim \
 '" c\nfunction! F()\n  let x = 1\n  return x\nendfunction\n' \
@@ -247,7 +265,7 @@ case_ 'Vim script: comment, function, let' t.vim \
 
 case_ 'awk: BEGIN, print, a field' t.awk \
 'BEGIN { print "hi" }\n{ print $1 }\n' \
-'1:0-5 Statement w/BEGIN\n1:8-13 Function w/print\n1:14-18 String m/".*[^\\\\]"\n2:2-7 Function w/print\n2:8-10 Identifier n/\\$\\d\\+\n'
+'1:0-5 Statement w/BEGIN\n1:8-13 Function w/print\n1:14-18 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n2:2-7 Function w/print\n2:8-10 Identifier n/\\$\\d\\+\n'
 
 case_ 'Assembler: comment, label, instructions' t.asm \
 '; c\nmain:\n  mov eax, 1\n  ret\n' \
@@ -261,7 +279,7 @@ case_ '.pro is C, not a rule file of its own' t.pro \
 
 case_ '.jsonc points at json.jvsyn' t.jsonc \
 '{\n  "a": 1\n}\n' \
-'2:2-5 Identifier m-/".*[^\\\\]":\n2:7-8 Number n/-\\=\\d\\+\n'
+'2:2-5 Identifier -/"\\([^"\\\\]\\|\\\\.\\)*":\n2:7-8 Number n/-\\=\\d\\+\n'
 
 case_ '.cfg points at ini.jvsyn' t.cfg \
 '[a]\nb = 1\n' \
@@ -287,7 +305,7 @@ case_ '.gitignore has nothing before its dot, and still matches' .gitignore \
 # tell them apart from nothing.
 case_ 'HTML: tag, argument, entity' t.html \
 '<!-- c -->\n<body bgcolor="#ffffff">\n<a href="http://x.example/">&amp;</a>\n</body>\n' \
-'1:0-10 Comment p/<!--\n2:0-1 Delimiter n/<\n2:1-5 HtmlTag iwt/body\n2:6-13 HtmlArg iwt/bgcolor\n2:14-23 Number t/"#\\x\\x\\x\\x\\x\\x"\n2:23-24 Delimiter n/>\n3:0-1 Delimiter n/<\n3:1-2 HtmlTag iwt/a\n3:3-7 HtmlArg iwt/href\n3:8-27 String mt/"[^#].*"\n3:27-28 Delimiter n/>\n3:28-33 SpecialChar n/&amp;\n3:33-35 Delimiter n/<\\/\n3:35-36 HtmlTag iwt/a\n3:36-37 Delimiter n/>\n4:0-2 Delimiter n/<\\/\n4:2-6 HtmlTag iwt/body\n4:6-7 Delimiter n/>\n'
+'1:0-10 Comment p/<!--\n2:0-1 Delimiter n/<\n2:1-5 HtmlTag iwt/body\n2:6-13 HtmlArg iwt/bgcolor\n2:14-23 Number t/"#\\x\\x\\x\\x\\x\\x"\n2:23-24 Delimiter n/>\n3:0-1 Delimiter n/<\n3:1-2 HtmlTag iwt/a\n3:3-7 HtmlArg iwt/href\n3:7-27 String mt/=[ \\t]*"[^#"].*"\n3:27-28 Delimiter n/>\n3:28-33 SpecialChar n/&amp;\n3:33-35 Delimiter n/<\\/\n3:35-36 HtmlTag iwt/a\n3:36-37 Delimiter n/>\n4:0-2 Delimiter n/<\\/\n4:2-6 HtmlTag iwt/body\n4:6-7 Delimiter n/>\n'
 
 # A tag over more than one line, with 'synlines' set as low as it goes.
 #
@@ -300,6 +318,51 @@ case_ 'HTML: a tag over three lines' t.html \
 '<td\nwidth=3\n>4</td>\n' \
 '1:0-1 Delimiter n/<\n1:1-3 HtmlTag iwt/td\n2:0-5 HtmlArg iwt/width\n2:6-7 Number t/\\d\\+\n3:0-1 Delimiter n/>\n3:2-4 Delimiter n/<\\/\n3:4-6 HtmlTag iwt/td\n3:6-7 Delimiter n/>\n' \
 ':set synlines=1\r'
+
+# Two values the value rule does not take: "#" is not a colour and not a value
+# it will match, and "" is empty.
+#
+# This is why that rule is anchored at the "=". Written to match from a quote it
+# matched at whichever quote the search reached, which is the opening one only
+# while the quotes on the line pair up from the left. A value that takes no
+# quote of its own puts every quote after it one out, and the rule then matched
+# from the end of one value to the start of the next: here that was a single
+# String run from href's closing quote to class's opening one, swallowing
+# 'title=""' and the name 'class' with it. On a page of <div class="..."> it
+# meant the class list was drawn as HTML and the ">", "<div" and "class" between
+# two values were drawn as nothing at all.
+#
+# 'title' comes out as a tag name rather than an argument because <title> is
+# both, and the rule for the tag is the earlier of the two.
+case_ 'HTML: a value it will not match does not put the next one out of phase' t.html \
+'<a href="#" title="" class="x">y</a>\n' \
+'1:0-1 Delimiter n/<\n1:1-2 HtmlTag iwt/a\n1:3-7 HtmlArg iwt/href\n1:8-9 Delimiter t/"\n1:10-11 Delimiter t/"\n1:12-17 HtmlTag iwt/title\n1:18-20 Delimiter t/"\n1:21-26 HtmlArg iwt/class\n1:26-30 String mt/=[ \\t]*"[^#"].*"\n1:30-31 Delimiter n/>\n1:32-34 Delimiter n/<\\/\n1:34-35 HtmlTag iwt/a\n1:35-36 Delimiter n/>\n'
+
+# A tag with a line break inside a quoted value, which is what a page written
+# with a long list of classes looks like.
+#
+# What this case is about is line 2: "id" and its value are coloured as an
+# argument and a value, where the unanchored rule matched from the quote that
+# *closed* the class value to the one that *opened* the id value, and so drew
+# 'id=' as a string and left "c" plain.
+#
+# The value itself, over both lines, is not coloured -- and the words in it that
+# happen to be tag names, 'a' and 'b' here, are coloured as tag names. A value
+# is one line's worth: reaching across the break needs a region, and a region
+# cannot be told to open only inside a tag. That is the limit, written down.
+case_ 'HTML: a value the tag breaks a line inside of' t.html \
+'<div class="a\n  b" id="c">x</div>\n' \
+'1:0-1 Delimiter n/<\n1:1-4 HtmlTag iwt/div\n1:5-10 HtmlArg iwt/class\n1:11-12 Delimiter t/"\n1:12-13 HtmlTag iwt/a\n2:2-3 HtmlTag iwt/b\n2:3-4 Delimiter t/"\n2:5-7 HtmlArg iwt/id\n2:7-11 String mt/=[ \\t]*"[^#"].*"\n2:11-12 Delimiter n/>\n2:13-15 Delimiter n/<\\/\n2:15-18 HtmlTag iwt/div\n2:18-19 Delimiter n/>\n'
+
+# A single quoted value, and two apostrophes that are not one.
+#
+# Its rule was \'.*\' and was not confined to a tag, so it also matched from
+# any apostrophe to the next one: "It's fine, isn't" was coloured as a value.
+# HTML gives a quote outside a tag no meaning, so there is nothing out there for
+# the rule to find, and it is anchored at the "=" like the double quoted one.
+case_ 'HTML: a single quoted value, and apostrophes that are not one' t.html \
+'<a title=\047x\047>It\047s fine, isn\047t it?</a>\n' \
+'1:0-1 Delimiter n/<\n1:1-2 HtmlTag iwt/a\n1:3-8 HtmlTag iwt/title\n1:8-12 Character mt/=[ \\t]*\\\047[^\\\047]*\\\047\n1:12-13 Delimiter n/>\n1:33-35 Delimiter n/<\\/\n1:35-36 HtmlTag iwt/a\n1:36-37 Delimiter n/>\n'
 
 # What is inside <script> and <style> is not HTML, and there is no way for one
 # rule set to reach inside another, so each is a region of its own -- grey
@@ -335,7 +398,7 @@ case_ 'batch: REM, a variable, a label' t.bat \
 # written inside the single quotes these arguments use.
 case_ 'VBScript: apostrophe comment, keywords' t.vbs \
 '\047 c\nDim n\nn = 1.5\nIf n > 0 Then\n  MsgBox "hi"\nEnd If\n' \
-'1:0-3 Comment n/\\\047.*\n2:0-3 Statement iw/Dim\n3:4-7 Float n/\\d*\\.\\d\\+\n4:0-2 Statement iw/If\n4:7-8 Number w/\\d\\+\n4:9-13 Statement iw/Then\n5:2-8 Identifier iw/MsgBox\n5:9-13 String m/".*[^\\\\]"\n6:0-3 Statement iw/End\n6:4-6 Statement iw/If\n'
+'1:0-3 Comment n/\\\047.*\n2:0-3 Statement iw/Dim\n3:4-7 Float n/\\d*\\.\\d\\+\n4:0-2 Statement iw/If\n4:7-8 Number w/\\d\\+\n4:9-13 Statement iw/Then\n5:2-8 Identifier iw/MsgBox\n5:9-13 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n6:0-3 Statement iw/End\n6:4-6 Statement iw/If\n'
 
 # The plain-text rules are for mail: headers, quoting depth by alternating
 # colour, and a bare URL.
@@ -345,7 +408,7 @@ case_ 'text: mail headers and quoting' t.txt \
 
 case_ 'Java: types, character, numbers' T.java \
 '// c\npackage a.b;\npublic class T {\n    static char c = \047x\047;\n    static double d = 1.5;\n    static int n = 0x1f;\n}\n' \
-'1:0-4 Comment n/\\/\\/.*$\n2:0-7 Include w/package\n3:0-6 StorageClass w/public\n3:7-12 Typedef w/class\n4:4-10 StorageClass w/static\n4:11-15 Type w/char\n4:20-23 Character m/\047.*[^\\\\]\047\n5:4-10 StorageClass w/static\n5:11-17 Type w/double\n5:22-25 Float n/\\d*\\.\\d\\+\n6:4-10 StorageClass w/static\n6:11-14 Type w/int\n6:19-23 Number w/0x\\x\\+\n'
+'1:0-4 Comment n/\\/\\/.*$\n2:0-7 Include w/package\n3:0-6 StorageClass w/public\n3:7-12 Typedef w/class\n4:4-10 StorageClass w/static\n4:11-15 Type w/char\n4:20-23 Character n/\047\\([^\047\\\\]\\|\\\\.\\)*\047\n5:4-10 StorageClass w/static\n5:11-17 Type w/double\n5:22-25 Float n/\\d*\\.\\d\\+\n6:4-10 StorageClass w/static\n6:11-14 Type w/int\n6:19-23 Number w/0x\\x\\+\n'
 
 case_ 'INI: comment, section, key' t.ini \
 '; c\n[core]\nname = jvim\n' \

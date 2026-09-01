@@ -1,6 +1,6 @@
 syntax Comment			n/;.*$
 syntax Comment			n/#.*$
-syntax String			m/\".*[^\\]\"
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
 syntax	Label			m/^[_a-zA-Z.][_a-zA-Z0-9.]*\s*:
 syntax	Float			n/\d*\.\d\+
 syntax	Number			w/0x\x\+

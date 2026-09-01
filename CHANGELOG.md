@@ -35,15 +35,16 @@ repository and would drift within three releases.
   **not** deleted, and a second signal during that exits at once rather than
   going round again. SIGSEGV and SIGBUS are left to AddressSanitizer under
   `build-unix.sh asan`, whose report is worth more than the message.
-- `scripts/test-hostile.sh`, a fifth suite: 17 cases that hand the editor input
+- `scripts/test-hostile.sh`, a fifth suite: 18 cases that hand the editor input
   nobody intended, or a hostile end, where the other four hand it input it is
   meant to accept.
   2 MB on one line, every byte value there is, invalid and truncated UTF-8, a
   1015 character pattern to `:syntax` (`pattern[1024]` on the stack is as close
   as the command line can get to it), 60 nested groups in `:s`, a tabstop of two
   billion, 200k lines through `:g`, a colour scheme whose every token is
-  longer than the command line can hold, and the session dropping mid-edit.
-  Sixteen of them pass; one is KNOWN-FAIL and is the issue below. Input files
+  longer than the command line can hold, 17 kB of tags on one line with the
+  colouring rules loaded, and the session dropping mid-edit.
+  Seventeen of them pass; one is KNOWN-FAIL and is the issue below. Input files
   come from `scripts/hostilegen.c` rather than from awk or dd, because five
   operating systems run this and their awks disagree about a zero byte.
 - Two cases in `scripts/test-editing.sh` for a `:s` whose replacement holds a
@@ -65,7 +66,7 @@ repository and would drift within three releases.
 - Two cases in `scripts/test-encoding.sh` for autodetection where the file is
   not perfectly one thing: a UTF-8 file with one byte that is not, and a
   Shift-JIS file that has to stay Shift-JIS. They pin what happens today rather
-  than fixing anything; see the note below. 230 cases in all.
+  than fixing anything; see the note below. 235 cases in all.
 - `scripts/build-unix.sh asan` and `scripts/build-unix.sh ubsan` build with
   AddressSanitizer or UndefinedBehaviorSanitizer and then run the same suites
   the `test` target does, and CI runs both on every push. ASan had only ever
@@ -128,6 +129,81 @@ repository and would drift within three releases.
   worth doing. The two `STRCPY()` calls in the same function that were given
   overlapping strings — undefined, and the sort of thing AddressSanitizer stops
   on — are `memmove()` now. (#22)
+- **Syntax colouring made a long line quadratic, which is a minified page.**
+  Opening a 31 kB `.html` with 17 kB of it on one line took 2.0 seconds; sending
+  the cursor to the far end of that line took 19.5; dumping the colouring of the
+  whole file took 89. They are 0.09, 0.32 and 1.8 now. A file of 800 tags on one
+  line went from 73 seconds to one, and the Windows build opened the same 31 kB
+  page and walked that line in 39 seconds where it now takes 1.6. Drawing asks `is_syntax()` for the colour
+  of a byte, which asks every rule where its next match is — and asked again at
+  every match in the line, so each of the thousands of matches on a minified line
+  was another search of the whole of it by all eighty of `html.jvsyn`'s rules.
+  Each rule now keeps the answer it last gave and searches again only once the
+  drawing has passed it, which is one pass over the line per rule however many
+  matches are in it, and the answers are dropped when the line changes or another
+  line is drawn. A "no match" is kept only as far as the search that produced it
+  really looked: a word rule matched as a string stops at the first place its
+  letters appear and gives up if that one is inside a longer word, so keeping
+  that as "nothing further on this line" lost every later `var` that was a word
+  of its own. What is coloured has not changed — `:syntax dump` over the file
+  this was found on is byte for byte what it was.
+- **Every string rule in the tree ended a string at the wrong quote, so an empty
+  `""` — or one ending in a backslash — drew the rest of the line as string.**
+  The 50 rules were written `\".*[^\\]\"`: a quote, anything, one character that
+  is not a backslash, a quote. That reads as "ends at a quote that is not
+  escaped", and is not one. An empty `""` has no character between its quotes and
+  `"C:\\"` has a backslash there, so neither could end where it does: the match
+  ran on to the next quote on the line, and everything in between — the commas,
+  the keywords, the numbers — came out coloured as string. `textmode ? "" :
+  "[notextmode] "` in this tree's own `src/fileio.c` was one run from the first
+  quote to the last; `if (s == "" || t == "y")` is the shape of it in any
+  language. 35 of the 49 rule files carried it — 36 rules, and 14 more through
+  the single quoted twin `'.*[^\\]'` — and a probe of every file type caught 32 of
+  them drawing the rest of the line as string: C, Python, JavaScript, Go, Rust,
+  Ruby, JSON, YAML, TOML, CSS, C#, PHP, Lua, Java, Kotlin, Swift, Perl, D, OCaml,
+  SML, Scheme, Lisp, Clojure, Haskell, proto, Terraform, CMake, vim, awk and asm
+  among them.
+  They are `\"\([^\"\\]\\|\\.\)*\"` now — a quote, then any number of (one
+  character that is neither a quote nor a backslash, or a backslash and whatever
+  follows it), then a quote — which cannot reach past a closing quote, because
+  neither branch matches one. A string holding an escaped quote, which is what
+  the old form was written for, still works: there is a case for all three in
+  `test-syntax.sh` now. The new form is also **8 times faster** on a 33 kB
+  minified `.js` held on one line, since it gives up at the first character that
+  cannot be in a string rather than scanning to the end of the line from every
+  quote. `syntax/README` has the pattern to copy and says not to simplify it.
+- **An HTML attribute value was found by counting quotes from the left, so one
+  value that did not take part spoiled every value after it.** On a page built
+  the way pages are built now — `<div class="flex items-center ...">` — the class
+  list came out drawn as HTML, with `border`, `var` and `center` in it coloured
+  as tag and attribute names, while the `>`, the `<div` and the `class` between
+  two values were drawn as nothing at all. `syntax/html.jvsyn` matched a value as
+  `\"[^#].*\"`, which starts at whichever quote the search reaches: that is the
+  opening quote only while the quotes on the line pair up from the left, and a
+  value the rule does not match — `href="#"`, an empty `""`, a value a tag broke
+  a line inside of — puts every quote after it one out. The rule then matched
+  from the *end* of one value to the *start* of the next. It is anchored at the
+  `=` that introduces the value now, which cannot be a closing quote; the `=` is
+  coloured with the value, there being no way to match text without colouring it.
+  A tag broken across lines keeps this from spreading: the attributes after the
+  break are coloured again, though the value itself is still not coloured over
+  the break — that needs a region that opens only inside a tag, which the rule
+  language cannot say, and it is in USAGE.md's known limits with the `<script>`
+  body it is the same missing idea as.
+- The rule for a single quoted HTML value was `\'.*\'` and was not confined to a
+  tag, so it also matched from any apostrophe to the next: "It's fine, isn't it"
+  came out coloured from the first apostrophe to the second. It is anchored at
+  the `=` and confined to a tag now, like the double quoted one. A quote outside
+  a tag means nothing in HTML, so there was nothing out there for it to find.
+- **A regexp on a long line asked which byte of its character it was on the slow
+  way.** `ISkanjiPointer()` was a wrapper on the offset form, which walks the
+  string from the start to reach the byte, so a `*` or `\+` backing off over a
+  long match paid the length of the line at every step. It has the byte, so it
+  looks at that byte and at the three before it now — the search backwards for
+  the start of a character stops after `UTF8_MAXLEN - 1` bytes, which also keeps
+  a run of stray trailing bytes in a `-b` buffer from being walked to its
+  beginning. This was most of those 20 seconds: 3.9 million calls of it, and
+  19.85 of the 21.7 seconds a profile could account for.
 - **`>>` with a large `shiftwidth` no longer locks the editor up.** `:set
   sw=10000000` then `>>` did not finish and could not be interrupted; it takes
   about a tenth of a second now. `set_indent()` inserted the indent one
@@ -205,14 +281,14 @@ written into the known limits instead (#30):
   `build-unix.sh asan` では AddressSanitizer に譲ります（そのレポートのほうが
   このメッセージより価値があります）。
 - `scripts/test-hostile.sh` を追加しました。5 つ目のスイートで、誰も意図して
-  いない入力や終わり方を与える 17 ケースです（他の 4 つは、受け付けるべき入力を
+  いない入力や終わり方を与える 18 ケースです（他の 4 つは、受け付けるべき入力を
   与えます）。
   1 行 2 MB、あらゆるバイト値、不正な・途中で切れた UTF-8、`:syntax` への
   1015 文字のパターン（スタック上の `pattern[1024]` にコマンドラインから
   最も近づける長さ）、`:s` の 60 重ネストしたグループ、タブ幅 20 億、
   20 万行への `:g`、全トークンがコマンドラインに収まらない長さの配色スキーム、
-  編集中のセッション切断。
-  16 件が通り、KNOWN-FAIL は 1 件で、下記の issue に対応します。
+  カラールールを読み込んだ状態で 1 行に 17 kB のタグ、編集中のセッション切断。
+  17 件が通り、KNOWN-FAIL は 1 件で、下記の issue に対応します。
   入力ファイルは awk や dd ではなく `scripts/hostilegen.c` が作ります。5 つの
   OS で走るのに、それぞれの awk がゼロバイトの扱いで一致しないからです。
 - `scripts/test-editing.sh` にケースを 2 件追加しました。置換文字列に改行を含む
@@ -233,7 +309,7 @@ written into the known limits instead (#30):
 - `scripts/test-encoding.sh` にケースを 2 件追加しました。ファイルが完全に
   1 つの符号ではない場合の自動判別で、不正なバイトが 1 個ある UTF-8 ファイルと、
   Shift-JIS のままであるべき Shift-JIS ファイルです。何かを直したのではなく、
-  現在の挙動を固定するものです（下記の注記を参照）。合わせて 230 ケースに
+  現在の挙動を固定するものです（下記の注記を参照）。合わせて 235 ケースに
   なりました。
 - 敵性入力スイートは、エディタが通らない 3 件を持って入りました。うち 2 件は
   下記の `:s` と `>>` の修正です。残る 1 件は調べた結果バグではなく、既知の
@@ -302,6 +378,82 @@ written into the known limits instead (#30):
   ファイルであり、それがこの修正の理由です。同じ関数で重なった文字列を
   渡していた `STRCPY()` 2 箇所（未定義動作で、AddressSanitizer が止まる類の
   もの）も `memmove()` にしました。(#22)
+- **シンタックスカラーが長い 1 行に対して二次オーダーで、それは minified な
+  ページそのものでした。** 17 kB が 1 行に入った 31 kB の `.html` を開くのに
+  2.0 秒、その行の末尾へカーソルを送るのに 19.5 秒、ファイル全体の色を
+  ダンプするのに 89 秒かかっていました。それぞれ 0.09 秒、0.32 秒、1.8 秒に
+  なりました。1 行に 800 個のタグが並ぶファイルは 73 秒から 1 秒になり、
+  Windows 版が同じ 31 kB のページを開いてその行を歩くのにかかる時間は
+  39 秒から 1.6 秒になりました。
+  描画は 1 バイトの色を `is_syntax()` に尋ね、それが全ルールに「次のマッチは
+  どこか」を尋ねます。これを行内のマッチごとに毎回尋ねていたので、minified な
+  1 行にある数千のマッチのそれぞれで、`html.jvsyn` の 80 個のルールが行全体を
+  もう一度探し直していました。各ルールは直前に返した答えを覚えておき、描画が
+  そこを通り過ぎてから探し直すようにしたので、マッチが何個あってもルールごとに
+  行を 1 回なめるだけになります。行が書き換わったとき、別の行を描き始めたときに
+  答えは破棄します。「マッチなし」は、その探索が実際に見た範囲までしか
+  覚えません。文字列として照合される `w` ルールは、字面が最初に現れた場所で
+  止まり、そこが長い単語の一部なら諦めるからで、それを「この行にはもうない」
+  として覚えると、それより後ろにある単独の `var` がすべて失われます。何が
+  色づくかは変わっていません。これが見つかったファイルに対する
+  `:syntax dump` は、以前とバイト単位で同一です。
+- **リポジトリ内のすべての文字列ルールが文字列の終わりを誤った引用符で判定して
+  いたため、空の `""`、あるいはバックスラッシュで終わる文字列があると、その行の
+  残りが文字列として色付けされていました。** 該当する 50 個のルールは
+  `\".*[^\\]\"` と書かれていました。引用符、任意の文字列、バックスラッシュ
+  でない 1 文字、引用符です。これは「エスケープされていない引用符で終わる」と
+  読めますが、そうではありません。空の `""` には引用符の間に文字がなく、
+  `"C:\\"` はそこがバックスラッシュなので、どちらも本来の位置で終われず、
+  マッチはその行の次の引用符まで伸びて、間にあるカンマ・キーワード・数値が
+  すべて文字列の色になっていました。このリポジトリ自身の `src/fileio.c` にある
+  `textmode ? "" : "[notextmode] "` は最初の引用符から最後の引用符までが
+  1 つの区間になっていました。どの言語でも `if (s == "" || t == "y")` がその形
+  です。49 個のルールファイルのうち 35 個がこれを持っていました（36 ルール。
+  シングルクォート版の `'.*[^\\]'` でさらに 14 ルール）。全ファイルタイプを
+  当たったところ、そのうち 32 個で行の残りが文字列として描かれていました。
+  C、Python、JavaScript、Go、Rust、Ruby、JSON、YAML、TOML、CSS、C#、PHP、
+  Lua、Java、Kotlin、Swift、Perl、D、OCaml、SML、Scheme、Lisp、Clojure、
+  Haskell、proto、Terraform、CMake、vim、awk、asm などです。
+  現在は `\"\([^\"\\]\\|\\.\)*\"` です。引用符、そのあと「引用符でも
+  バックスラッシュでもない 1 文字、またはバックスラッシュとそれに続く 1 文字」
+  の任意回の繰り返し、引用符。どちらの分岐も閉じ引用符にマッチしないので、
+  閉じ引用符を越えることができません。古い形が想定していたエスケープされた
+  引用符を含む文字列も従来どおり動きます。3 つとも `test-syntax.sh` に
+  ケースがあります。新しい形は 1 行に収まった 33 kB の minified な `.js` で
+  **8 倍高速**でもあります。引用符ごとに行末まで走査するのではなく、文字列に
+  入りえない文字で打ち切るからです。コピーすべきパターンと「簡略化しないこと」は
+  `syntax/README` に書きました。
+- **HTML の属性値を左から引用符の数を数えて見つけていたため、数に入らない値が
+  1 つあるとそれ以降の値がすべてずれていました。** いまふうに書かれたページ
+  — `<div class="flex items-center ...">` — では、クラスの並びが HTML として
+  描かれ、その中の `border`・`var`・`center` がタグ名や属性名の色になり、
+  値と値のあいだにある `>`・`<div`・`class` には何の色も付きませんでした。
+  `syntax/html.jvsyn` は値を `\"[^#].*\"` で照合していて、これは探索が到達した
+  引用符から始まります。それが開き引用符であるのは、その行の引用符が左から
+  対になっているあいだだけです。このルールが照合しない値 — `href="#"`、空の
+  `""`、タグが途中で改行された値 — が 1 つあると、以降の引用符がすべて 1 つ
+  ずれ、ルールはある値の*終わり*から次の値の*始まり*までを照合していました。
+  値を導く `=` に錨を打つようにしました。`=` が閉じ引用符であることはあり得ま
+  せん。色を付けずに照合する方法がないので、`=` は値と同じ色になります。
+  タグが行をまたいでいてもここから崩れることはなくなり、改行の後ろの属性には
+  また色が付きます。ただし値そのものは改行をまたいで色が付きません。それには
+  「タグの内側でだけ開く領域」が必要で、ルール言語にその言い方はありません。
+  `<script>` の中身と同じ欠けている概念として USAGE.md の既知の制限にあります。
+- HTML のシングルクォート値のルールは `\'.*\'` で、タグの内側に限定されて
+  いなかったため、任意のアポストロフィから次のアポストロフィまでも照合して
+  いました。"It's fine, isn't it" が 1 つ目から 2 つ目まで色付きになる、という
+  ことです。ダブルクォートのものと同じく `=` に錨を打ち、タグの内側に限定
+  しました。HTML ではタグの外の引用符に意味はないので、外に探すものは
+  ありません。
+- **長い 1 行に対する正規表現が、いま何文字目のどのバイトかを遅い方法で
+  尋ねていました。** `ISkanjiPointer()` はオフセット版の薄い包みで、その
+  オフセット版はバイトに到達するために文字列の先頭から歩きます。そのため
+  `*` や `\+` が長いマッチを 1 文字ずつ戻すとき、毎回行の長さぶんを払って
+  いました。ポインタは手元にあるのですから、そのバイトと直前の 3 バイトだけを
+  見るようにしました（文字の先頭を探す後方走査は `UTF8_MAXLEN - 1` バイトで
+  打ち切るので、`-b` バッファにありうる後続バイトの連なりを先頭まで
+  歩くこともなくなります）。上の 20 秒の大半はこれでした。呼び出し回数
+  390 万回、プロファイルが説明できた 21.7 秒のうち 19.85 秒です。
 - **大きな `shiftwidth` での `>>` がエディタを固めなくなりました。**
   `:set sw=10000000` のあと `>>` すると終わらず、中断もできませんでしたが、
   0.1 秒ほどで終わります。`set_indent()` は新しいインデントを `inschar()` で

@@ -1,6 +1,6 @@
 syntax Comment			p/\/\*/\*\/
 syntax Comment			n/\/\/.*$
-syntax String			m/\".*[^\\]\"
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
 syntax String			m/'.*'
 syntax Constant		n/#\x\x\x\x\x\x
 syntax Constant		n/#\x\x\x

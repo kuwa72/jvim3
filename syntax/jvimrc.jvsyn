@@ -81,7 +81,7 @@ syntax	PreCondit		n/^\"\=end\s\+files
 syntax	PreCondit		n/^\"\=begin\s\+suffixes\s*=.*
 syntax	PreCondit		n/^\"\=end\s\+suffixes
 " A comment on a line of its own. Only that: a rule file writes \" inside its
-" patterns all the time -- m/\".*[^\\]\" is an ordinary String rule -- and a
+" patterns all the time -- n/\"\([^\"\\]\\|\\.\)*\" is an ordinary String rule -- and a
 " rule that took any quote for the start of a comment would paint every one of
 " those as one. 154 of the comments in syntax/ are on their own line and 18 are
 " not, so this is the side to be wrong on.

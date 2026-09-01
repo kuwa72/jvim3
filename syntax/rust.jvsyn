@@ -1,7 +1,7 @@
 syntax Comment			n/\/\/.*$
 syntax Comment			p/\/\*/\*\/
-syntax String			m/\".*[^\\]\"
-syntax Character		m/'.*[^\\]'
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
+syntax Character		n/'\([^'\\]\\|\\.\)*'
 syntax PreProc			n/^\s*#!\=\[.*\]
 syntax Macro			-/\i\+![({[]
 syntax Float			n/\d*\.\d\+

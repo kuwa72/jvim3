@@ -1,4 +1,4 @@
-syntax String			m/\".*[^\\]\"
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
 syntax	Float			n/\d*\.\d\+
 syntax	Number			w/\d\+
 syntax Comment			n/REM.*

@@ -1,6 +1,6 @@
 syntax Comment			n/^\s*\".*
-syntax String			m/\".*[^\\]\"
-syntax String			m/'.*[^\\]'
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
+syntax String			n/'\([^'\\]\\|\\.\)*'
 syntax Identifier		n/[bgstwl]:\i\+
 syntax	Number			w/\d\+
 syntax	Conditional		w/if/elseif/else/endif
