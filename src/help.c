@@ -31,7 +31,9 @@ static char_u *
 kopen(char_u *fnamep, char *type)
 {
 	int			w_jkc = p_jkc;
+	long		flen;
 	int			len;
+	int			room;
 	FILE	*	fp;
 	char_u	*	wp;
 	int			c;
@@ -41,26 +43,30 @@ kopen(char_u *fnamep, char *type)
 
 	if ((fp = fopen((char *)fnamep, type)) == NULL)
 		return(NULL);
-	fseek(fp, 0, 2);
-	len = ftell(fp);
+	/*
+	 * 256 MB is not a help file, and the limit is what keeps the six times of
+	 * it computed below inside an int.
+	 */
+	if (fseek(fp, 0, 2) != 0 || (flen = ftell(fp)) < 0 || flen > 0x10000000L)
+	{
+		fclose(fp);
+		return(NULL);
+	}
+	len = (int)flen;
 	if ((wp = malloc(len + 1)) == NULL)
 	{
 		fclose(fp);
 		return(NULL);
 	}
-	if ((helpmem = malloc(len + 1)) == NULL)
-	{
-		free(wp);
-		fclose(fp);
-		return(NULL);
-	}
 	fseek(fp, 0, 0);
 	i = 0;
-	while ((c = fgetc(fp)) != EOF)
+	/* "i < len", because the file can have grown since ftell() measured it */
+	while (i < len && (c = fgetc(fp)) != EOF)
 	{
 		wp[i] = c;
 		i++;
 	}
+	len = i;					/* and it can have been read short */
 	wp[len] = NUL;
 	fclose(fp);
 	code = judge_jcode(&code, &ubig, wp, len);
@@ -68,18 +74,51 @@ kopen(char_u *fnamep, char *type)
 	if (toupper(code) == JP_WIDE)	/* UNICODE */
 		len = wide2multi(wp, len, ubig, TRUE);
 	/* MS UTF8 */
-	else if (toupper(code) == JP_UTF8
+	else if (toupper(code) == JP_UTF8 && len >= 3
 			&& (wp[0] == 0xef && wp[1] == 0xbb && wp[2] == 0xbf))
 	{
 		len -= 3;
 		memmove((char *)wp, (char *)wp + 3, len);
 	}
 # endif
+	/*
+	 * Room for the converted text, which is not the size of the file.
+	 * kanjiconvsfrom() returns -1 rather than truncating when it does not fit,
+	 * and this used to ask it for the file's own length. Any 'helpfile' that is
+	 * not already UTF-8 grows on the way in, so the conversion failed: the
+	 * shipped vim.hlp was ISO-2022-JP, where every escape sequence goes away and
+	 * every two byte character becomes three UTF-8 ones, and its 32241 bytes
+	 * came to 33784 every time. The -1 was then stored as the length -- writing
+	 * a NUL one byte in front of the buffer -- and kgetc() read end of file
+	 * straight away, so ":help" cleared the screen and displayed nothing. The
+	 * free() in kclose() was left to fall over the damaged heap when the reader
+	 * pressed RETURN to leave, which on Windows ends the process where it
+	 * stands, unwritten buffers and all. (The file in doc.j is UTF-8 now, which
+	 * needs no conversion at all; a help file in any other code still does.)
+	 *
+	 * The bound is the one the conversion itself works to: kanjiconvsfrom()
+	 * pivots through Shift-JIS in len * 2 + 8 bytes, and sjis2utf8_n() can turn
+	 * each of those into three (a halfwidth katakana byte does). Six times a
+	 * help file is a few hundred kilobytes, held only while the screen is up.
+	 */
+	room = (len * 2 + 8) * 3;
+	if ((helpmem = malloc(room + 1)) == NULL)
+	{
+		free(wp);
+		return(NULL);
+	}
 	p_jkc = FALSE;
-	helpsize = kanjiconvsfrom(wp, len, helpmem, len, NULL, code, NULL);
-	helpmem[helpsize] = NUL;
+	helpsize = kanjiconvsfrom(wp, len, helpmem, room, NULL, code, NULL);
 	p_jkc = w_jkc;
 	free(wp);
+	if (helpsize < 0)			/* not with the room above, but do not guess */
+	{
+		free(helpmem);
+		helpmem = NULL;
+		helpsize = helppos = 0;
+		return(NULL);
+	}
+	helpmem[helpsize] = NUL;
 	return(helpmem);
 }
 
@@ -87,6 +126,7 @@ static void
 kclose(char_u *mp)
 {
 	free(mp);
+	helpmem = NULL;
 	helpsize = helppos = 0;
 }
 
@@ -374,7 +414,19 @@ redrawhelp(void)
 #ifdef NT
 				if (GuiWin)
 				{
-					IObuff[--col] = '\0';
+					/*
+					 * "IObuff[col]", not "IObuff[--col]". Only a CR belongs to
+					 * the line separator, and the help file this ships with has
+					 * none: dropping the last byte unconditionally took the
+					 * final character off every line -- the last byte of it,
+					 * really, so a Japanese one at the end of a line came out
+					 * as half a character -- and on an empty line, where col is
+					 * already 0, it wrote a NUL in front of IObuff and then
+					 * displayed the previous line again in place of the blank.
+					 */
+					if (col > 0 && IObuff[col - 1] == '\r')
+						--col;
+					IObuff[col] = '\0';
 					msg_outstr(IObuff);
 					col = 0;
 				}
@@ -393,7 +445,11 @@ redrawhelp(void)
 #endif
 			}
 #ifdef NT
-			else if (GuiWin)
+			/*
+			 * A line of a help file nobody checked can be longer than IObuff;
+			 * hold what fits and drop the rest rather than run off the end.
+			 */
+			else if (GuiWin && col < IOSIZE - 1)
 				IObuff[col++] = nextc;
 #endif
 		}

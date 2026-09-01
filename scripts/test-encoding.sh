@@ -94,6 +94,50 @@ verdict() {
 	fi
 }
 
+# helpscreen <name> <expect> <help file bytes> <expected bytes on the screen>
+#
+# 'helpfile' is the one file the editor converts without loading it into a
+# buffer: help() reads it whole, converts it to the internal UTF-8 in one go and
+# paints it (kopen() in src/help.c). Nothing it does reaches a buffer, so the
+# terminal is the only place the answer shows up, and RETURN leaves the screen
+# again so the editor can quit normally.
+#
+# The file here is written in ISO-2022-JP, and long enough in one run of kanji
+# that the conversion grows it: two bytes a character become three, while the
+# two escape sequences go away entirely. That direction is the whole case. The
+# buffer for the converted text used to be the size of the file, so every help
+# file that was not already UTF-8 failed to convert and ":help" drew an empty
+# screen -- and the failure wrote a NUL in front of the buffer on its way out.
+# doc.j/vim.hlp is UTF-8 now and needs no conversion at all, which is exactly
+# why this case writes its own file rather than using it.
+helpscreen() {
+	counted && return
+	local name=$1 expect=$2 data=$3 want=$4
+
+	printf "$data" > "$tmp/hlp"
+	printf "$want" > "$tmp/want"
+	printf 'a\n' > "$tmp/in"
+	printf ':set helpfile=%s/hlp\r:help\r\r:q!\r' "$tmp" > "$tmp/helpcmds"
+	rm -f "$tmp/screen"
+	pty "TERM=xterm $jvim -T xterm -s $tmp/helpcmds $tmp/in" > "$tmp/screen" 2>&1
+
+	local got=bad
+	grep -qF -f "$tmp/want" "$tmp/screen" && got=ok
+
+	if [ "$expect" = ok ] && [ "$got" = ok ]; then
+		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
+	elif [ "$expect" = ok ]; then
+		printf '  FAIL        %s\n' "$name"
+		printf '                %s is not on the screen\n' "$(hex "$tmp/want")"
+		fail=$((fail+1))
+	elif [ "$got" = bad ]; then
+		printf '  KNOWN-FAIL  %s\n' "$name"; xfail=$((xfail+1))
+	else
+		printf '  NOW PASSES  %s  <- update the expectation\n' "$name"
+		xpass=$((xpass+1))
+	fi
+}
+
 # detects <name> <expect> <input bytes> <expected bytes>
 #
 # What judge_jcode() decided, read off the bytes that come back: no -k, so
@@ -316,6 +360,20 @@ edit "[au] matches both"       ok ":s/[$AA$UU]//g\r"    "$AA$II$UU\n"      "$II\
 edit "[a-n] range by code pt"  ok ":s/[$AA-$NN]//g\r"   "$AA$II$UU""abc\n" "abc\n"
 edit "[a-c] leaves kana"       ok ":s/[a-c]//g\r"       "$AA""abc$II\n"    "$AA$II\n"
 edit "search a not i"          ok "/$AA\rx"             "$II$AA$UU\n"      "$II$UU\n"
+
+echo
+echo "the help file, which is converted and not loaded:"
+# 日本語 ten times over, in one run of ISO-2022-JP: 67 bytes in the file, 91 in
+# the internal UTF-8. It has to be a run, because a short one shrinks -- the six
+# bytes of the two escape sequences pay for three characters.
+JIS_NIHONGO='\x46\x7c\x4b\x5c\x38\x6c'					# 日本語 in ISO-2022-JP
+U8_NIHONGO='\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e'		# and in UTF-8
+jis_run= ; u8_run=
+for i in 1 2 3 4 5 6 7 8 9 10; do
+	jis_run="$jis_run$JIS_NIHONGO"
+	u8_run="$u8_run$U8_NIHONGO"
+done
+helpscreen "ISO-2022-JP help file" ok "\033\$B$jis_run\033(B\n" "$u8_run\n"
 
 if [ -n "$count_only" ]; then
 	printf 'cases %d\n' "$cases"

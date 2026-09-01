@@ -1,55 +1,55 @@
-                     VIM help file $BL\<!(B
+                     VIM help file 目次
 
-RETURN  HELP$B=*N;(B                VIM stands for Vi IMproved.
- SPACE  $B<!%Z!<%8I=<((B            Most of VIM was made by Bram Moolenaar.
-     a  $B$3$NL\<!$KLa$k(B          $BF|K\8lHG(BHELP by Ogasawara Hiroyuki.
-     b  $BA0$N%Z!<%8$KLa$k(B
+RETURN  HELP終了                VIM stands for Vi IMproved.
+ SPACE  次ページ表示            Most of VIM was made by Bram Moolenaar.
+     a  この目次に戻る          日本語版HELP by Ogasawara Hiroyuki.
+     b  前のページに戻る
 
-c   $B%+!<%=%k0\F0(B                     q   $B%*%W%7%g%s(B i$B!A(Bn
-d   $B%o!<%I(B/$B%V%m%C%/C10L0\F0(B          r   $B%*%W%7%g%s(B p$B!A(Bs
-e   $B8!:w(B                             s   $B%*%W%7%g%s(B s$B!A(Bt
-f   $B$=$NB>$N0\F0(B/$B%?%0%8%c%s%W(B        t   $B%*%W%7%g%s(B t$B!A(By
-g   $B%9%/%m!<%k(B                       u   undo, shell, quickfix $B$=$NB>(B
-h   $BA^F~%b!<%I(B                       v   $B%3%^%s%I%i%$%sJT=8%3%^%s%I(B
-i   $BA^F~%b!<%I$G$NA`:n(B               w   Ex$B%b!<%I$NHO0O;XDj$HFC<l5!G=(B
-j   $BJQ99%3%^%s%I(B/$B%7%U%H(B              x   file$B%(%G%#%C%H(B
-k   $B$=$NB>$NJQ99%3%^%s%I(B             y   $B%U%!%$%k%j%9%H(B
-l   $B%F%-%9%H:o=|(B/$B%3%T!<(B/$B0\F0(B         z   $B%U%!%$%k=q$-=P$7$H=*N;(B
-m   $B7+$jJV$7(B                         A   VIM$B5/F0%*%W%7%g%s(B
-n   $B%-!<%^%C%T%s%0(B/$BN,8lEPO?(B          B   $B%&%#%s%I%&A`:n%3%^%s%I(B
-o   $B%*%W%7%g%s%3%^%s%I(B a$B!A(Bc          C   $B%P%C%U%!%j%9%H%3%^%s%I(B
-p   $B%*%W%7%g%s(B d$B!A(Bh
+c   カーソル移動                     q   オプション i～n
+d   ワード/ブロック単位移動          r   オプション p～s
+e   検索                             s   オプション s～t
+f   その他の移動/タグジャンプ        t   オプション t～y
+g   スクロール                       u   undo, shell, quickfix その他
+h   挿入モード                       v   コマンドライン編集コマンド
+i   挿入モードでの操作               w   Exモードの範囲指定と特殊機能
+j   変更コマンド/シフト              x   fileエディット
+k   その他の変更コマンド             y   ファイルリスト
+l   テキスト削除/コピー/移動         z   ファイル書き出しと終了
+m   繰り返し                         A   VIM起動オプション
+n   キーマッピング/略語登録          B   ウィンドウ操作コマンド
+o   オプションコマンド a～c          C   バッファリストコマンド
+p   オプション d～h
 
 Read "reference.doc" for a more complete explanation.
- $B%+!<%=%k:81&0\F0(B 
-N  h            $B:8(B ( CTRL-H, BS, [$B"+(B] $B$bF1$8(B )
-N  l            $B1&(B ( SPACE, [$B"*(B] $B$bF1$8(B )
-   0            $B9T$N@hF,$X0\F0(B
-   ^            $B9T$N@hF,J8;z$X0\F0(B($B6uGr$r=|$/(B)
-N  $            $B9TKv$K0\F0(B
-N  |            N$BJ8;zL\$K0\F0$9$k(B
-N  f<char>      $B$=$N9T$N(B<char>$BJ8;z$N0LCV$K0\F0$9$k(B($B1&J}8~8!:w(B)
-N  F<char>      $B$=$N9T$N(B<char>$BJ8;z$N0LCV$K0\F0$9$k(B($B:8J}8~8!:w(B)
-N  t<char>      $B$=$N9T$N(B<char>$BJ8;z$N0LCV$N:8$K0\F0$9$k(B($B1&J}8~8!:w(B)
-N  T<char>      $B$=$N9T$N(B<char>$BJ8;z$N0LCV$N1&$K0\F0$9$k(B($B:8J}8~8!:w(B)
-N  ;            f,F,t,T $B%3%^%s%I$N<!8!:w(B
-N  ,            f,F,t,T $B%3%^%s%I$N5U8!:w(B
+ カーソル左右移動 
+N  h            左 ( CTRL-H, BS, [←] も同じ )
+N  l            右 ( SPACE, [→] も同じ )
+   0            行の先頭へ移動
+   ^            行の先頭文字へ移動(空白を除く)
+N  $            行末に移動
+N  |            N文字目に移動する
+N  f<char>      その行の<char>文字の位置に移動する(右方向検索)
+N  F<char>      その行の<char>文字の位置に移動する(左方向検索)
+N  t<char>      その行の<char>文字の位置の左に移動する(右方向検索)
+N  T<char>      その行の<char>文字の位置の右に移動する(左方向検索)
+N  ;            f,F,t,T コマンドの次検索
+N  ,            f,F,t,T コマンドの逆検索
 
- $B%+!<%=%k>e2<0\F0(B 
-N  k            $B>e(B ( CTRL-P, [$B",(B] $B$bF1$8(B )
-N  j            $B2<(B ( CTRL-J, CTRL-N, LF, [$B"-(B] $B$bF1$8(B )
-N  -            $B>e$N9T$N6uGr$G$J$$@hF,0LCV$K0\F0(B
-N  +            $B2<$N9T$N6uGr$G$J$$@hF,0LCV$K0\F0(B (CTRL-M, CR $B$G$bF1$8(B )
-N  _            N - 1 $B9T2<$N6uGr$G$J$$0LCV$K0\F0(B
-N  G            N $B9TL\$KHt$V(B ($B%G%U%)%k%H$G:G=*9T$XHt$V(B)
-N  %            $B%U%!%$%k9T?t$N(B N $B%Q!<%;%s%HL\$N0LCV$KHt$V(B
- $B%o!<%I0\F0(B 
-N  w            $B<!$N%o!<%I0LCV$K?J$`(B
-N  W            $B%9%Z!<%9$G6h@Z$C$?<!$N%o!<%I0LCV$K?J$`(B
-N  e            $B<!$N%o!<%I$N:G8e$N0LCV$K?J$`(B
-N  E            $B%9%Z!<%9$G6h@Z$C$?<!$N%o!<%I$N:G8e$N0LCV$K?J$`(B
-N  b            $BA0$N%o!<%I0LCV$K?J$`(B
-N  B            $B%9%Z!<%9$G6h@Z$C$?A0$N%o!<%I0LCV$K?J$`(B
+ カーソル上下移動 
+N  k            上 ( CTRL-P, [↑] も同じ )
+N  j            下 ( CTRL-J, CTRL-N, LF, [↓] も同じ )
+N  -            上の行の空白でない先頭位置に移動
+N  +            下の行の空白でない先頭位置に移動 (CTRL-M, CR でも同じ )
+N  _            N - 1 行下の空白でない位置に移動
+N  G            N 行目に飛ぶ (デフォルトで最終行へ飛ぶ)
+N  %            ファイル行数の N パーセント目の位置に飛ぶ
+ ワード移動 
+N  w            次のワード位置に進む
+N  W            スペースで区切った次のワード位置に進む
+N  e            次のワードの最後の位置に進む
+N  E            スペースで区切った次のワードの最後の位置に進む
+N  b            前のワード位置に進む
+N  B            スペースで区切った前のワード位置に進む
 
 Text object motions
 N  )            N sentences forward
@@ -62,15 +62,15 @@ N  ][           N sections (starting with a <}>) forward
 N  []           N sections (starting with a <}>) backward
 N  [(  [{       N times back to unclosed <(> or <{>
 N  ])  ]}       N times forward to unclosed <(> or <{>
- $B8!:w(B 
-N  /{pattern}[/]        $B%Q%?!<%s8!:w(B
-N  ?{pattern}[?]        $B5U8!:w(B
-N  /                    $BA0J}8~$K:F8!:w(B
-N  ?                    $B5UJ}8~$K:F8!:w(B
-N  n                    $B<!8!:w(B($B:G8e$N8!:w$r7+$jJV$7(B)
-N  N                    $B<!8!:w(B($B:G8e$N8!:w$N5UJ}8~7+$jJV$7(B)
-N  *                    $B%+!<%=%k0LCV$NC18l8!:w(B
-N  #                    $B%+!<%=%k0LCV$NC18l5U8!:w(B
+ 検索 
+N  /{pattern}[/]        パターン検索
+N  ?{pattern}[?]        逆検索
+N  /                    前方向に再検索
+N  ?                    逆方向に再検索
+N  n                    次検索(最後の検索を繰り返し)
+N  N                    次検索(最後の検索の逆方向繰り返し)
+N  *                    カーソル位置の単語検索
+N  #                    カーソル位置の単語逆検索
 
 special characters in search patterns      magic      nomagic
            matches any single character      .            \.
@@ -85,246 +85,246 @@ matches 1 or more of the preceding atom      \+           \+
    matches 0 or 1 of the preceding atom      \=           \=
                  separates two branches      \|           \|
            group a pattern into an atom      \(\)         \(\)
- $B$=$NB>$N0\F0%3%^%s%I(B 
-   m<a-zA-Z>    $B%+!<%=%k0LCV$K(B <a-zA-Z> $B$N%^!<%/$r$D$1$k(B
-   `<a-zA-Z>    <a-zA-Z> $B$N%^!<%/0LCV$K0\F0$9$k(B
-   ``           $B:G8e$KHt$s$@%^!<%/0LCV$K0\F0$9$k(B
+ その他の移動コマンド 
+   m<a-zA-Z>    カーソル位置に <a-zA-Z> のマークをつける
+   `<a-zA-Z>    <a-zA-Z> のマーク位置に移動する
+   ``           最後に飛んだマーク位置に移動する
    `[ or `]     go to the start or end of the previously operated or put text
-   '<a-zA-Z[]'> $B%^!<%/0LCV$N6uGr$G$J$$9TF,$XHt$V(B
-:marks          $B%^!<%/0LCV$NI=<((B
-N  CTRL-O       $B2a5n$K0\F0$7$?%8%c%s%W0LCV$rAL$k(B
-N  CTRL-I       $B2a5n$K0\F0$7$?%8%c%s%W0LCV$r?J$`(B
-:jumps          $B%8%c%s%W0LCV$N%j%9%H$rI=<($9$k(B
-   %            $B3g8L$NBP1~0LCV$KHt$V(B, $B%3%a%s%H$d(B #if/#else/#endif $B$NBP1~8!:w(B
-                $B$b2DG=(B
-N  H            $B8=:_$N2hLL$G:G>e0L0LCV$XHt$V(B
-   M            $B8=:_$N2hLL$G??Cf$N0LCV$XHt$V(B
-N  L            $B8=:_$N2hLL$G:G2<9T0LCV$XHt$V(B
+   '<a-zA-Z[]'> マーク位置の空白でない行頭へ飛ぶ
+:marks          マーク位置の表示
+N  CTRL-O       過去に移動したジャンプ位置を遡る
+N  CTRL-I       過去に移動したジャンプ位置を進む
+:jumps          ジャンプ位置のリストを表示する
+   %            括弧の対応位置に飛ぶ, コメントや #if/#else/#endif の対応検索
+                も可能
+N  H            現在の画面で最上位位置へ飛ぶ
+   M            現在の画面で真中の位置へ飛ぶ
+N  L            現在の画面で最下行位置へ飛ぶ
 
- $B%?%0%8%c%s%W(B 
-:ta[g][!] {tag}         $B%?%0L>$r;XDj$7$F$=$N0LCV$XHt$V(B
-   CTRL-]               $B%+!<%=%k0LCV$NC18l$r%?%0$H$7$F%8%c%s%W(B
-N  CTRL-T               $B2a5n$K%?%0%8%c%s%W$7$?%j%9%H$rAL$k(B(Pop)
-:[count]po[p][!]        [count] $BHVL\$N%?%0%j%9%H0LCV$KHt$V(B
-:[count]ta[g][!]        [count] $BHVL\$N%?%0%j%9%H0LCV$KHt$V(B
-:tags                   $B%?%0%j%9%H$rI=<((B
- $B%9%/%m!<%k(B 
-N  CTRL-E       $BI=<($r9T%9%/%m!<%k%"%C%W(B
-N  CTRL-D       $B2hLL$NH>J,9T?J$`(B (N$B9T(B)
-N  CTRL-F       $B<!%Z!<%8(B (N$B%Z!<%8(B)
-N  CTRL-Y       $BI=<($r9T%9%/%m!<%k%@%&%s(B
-N  CTRL-U       $B2hLL$NH>J,9TLa$k(B (N$B9T(B)
-N  CTRL-B       $BA0%Z!<%8(B (N$B%Z!<%8(B)
-   z<CR> or zt  $B%+!<%=%k9T$,(B1$BHV>e$K$J$k$h$&=q$-D>$7(B
-   z.    or zz  $B%+!<%=%k9T$,Cf?4$K$J$k$h$&=q$-D>$7(B
-   z-    or zb  $B%+!<%=%k9T$,(B1$BHV2<$K$J$k$h$&=q$-D>$7(B
- $BA^F~(B 
-N  a            $B%+!<%=%k0LCV$N<!$NJ8;z0LCV$XA^F~(B($BA^F~%b!<%I$X(B)
-N  A            $B9T$N:G8e$KDI2C(B($BA^F~%b!<%I$X(B)
-N  i            $B%+!<%=%k0LCV$KA^F~(B($BA^F~%b!<%I$X(B)
-N  I            $B9T$N6uGr$G$J$$:G=i$N0LCV$KA^F~(B($BA^F~%b!<%I$X(B)
-N  o            $B<!$N9T$KA^F~(B($BA^F~%b!<%I$X(B)
-N  O            $BA0$N9T$KA^F~(B($BA^F~%b!<%I$X(B)
+ タグジャンプ 
+:ta[g][!] {tag}         タグ名を指定してその位置へ飛ぶ
+   CTRL-]               カーソル位置の単語をタグとしてジャンプ
+N  CTRL-T               過去にタグジャンプしたリストを遡る(Pop)
+:[count]po[p][!]        [count] 番目のタグリスト位置に飛ぶ
+:[count]ta[g][!]        [count] 番目のタグリスト位置に飛ぶ
+:tags                   タグリストを表示
+ スクロール 
+N  CTRL-E       表示を行スクロールアップ
+N  CTRL-D       画面の半分行進む (N行)
+N  CTRL-F       次ページ (Nページ)
+N  CTRL-Y       表示を行スクロールダウン
+N  CTRL-U       画面の半分行戻る (N行)
+N  CTRL-B       前ページ (Nページ)
+   z<CR> or zt  カーソル行が1番上になるよう書き直し
+   z.    or zz  カーソル行が中心になるよう書き直し
+   z-    or zb  カーソル行が1番下になるよう書き直し
+ 挿入 
+N  a            カーソル位置の次の文字位置へ挿入(挿入モードへ)
+N  A            行の最後に追加(挿入モードへ)
+N  i            カーソル位置に挿入(挿入モードへ)
+N  I            行の空白でない最初の位置に挿入(挿入モードへ)
+N  o            次の行に挿入(挿入モードへ)
+N  O            前の行に挿入(挿入モードへ)
 
- $B$=$NB>$NA^F~(B 
-:r [file]       $B%U%!%$%kFbMF$r%+!<%=%k0LCV$K<h$j9~$`(B
-:r!{command}    $B%3%^%s%I$r<B9T$7$?7k2L(B(stdout)$B$r<h$j9~$`(B
+ その他の挿入 
+:r [file]       ファイル内容をカーソル位置に取り込む
+:r!{command}    コマンドを実行した結果(stdout)を取り込む
 
 Digraphs
 :dig[raphs]     show current list of digraphs
 :dig[raphs] {char1}{char2} {number} ...
                 add digraph(s) to the list
- $BA^F~%b!<%I$G$NA`:n(B               action in insert mode
-CTRL-[ or <ESC>   $BA^F~%b!<%I$r=*N;$9$k(B
-CTRL-A            $B:G8e$KA^F~$7$?%F%-%9%H$r<h$j9~$`(B
-CTRL-@            CTRL+A$B$G<h$j9~$^$l$k%F%-%9%H$r%/%j%"$9$k(B
-CTRL-R <0-9a-z%:> $B;XDj$7$?%+%C%H%P%C%U%!$NFbMF$r<h$j9~$`(B
-CTRL-J or <LF> or CTRL-M or <CR>   $B2~9T(B
+ 挿入モードでの操作               action in insert mode
+CTRL-[ or <ESC>   挿入モードを終了する
+CTRL-A            最後に挿入したテキストを取り込む
+CTRL-@            CTRL+Aで取り込まれるテキストをクリアする
+CTRL-R <0-9a-z%:> 指定したカットバッファの内容を取り込む
+CTRL-J or <LF> or CTRL-M or <CR>   改行
 CTRL-K {char1} {char2}  enter digraph
-CTRL-E / CTRL-Y   $B<!$N9T(B/$BA0$N9T$r%3%T!<$9$k(B
-CTRL-V            $B%3%s%H%m!<%k%-!<$NA^F~$r;XDj$9$k(B
-CTRL-N / CTRL-P   $B%F%-%9%HFb$+$iC18l8!:w$r$9$k(B
-CTRL-H or <BS> or <DEL> $BA0$N(B1$BJ8;z$r>C$9(B
-CTRL-W            $BA0$N%o!<%I$r>C$9(B
-CTRL-U            $BA^F~$7$?9T$r>C$9(B
-CTRL-T            $BA^F~9T$N%$%s%G%s%HJQ99(B($B1&%7%U%H(B)
-CTRL-D            $BA^F~9T$N%$%s%G%s%HJQ99(B($B:8%7%U%H(B)
-0 CTRL-D or ^ CTRL-D    $BA^F~9T$N%$%s%G%s%HA4:o=|(B
+CTRL-E / CTRL-Y   次の行/前の行をコピーする
+CTRL-V            コントロールキーの挿入を指定する
+CTRL-N / CTRL-P   テキスト内から単語検索をする
+CTRL-H or <BS> or <DEL> 前の1文字を消す
+CTRL-W            前のワードを消す
+CTRL-U            挿入した行を消す
+CTRL-T            挿入行のインデント変更(右シフト)
+CTRL-D            挿入行のインデント変更(左シフト)
+0 CTRL-D or ^ CTRL-D    挿入行のインデント全削除
 {char1} <BS> {char2}    enter digraph if 'dg' option set
-CTRL-B            $B5UA^F~%b!<%I$N%H%0%k%A%'%s%8(B
-         $BA^F~%b!<%I$G$N%@%$%l%/%H%+!<%=%k0\F0(B 
-$B%+!<%=%k%-!<(B      $BA^F~0LCV$rJQ99(B
-SHIFT[$B",(B]/[$B"-(B]    1$B2hLLLa$k(B/$B?J$`(B(X68K$BHGL$BP1~(B)
-SHIFT[$B"+(B]/[$B"*(B]    $B%o!<%I:81&0\F0(B(X68K$BHGL$BP1~(B)
-CTRL-O {command}  $BA^F~%b!<%I$+$i0\F0%3%^%s%I$r<B9T$9$k(B(CTRL-Oj$B$J$I(B)
- $BJQ99%3%^%s%I(B 
-N  R            $B=E$M=q$-(B($BJQ99%b!<%I$X(B)
-N  c{motion}    $B;XDjHO0OJQ99(B($BA^F~%b!<%I$X(B)
-{visual}c       $B;XDjHO0O$rCV$-49$($k(B($BA^F~%b!<%I$X(B)
-N  cc           $B9TJQ99(B($BA^F~%b!<%I$X(B)
-N  C            $B9TKv$^$GJQ99(B($BA^F~%b!<%I$X(B)
-N  s            $BJ8;zJQ99(B($BA^F~%b!<%I$X(B)
-N  S            $B9TJQ99(B($BA^F~%b!<%I$X(B)
-N  r<char>      $B<!$N(B1$BJ8;z$XCV49(B
-N  ~            $B%+!<%=%k0LCV$N%"%k%U%!%Y%C%H$NBgJ8;z>.J8;zJQ49(B
-{visual}~       $B;XDjHO0O$NBgJ8;z>.J8;zJQ49(B
-{visual}u       $B;XDjHO0O$N>.J8;zJQ49(B
-{visual}U       $B;XDjHO0O$NBgJ8;zJQ49(B
-N  CTRL-A       $B%+!<%=%k0LCV$N?tCM%o!<%I$K(B N $B$r2C$($k(B(C$B8@8lDj?tCM(B)
-N  CTRL-X       $B%+!<%=%k0LCV$N?tCM%o!<%I$+$i(B N $B$r0z$/(B
-N  <{motion}    $B:8%7%U%H(B($B%7%U%HJ8;zI}$O(Bshiftwidth$B$G;XDj$9$k(B)
-N  <<           N $B9T:8%7%U%H(B
-N  >{motion}    $B1&%7%U%H(B
-N  >>           N $B9T1&%7%U%H(B
-N  Q{motion}    textwidth $B%*%W%7%g%s$K=>$C$F$r%U%)!<%^%C%H$9$k(B
-:[range]ce[nter] [width]   $B%;%s%?%j%s%0(B
-:[range]le[ft] [indent]    $B:8$h$;(B
-:[range]ri[ght] [width]    $B1&$h$;(B
- $B$=$NB>$NJQ99(B 
-   v            $BJ8;zHO0O;XDj3+;O(B               } $B%+!<%=%k0\F0$K$h$C$F(B
-   V            $B9THO0O;XDj3+;O(B                 } $BH?E>$7$F<($9HO0O$rJQ(B
-   CTRL-V       $B%V%m%C%/HO0O;XDj3+;O(B           } $B99(B
-   o            $BH?E>;XDjNN0h$G$N%+!<%=%k0LCV$r@hF,$H:G8e$G8r49$9$k(B
+CTRL-B            逆挿入モードのトグルチェンジ
+         挿入モードでのダイレクトカーソル移動 
+カーソルキー      挿入位置を変更
+SHIFT[↑]/[↓]    1画面戻る/進む(X68K版未対応)
+SHIFT[←]/[→]    ワード左右移動(X68K版未対応)
+CTRL-O {command}  挿入モードから移動コマンドを実行する(CTRL-Ojなど)
+ 変更コマンド 
+N  R            重ね書き(変更モードへ)
+N  c{motion}    指定範囲変更(挿入モードへ)
+{visual}c       指定範囲を置き換える(挿入モードへ)
+N  cc           行変更(挿入モードへ)
+N  C            行末まで変更(挿入モードへ)
+N  s            文字変更(挿入モードへ)
+N  S            行変更(挿入モードへ)
+N  r<char>      次の1文字へ置換
+N  ~            カーソル位置のアルファベットの大文字小文字変換
+{visual}~       指定範囲の大文字小文字変換
+{visual}u       指定範囲の小文字変換
+{visual}U       指定範囲の大文字変換
+N  CTRL-A       カーソル位置の数値ワードに N を加える(C言語定数値)
+N  CTRL-X       カーソル位置の数値ワードから N を引く
+N  <{motion}    左シフト(シフト文字幅はshiftwidthで指定する)
+N  <<           N 行左シフト
+N  >{motion}    右シフト
+N  >>           N 行右シフト
+N  Q{motion}    textwidth オプションに従ってをフォーマットする
+:[range]ce[nter] [width]   センタリング
+:[range]le[ft] [indent]    左よせ
+:[range]ri[ght] [width]    右よせ
+ その他の変更 
+   v            文字範囲指定開始               } カーソル移動によって
+   V            行範囲指定開始                 } 反転して示す範囲を変
+   CTRL-V       ブロック範囲指定開始           } 更
+   o            反転指定領域でのカーソル位置を先頭と最後で交換する
 
 N  !{motion}{command}
-                $B;XDjHO0O$r%U%#%k%?%W%m%0%i%`$K$+$1$k(B
+                指定範囲をフィルタプログラムにかける
 N  !!{command}
-                N $B9T$r%U%#%k%?%W%m%0%i%`$K$+$1$k(B
+                N 行をフィルタプログラムにかける
 :[range]!{command}
-                $B;XDjHO0O$r%U%#%k%?%W%m%0%i%`$K$+$1$k(B
+                指定範囲をフィルタプログラムにかける
 N  ={motion}{command}
-                $B%U%#%k%?(B indent $B$K$+$1$k(B ($B%W%m%0%i%`$O(B 'equalprg' $B$G;XDj(B)
+                フィルタ indent にかける (プログラムは 'equalprg' で指定)
 N  =={command}
-                N $B9T$r%U%#%k%?(B indent $B$K$+$1$k(B
+                N 行をフィルタ indent にかける
 :[range]s[ubstitute]/{pattern}/{string}/[g][c]
-                [range] $B$NHO0O$G(B {pattern} $B$r(B {string} $B$KCV49$9$k(B
-                [g]$B$O8=$l$?A4It$N%Q%?!<%s$rCV49(B,[c]$B$O3NG'CV49(B
+                [range] の範囲で {pattern} を {string} に置換する
+                [g]は現れた全部のパターンを置換,[c]は確認置換
 :[range]s[ubstitute] [g][c]
-                $BA0$K<B9T$7$?(B :s $B%3%^%s%I$r$b$&0lEY<B9T$9$k(B
-   &            $BA0$K<B9T$7$?(B :s $B%3%^%s%I$r8=:_9T$KBP$7$F<B9T$9$k(B
+                前に実行した :s コマンドをもう一度実行する
+   &            前に実行した :s コマンドを現在行に対して実行する
 
- $B:o=|%3%^%s%I(B 
-N  x            $B%+!<%=%k0LCV$NJ8;z:o=|(B (N$BJ8;z(B)
-N  X            $B%+!<%=%k0LCV$NA0$NJ8;z:o=|(B (N$BJ8;z(B)
-N  d{motion}    $B;XDjHO0O:o=|(B
-{visual}d       $B;XDjHO0O:o=|(B
-N  dd           $B9T:o=|(B (N$B9T(B)
-N  D            $B%+!<%=%k0LCV$+$i9TKv$^$G:o=|(B
-N  J            $B<!$N9T$HO"7k$9$k(B
-{visual}J       $B;XDjHO0O$r9TO"7k$9$k(B
-:[range]d [x]   $B;XDjHO0O(B [range] lines $B:o=|$7%+%C%H%P%C%U%!(B[x]$B$K<h$j9~$`(B
+ 削除コマンド 
+N  x            カーソル位置の文字削除 (N文字)
+N  X            カーソル位置の前の文字削除 (N文字)
+N  d{motion}    指定範囲削除
+{visual}d       指定範囲削除
+N  dd           行削除 (N行)
+N  D            カーソル位置から行末まで削除
+N  J            次の行と連結する
+{visual}J       指定範囲を行連結する
+:[range]d [x]   指定範囲 [range] lines 削除しカットバッファ[x]に取り込む
 
- $B%F%-%9%H%3%T!<(B/$B0\F0%3%^%s%I(B 
-   "<char>      $B<!$NA`:n$G<h$j9~$`%+%C%H%P%C%U%!$r;XDj$9$k(B
-:dis            $B8=:_$N3F%+%C%H%P%C%U%!$NFbMF$rI=<($9$k(B
-N  y{motion}    $B%F%-%9%HFbMF$r<h$j9~$`(B ($B%+%C%H%P%C%U%!$X%3%T!<(B)
-{visual}y       $B;XDjHO0O$r<h$j9~$`(B
-N  yy           $B9T<h$j9~$_(B (N$B9T(B)
-N  Y            $B9T<h$j9~$_(B (N$B9T(B)
-N  p            $B%+%C%H%P%C%U%!$NFbMF$r%+!<%=%k0LCV$N<!$KA^F~$9$k(B
-N  P            $B%+%C%H%P%C%U%!$NFbMF$r%+!<%=%k0LCV$NA0$KA^F~$9$k(B
-N  ]p           $B%$%s%G%s%HD4@0$D$-$N(B p
-N  [p           $B%$%s%G%s%HD4@0$D$-$N(B P
- $B7+$jJV$7(B 
-N  .            $B:G8e$NJQ99%3%^%s%I$r7+$jJV$9(B
-   q<a-z>       $B%-!<%\!<%I%^%/%m$N5-O?3+;O(B (<a-z>$B$O%^%/%mL>(B)
-   q            $B%-!<%\!<%I%^%/%m$N5-O?Dd;_(B
-N  @<a-z>       $B%-!<%\!<%I%^%/%m<B9T(B
-N  @@           $B%-!<%\!<%I%^%/%m$N<B9T7+$jJV$7(B
-:@<a-z>         $B%-!<%\!<%I%^%/%m<B9T(B
-:@@             $B%-!<%\!<%I%^%/%m7+$jJV$7(B
+ テキストコピー/移動コマンド 
+   "<char>      次の操作で取り込むカットバッファを指定する
+:dis            現在の各カットバッファの内容を表示する
+N  y{motion}    テキスト内容を取り込む (カットバッファへコピー)
+{visual}y       指定範囲を取り込む
+N  yy           行取り込み (N行)
+N  Y            行取り込み (N行)
+N  p            カットバッファの内容をカーソル位置の次に挿入する
+N  P            カットバッファの内容をカーソル位置の前に挿入する
+N  ]p           インデント調整つきの p
+N  [p           インデント調整つきの P
+ 繰り返し 
+N  .            最後の変更コマンドを繰り返す
+   q<a-z>       キーボードマクロの記録開始 (<a-z>はマクロ名)
+   q            キーボードマクロの記録停止
+N  @<a-z>       キーボードマクロ実行
+N  @@           キーボードマクロの実行繰り返し
+:@<a-z>         キーボードマクロ実行
+:@@             キーボードマクロ繰り返し
 :[range]g[lobal]/{pattern}/[cmd]
-                $B%Q%?!<%s%^%C%A$7$?9T$KBP$7$F;XDj$N(B Ex $B%3%^%s%I$r<B9T$9$k(B
-                Ex$B%3%^%s%I$N%G%U%)%k%H$O(B p
+                パターンマッチした行に対して指定の Ex コマンドを実行する
+                Exコマンドのデフォルトは p
 :[range]g[lobal]!/{pattern}/[cmd]
-                $B%Q%?!<%s%^%C%A$7$J$+$C$?9T$KBP$7$F;XDj$N(B Ex $B%3%^%s%I$r<B(B
-                $B9T$9$k!#(BEx$B%3%^%s%I$N%G%U%)%k%H$O(B p
+                パターンマッチしなかった行に対して指定の Ex コマンドを実
+                行する。Exコマンドのデフォルトは p
 :so[urce] {file}
-                Ex $B%3%^%s%I$r%U%!%$%k$+$iFI$_9~$s$G<B9T$9$k(B
+                Ex コマンドをファイルから読み込んで実行する
 :so[urce]! {file}
-                VIM $B%3%^%s%I$r%U%!%$%k$+$iFI$_9~$s$G<B9T$9$k(B
-:sl[eep] [N]    N $BIC(B sleep $B$9$k(B
-N  gs           N $BIC(B sleep $B$9$k(B
- $B%-!<%^%C%T%s%0(B 
-:ma[p] {lhs} {rhs}      $B%N!<%^%k%b!<%I$G(B {lhs} $B$K(B {rhs} $B$rDj5A(B
-:ma[p]! {lhs} {rhs}     $BA^F~(B/$B%3%^%s%I%b!<%I$G(B {lhs} $B$K(B {rhs} $B$rDj5A(B
+                VIM コマンドをファイルから読み込んで実行する
+:sl[eep] [N]    N 秒 sleep する
+N  gs           N 秒 sleep する
+ キーマッピング 
+:ma[p] {lhs} {rhs}      ノーマルモードで {lhs} に {rhs} を定義
+:ma[p]! {lhs} {rhs}     挿入/コマンドモードで {lhs} に {rhs} を定義
 :no[remap][!] {lhs} {rhs}
-                        :map $B$HF1$8(B
-:unm[ap] {lhs}          $B%N!<%^%k%b!<%I$G$N(B {lhs} $B$NDj5AFbMF$r:o=|$9$k(B
-:unm[ap]! {lhs}         $BA^F~(B/$B%3%^%s%I%b!<%I$G$N(B {lhs} $B$NDj5AFbMF$r:o=|$9$k(B
-:ma[p] [lhs]            $B%N!<%^%k%b!<%I$G$NDj5AFbMF$NI=<((B
-:ma[p]! [lhs]           $BA^F~(B/$B%3%^%s%I%b!<%I$G$NDj5AFbMF$NI=<((B
-:cmap/:cunmap/:cnoremap $B%3%^%s%I%b!<%I$G$N$_M-8z$J(B map/unmap/noremap $B%3%^%s%I(B
-:imap/:iunmap/:inoremap $BA^F~%b!<%I$G$N$_M-8z$J(B map/unmap/noremap $B%3%^%s%I(B
-:mk[exrc][!] [file]     $B8=:_$N@_DjFbMF$r%U%!%$%k$K=q$-=P$9(B($B%G%U%)%k%H(B .exrc)
-                        $B$9$G$K(B .exrc $B$,$"$k>l9g$O(B ! $B$,I,MW(B
-:mkv[imrc][!] [file]    $B%G%U%)%k%H%U%!%$%kL>$,(B .vimrc $B$J$@$1$G(B :mkexrc $B$HF1$8(B
+                        :map と同じ
+:unm[ap] {lhs}          ノーマルモードでの {lhs} の定義内容を削除する
+:unm[ap]! {lhs}         挿入/コマンドモードでの {lhs} の定義内容を削除する
+:ma[p] [lhs]            ノーマルモードでの定義内容の表示
+:ma[p]! [lhs]           挿入/コマンドモードでの定義内容の表示
+:cmap/:cunmap/:cnoremap コマンドモードでのみ有効な map/unmap/noremap コマンド
+:imap/:iunmap/:inoremap 挿入モードでのみ有効な map/unmap/noremap コマンド
+:mk[exrc][!] [file]     現在の設定内容をファイルに書き出す(デフォルト .exrc)
+                        すでに .exrc がある場合は ! が必要
+:mkv[imrc][!] [file]    デフォルトファイル名が .vimrc なだけで :mkexrc と同じ
 
- $BN,8lEPO?(B 
-:ab[breviate] {lhs} {rhs}    $BN,8l$rEPO?$9$k(B ({lhs} $B$,(B {rhs} $B$HF1$8$K$J$k(B)
-:ab[breviate] {lhs}          {lhs} $B$,$I$&E83+$5$l$k$+I=<($9$k(B
-:ab[breviate]                $BEPO?$5$l$F$$$kN,8l$rA4ItI=<($9$k(B
-:una[bbreviate] {lhs}        $B;XDjC18l$NN,8lEPO?$r:o=|$9$k(B
-:iab/:cab/:iunab/:cunab/:noreab/:cnoreab/:inoreab    $B$3$l$i$bF1$8(B
- $B%*%W%7%g%s(B 
-:se[t]                  $BJQ99$7$?%*%W%7%g%s$rI=<($9$k(B
-:se[t] all              $BA4It$N%*%W%7%g%s$rI=<($9$k(B
-:se[t] {option}         $B%*%W%7%g%s$r(B ON $B$K$9$k(B(or STR/NUM$B%*%W%7%g%sFbMF$NI=<((B)
-:se[t] no{option}       $B%*%W%7%g%s$r(B OFF $B$K$9$k(B
-:se[t] inv{option}      $B%*%W%7%g%s$N>uBV$rH?E>$9$k(B($B%H%0%k(B)
-:se[t] {option}={value} $BJ8;zNs$^$?$O?tCM%*%W%7%g%s$KCM$r@_Dj$9$k(B
-:se[t] {option}?        $B%*%W%7%g%s$NFbMF$rI=<((B
+ 略語登録 
+:ab[breviate] {lhs} {rhs}    略語を登録する ({lhs} が {rhs} と同じになる)
+:ab[breviate] {lhs}          {lhs} がどう展開されるか表示する
+:ab[breviate]                登録されている略語を全部表示する
+:una[bbreviate] {lhs}        指定単語の略語登録を削除する
+:iab/:cab/:iunab/:cunab/:noreab/:cnoreab/:inoreab    これらも同じ
+ オプション 
+:se[t]                  変更したオプションを表示する
+:se[t] all              全部のオプションを表示する
+:se[t] {option}         オプションを ON にする(or STR/NUMオプション内容の表示)
+:se[t] no{option}       オプションを OFF にする
+:se[t] inv{option}      オプションの状態を反転する(トグル)
+:se[t] {option}={value} 文字列または数値オプションに値を設定する
+:se[t] {option}?        オプションの内容を表示
 
- $B%*%W%7%g%s(B($BN,5-(B)    type  default        effect
-autoindent (ai)     toggle    off   $BA^F~%b!<%I$GA09T$N%$%s%G%s%H$r%3%T!<$9$k(B
-autowrite (aw)      toggle    off   $B?7JT=8;~$K8=:_$NJQ99$r%U%!%$%k$r=q$-=P$9(B
-backspace (bs)      number    0     0:$BDL>o$N(BVi, 1:$B2~9T$b>C$;$k(B, 2:$BA4It>C$;$k(B
-backup (bk)         toggle    on    $B%P%C%/%"%C%W%U%!%$%k$r:n$k(B
-backupdir (bdir)    string    "~/"  $B%P%C%/%"%C%W%G%#%l%/%H%j$N;XDj(B
-binary (bin)        toggle    off   $B%P%$%J%j!<%b!<%I(B
+ オプション(略記)    type  default        effect
+autoindent (ai)     toggle    off   挿入モードで前行のインデントをコピーする
+autowrite (aw)      toggle    off   新編集時に現在の変更をファイルを書き出す
+backspace (bs)      number    0     0:通常のVi, 1:改行も消せる, 2:全部消せる
+backup (bk)         toggle    on    バックアップファイルを作る
+backupdir (bdir)    string    "~/"  バックアップディレクトリの指定
+binary (bin)        toggle    off   バイナリーモード
 bioskey (bk)        toggle    on    MSDOS: use bios to get characters
-cmdheight (ch)      number     1    $B%3%^%s%I9T$N9T?t(B
-columns (co)        number    80    $B2hLL$N7e?t(B
-compatible (cp)     toggle    off   vi $B40A4%3%s%Q%A%b!<%I;XDj(B
- $B%*%W%7%g%s(B($BN,5-(B)    type  default        effect
+cmdheight (ch)      number     1    コマンド行の行数
+columns (co)        number    80    画面の桁数
+compatible (cp)     toggle    off   vi 完全コンパチモード指定
+ オプション(略記)    type  default        effect
 digraph (dg)        toggle    off   enable <BS> digraphs in insert mode
-directory (dir)     string    ""    $B%9%o%C%W%U%!%$%k$rCV$/%G%#%l%/%H%j;XDj(B
+directory (dir)     string    ""    スワップファイルを置くディレクトリ指定
 edcompatible        toggle    off   flags for :substitute toggle
 endofline (eol)     toggle    on    last line has a newline character
-equalalways (ea)    toggle    on    $B%&%#%s%I%&3+JD;~(B,$B>o$KA4ItF1$8%5%$%:$K$9$k(B
-equalprg (ep)       string    "indent"  '=' $B%3%^%s%I$G;H$&%W%m%0%i%`L>(B
+equalalways (ea)    toggle    on    ウィンドウ開閉時,常に全部同じサイズにする
+equalprg (ep)       string    "indent"  '=' コマンドで使うプログラム名
 errorbells (eb)     toggle    off   ring the bell for error messages
 errorfile (ef)      string    "AztecC.Err" file for QuickFix option
-errorformat (efm)   string          $B%3%s%Q%$%i%(%i!<%a%C%;!<%8$N%U%)!<%^%C%H(B
-esckeys (ek)        toggle    on    <ESC>$B%-!<$NC1FHH=DjBT$A$r$9$k(B
+errorformat (efm)   string          コンパイラエラーメッセージのフォーマット
+esckeys (ek)        toggle    on    <ESC>キーの単独判定待ちをする
 expandtab (et)      toggle    off   insert mode: use spaces to enter a tab
-exrc                toggle    off   $B%+%l%s%H$N(B .exrc/.vimrc $B$rFI$_9~$`(B
-formatprg (fp)      string    ""    'Q'$B$G30It8F$S=P$7$9$k>l9g$N%W%m%0%i%`L>(B
+exrc                toggle    off   カレントの .exrc/.vimrc を読み込む
+formatprg (fp)      string    ""    'Q'で外部呼び出しする場合のプログラム名
 gdefault (gd)       toggle    off   the 'g' flag is default on for :substitute
-graphic (gr)        toggle    off   $BF|K\8lHG$G$O0UL#$r;}$?$J$$(B
-helpfile (hf)       string    "vim:vim.hlp"     $B%X%k%W%U%!%$%kL>(B
+graphic (gr)        toggle    off   日本語版では意味を持たない
+helpfile (hf)       string    "vim:vim.hlp"     ヘルプファイル名
 hidden (hid)        toggle    off   buffers become hidden when abandoned
 highlight (hl)      string    "db,es,hs,rs,vi,si"   when to use higlighting
-history (hi)        number    20    $B%3%^%s%I9T%R%9%H%j$NJ]B8%G!<B??t(B
- $B%*%W%7%g%s(B($BN,5-(B)    type  default        effect
+history (hi)        number    20    コマンド行ヒストリの保存デー多数
+ オプション(略記)    type  default        effect
 icon                toggle    off   set icon title to file name
 ignorecase (ic)     toggle    off   ignore case in search patterns
-insertmode (im)     toggle    off   $B5/F0D>8eB((B insert mode $B$K$9$k(B
-joinspaces (js)     toggle    on    $B9TO"7k;~(B '.' $B$N8e$m$O%9%Z!<%9$r(B2$B$DF~$l$k(B
-keywordprg (kp)     string    "ref" 'K'command $B$G5/F0$9$k%W%m%0%i%`L>(B
-laststatus (ls)     number    1     STATUS$B9T@_Dj(B 0:single$B>uBV(Bor$B:G2<(BWIN$B$K$OIU$+(B
-                                    $B$J$$(B,1:WIN$BJ,3d;~$OA4It$KIU$/(B,2:$B>o$KIU$/(B
-lines               number    25    $B2hLL$N9T?t(B
-list                toggle    off   TAB,$B2~9T$rI=<(J8;z$H$7$FI=<((B
+insertmode (im)     toggle    off   起動直後即 insert mode にする
+joinspaces (js)     toggle    on    行連結時 '.' の後ろはスペースを2つ入れる
+keywordprg (kp)     string    "ref" 'K'command で起動するプログラム名
+laststatus (ls)     number    1     STATUS行設定 0:single状態or最下WINには付か
+                                    ない,1:WIN分割時は全部に付く,2:常に付く
+lines               number    25    画面の行数
+list                toggle    off   TAB,改行を表示文字として表示
 magic               toggle    on    different pattern matching characters
-makeprg (mp)        string    "make" ':make'command$B$G8F$S=P$9%W%m%0%i%`L>(B
+makeprg (mp)        string    "make" ':make'commandで呼び出すプログラム名
 maxmem (mm)         number    512   How may Kbyte to use for one buffer
 maxmemtot (mmt)     number    512   How may Kbyte to use for all buffers
-modeline (ml)       toggle    on    $B%U%!%$%k$N%b!<%I9T@_Dj$rM-8z$K$9$k(B
-modelines (mls)     number    5     $B%b!<%I9T$NB8:_$rD4$Y$k9THO0O(B
-more                toggle    on    $BD9$$%j%9%HI=<(;~$O2hLLC10L$G0l;~Dd;_$9$k(B
-number (nu)         toggle    off   $B9THV9f$rI=<($9$k(B
- $B%*%W%7%g%s(B($BN,5-(B)    type  default        effect
+modeline (ml)       toggle    on    ファイルのモード行設定を有効にする
+modelines (mls)     number    5     モード行の存在を調べる行範囲
+more                toggle    on    長いリスト表示時は画面単位で一時停止する
+number (nu)         toggle    off   行番号を表示する
+ オプション(略記)    type  default        effect
 paragraphs (para)   string    "IPLPPPQPP LIpplpipbp"
                                     nroff macros that separate paragraphs
 paste               toggle    off   paste mode: insert literally
@@ -373,96 +373,96 @@ title               toggle    on    set window title to file name
 ttyfast (tf)        toggle    off   don't use scroll commands for terminal
 undolevels (ul)     number    100   number of changes that can be undone
                                         (0 for Vi compatibility)
-updatecount (uc)    number    200   $B;XDj$7$?%-!<A`:n2s?tKh$K(B swap $B%U%!%$%k:n@.(B
-updatetime (ut)     number    4000  $B;XDj$7$?;~4V(B(msec)$B7P2aKh$K(B swap file $B:n@.(B
+updatecount (uc)    number    200   指定したキー操作回数毎に swap ファイル作成
+updatetime (ut)     number    4000  指定した時間(msec)経過毎に swap file 作成
 visualbell (vb)     toggle    off   use visual instead of audible beep
 warn                toggle    on    warn when changes and shell command used
 weirdinvert (wi)    toggle    off   terminal has a weird invert behaviour
 whichwrap (ww)      number    3     which left/right move commands wrap
-wildchar (wc)       number    TAB   $B%3%^%s%I9TJd40$G;H$&%-!<%3!<%I;XDj(B
+wildchar (wc)       number    TAB   コマンド行補完で使うキーコード指定
 winheight (wh)      number    0     minimal number of lines for current window
-wrap                toggle    on    $B?eJ?%9%/%m!<%k$N6X;_(B
+wrap                toggle    on    水平スクロールの禁止
 wrapmargin (wm)     number    0     wrap text when at (columns - wrapmargin)
 wrapscan (ws)       toggle    on    searches wrap around the end of the file
 writeany (wa)       toggle    off   always write file without asking
 writebackup (wb)    toggle    on    backup a file WHILE overwriting it
 yankendofline (ye)  toggle    off   'Y' yanks from cursor to end of line
  Undo/Redo 
-N  u            $B:G8e$NJQ99$r<h$j>C$9(B
-N  CTRL-R       UNDO $B$rLa$9(B
-   U            $B:G8e$KJQ99$7$?9T$NJQ99$r<h$j>C$9(B
- $B30It%3%^%s%I<B9T(B 
-:sh             $B%7%'%k5/F0(B
-:!{command}     $B%7%'%k%3%^%s%I$N<B9T(B
-   K            $B%+%l%s%H%o!<%I$r0z?t$K$7$F%W%m%0%i%`(B'keywordprg'$B<B9T(B
- Quickfix $B%3%^%s%I(B 
-:cc [nr]        $B%(%i!<I=<((B [nr] (default $B8=:_CmL\$7$F$$$k%(%i!<I=<((B)
-:cn             $B<!$N%(%i!<I=<((B
-:cp             $BA0$N%(%i!<I=<((B
-:cl             $BA4It$N%(%i!<FbMF$rI=<($9$k(B
-:cf             $B%(%i!<%U%!%$%k$r?7$?$KFI$_9~$`(B
-:cq             $B%3%s%Q%$%i$N%(%i!<%3!<%I$r;}$C$F6/@)=*N;(B
-:make [args]    make $B$r<B9T8e%(%i!<FbMF$rFI$_9~$_:G=i$N%(%i!<9T$K%8%c%s%W$9$k(B
- $B$=$NB>$N%3%^%s%I(B 
-   CTRL-L       $B2hLL$N:FIA2h(B
-   CTRL-G       $B%U%!%$%kL>(B,$B%+!<%=%k0LCV>pJs$NI=<((B
-   CTRL-C       $B=hM}CfCG(B
-   <DEL>        $BD>A0$KF~NO$7$?2s?t;XDjCM$r<h$j>C$9(B
-:vers           VIM $B$N%P!<%8%g%sI=<((B
+N  u            最後の変更を取り消す
+N  CTRL-R       UNDO を戻す
+   U            最後に変更した行の変更を取り消す
+ 外部コマンド実行 
+:sh             シェル起動
+:!{command}     シェルコマンドの実行
+   K            カレントワードを引数にしてプログラム'keywordprg'実行
+ Quickfix コマンド 
+:cc [nr]        エラー表示 [nr] (default 現在注目しているエラー表示)
+:cn             次のエラー表示
+:cp             前のエラー表示
+:cl             全部のエラー内容を表示する
+:cf             エラーファイルを新たに読み込む
+:cq             コンパイラのエラーコードを持って強制終了
+:make [args]    make を実行後エラー内容を読み込み最初のエラー行にジャンプする
+ その他のコマンド 
+   CTRL-L       画面の再描画
+   CTRL-G       ファイル名,カーソル位置情報の表示
+   CTRL-C       処理中断
+   <DEL>        直前に入力した回数指定値を取り消す
+:vers           VIM のバージョン表示
 :mode N         MSDOS: set screen mode to N (number, C80, C4350, etc.)
- $B%3%^%s%I9TJT=8(B 
-<ESC>              $B%3%^%s%I%b!<%I=*N;(B
-CTRL-V {char}      $B%3%s%H%m!<%k%3!<%IF~NO(B
-CTRL-V {number}    8$B?J?t?tCM$K$h$k%3!<%IF~NO(B($B?tCM(B3$B7eI,MW(B)
-[$B"+(B]/[$B"*(B]          $B%+!<%=%k0\F0(B
-SHIFT+[$B"+(B]/[$B"*(B]    $B%+!<%=%k%o!<%I0\F0(B
-CTRL-B/CTRL-E      $B9T$N@hF,(B/$B:G=*0LCV$X0\F0(B
-<BS>               $B%+!<%=%k0LCV$NA0$NJ8;z:o=|(B
-<DEL>              $B%+!<%=%k0LCV$NJ8;z:o=|(B
-CTRL-W             $B%o!<%I:o=|(B
-CTRL-U             $B9TFbMFA4:o=|(B
-[$B",(B]/[$B"-(B]          $B%3%^%s%I9T%R%9%H%j(B
-[SC_UP]/[SC_DOWN]  $B%3%^%s%I9T%R%9%H%j(B(ROLLUP/ROLLDOWN)
+ コマンド行編集 
+<ESC>              コマンドモード終了
+CTRL-V {char}      コントロールコード入力
+CTRL-V {number}    8進数数値によるコード入力(数値3桁必要)
+[←]/[→]          カーソル移動
+SHIFT+[←]/[→]    カーソルワード移動
+CTRL-B/CTRL-E      行の先頭/最終位置へ移動
+<BS>               カーソル位置の前の文字削除
+<DEL>              カーソル位置の文字削除
+CTRL-W             ワード削除
+CTRL-U             行内容全削除
+[↑]/[↓]          コマンド行ヒストリ
+[SC_UP]/[SC_DOWN]  コマンド行ヒストリ(ROLLUP/ROLLDOWN)
 
- $B%3%^%s%I9TJd40(B 
-'wildchar'  (def. <TAB>)  $B%+!<%=%k0LCV$NC18l$rJd40$9$k(B
-CTRL-D             $B%^%C%A$9$kC18l$N%j%9%H$rI=<($9$k(B
-CTRL-A             $B%^%C%A$9$kC18lA4It$r<h$j9~$`(B
-CTRL-L             $B8uJd$,J#?t$"$k>l9g:GBg%^%C%A$9$k0LCV$^$GJd40$9$k(B
-CTRL-N             $BJd40$N<!8!:w(B
-CTRL-P             $BJd40$NA08!:w(B
- Ex $B%b!<%I$NHO0O;XDj(B 
-,               2$B$D$N9THV9f$r(B,$B$G6h@Z$C$F;XDj$9$k(B
+ コマンド行補完 
+'wildchar'  (def. <TAB>)  カーソル位置の単語を補完する
+CTRL-D             マッチする単語のリストを表示する
+CTRL-A             マッチする単語全部を取り込む
+CTRL-L             候補が複数ある場合最大マッチする位置まで補完する
+CTRL-N             補完の次検索
+CTRL-P             補完の前検索
+ Ex モードの範囲指定 
+,               2つの行番号を,で区切って指定する
 ;               idem, set cursor to the first line number
 
-{number}        $B@dBP9THV9f(B
-.               $B%+%l%s%H9T(B($B%+!<%=%k9T(B)
-$               $B%U%!%$%k$N:G=*9T(B
-%               1,$ $B$HF1$8(B(1$B9TL\$+$i:G=*9T$^$G(B,$B$D$^$j%U%!%$%kA4BN(B)
-'t              t$B$N%^!<%/0LCV(B
-/{pattern}      $B%Q%?!<%s%^%C%A$7$?9T(B
-?{pattern}      $B%Q%?!<%s%^%C%A$7$?9T(B($B5U8!:w(B)
+{number}        絶対行番号
+.               カレント行(カーソル行)
+$               ファイルの最終行
+%               1,$ と同じ(1行目から最終行まで,つまりファイル全体)
+'t              tのマーク位置
+/{pattern}      パターンマッチした行
+?{pattern}      パターンマッチした行(逆検索)
 
-+[num]          $B9THV9f$N2C;;(B (default 1)
--[num]          $B9THV9f$N8:;;(B (default 1)
++[num]          行番号の加算 (default 1)
+-[num]          行番号の減算 (default 1)
 
- Ex $BFC<lJ8;z(B 
-    |           $B%3%^%s%I%;%Q%l!<%?(B (not for ":global" and ":!")
-    "           $B%3%a%s%H(B
-    #[number]   $BHV9f$G;XDj$7$?%U%!%$%k%M!<%`(B
-    %           $B%+%l%s%H%U%!%$%k%M!<%`(B
+ Ex 特殊文字 
+    |           コマンドセパレータ (not for ":global" and ":!")
+    "           コメント
+    #[number]   番号で指定したファイルネーム
+    %           カレントファイルネーム
     %<  or #<   idem, but without extension
- $B%U%!%$%kJT=8(B 
+ ファイル編集 
 :e                      Edit the current file, unless changes have been made.
 :e!                     Edit the current file always. Discard any changes.
 :e[dit] {file}          Edit {file}, unless changes have been made.
 :e[dit]! {file}         Edit {file} always. Discard any changes.
 N   CTRL-^              Edit alternate file N (equivalent to ":e #N").
 gf  or ]f               Edit the file whose name is under the cursor
-:pwd                    $B%+%l%s%H%G%#%l%/%H%jL>I=<((B
-:cd [path]              $B%+%l%s%H%G%#%l%/%H%j$rJQ99$9$k(B
-:f[ile]                 $B%+%l%s%H$N%U%!%$%kL>(B,$B%+!<%=%k0LCV>pJs$rI=<($9$k(B
-:f[ile] {name}          $B%+%l%s%H%U%!%$%kL>$r@_Dj$9$k(B
+:pwd                    カレントディレクトリ名表示
+:cd [path]              カレントディレクトリを変更する
+:f[ile]                 カレントのファイル名,カーソル位置情報を表示する
+:f[ile] {name}          カレントファイル名を設定する
 :files                  Show alternate file names.
 
 Using the file list
@@ -482,81 +482,81 @@ gf  or ]f               Edit the file whose name is under the cursor
 :rew[ind][!]         :srew[ind]            Edit first file
 :last                :slast                Edit last file
 
- $B=q$-9~$_$H=*N;(B 
-:[range]w[rite][!]      $B%+%l%s%H%U%!%$%k$K=q$-9~$`(B
-:[range]w[rite] {file}  $B;XDj%U%!%$%k$K=q$-9~$`(B({file}$B$,4{$K$"$k$H=q$-9~$a$J$$(B)
-:[range]w[rite]! {file} $B;XDj%U%!%$%k$,B8:_$7$F$$$F$b=E$M=q$-$9$k(B
-:[range]w[rite][!] >>   $B%+%l%s%H%U%!%$%k$KDI2C=q$-9~$_$9$k(B
+ 書き込みと終了 
+:[range]w[rite][!]      カレントファイルに書き込む
+:[range]w[rite] {file}  指定ファイルに書き込む({file}が既にあると書き込めない)
+:[range]w[rite]! {file} 指定ファイルが存在していても重ね書きする
+:[range]w[rite][!] >>   カレントファイルに追加書き込みする
 :[range]w[rite][!] >> {file}
-                        $B;XDj%U%!%$%k$KDI2C=q$-9~$_$9$k(B
-:[range]w[rite] !{cmd}  $B;XDj%3%^%s%I$NI8=`F~NO$H$7$F<B9T$9$k(B
-:wall[!]                $BA4It$N99?7$7$?%P%C%U%!$r%U%!%$%k$K=q$-9~$`(B
+                        指定ファイルに追加書き込みする
+:[range]w[rite] !{cmd}  指定コマンドの標準入力として実行する
+:wall[!]                全部の更新したバッファをファイルに書き込む
 
-:q[uit]                 $B=*N;$9$k(B,$B99?7$7$F$"$k>l9g$O=*N;$G$-$J$$(B
-:q[uit]!                $B99?7$,$"$C$?$H$7$F$b$=$l$rL5;k$7$F6/@)=*N;$9$k(B
-:qall[!]                $BA4It$N%&%#%s%I%&%P%C%U%!$r=*N;$9$k(B
-:cq                     $B%(%i!<%3!<%I$r;}$C$F6/@)=*N;$9$k(B
-:wq[!]                  $B%+%l%s%H%U%!%$%k$K=q$-9~$s$G=*N;$9$k(B
-:wq[!] {file}           $B;XDj%U%!%$%k$K=q$-9~$s$G=*N;$9$k(B
-:x[it][!] [file]        $B99?7$5$l$F$$$l$P%U%!%$%k$K=q$-9~$s$G=*N;$9$k(B
-   ZZ                   ":x" $B$HF1$8(B
-:xall[!]  or :wqall[!]  $BA4It$N99?7$5$l$?%P%C%U%!$r=q$-9~$s$G=*N;$9$k(B
+:q[uit]                 終了する,更新してある場合は終了できない
+:q[uit]!                更新があったとしてもそれを無視して強制終了する
+:qall[!]                全部のウィンドウバッファを終了する
+:cq                     エラーコードを持って強制終了する
+:wq[!]                  カレントファイルに書き込んで終了する
+:wq[!] {file}           指定ファイルに書き込んで終了する
+:x[it][!] [file]        更新されていればファイルに書き込んで終了する
+   ZZ                   ":x" と同じ
+:xall[!]  or :wqall[!]  全部の更新されたバッファを書き込んで終了する
 
-:st[op][!]              $B%5%9%Z%s%I$^$?$O%A%c%$%k%I%7%'%k5/F0(B.$B$b$7(B'aw'$B%*%W%7%g(B
-                        $B%s$,@_Dj$5$l$F$$$F$+$D(B ! $B$,$J$1$l$P%P%C%U%!$r=q$-9~$`(B
-CTRL-Z                  ":stop!" $B$HF1$8(B
- $B5/F0J}K!(B 
-vim [options]           $B6u$N%P%C%U%!$GJT=83+;O(B
-vim [options] {file ..} $B%U%!%$%k$NJT=83+;O(B($BJ#?t%U%!%$%k;XDj2DG=(B)
-vim [options] -t {tag}  $B;XDj%?%0$N4^$^$l$k%U%!%$%k$rJT=8$9$k(B
-vim [options] -e [fname] QuickFix mode $B$GJT=83+;O(B,$B:G=i$N%(%i!<$rI=<($9$k(B
- $B5/F0%*%W%7%g%s(B 
-+[num]                  $B;XDj9T$+$iJT=8$r3+;O$9$k(B($B%G%U%)%k%H$G:G=*9T$+$i(B)
-+/{pat} {file ..}       $B:G=i$K%Q%?!<%s$N8=$l$?9T$+$iJT=8$r3+;O$9$k(B
--v                      View $B%b!<%I(B(read-only) -n $B$N5!G=$b4^$`(B
--b                      $B%P%$%J%j!<%b!<%I(B
--r                      .swp $B%U%!%$%k$+$iJT=8Cf$N%U%!%$%k$rI|3h$5$;$k(B
--n                      .swp $B%U%!%$%k$r:n$i$J$$(B
--o [N]                  N $B8D$N%&%#%s%I%&$r3+$$$F5/F0$9$k(B
+:st[op][!]              サスペンドまたはチャイルドシェル起動.もし'aw'オプショ
+                        ンが設定されていてかつ ! がなければバッファを書き込む
+CTRL-Z                  ":stop!" と同じ
+ 起動方法 
+vim [options]           空のバッファで編集開始
+vim [options] {file ..} ファイルの編集開始(複数ファイル指定可能)
+vim [options] -t {tag}  指定タグの含まれるファイルを編集する
+vim [options] -e [fname] QuickFix mode で編集開始,最初のエラーを表示する
+ 起動オプション 
++[num]                  指定行から編集を開始する(デフォルトで最終行から)
++/{pat} {file ..}       最初にパターンの現れた行から編集を開始する
+-v                      View モード(read-only) -n の機能も含む
+-b                      バイナリーモード
+-r                      .swp ファイルから編集中のファイルを復活させる
+-n                      .swp ファイルを作らない
+-o [N]                  N 個のウィンドウを開いて起動する
 -x                      do not restart VIM to open a window (for e.g. mail)
--s {scriptin}           $B:G=i$K%3%^%s%I%9%/%j%W%H%U%!%$%k$rFI$_9~$^$;$k(B
--w {scriptout}          $B%?%$%W$7$?%-!<$rA4It%9%/%j%W%H%U%!%$%k$K=q$-=P$9(B
--T {terminal}           termcap $B$N%?!<%_%J%kL>$r;XDj$9$k(B
--d {device}             open {device} to be used as a console (Vim$B$G$OL$;HMQ(B)
+-s {scriptin}           最初にコマンドスクリプトファイルを読み込ませる
+-w {scriptout}          タイプしたキーを全部スクリプトファイルに書き出す
+-T {terminal}           termcap のターミナル名を指定する
+-d {device}             open {device} to be used as a console (Vimでは未使用)
 
- $B%U%!%$%kC10L$N<+F0%*%W%7%g%s@_Dj(B 
-vim:{set-arg}: ..       $B%U%!%$%k$N@hF,$^$?$O:G=*9T$K(Bset$B%3%^%s%I$G;XDj$G$-$k(B
-                        $B%*%W%7%g%s$r=q$/$3$H$,$G$-$k(B($B%b!<%I9T(B)
- $B%^%k%A%&%#%s%I%&5!G=(B 
-CTRL-W s  or :split     $B%&%#%s%I%&$r(B2$B$D$KJ,$1$k(B
-:split <file>           $BJ,3d$7$?%&%#%s%I%&$K%U%!%$%k$rFI$_9~$`(B
-CTRL-W ]                $B%&%#%s%I%&$rJ,3d$7$F%+!<%=%k0LCV$N%?%0%8%c%s%W$9$k(B
-CTRL-W f                $B%&%#%s%I%&$rJ,3d$7$F%+!<%=%k0LCV$N%U%!%$%k$rFI$_9~$`(B
-CTRL-W n  or :new       $B6u$N?7$7$$%&%#%s%I%&$r3+$/(B
-CTRL-W q  or :q[uit]    $B%&%#%s%I%&$rJD$8$FJT=8$rCf;_$9$k(B
-CTRL-W c  or :cl[ose]   $B%&%#%s%I%&$rJD$8$k(B($BJT=8%P%C%U%!$O;D$k(B)
-CTRL-W o  or :o[nly]    $B%+%l%s%H0J30$N%&%#%s%I%&$rA4ItJD$8$k(B
+ ファイル単位の自動オプション設定 
+vim:{set-arg}: ..       ファイルの先頭または最終行にsetコマンドで指定できる
+                        オプションを書くことができる(モード行)
+ マルチウィンドウ機能 
+CTRL-W s  or :split     ウィンドウを2つに分ける
+:split <file>           分割したウィンドウにファイルを読み込む
+CTRL-W ]                ウィンドウを分割してカーソル位置のタグジャンプする
+CTRL-W f                ウィンドウを分割してカーソル位置のファイルを読み込む
+CTRL-W n  or :new       空の新しいウィンドウを開く
+CTRL-W q  or :q[uit]    ウィンドウを閉じて編集を中止する
+CTRL-W c  or :cl[ose]   ウィンドウを閉じる(編集バッファは残る)
+CTRL-W o  or :o[nly]    カレント以外のウィンドウを全部閉じる
 
-CTRL-W j                $B2<$N%&%#%s%I%&$K0\F0$9$k(B
-CTRL-W k                $B>e$N%&%#%s%I%&$K0\F0$9$k(B
-CTRL-W CTRL-W           $B<!$N%&%#%s%I%&$K?J$`(B
-CTRL-W p                $BA0$N%&%#%s%I%&$KLa$k(B
+CTRL-W j                下のウィンドウに移動する
+CTRL-W k                上のウィンドウに移動する
+CTRL-W CTRL-W           次のウィンドウに進む
+CTRL-W p                前のウィンドウに戻る
 
-CTRL-W r                $B%&%#%s%I%&$N0LCV$r8r49$9$k(B
-CTRL-W R                $B%&%#%s%I%&$N0LCV$r8r49$9$k(B($B5U2sE>(B)
-CTRL-W x                $B<!$N%&%#%s%I%&$H0LCV$r8r49$9$k(B
+CTRL-W r                ウィンドウの位置を交換する
+CTRL-W R                ウィンドウの位置を交換する(逆回転)
+CTRL-W x                次のウィンドウと位置を交換する
 
-CTRL-W =                $BA4It$N%&%#%s%I%&$NBg$-$5$rF1$8$K$9$k(B
-CTRL-W -                $B%+%l%s%H%&%#%s%I%&$r>.$5$/$9$k(B
-CTRL-W +                $B%+%l%s%H%&%#%s%I%&$r9-$2$k(B
-CTRL-W _                $B%+%l%s%H%&%#%s%I%&$NBg$-$5$r:GBg$^$G9-$2$k(B
- $B%P%C%U%!%j%9%H5!G=(B 
-:buffers  or :files     $B%P%C%U%!$H%U%!%$%kL>$rA4ItI=<($9$k(B
+CTRL-W =                全部のウィンドウの大きさを同じにする
+CTRL-W -                カレントウィンドウを小さくする
+CTRL-W +                カレントウィンドウを広げる
+CTRL-W _                カレントウィンドウの大きさを最大まで広げる
+ バッファリスト機能 
+:buffers  or :files     バッファとファイル名を全部表示する
 
-:ball     or :sball     $BA4It$N%P%C%U%!$rJT=8>uBV$K$9$k(B
-:unhide   or :sunhide   $BA4It$N6u$G$J$$%P%C%U%!$rI=$K=P$9(B
+:ball     or :sball     全部のバッファを編集状態にする
+:unhide   or :sunhide   全部の空でないバッファを表に出す
 
-$B%+%l%s%H%&%#%s%I%&(B     $B?7%&%#%s%I%&(B
+カレントウィンドウ     新ウィンドウ
 :[N]buffer [N]       :[N]sbuffer [N]       to arg/buf N
 :[N]bnext [N]        :[N]sbnext [N]        to Nth next arg/buf
 :[N]bNext [N]        :[N]sbNext [N]        to Nth previous arg/buf

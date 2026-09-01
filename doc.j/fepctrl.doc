@@ -1,410 +1,410 @@
 ============================================================================
-$BF|K\8lF~NO(B FEP $BA`:n%i%$%V%i%j!<(B FEPCTRL $B%f!<%6!<%:%^%K%e%"%k(B
+日本語入力 FEP 操作ライブラリー FEPCTRL ユーザーズマニュアル
 ============================================================================
 
-$B!ZL>>N![(B
-	FEPCTRL - $BF|K\8lF~NO(B FEP $B$r%"%W%j%1!<%7%g%s$+$i@)8f$9$k(B
+【名称】
+	FEPCTRL - 日本語入力 FEP をアプリケーションから制御する
 
-$B!Z%P!<%8%g%s![(B
+【バージョン】
 	1.5 - 1992/04/08
 
-$B!Z7A<0![(B
+【形式】
 	#include "fepctrl.h"
 
-	int	fep_init(void)		... $B=i4|2=$*$h$SJQ49%*%U(B
-	void	fep_term(void)		... $BJQ49>uBV$NI|85$*$h$S=*N;=hM}(B
-	void	fep_on(void)		... fep_off() $B;~$NJQ49>uBV$KLa$9(B
-	void	fep_off(void)		... $BJQ49>uBV$rJ]B8$7$FJQ49%*%U(B
-	void	fep_force_on(void)	... $BJQ49%*%s(B
-	void	fep_force_off(void)	... $BJQ49>uBV$rJ]B8$;$:JQ49%*%U(B
-	int	fep_raw_init(void)	... $B=i4|2=(B
-	void	fep_raw_term(void)	... $B=*N;=hM}(B
-	int	fep_get_mode(void)	... $BJQ49>uBV$N<hF@(B
+	int	fep_init(void)		... 初期化および変換オフ
+	void	fep_term(void)		... 変換状態の復元および終了処理
+	void	fep_on(void)		... fep_off() 時の変換状態に戻す
+	void	fep_off(void)		... 変換状態を保存して変換オフ
+	void	fep_force_on(void)	... 変換オン
+	void	fep_force_off(void)	... 変換状態を保存せず変換オフ
+	int	fep_raw_init(void)	... 初期化
+	void	fep_raw_term(void)	... 終了処理
+	int	fep_get_mode(void)	... 変換状態の取得
 
-$B!Z@bL@![(B
-	FEPCTRL $B$O(B C $B8@8l$G=q$+$l$?%"%W%j%1!<%7%g%s$+$i(B MS-DOS $B>e$NF|K\8lF~(B
-	$BNO(B FEP $B$NJQ49%*%s!&%*%U$r@)8f$9$k$?$a$N%i%$%V%i%j!<$G$"$k!#$3$N%i%$(B
-	$B%V%i%j!<$r;H$&$3$H$K$h$j!"AH$_9~$^$l$F$$$k(B FEP $B$N<oN`$K$h$i$:!"$5$^(B
-	$B$6$^$J(B FEP $B$r%"%W%j%1!<%7%g%s$+$iE}0lE*$K@)8f$9$k$3$H$,$G$-$k!#(B
+【説明】
+	FEPCTRL は C 言語で書かれたアプリケーションから MS-DOS 上の日本語入
+	力 FEP の変換オン・オフを制御するためのライブラリーである。このライ
+	ブラリーを使うことにより、組み込まれている FEP の種類によらず、さま
+	ざまな FEP をアプリケーションから統一的に制御することができる。
 
-	$B$3$N%i%$%V%i%j!<$r;H$&%"%W%j%1!<%7%g%s$O!":G=i$K(B fep_init() $B$r8F$P$J(B
-	$B$1$l$P$J$i$J$$!#(Bfep_init() $B$OAH$_9~$^$l$F$$$k(B FEP $B$r<1JL$7!"JQ49%*%s(B
-	$B$N>uBV$G$"$l$P%*%U$K$7$F$+$i!"3F(B FEP $B$KBP1~$9$kDj?t$rJV$9!#$3$NDj?t(B
-	$B$O(B fepctrl.h $B$K(B enum $B7?$GDj5A$5$l$F$*$j!"$$$:$l$N(B FEP $B$NAH$_9~$_$b3N(B
-	$BG'$G$-$J$$>l9g$K$O(B FEP_NONE$B!"$9$J$o$A(B 0 $B$,JV$k!#$3$l0J8e(B fep_term()
-	$B$,8F$P$l$k$^$G$N$"$$$@!"%"%W%j%1!<%7%g%s$O%i%$%V%i%j!<$N3F4X?t$rMxMQ(B
-	$B$G$-$k!#%"%W%j%1!<%7%g%s$O!"%i%$%V%i%j!<$N;HMQ=*N;;~$K$O(B fep_term()
-	$B$r8F$P$J$1$l$P$J$i$J$$!#(Bfep_term() $B$O(B FEP $B$r(B fep_init() $B$,8F$P$l$?$H(B
-	$B$-$NJQ49>uBV$KLa$9!#(Bfep_init() $B$H(B fep_term() $B$NAH$O%"%W%j%1!<%7%g%s(B
-	$B$N<B9TCf$K2?EY<B9T$5$l$F$b$h$/!"FC$K;R%W%m%;%9$N<B9T$J$I@)8f$,%W%m%0(B
-	$B%i%`$rN%$l$k>l9g$K$O!"$=$ND>A0D>8e$r(B fep_term() $B$H(B fep_init() $B$G0O$s(B
-	$B$G$*$/I,MW$,$"$k!#$?$@$7!"(B2 $B2sL\0J9_$K<B9T$5$l$?(B fep_init() $B$G$O(B FEP
-	$B$N<1JL$r9T$o$J$$$N$G!"$3$N4V$K(B FEP $B$r@Z$jJ|$7$?$jAH$_BX$($?$j$9$k$H(B
-	$BF0:n$,@5>o$K9T$o$l$J$$62$l$,$"$k!#$J$*!"(BFEP $B$,(B FEP_NONE $B$G$"$C$F$b3F(B
-	$B%i%$%V%i%j!<4X?t$r8F$s$G:9$7;Y$($J$/!"$3$N>l9g$O2?$NF0:n$b9T$o$l$J$$!#(B
+	このライブラリーを使うアプリケーションは、最初に fep_init() を呼ばな
+	ければならない。fep_init() は組み込まれている FEP を識別し、変換オン
+	の状態であればオフにしてから、各 FEP に対応する定数を返す。この定数
+	は fepctrl.h に enum 型で定義されており、いずれの FEP の組み込みも確
+	認できない場合には FEP_NONE、すなわち 0 が返る。これ以後 fep_term()
+	が呼ばれるまでのあいだ、アプリケーションはライブラリーの各関数を利用
+	できる。アプリケーションは、ライブラリーの使用終了時には fep_term()
+	を呼ばなければならない。fep_term() は FEP を fep_init() が呼ばれたと
+	きの変換状態に戻す。fep_init() と fep_term() の組はアプリケーション
+	の実行中に何度実行されてもよく、特に子プロセスの実行など制御がプログ
+	ラムを離れる場合には、その直前直後を fep_term() と fep_init() で囲ん
+	でおく必要がある。ただし、2 回目以降に実行された fep_init() では FEP
+	の識別を行わないので、この間に FEP を切り放したり組み替えたりすると
+	動作が正常に行われない恐れがある。なお、FEP が FEP_NONE であっても各
+	ライブラリー関数を呼んで差し支えなく、この場合は何の動作も行われない。
 
-	fep_off() $B$O(B FEP $B$N8=:_$NJQ49>uBV$r5-21$7!"JQ49$r%*%U$K$9$k!#(Bfep_on()
-	$B$O(B FEP $B$r(B fep_off() $B$,8F$P$l$?$H$-$NJQ49>uBV$KLa$9!#$?$@$7(B fep_off()
-	$B$,8F$P$l$F$$$J$$>uBV$G(B fep_on() $B$,8F$P$l$?>l9g$O(B fep_init() $B$,8F$P$l(B
-	$B$?$H$-$NJQ49>uBV$K$J$k!#$D$^$j!"%"%W%j%1!<%7%g%s$,0l;~E*$K(B FEP $B$rDL(B
-	$B$5$:$KF~NO$r9T$$$?$$>l9g!"$=$NA08e$r(B fep_off() $B$H(B fep_on() $B$G0O$a$P(B
-	$B$h$$!#(Bfep_off() $B$r8F$s$@$H$-$NJQ49%b!<%I$O!"$=$l$,F|K\8lF~NO>uBV$G$"(B
-	$B$m$&$H$J$+$m$&$H!"(Bfep_on() $B$,8F$P$l$?CJ3,$G2sI|$5$l$k$3$H$K$J$k!#(B
+	fep_off() は FEP の現在の変換状態を記憶し、変換をオフにする。fep_on()
+	は FEP を fep_off() が呼ばれたときの変換状態に戻す。ただし fep_off()
+	が呼ばれていない状態で fep_on() が呼ばれた場合は fep_init() が呼ばれ
+	たときの変換状態になる。つまり、アプリケーションが一時的に FEP を通
+	さずに入力を行いたい場合、その前後を fep_off() と fep_on() で囲めば
+	よい。fep_off() を呼んだときの変換モードは、それが日本語入力状態であ
+	ろうとなかろうと、fep_on() が呼ばれた段階で回復されることになる。
 
-	fep_force_on() $B$OL5>r7o$KJQ49$r%*%s$K$9$k!#$3$N$H$-$NJQ49>uBV$O(B FEP
-	$B$K0MB8$9$k!#(Bfep_force_off() $B$O8=:_$NJQ49>uBV$r5-21$9$k$3$H$J$/JQ49$r(B
-	$B%*%U$K$9$k!#%W%m%0%i%`$,DL>o$OJQ49%*%U$N>uBV$G<B9T$5$l$F$$$F!"0l;~E*(B
-	$B$KF|K\8lF~NO$,I,MW$K$J$k>l9g$K$O!"(Bfep_force_on() $B$H(B fep_force_off()
-	$B$G$=$NA08e$r0O$a$P$h$$!#(B
+	fep_force_on() は無条件に変換をオンにする。このときの変換状態は FEP
+	に依存する。fep_force_off() は現在の変換状態を記憶することなく変換を
+	オフにする。プログラムが通常は変換オフの状態で実行されていて、一時的
+	に日本語入力が必要になる場合には、fep_force_on() と fep_force_off()
+	でその前後を囲めばよい。
 
-	fep_raw_init()$B!"(Bfep_raw_term() $B$O(B fep_init()$B!"(Bfep_term() $B$HF1MM$K=i(B
-	$B4|2=$H=*N;=hM}$r9T$&$,!"(Bfep_raw_init() $B$O(B FEP $B$rJQ49%*%U$N>uBV$K$;$:!"(B
-	fep_raw_term() $B$O(B FEP $B$r(B fep_raw_term() $B$,8F$P$l$?$H$-$N>uBV$KLa$9$3(B
-	$B$H$r$7$J$$!#(BFEP $B$r=i4|2=;~$H0[$J$k>uBV$K$7$F=*N;$9$k$h$&$J%"%W%j%1!<(B
-	$B%7%g%s$G$O!"(Bfep_init() $B$d(B fep_term() $B$NBe$o$j$K$3$A$i$N4X?t$r;H$&I,(B
-	$BMW$,$"$k!#$J$*!"(Bfep_init() $B$d(B fep_term() $B$HF1;~$K$O;HMQ$G$-$J$$!#(B
+	fep_raw_init()、fep_raw_term() は fep_init()、fep_term() と同様に初
+	期化と終了処理を行うが、fep_raw_init() は FEP を変換オフの状態にせず、
+	fep_raw_term() は FEP を fep_raw_term() が呼ばれたときの状態に戻すこ
+	とをしない。FEP を初期化時と異なる状態にして終了するようなアプリケー
+	ションでは、fep_init() や fep_term() の代わりにこちらの関数を使う必
+	要がある。なお、fep_init() や fep_term() と同時には使用できない。
 
-	fep_get_mode() $B$O(B FEP $B$N8=:_$NJQ49>uBV$rJV$9!#$3$NCM$O(B FEP $B$,%*%U$N(B
-	$B$H$-$K$O(B 0$B!"%*%s$N$H$-$K$O(B 0 $B0J30$G$"$k!#(B
+	fep_get_mode() は FEP の現在の変換状態を返す。この値は FEP がオフの
+	ときには 0、オンのときには 0 以外である。
 
-	$BDj5A$5$l$F$$$k(B FEP $B$N?t$O(B FEP_NONE $B$r4^$a(B NFEPS $B8D$G$"$j!"(Bfep_init()
-	$B$,JV$9CM$O(B 0 $B0J>e(B NFEPS-1 $B0J2<$N?tCM$G$"$k!#Dj?t(B NFEPS $B$O(B fepctrl.h
-	$BCf$G(B enum $B7?$NCM$H$7$FDj5A$5$l$F$$$k!#(B
+	定義されている FEP の数は FEP_NONE を含め NFEPS 個であり、fep_init()
+	が返す値は 0 以上 NFEPS-1 以下の数値である。定数 NFEPS は fepctrl.h
+	中で enum 型の値として定義されている。
 
-	$B$3$N%i%$%V%i%j!<$O(B Turbo C 1.5/2.0$B!"(BTurbo C++ 1.0$B!"(BBorland C++ 2.0/
-	3.0$B!"(BMicrosoft C 5.1/6.0$B!"(BQuick C 2.0$B!"(BLattice C 4.1$B!"(BLSI C-86 3.2/
-	3.3 $B;n?)HG$+$iMxMQ$9$k$3$H$,2DG=$G$"$j!"0J2<$NNc30$r=|$$$F3F%3%s%Q%$(B
-	$B%i!<$NA4%a%b%j!<%b%G%k$KBP1~$7$F$$$k!#(BLattice C $B$G$O%R%e!<%8%b%G%k$G(B
-	$BMxMQ$9$k$3$H$,$G$-$:!"$^$?%3%s%Q%$%k;~$K(B -t $B$r;XDj$7$F%M%,%F%#%V%9%?(B
-	$B%C%/%U%l!<%`$r;HMQ$9$kI,MW$,$"$k!JDL>o$N%]%8%F%#%V%9%?%C%/%U%l!<%`$r(B
-	$B;HMQ$7$?%*%V%8%'%/%H$H%j%s%/$9$k$3$H$O2DG=!K!#$^$?!"(BLSI C-86 $B$G$O%9(B
-	$B%b!<%k%b%G%k$G$N$_MxMQ2DG=$G$"$k!#%3%s%Q%$%i!<$d%a%b%j!<%b%G%k$K$b$h(B
-	$B$k$,!"$3$N%i%$%V%i%j!<$r%j%s%/$9$k$3$H$K$h$j!":GDc$G(B 4.7KB $B$[$I>CHq(B
-	$B%a%b%j!<$,A}2C$9$k!#(B
+	このライブラリーは Turbo C 1.5/2.0、Turbo C++ 1.0、Borland C++ 2.0/
+	3.0、Microsoft C 5.1/6.0、Quick C 2.0、Lattice C 4.1、LSI C-86 3.2/
+	3.3 試食版から利用することが可能であり、以下の例外を除いて各コンパイ
+	ラーの全メモリーモデルに対応している。Lattice C ではヒュージモデルで
+	利用することができず、またコンパイル時に -t を指定してネガティブスタ
+	ックフレームを使用する必要がある（通常のポジティブスタックフレームを
+	使用したオブジェクトとリンクすることは可能）。また、LSI C-86 ではス
+	モールモデルでのみ利用可能である。コンパイラーやメモリーモデルにもよ
+	るが、このライブラリーをリンクすることにより、最低で 4.7KB ほど消費
+	メモリーが増加する。
 
-	fepctrl.c $B$N@hF,$K$O%i%$%V%i%j!<$NF0:n$rJQ99$9$k$?$a$N#3$D$N%^%/%mDj(B
-	$B5A$,CV$+$l$F$$$k!#%3%s%Q%$%k;~$K(B DO_MSKANJI $B$r;XDj$7$J$+$C$?>l9g$K$O!"(B
-	MS-KANJI API $B;EMM$N(B FEP $B$r@)8f$G$-$J$/$J$k$,!">CHq%a%b%j!<$,(B 500 $B%P(B
-	$B%$%H$[$I>/$J$/$J$k!#$^$?!"(BDO_GENERIC $B$r;XDj$7$J$+$C$?>l9g$O!"(BPC-9801
-	$B0J30$N5!<o@lMQ$N(B FEP $B$r@)8f$G$-$J$/$J$k!#$3$l$i$N#2$D$O(B PC-9801 $B@lMQ(B
-	$B$N%W%m%0%i%`$+$iMxMQ$9$k$H$-Lr$KN)$D$+$bCN$l$J$$!#$5$i$K!"(BDO_USERDEV
-	$B$r;XDj$7$J$+$C$?>l9g$K$O!"8e=R$9$k%@%_!<%G%P%$%9L>$K$h$kAH$_9~$_H=Dj(B
-	$B$,9T$o$l$J$/$J$k!#BP1~$9$k(B FEP $B$r>/$J$/$7$F$b(B FEPDMY.SYS$B!"(BFEPAID.SYS
-	$B$J$I$N@)8f;Y1g%f!<%F%#%j%F%#!<$r;H$$$?$/$J$$>l9g$K$OLr$KN)$D$+$b$7$l(B
-	$B$J$$!#$3$N%i%$%V%i%j!<$,;2>H$9$k(B C $B%i%$%V%i%j!<4X?t$O0J2<$N$b$N$@$1(B
-	$B$G$"$k!#(B
+	fepctrl.c の先頭にはライブラリーの動作を変更するための３つのマクロ定
+	義が置かれている。コンパイル時に DO_MSKANJI を指定しなかった場合には、
+	MS-KANJI API 仕様の FEP を制御できなくなるが、消費メモリーが 500 バ
+	イトほど少なくなる。また、DO_GENERIC を指定しなかった場合は、PC-9801
+	以外の機種専用の FEP を制御できなくなる。これらの２つは PC-9801 専用
+	のプログラムから利用するとき役に立つかも知れない。さらに、DO_USERDEV
+	を指定しなかった場合には、後述するダミーデバイス名による組み込み判定
+	が行われなくなる。対応する FEP を少なくしても FEPDMY.SYS、FEPAID.SYS
+	などの制御支援ユーティリティーを使いたくない場合には役に立つかもしれ
+	ない。このライブラリーが参照する C ライブラリー関数は以下のものだけ
+	である。
 
-	$B!!!!(Bintdos(), intdosx(), int86(), int86x(), bdos(), strncmp()
-	$B!!!!(Bmemset() ... DO_MSKANJI $B$r;XDj$7$?>l9g$N$_(B
-	$B!!!!(Bintdoss(), int86s(), FP_SEG(), FP_OFF() ... Lattice C 4.1 $B$N$_(B
+	　　intdos(), intdosx(), int86(), int86x(), bdos(), strncmp()
+	　　memset() ... DO_MSKANJI を指定した場合のみ
+	　　intdoss(), int86s(), FP_SEG(), FP_OFF() ... Lattice C 4.1 のみ
 
-	$B8=:_$N%P!<%8%g%s$G%5%]!<%H$9$k(B FEP $B$O<!$N$b$N$G$"$k!#3g8LFb$O3NG'$5(B
-	$B$l$?BP1~5!<o$r<($9!#(B
+	現在のバージョンでサポートする FEP は次のものである。括弧内は確認さ
+	れた対応機種を示す。
 
-	$B!!!!(BMS-KANJI API $B;EMM$N(B FEP ($B3F<o(B MS-DOS $B5!(B)
-	$B!!!!(BVJE-$B&A(B/$B&B(B/$B&2(B (PC-9801)
-	$B!!!!(BATOK5/ATOK6/ATOK7 (PC-9801, Panacom M, J3100, AX, PS/55, DOS/V)
-	$B!!!!>>B{(B86/$B>>B{(BV2/$B>>B{(BV3 (PC-9801)
-	$B!!!!(BEGBridge Ver.2/Ver.3 (PC-9801)
-	$B!!!!(BKatana2/ACE/Katana4 (PC-9801)
-	$B!!!!(BFIXER3/FIXER4 (PC-9801)
-	$B!!!!(BWX/WXS/WXP/WX2/WXA6/WX2+ (PC-9801, J3100, DOS/V)
-	$B!!!!(BDFJ/DFJ2 (PC-9801)
-	$B!!!!(BMGR2/JJ (PC-9801)
-	$B!!!!(BE1 (PC-9801)
-	$B!!!!(BDANGO$BJQ49(B (PC-9801)
-	$B!!!!$*$F$b$H(B (PC-9801)
-	$B!!!!(BOMAC (PC-9801)
-	$B!!!!&A(BX-1 (PC-9801)
-	$B!!!!(BAJIP1 (PC-9801)
-	$B!!!!(BJoker-III (PC-9801)
-	$B!!!!(BNEC $BC`<!(B/$BO"J8@aJQ49!"(BAI $B$+$J4A;zJQ49(B (PC-9801)
-	$B!!!!Iw!"Mr(B Ver.2/Ver.3 (PC-9801)
-	$B!!!!%*%"%7%9$+$J4A;zJQ49(B (FM-R)
-	$B!!!!$+$J4A;zJQ495!G=(B (Panacom M)
-	$B!!!!O"J8@aF|K\8lF~NO(B/$BF|K\8l<+F0JQ49%7%9%F%`(B (B16$B!"(BMr.$B%^%$%D!<%k(B)
-	$B!!!!F|K\8lF~NO%7%9%F%`(B (Mr.$B%^%$%D!<%k(B MAGUS)
-	$B!!!!(BFEPEX (IF800)
-	$B!!!!C14A;zJQ49(B/$BO"J8@aJQ49(B (IBM DOS/V)
+	　　MS-KANJI API 仕様の FEP (各種 MS-DOS 機)
+	　　VJE-α/β/Σ (PC-9801)
+	　　ATOK5/ATOK6/ATOK7 (PC-9801, Panacom M, J3100, AX, PS/55, DOS/V)
+	　　松茸86/松茸V2/松茸V3 (PC-9801)
+	　　EGBridge Ver.2/Ver.3 (PC-9801)
+	　　Katana2/ACE/Katana4 (PC-9801)
+	　　FIXER3/FIXER4 (PC-9801)
+	　　WX/WXS/WXP/WX2/WXA6/WX2+ (PC-9801, J3100, DOS/V)
+	　　DFJ/DFJ2 (PC-9801)
+	　　MGR2/JJ (PC-9801)
+	　　E1 (PC-9801)
+	　　DANGO変換 (PC-9801)
+	　　おてもと (PC-9801)
+	　　OMAC (PC-9801)
+	　　αX-1 (PC-9801)
+	　　AJIP1 (PC-9801)
+	　　Joker-III (PC-9801)
+	　　NEC 逐次/連文節変換、AI かな漢字変換 (PC-9801)
+	　　風、嵐 Ver.2/Ver.3 (PC-9801)
+	　　オアシスかな漢字変換 (FM-R)
+	　　かな漢字変換機能 (Panacom M)
+	　　連文節日本語入力/日本語自動変換システム (B16、Mr.マイツール)
+	　　日本語入力システム (Mr.マイツール MAGUS)
+	　　FEPEX (IF800)
+	　　単漢字変換/連文節変換 (IBM DOS/V)
 
-	$B$J$*!"%^%/%m(B TEST $B$rDj5A$7$F(B fepctrl.c $B$r%3%s%Q%$%k$9$k$H!"(BFEP $B@)8f(B
-	$B$N4J0W%F%9%H%W%m%0%i%`$,F@$i$l$k!#%i%$%V%i%j!<$K?7$?$J(B FEP $B$N@)8f$r(B
-	$BDI2C$7$?$H$-$O$3$N%W%m%0%i%`$G%F%9%H$9$k$3$H$,$G$-$k!#(Btest $B%*%W%7%g(B
-	$B%s$r;XDj$7$F%F%9%H%W%m%0%i%`$r5/F0$9$k$H!"AH$_9~$_$,3NG'$5$l$?(B FEP
-	$B$NL>A0$,I=<($5$l!"#49T$N%F%-%9%HF~NO$,MW5a$5$l$k!#0J2<$O(B WXP $B$rAH$_(B
-	$B9~$s$@>uBV$G%F%9%H%W%m%0%i%`$r<B9T$7$?>l9g$NNc$G$"$k!#(B
+	なお、マクロ TEST を定義して fepctrl.c をコンパイルすると、FEP 制御
+	の簡易テストプログラムが得られる。ライブラリーに新たな FEP の制御を
+	追加したときはこのプログラムでテストすることができる。test オプショ
+	ンを指定してテストプログラムを起動すると、組み込みが確認された FEP
+	の名前が表示され、４行のテキスト入力が要求される。以下は WXP を組み
+	込んだ状態でテストプログラムを実行した場合の例である。
 
-	$B!!!!(BA> tcc -DTEST fepctrl.c
-	$B!!!!(B...
-	$B!!!!(BA> fepctrl test <RET>
-	$B!!!!(Bfep = WXP
-	$B!!!!(Benter 4 lines of text
-	 $B!!!!(Bon: $B$&$K$c$K$c$s(B <RET>
-	$B!!!!(Boff: unyanyan <RET>
-	$B!!!!(B on: $B$U$R$g$R$g(B <RET>
-	$B!!!!(Boff: fuhyohyo <RET>
-	$B!!!!(BA> _ 
+	　　A> tcc -DTEST fepctrl.c
+	　　...
+	　　A> fepctrl test <RET>
+	　　fep = WXP
+	　　enter 4 lines of text
+	 　　on: うにゃにゃん <RET>
+	　　off: unyanyan <RET>
+	　　 on: ふひょひょ <RET>
+	　　off: fuhyohyo <RET>
+	　　A> _ 
 
-	$B:G=i$N#19T$O(B fep_force_on() $B$K$h$C$F6/@)E*$KJQ49%*%s$N>uBV$K$J$C$F$$(B
-	$B$k!#$3$3$G%F%-%9%H$rF~NO$7$F2~9T$9$k$H!"(Bfep_off() $B$K$h$C$FJQ49$,%*%U(B
-	$B$K$J$k!#<!$K#19TF~NO$9$k$H!"<!$O(B fep_on() $B$K$h$C$FJQ49$,%*%s$K$J$k!#(B
-	$BJQ49%b!<%I$O(B fep_off() $B$,F~NO$5$l$?$H$-$N>uBV$K$J$C$F$$$k$N$G!":G=i(B
-	$B$N#19T$NESCf$GJQ49%b!<%I$,JQ99$5$l$F$$$k>l9g$K$O!"$G$-$k$@$1$=$N%b!<(B
-	$B%I$,:F8=$5$l$k$h$&$K$J$C$F$$$k!#$3$3$G#19TF~NO$9$k$H(B fep_force_off()
-	$B$GJQ49%*%U$N>uBV$K$J$k$N$G!"$5$i$K#19TF~NO$9$k!#$3$NF~NO$,=*N;$9$k$H!"(B
-	FEP $B$O%F%9%H%W%m%0%i%`5/F0;~$N>uBV$KLa$j!"%F%9%H%W%m%0%i%`$,=*N;$9$k!#(B
+	最初の１行は fep_force_on() によって強制的に変換オンの状態になってい
+	る。ここでテキストを入力して改行すると、fep_off() によって変換がオフ
+	になる。次に１行入力すると、次は fep_on() によって変換がオンになる。
+	変換モードは fep_off() が入力されたときの状態になっているので、最初
+	の１行の途中で変換モードが変更されている場合には、できるだけそのモー
+	ドが再現されるようになっている。ここで１行入力すると fep_force_off()
+	で変換オフの状態になるので、さらに１行入力する。この入力が終了すると、
+	FEP はテストプログラム起動時の状態に戻り、テストプログラムが終了する。
 
-	$B3F9T$N@hF,$K$O!"(Bfep_get_mode() $B$N7k2L$K$h$C$F!V(Bon:$B!W$"$k$$$O!V(Boff:$B!W(B
-	$B$,I=<($5$l$k!#(B
+	各行の先頭には、fep_get_mode() の結果によって「on:」あるいは「off:」
+	が表示される。
 
-$B!ZHw9M![(B
-	$BL$3NDj$NF~NO$,$"$k>uBV$G$O!"0lHL$K$=$NF~NO$r<N$F$FJQ49$r%*%U$K$9$k$3(B
-	$B$H$,$G$-$J$$!#(B
+【備考】
+	未確定の入力がある状態では、一般にその入力を捨てて変換をオフにするこ
+	とができない。
 
-	fep_force_on() $B$K$h$C$F6/@)E*$KJQ49$r%*%s$K$9$k>l9g!"<B:]$K$I$N$h$&(B
-	$B$J%b!<%I$K$J$k$+$O(B FEP $B$K0MB8$9$k!#JQ490LCV$O%+!<%=%k0LCV$J$$$74{Dj(B
-	$B$NJQ490LCV$H$J$k!#F~NO%b!<%I$O4{Dj$NF~NO%b!<%I$H$J$k$,!"Nc$($P(B ATOK6
-	$B$G$OJQ49$,%*%U$N$H$-$KF~NO%b!<%I$rCN$k<jCJ$,B8:_$7$J$$$?$a!"G[I[;~$N(B
-	$B@_Dj$G$O!V%m!<%^;z4A;z!W%b!<%I$,A*Br$5$l$k!#$J$*!"(Bfep_force_on() $B$G(B
-	$B0\9T$9$k%b!<%I$O(B fepctrl.c $BCf$NG[Ns(B fepon[] $B$KDj5A$5$l$F$$$k$N$G!"I,(B
-	$BMW$K1~$8$FJQ99$9$k$3$H$,$G$-$k!#(B
+	fep_force_on() によって強制的に変換をオンにする場合、実際にどのよう
+	なモードになるかは FEP に依存する。変換位置はカーソル位置ないし既定
+	の変換位置となる。入力モードは既定の入力モードとなるが、例えば ATOK6
+	では変換がオフのときに入力モードを知る手段が存在しないため、配布時の
+	設定では「ローマ字漢字」モードが選択される。なお、fep_force_on() で
+	移行するモードは fepctrl.c 中の配列 fepon[] に定義されているので、必
+	要に応じて変更することができる。
 
-	FEP $B$,JQ49%*%s>uBV$N$H$-$K(B fep_get_mode() $B$,JV$9CM$O(B FEP $B$K0MB8$9$k!#(B
+	FEP が変換オン状態のときに fep_get_mode() が返す値は FEP に依存する。
 
-	MS-DOS 5.0 $B$N(B KKCFUNC.SYS $B$rMxMQ$7$FJ#?t$N(B FEP $B$rAH$_9~$s$G$$$k>l9g!"(B
-	MS-KANJI API $B$KBP1~$7$F$$$J$$(B FEP $B$,$"$k$HAH$_9~$_H=Dj$,@5$7$/9T$o$l(B
-	$B$J$$2DG=@-$,$"$k!#$?$@$7!"(BKKCFUNC.SYS $B$KBP1~$7$F$$$J$,$i(B MS-KANJI API
-	$B$KBP1~$7$J$$$3$H$,5v$5$l$k$+$I$&$+$O8=:_$N$H$3$mITL@$G$"$k!#(B
+	MS-DOS 5.0 の KKCFUNC.SYS を利用して複数の FEP を組み込んでいる場合、
+	MS-KANJI API に対応していない FEP があると組み込み判定が正しく行われ
+	ない可能性がある。ただし、KKCFUNC.SYS に対応していながら MS-KANJI API
+	に対応しないことが許されるかどうかは現在のところ不明である。
 
-	MS-KANJI API $B;EMM$HFH<+%$%s%?!<%U%'!<%9$NN>J}$rHw$($?(B FEP $B$O(B MS-KANJI
-	API $B;EMM$N(B FEP$B$H$7$FG'<1$5$l$k!#(B
+	MS-KANJI API 仕様と独自インターフェースの両方を備えた FEP は MS-KANJI
+	API 仕様の FEPとして認識される。
 
-	MS-KANJI API $B;EMM$N(B FEP $B$G$O!"%i%$%V%i%j!<$N;HMQ8e$KJQ490LCV$,%+!<%=(B
-	$B%k0LCV$K8GDj$5$l$F$7$^$&>l9g$,$"$k!#$3$l$O(B VJE-$B&B(B 2.x $B$d(B AI $B$+$J4A;z(B
-	$BJQ49$,;}$D(B MS-KANJI API $B$NIT6q9g$KBP1~$7$F$$$k$?$a$G$"$k!#(B
+	MS-KANJI API 仕様の FEP では、ライブラリーの使用後に変換位置がカーソ
+	ル位置に固定されてしまう場合がある。これは VJE-β 2.x や AI かな漢字
+	変換が持つ MS-KANJI API の不具合に対応しているためである。
 
-	VJE-$B&A(B Ver.1.10 $B0JA0$N%P!<%8%g%s!"(BATOK5 $B$N=i4|%P!<%8%g%s$O@)8f$G$-$J(B
-	$B$$!#$^$?!"(BEGBridge Ver.2 $B$G$OJQ49%*%sD>8e$N#1J8;z$NF~NO$,JQ49$NBP>](B
-	$B$H$J$i$J$$>l9g$,$"$k!#(BFIXER4 $B$O(B V3 $B8_49%$%s%?!<%U%'!<%9$N$_$K$h$C$F(B
-	$B@)8f$5$l$k!J(BV4 $B%$%s%?!<%U%'!<%9$r;HMQ$7$J$$!K!#>>B{(BV3 $B$O(B V2 $B8_49%$%s(B
-	$B%?!<%U%'!<%9$N$_$K$h$C$F@)8f$5$l$k!J(BV3 $B%M%$%F%#%V%$%s%?!<%U%'!<%9$r(B
-	$B;HMQ$7$J$$!K!#(B
+	VJE-α Ver.1.10 以前のバージョン、ATOK5 の初期バージョンは制御できな
+	い。また、EGBridge Ver.2 では変換オン直後の１文字の入力が変換の対象
+	とならない場合がある。FIXER4 は V3 互換インターフェースのみによって
+	制御される（V4 インターフェースを使用しない）。松茸V3 は V2 互換イン
+	ターフェースのみによって制御される（V3 ネイティブインターフェースを
+	使用しない）。
 
-	EGBridge$B!"(BMGR2/JJ$B!"$*$F$b$H!"(BJoker-III $B$K$D$$$F$O86:n<T$,FH<+$KD4::(B
-	$B$7$?J}K!$G@)8f$7$F$$$k$?$a!"%i%$%V%i%j!<$N;HMQ$K$h$C$F2?$i$+$N>c32$,(B
-	$BH/@8$9$k2DG=@-$,$"$k!#$?$@$7!"$3$l$^$G;HMQ$7$?8B$j$G$OFC$KLdBj$OH/8+(B
-	$B$5$l$F$$$J$$!#(B
+	EGBridge、MGR2/JJ、おてもと、Joker-III については原作者が独自に調査
+	した方法で制御しているため、ライブラリーの使用によって何らかの障害が
+	発生する可能性がある。ただし、これまで使用した限りでは特に問題は発見
+	されていない。
 
-	J3100 $B$N(B MIJ$B!JFH<+(B API$B!K(B $B$K$D$$$F$OBP1~$7$F$$$k$O$:$G$"$k$,!"F0:n$r(B
-	$B3NG'$7$F$$$J$$!#(B
+	J3100 の MIJ（独自 API） については対応しているはずであるが、動作を
+	確認していない。
 
-	Microsoft C 5.1$B!"(BLattice C 4.1 $B$G$O!"%G!<%?NN0h$K%3!<%I$rCV$$$F$=$3(B
-	$B$KHt$S9~$`$H$$$&%H%j%C%-!<$JJ}K!$rMQ$$$F(B ATOK7 $B$*$h$S(B FIXER3/FIXER4
-	$B$N4X?t8F$S=P$7$K$h$k@)8f$r<B8=$7$F$$$k!#$3$N$?$a!"%G!<%?NN0h$KCV$$$?(B
-	$B%3!<%I$r<B9T$G$-$J$$$h$&$J%a%b%j!<4IM}$,9T$o$l$F$$$k4D6-$G$OMxMQ$G$-(B
-	$B$J$$$3$H$,9M$($i$l$k!#(B
+	Microsoft C 5.1、Lattice C 4.1 では、データ領域にコードを置いてそこ
+	に飛び込むというトリッキーな方法を用いて ATOK7 および FIXER3/FIXER4
+	の関数呼び出しによる制御を実現している。このため、データ領域に置いた
+	コードを実行できないようなメモリー管理が行われている環境では利用でき
+	ないことが考えられる。
 
-	Lattice C 4.1 $B$G%3%s%Q%$%k$7$?>l9g!">>B{(B86 $B$r@)8f$9$k:]$K%O%s%0%"%C(B
-	$B%W$9$k$3$H$,$"$k!#$3$N8=>]$O(B Lattice C $B$G%3%s%Q%$%k$7$?D>8e$K@)8f$7(B
-	$B$?$H$-$K$OI,$:H/@8$9$k$,!"$$$C$?$s7W;;5!$r%j%V!<%H$7$?8e$G$OH/@8$7$J(B
-	$B$$$h$&$G$"$k!#8=:_$N$H$3$m860x$OITL@!#(B
+	Lattice C 4.1 でコンパイルした場合、松茸86 を制御する際にハングアッ
+	プすることがある。この現象は Lattice C でコンパイルした直後に制御し
+	たときには必ず発生するが、いったん計算機をリブートした後では発生しな
+	いようである。現在のところ原因は不明。
 
-	$B%=%U%H%&%(%"3d$j9~$_%Y%/%?!<>e$KCV$+$l$?<1JLJ8;zNs$GAH$_9~$_$rH=Dj$7(B
-	$B$F$$$k(B FEP $B$G$O!"(BPC-9801 $B$H0[$J$k3d$j9~$_%Y%/%?!<$rMxMQ$7$F$$$k>l9g(B
-	$B$K$O@)8f$G$-$J$$!#$^$?%G%P%$%9L>$GAH$_9~$_$rH=Dj$7$F%=%U%H%&%(%"3d$j(B
-	$B9~$_7PM3$G@)8f$7$F$$$k(B FEP $B$O!"(BPC-9801 $B0J30$N5!<o$G$O8mF0:n$r5/$3$9(B
-	$B2DG=@-$,$"$k!#$J$*!"8=<B$K$3$NLdBj$,H/@8$7$?$?$a$K!"<1JLJ8;zNs$K$h$k(B
-	$BH=Dj$r%G%P%$%9L>$K$h$kH=Dj$h$jM%@h$5$;$k$3$H$K$7$?!#(B
+	ソフトウエア割り込みベクター上に置かれた識別文字列で組み込みを判定し
+	ている FEP では、PC-9801 と異なる割り込みベクターを利用している場合
+	には制御できない。またデバイス名で組み込みを判定してソフトウエア割り
+	込み経由で制御している FEP は、PC-9801 以外の機種では誤動作を起こす
+	可能性がある。なお、現実にこの問題が発生したために、識別文字列による
+	判定をデバイス名による判定より優先させることにした。
 
-	$BAH$_9~$_H=Dj$N<jCJ$,MQ0U$5$l$F$$$J$$0lIt$N(B FEP$B!"%5!<%I%Q!<%F%#!<$NAH(B
-	$B$_9~$_%f!<%F%#%j%F%#!<$GAH$_9~$s$@(B FEP$B!"(BPC-286/386 $B%7%j!<%:>e$N(B FEP
-	$B$J$I$K$D$$$F$O!"(BFEPCTRL $BC1FH$G$O@)8f$G$-$J$$>l9g$,$"$k!#$3$N$h$&$J>l(B
-	$B9g$G$b%i%$%V%i%j!<$KIUB0$9$k(B FEPDMY.SYS$B!"(BFEPAID.SYS $B$J$I$N@)8f;Y1g%f(B
-	$B!<%F%#%j%F%#!<$rF1;~$KAH$_9~$a$P@)8f$G$-$k$3$H$,$"$k!#$3$l$K$D$$$F$O(B
-	$B<!@a0J9_$N(B FEPDMY.SYS$B!"(BFEPAID.SYS $B$N@bL@$*$h$SIUI=!V(BFEPCTRL Ver.1.2
-	$B!A(B 1.5 $B$K$h$k(B FEP $B@)8f%F%9%H7k2L!W$r;2>H$5$l$?$$!#(B
+	組み込み判定の手段が用意されていない一部の FEP、サードパーティーの組
+	み込みユーティリティーで組み込んだ FEP、PC-286/386 シリーズ上の FEP
+	などについては、FEPCTRL 単独では制御できない場合がある。このような場
+	合でもライブラリーに付属する FEPDMY.SYS、FEPAID.SYS などの制御支援ユ
+	ーティリティーを同時に組み込めば制御できることがある。これについては
+	次節以降の FEPDMY.SYS、FEPAID.SYS の説明および付表「FEPCTRL Ver.1.2
+	～ 1.5 による FEP 制御テスト結果」を参照されたい。
 
-	PC-9801 $B>e$N(B FEP $B$K$O!"%*%s!&%*%U$N:]$K%F%-%9%H(B VRAM $B$rJ,3d!&7k9g$7(B
-	$B$?7k2L$,(B CRT BIOS $B$N:n6HNN0h$K;D$k$?$a$K%*%s!&%*%U$r8!=P$G$-$k$b$N$,(B
-	$B$"$k!#$5$i$K!"(BKBD BIOS $B$N%P%C%U%!!<$KD>@\(B CTRL-XFER $B$N%3!<%I$r=q$-9~(B
-	$B$`$3$H$K$h$C$F%*%s!&%*%U$,2DG=$J$i$P!"FH<+%$%s%?!<%U%'!<%9$NM-L5$K$h(B
-	$B$i$:(B FEPCTRL $B$+$i$3$l$i$N(B FEP $B$r@)8f$9$k$3$H$,2DG=$G$"$k!#(BFEPCTRL $B$G(B
-	$B$O!"$$$/$D$+$N(B FEP $B$r$3$N$h$&$JJ}K!$G@)8f$7$F$$$k!#(B
+	PC-9801 上の FEP には、オン・オフの際にテキスト VRAM を分割・結合し
+	た結果が CRT BIOS の作業領域に残るためにオン・オフを検出できるものが
+	ある。さらに、KBD BIOS のバッファーに直接 CTRL-XFER のコードを書き込
+	むことによってオン・オフが可能ならば、独自インターフェースの有無によ
+	らず FEPCTRL からこれらの FEP を制御することが可能である。FEPCTRL で
+	は、いくつかの FEP をこのような方法で制御している。
 
-	$B$?$@$7!"$3$NJ}K!$G@)8f$9$k>l9g$K$O$$$/$D$+$NM}M3$GF0:n$,IT0BDj$K$J$k(B
-	$B$3$H$,$"$k!#(BCRT BIOS $B$N:n6HNN0h$O(B FEP $B0J30$N%W%m%0%i%`$+$i$b;HMQ$5$l(B
-	$B$k$?$a!"$3$N%i%$%V%i%j!<$N;HMQA0$"$k$$$O;HMQCf$KB>$N%W%m%0%i%`$+$iJQ(B
-	$B99$5$l$F%*%s!&%*%U$NH=Dj$r$"$d$^$k>l9g$,$"$k!#Nc$($P%+!<%=%k%?%$%W$r(B
-	$BJQ99$9$k(B BIOS $B8F$S=P$7$O$3$N:n6HNN0h$r%/%j%"$9$k!#$^$?(B KBD BIOS $B$N%P(B
-	$B%C%U%!!<$K=q$-9~$^$l$?(B CTRL-XFER $B$N%3!<%I$,$I$N;~E@$G(B FEP $B$KFI$^$l$k(B
-	$B$+$O(B FEP $B$K$h$C$F0[$J$j!"<!$K%-!<%\!<%I3d$j9~$_$,H/@8$7$?$H$-!J(BINT
-	09h$B!K!"<!$K%-!<F~NO$rFI$b$&$H$7$?$H$-!J(BINT 18h$B!K!"<!$K%3%s%=!<%k=PNO(B
-	$B$r9T$C$?$H$-!J(BINT 29h$B!K!"(BMS-DOS $B$,%"%$%I%k>uBV$K$J$C$?$H$-!J(BINT 28h$B!K(B
-	$B$J$I$5$^$6$^$G$"$k!#$3$N$?$a!"%*%s!&%*%U$N@)8f$,B3$1$F9T$o$l$?>l9g!"(B
-	$B@)8f$N4V$K%-!<F~NO$"$k$$$O%3%s%=!<%k=PNO$,9T$o$l$J$+$C$?>l9g$J$I$K$O(B
-	$B@5$7$/@)8f$G$-$J$$$3$H$,$"$k!#(B
+	ただし、この方法で制御する場合にはいくつかの理由で動作が不安定になる
+	ことがある。CRT BIOS の作業領域は FEP 以外のプログラムからも使用され
+	るため、このライブラリーの使用前あるいは使用中に他のプログラムから変
+	更されてオン・オフの判定をあやまる場合がある。例えばカーソルタイプを
+	変更する BIOS 呼び出しはこの作業領域をクリアする。また KBD BIOS のバ
+	ッファーに書き込まれた CTRL-XFER のコードがどの時点で FEP に読まれる
+	かは FEP によって異なり、次にキーボード割り込みが発生したとき（INT
+	09h）、次にキー入力を読もうとしたとき（INT 18h）、次にコンソール出力
+	を行ったとき（INT 29h）、MS-DOS がアイドル状態になったとき（INT 28h）
+	などさまざまである。このため、オン・オフの制御が続けて行われた場合、
+	制御の間にキー入力あるいはコンソール出力が行われなかった場合などには
+	正しく制御できないことがある。
 
-	$B$3$N%i%$%V%i%j!<$G$O$3$l$i$NLdBj$KBP1~$9$k$?$a!"(BBIOS $B7PM3$G$N@)8f$r(B
-	$B#3<oN`MQ0U$7$F(B FEP $B$K$h$C$F;H$$J,$1$F$$$k!#>\:Y$K$D$$$F$O%=!<%9$r;2(B
-	$B>H$5$l$?$$!#(B
+	このライブラリーではこれらの問題に対応するため、BIOS 経由での制御を
+	３種類用意して FEP によって使い分けている。詳細についてはソースを参
+	照されたい。
 
-$B!Z4XO"J88%![(B
-	$BB@ED=c!VFC=8(B: $BHFMQ(B FEP $B@)8f%i%$%V%i%j(B FEPCTRL$B!W!X(BC $B%^%,%8%s!Y(B1991 $BG/(B
-	3 $B7n9f(B, $B%=%U%H%P%s%/(B
-		FEPCTRL Ver.1.2 $B$G@)8f2DG=$J3F<o(B FEP $B$N(B API $B$*$h$S(B FEPCTRL
-		Ver.1.2 $B$NFbIt9=B$$r2r@b$7$F$$$k!#(B
+【関連文献】
+	太田純「特集: 汎用 FEP 制御ライブラリ FEPCTRL」『C マガジン』1991 年
+	3 月号, ソフトバンク
+		FEPCTRL Ver.1.2 で制御可能な各種 FEP の API および FEPCTRL
+		Ver.1.2 の内部構造を解説している。
 
-	$BB@ED=c!VFC=8(B: $BB3!&HFMQ(B FEP $B@)8f%i%$%V%i%j9=C[!W!X(BC $B%^%,%8%s!Y(B1991 $BG/(B
-	9 $B7n9f(B, $B%=%U%H%P%s%/(B
-		$B>e5-5-;v$X$N%U%)%m!<%"%C%W!#(BFEPCTRL Ver.1.4 $BBP1~!#(B
+	太田純「特集: 続・汎用 FEP 制御ライブラリ構築」『C マガジン』1991 年
+	9 月号, ソフトバンク
+		上記記事へのフォローアップ。FEPCTRL Ver.1.4 対応。
 
-$B!ZMxMQ>r7o![(B
-	$B$3$N%i%$%V%i%j!<!J(BFEPDMY.SYS$B!"(BFEPAID.SYS $B$r4^$`!K$NMxMQ!"2~JQ!":FG[(B
-	$BI[$K$O$$$+$J$k@)8B$b$J$$!#86:n<T$O$3$N%i%$%V%i%j!<$K4X$9$k$9$Y$F$NCx(B
-	$B:n8"$rJ|4~$9$k$3$H!"$^$?$$$+$J$k>l9g$G$bCx:n<T?M3J8"$r<gD%$7$J$$$3$H(B
-	$B$rI=L@$9$k!#8@$$49$($l$P!"86:n<T$O$3$N%i%$%V%i%j!<$,%Q%V%j%C%/%I%a%$(B
-	$B%s$KCV$+$l$?$b$N$H$7$F07$o$l$k$3$H$r4|BT$9$k!#%*%j%8%J%kHG!"2~JQHG$N(B
-	$B>&6HE*MxMQ$"$k$$$O3F<o(B BBS $B$X$NE>:\$J$I$K$D$$$F$b!"86:n<T$X$NO"Mm$O(B
-	$B0l@ZITMW$G$"$k!#(B
+【利用条件】
+	このライブラリー（FEPDMY.SYS、FEPAID.SYS を含む）の利用、改変、再配
+	布にはいかなる制限もない。原作者はこのライブラリーに関するすべての著
+	作権を放棄すること、またいかなる場合でも著作者人格権を主張しないこと
+	を表明する。言い換えれば、原作者はこのライブラリーがパブリックドメイ
+	ンに置かれたものとして扱われることを期待する。オリジナル版、改変版の
+	商業的利用あるいは各種 BBS への転載などについても、原作者への連絡は
+	一切不要である。
 
-	$B$?$@$7!"86:n<T$O$3$N%i%$%V%i%j!<$K4X$7$F$$$+$J$kJ]>Z$b9T$o$J$$!#86:n(B
-	$B<T$O$3$N%i%$%V%i%j!<$,4|BT$5$l$?F0:n$r$9$k$3$H!"FCDj$NL\E*$KBP$7$FM-(B
-	$BMQ$G$"$k$3$H$rJ]>Z$;$:!"$^$?$3$N%i%$%V%i%j!<$rMxMQ$7$?$3$H$K$h$C$F@8(B
-	$B5/$7$?$$$+$J$kB;32$KBP$9$k@UG$$bIi$o$J$$$b$N$H$9$k!#(B
+	ただし、原作者はこのライブラリーに関していかなる保証も行わない。原作
+	者はこのライブラリーが期待された動作をすること、特定の目的に対して有
+	用であることを保証せず、またこのライブラリーを利用したことによって生
+	起したいかなる損害に対する責任も負わないものとする。
 
-	$B$3$N%i%$%V%i%j!<$r2~JQ$7$F:FG[I[$9$k>l9g!"3F<+$K$h$k2~JQItJ,$r2?$i$+(B
-	$B$N7A$GJ]8n$7$?$$>l9g$K$O!"2~JQItJ,$H@)8B>r9`$r2?$i$+$N7A$GL@<($7$F$*(B
-	$B$+$J$1$l$P$J$i$J$$!#L@<($N$J$$>l9g$K$O!"2~JQ<T$O<+8J$N2~JQItJ,$K$D$$(B
-	$B$F86:n<T$K$h$kItJ,$HF1$807$$$r<u$1$k$3$H$KF10U$7$?$b$N$H$_$J$9!#(B
+	このライブラリーを改変して再配布する場合、各自による改変部分を何らか
+	の形で保護したい場合には、改変部分と制限条項を何らかの形で明示してお
+	かなければならない。明示のない場合には、改変者は自己の改変部分につい
+	て原作者による部分と同じ扱いを受けることに同意したものとみなす。
 
-$B!Z86:n<T![(B
-	$BB@ED=c(B
+【原作者】
+	太田純
 	ohta@src.ricoh.co.jp (junet)
 	msa02563 (MSA-NET)
 
-$B!Z<U<-![(B
-	Katana2/ACE/Katana4 $B$K4X$7$F$O%5%`%7%s%0%0%C%I$+$i!"(BFIXER3/FIXER4 $B$K(B
-	$B4X$7$F$OF|K\%^%$%3%sHNGd$+$i5;=Q;qNA$rDs6!$7$F$$$?$@$$$?!#$^$?!"@)8f(B
-	$B>pJs$NF~<j$*$h$S%F%9%H$K$D$$$F$O!"0J2<$N3F;a$KB?Bg$J1g=u$r$$$?$@$$$?(B
-	$B!J7I>NN,!K!#(B
+【謝辞】
+	Katana2/ACE/Katana4 に関してはサムシンググッドから、FIXER3/FIXER4 に
+	関しては日本マイコン販売から技術資料を提供していただいた。また、制御
+	情報の入手およびテストについては、以下の各氏に多大な援助をいただいた
+	（敬称略）。
 
-	$B!!!!B@ED>;9(!"7J;3><Gn!"3^0f9/?-!"6b;R(B  $BM5!"7s=!(B  $B?J!"5WJ]ED1Q9T!"(B
-	$B!!!!:dLn91G7!"_78}>;5,!"Bl@n2mL&!"@iMU(B  $B<"!"IZ2,(B  $B>=!"@._70l9@!"(B
-	$B!!!!Hu8}5.>O!"F#:j@69'!"B<0f(B  $B=_!"#O#h!*#N#o!*(B
+	　　太田昌宏、景山昭博、笠井康伸、金子  裕、兼宗  進、久保田英行、
+	　　坂野恒之、澤口昌規、滝川雅巳、千葉  滋、冨岡  晶、成澤一浩、
+	　　樋口貴章、藤崎清孝、村井  淳、Ｏｈ！Ｎｏ！
 
-	$B>e5-3F<R$*$h$S3F;a$KBP$7$F?<$/46<U$N0U$rI=$7$?$$!#$^$?(B MSA-NET $B$N(B TP
-	$B%3!<%J!<$[$+!"F|7P(B MIX $B$N(B fp $B2q5D!"(Baisoft $B2q5D!"(Bk3 $B2q5D!"(Bv.c. $B2q5D$N(B
-	$B5DO@$r;29M$K$5$;$F$$$?$@$$$?!#(B
+	上記各社および各氏に対して深く感謝の意を表したい。また MSA-NET の TP
+	コーナーほか、日経 MIX の fp 会議、aisoft 会議、k3 会議、v.c. 会議の
+	議論を参考にさせていただいた。
 
-$B!ZMzNr![(B
-	1990/1 - jstevie1.1 $B$N0lIt$H$7$F=iHG$r%j%j!<%9(B
-	* $BBP1~(B FEP $B$O(B MS-KANJI API$B!"(BATOK5/ATOK6/ATOK7$B!"(BVJE-$B&A(B/$B&B(B/$B&2!">>B{(BV2$B!"(B
-	  FIXER3/FIXER4$B!"(BKatana2/ACE$B!"(BEGBridge Ver.2/Ver.3$B!"(BWXP$B!"(BE1
-	* VJE-$B&B(B Ver.2 $B$N(B MS-KANJI API $B$O;HMQ$7$F$$$J$$(B
-	* ATOK7 $B$O(B 7TO6.COM $B$rAH$_9~$s$G(B ATOK6 $B8_49(B API $B$r<B8=$7$?>l9g$N$_(B
-	* FIXER3/FIXER4 $B$O%=%U%H%&%(%"3d$j9~$_(B API $B$N$_(B
-	* E1 $B$K$D$$$F$OL$%F%9%H(B
+【履歴】
+	1990/1 - jstevie1.1 の一部として初版をリリース
+	* 対応 FEP は MS-KANJI API、ATOK5/ATOK6/ATOK7、VJE-α/β/Σ、松茸V2、
+	  FIXER3/FIXER4、Katana2/ACE、EGBridge Ver.2/Ver.3、WXP、E1
+	* VJE-β Ver.2 の MS-KANJI API は使用していない
+	* ATOK7 は 7TO6.COM を組み込んで ATOK6 互換 API を実現した場合のみ
+	* FIXER3/FIXER4 はソフトウエア割り込み API のみ
+	* E1 については未テスト
 
-	1990/2 - jstevie1.2 $B$N0lIt$H$7$F%j%j!<%9(B
-	* $BBP1~(B FEP $B$K(B NEC AI $BJQ49!"(BDFJ$B!"(BMGR2 $B$rDI2C(B
-	* VJE-$B&B(B Ver.2 $B$r(B MS-KANJI API $B$G@)8f$9$k$h$&JQ99(B
-	* PC-9801 $B$N(B BIOS $B:n6HNN0h$rMxMQ$7$?@)8f$r<BAu(B
+	1990/2 - jstevie1.2 の一部としてリリース
+	* 対応 FEP に NEC AI 変換、DFJ、MGR2 を追加
+	* VJE-β Ver.2 を MS-KANJI API で制御するよう変更
+	* PC-9801 の BIOS 作業領域を利用した制御を実装
 
-	1990/06/06 - jstevie1.3 $B$+$i@Z$j=P$7!"%P!<%8%g%s(B 1.0 $B$H$9$k(B
-	* $BBP1~(B FEP $B$K>>B{(B86 $B$rDI2C(B
-	* MELWARE Ver.4 $B$N(B FPLD.SYS $B$KBP1~(B
-	* FEPDMY.SYS $B$rDI2C$7!"AH$_9~$_$,H=Dj$G$-$J$$(B FEP $B$KBP1~(B
-	* ATOK7$B!"(BFIXER3/FIXER4 $B$r4X?t7PM3$NFH<+(B API $B$G@)8f$9$k$h$&JQ99(B
-	* WXP $B$N@)8fJ}K!$r(B CTRL-XFER $B$r;H$&J}<0$KJQ99(B
-	* PC-9801 $B$N(B BIOS $B:n6HNN0h$rMxMQ$7$?@)8f$r2~A1(B
+	1990/06/06 - jstevie1.3 から切り出し、バージョン 1.0 とする
+	* 対応 FEP に松茸86 を追加
+	* MELWARE Ver.4 の FPLD.SYS に対応
+	* FEPDMY.SYS を追加し、組み込みが判定できない FEP に対応
+	* ATOK7、FIXER3/FIXER4 を関数経由の独自 API で制御するよう変更
+	* WXP の制御方法を CTRL-XFER を使う方式に変更
+	* PC-9801 の BIOS 作業領域を利用した制御を改善
 
-	1990/08/20 - $B%P!<%8%g%s(B 1.1
-	* $BBP1~(B FEP $B$K(B NEC $BC`<!JQ49!"(BJ3100 $B$N(B ATOK7R$B!"(BFM-R $B$N(B OAK $B$rDI2C(B
-	* IOS-10/II $B$N(B BNKDRV.SYS $B$KBP1~(B
-	* $B0z?t$G%G%P%$%9L>$r;XDj$G$-$k$h$&$K(B FEPDMY.SYS $B$rJQ99(B
-	* ATOK5/ATOK6 $B$NAH$_9~$_H=DjJ}K!$rJQ99$7!"(BAtokID Ver.1.02 $B$KBP1~(B
-	* $B>>B{MQ(B G-RAM $BE>Aw%I%i%$%P!"N"$7$^$CB@O:;HMQ;~$NF0:n$r3NG'(B
-	* BNKDRV.SYS $B$GAH$_9~$s$@(B ATOK7 $B$r@)8f$9$k(B BDATOK7 $B$rJLES%j%j!<%9(B
+	1990/08/20 - バージョン 1.1
+	* 対応 FEP に NEC 逐次変換、J3100 の ATOK7R、FM-R の OAK を追加
+	* IOS-10/II の BNKDRV.SYS に対応
+	* 引数でデバイス名を指定できるように FEPDMY.SYS を変更
+	* ATOK5/ATOK6 の組み込み判定方法を変更し、AtokID Ver.1.02 に対応
+	* 松茸用 G-RAM 転送ドライバ、裏しまっ太郎使用時の動作を確認
+	* BNKDRV.SYS で組み込んだ ATOK7 を制御する BDATOK7 を別途リリース
 
-	1990/11/25 - $B%P!<%8%g%s(B 1.2
-	* $BBP1~(B FEP $B$K(B OAK Ver.4.20$B!"(BJ3100 $B$N(B WXP$B!"(BJ3100 $B$N(B ATOK5T$B!"(B
-	  MS-DOS3.3C $B$N(B NEC AI $BJQ49!"Iw!"Mr!"F|N)=c@5(B FEP $B$rDI2C(B
-	* BNKDRV.SYS $B$GAH$_9~$s$@>>B{(BV2/XMS$BBP1~HG$KBP1~(B
-	* FEPAID.SYS $B$rDI2C$7!"(BPC-286/386 $B$K$*$1$k(B BIOS $B7PM3$G$N@)8f$KBP1~(B
-	* MS-KANJI API $B$N@)8fJ}K!$r0lItJQ99(B
-	* NEC $B=c@5(B FEP $B$N@)8fJ}K!$r3HD%5!G=8F$S=P$7$r;H$&J}<0$KJQ99(B
-	* PC-9801 $B$N(B VRAM $B$rMxMQ$7$?>uBV8!=P$r<BAu(B
-	* MEMORY-PRO386 $B$N(B LU.DRV $B;HMQ;~$NF0:n$r3NG'(B
-	* MSATOK $B;HMQ;~$NIT6q9g$r3NG'(B
+	1990/11/25 - バージョン 1.2
+	* 対応 FEP に OAK Ver.4.20、J3100 の WXP、J3100 の ATOK5T、
+	  MS-DOS3.3C の NEC AI 変換、風、嵐、日立純正 FEP を追加
+	* BNKDRV.SYS で組み込んだ松茸V2/XMS対応版に対応
+	* FEPAID.SYS を追加し、PC-286/386 における BIOS 経由での制御に対応
+	* MS-KANJI API の制御方法を一部変更
+	* NEC 純正 FEP の制御方法を拡張機能呼び出しを使う方式に変更
+	* PC-9801 の VRAM を利用した状態検出を実装
+	* MEMORY-PRO386 の LU.DRV 使用時の動作を確認
+	* MSATOK 使用時の不具合を確認
 
-	1991/05/18 - $B%P!<%8%g%s(B 1.3
-	* $B%3!<%I$r(B ANSI $B%9%?%$%k$K=q$-D>$7!"A4LLE*$K%/%j!<%s%"%C%W(B
-	* $BBP1~%3%s%Q%$%i!<$K(B Turbo C++ 1.0$B!"(BBorland C++ 2.0$B!"(B
-	  Microsoft C 6.00$B!"(BQuick C 2.0$B!"(BLattice C 4.1$B!"(B
-	  LSI C-86 3.2 $B;n?)HG$rDI2C(B
-	* $BBP1~(B FEP $B$K(B JJ$B!"(BWX2$B!"%j%3!<=c@5(B FEP$B!"(BKatana4$B!JL$%F%9%H!K!"(B
-	  AX $B$N(B ATOK6$B!"(BIBM PS/55 $B%7%j!<%:$N(B ATOK6/ATOK7$B!"(B
-	  IBM DOS/V $B$N(B ATOK7$B!"(BIBM $BC14A;z(B/$BO"J8@a!"(B
-	  IF800 $B%7%j!<%:$N(B FEPEX$B!"(BJ3100 $B$N(B MIJ$B!JL$%F%9%H!K$rDI2C(B
-	* PC-9801 $B$N(B WXS$B!"(BAX $B$N(B VJE-$B&B!"(BIBM DOS/V $B$N(B VJE-$B&B$NF0:n$r3NG'(B
-	* MS-KANJI API $B$N@)8fJ}K!$r0lItJQ99$7$F0BA4@-$r8~>e(B
-	* $BAH$_9~$_H=Dj$N=g=x$r!J$d$`$J$/!K3d$j9~$_%Y%/%?!<M%@h$KJQ99(B
-	* FIXER4 $B$r(B FIXER3 $B8_49(B API $B$N$_$K$h$C$F@)8f$9$k$h$&JQ99(B
-	* Microsoft C 5.1$B!"(BLattice C 4.1 $B$G$N(B ATOK7/7R$B!"(BFIXER3/FIXER4 $B$N(B
-	  $B4X?t8F$S=P$7$K$h$kD>@\@)8f$r<B8=(B
+	1991/05/18 - バージョン 1.3
+	* コードを ANSI スタイルに書き直し、全面的にクリーンアップ
+	* 対応コンパイラーに Turbo C++ 1.0、Borland C++ 2.0、
+	  Microsoft C 6.00、Quick C 2.0、Lattice C 4.1、
+	  LSI C-86 3.2 試食版を追加
+	* 対応 FEP に JJ、WX2、リコー純正 FEP、Katana4（未テスト）、
+	  AX の ATOK6、IBM PS/55 シリーズの ATOK6/ATOK7、
+	  IBM DOS/V の ATOK7、IBM 単漢字/連文節、
+	  IF800 シリーズの FEPEX、J3100 の MIJ（未テスト）を追加
+	* PC-9801 の WXS、AX の VJE-β、IBM DOS/V の VJE-βの動作を確認
+	* MS-KANJI API の制御方法を一部変更して安全性を向上
+	* 組み込み判定の順序を（やむなく）割り込みベクター優先に変更
+	* FIXER4 を FIXER3 互換 API のみによって制御するよう変更
+	* Microsoft C 5.1、Lattice C 4.1 での ATOK7/7R、FIXER3/FIXER4 の
+	  関数呼び出しによる直接制御を実現
 
-	1991/06/29 - $B%P!<%8%g%s(B 1.4
-	* $BBP1~(B FEP $B$K(B Panacom M $B%7%j!<%:$N$+$J4A;zJQ495!G=$rDI2C(B
-	* PC-9801 $B$N>>B{(BV3$B!"(BKatana4$B!"(BWX2+$B!"(B
-	  Panacom M $B%7%j!<%:$N(B ATOK6 $B$G$NF0:n$r3NG'(B
-	* ATOK6+MSKN$B!"(BATOK7+MSKN $B$G$NF0:n$r3NG'(B
+	1991/06/29 - バージョン 1.4
+	* 対応 FEP に Panacom M シリーズのかな漢字変換機能を追加
+	* PC-9801 の松茸V3、Katana4、WX2+、
+	  Panacom M シリーズの ATOK6 での動作を確認
+	* ATOK6+MSKN、ATOK7+MSKN での動作を確認
 
-	1992/04/08 - $B%P!<%8%g%s(B 1.5
-	* $B%i%$%V%i%j!<4X?t$K(B fep_raw_init()$B!"(Bfep_raw_term()$B!"(B
-	  fep_get_mode() $B$rDI2C(B
-	* $B%F%9%H%W%m%0%i%`$r3HD%$7$F%P%C%A%f!<%F%#%j%F%#!<$r:n@.(B
-	* $BBP1~%3%s%Q%$%i!<$K(B Borland C++ 3.0$B!"(BLSI C-86 3.3 $B;n?)HG$rDI2C(B
-	* $BBP1~(B FEP $B$K(B PC-9801 $B$N(B DANGO $BJQ49!"$*$F$b$H!"(BOMAC$B!"(BAJIP1$B!"(B
-	  Joker-III$B!"Mr(BV3 $B$rDI2C(B
-	* PC-9801 $B$N(B DFJ2$B!"(BVJE-$B&B(B3.0$B!"(BE1$B!"(BWX$B!"(BWXA6$B!"&A(BX-1$B!"(B
-	  IBM DOS/V $B$N(B WX2+/WX2I/WX2A7$B!"(BJ3100 $B$N(B WX2+/WX2A5/WX2A7$B!"(B
-	  FM-R $B%7%j!<%:$N(B VJE-$B&B(B2.5 $B$G$NF0:n$r3NG'(B
-	* PC-9801 $B$N(B BIOS $B:n6HNN0h$rMxMQ$7$?@)8f$r2~A1(B
-	* NEC $B$*$h$SF|K\(B IBM $B$N(B MS-DOS 5.0 $B$G$NF0:n$r3NG'(B
-	* $B%G%P%$%9$N%*!<%W%s$N:]$K%I%i%$%VL>!V(B@:$B!W$rIU2C$9$k$h$&JQ99$7$F(B
-	  $B%G%P%$%9%"%/%;%9$N0BA4@-$r8~>e(B
-	* FEPAID.SYS $B$N%P%0$r=$@5(B
+	1992/04/08 - バージョン 1.5
+	* ライブラリー関数に fep_raw_init()、fep_raw_term()、
+	  fep_get_mode() を追加
+	* テストプログラムを拡張してバッチユーティリティーを作成
+	* 対応コンパイラーに Borland C++ 3.0、LSI C-86 3.3 試食版を追加
+	* 対応 FEP に PC-9801 の DANGO 変換、おてもと、OMAC、AJIP1、
+	  Joker-III、嵐V3 を追加
+	* PC-9801 の DFJ2、VJE-β3.0、E1、WX、WXA6、αX-1、
+	  IBM DOS/V の WX2+/WX2I/WX2A7、J3100 の WX2+/WX2A5/WX2A7、
+	  FM-R シリーズの VJE-β2.5 での動作を確認
+	* PC-9801 の BIOS 作業領域を利用した制御を改善
+	* NEC および日本 IBM の MS-DOS 5.0 での動作を確認
+	* デバイスのオープンの際にドライブ名「@:」を付加するよう変更して
+	  デバイスアクセスの安全性を向上
+	* FEPAID.SYS のバグを修正
 
 ============================================================================
 
-$B!ZL>>N![(B
-	FEPCTRL.COM/EXE - $B%P%C%A%U%!%$%k$N$?$a$N(B FEP $B@)8f%f!<%F%#%j%F%#!<(B
+【名称】
+	FEPCTRL.COM/EXE - バッチファイルのための FEP 制御ユーティリティー
 
-$B!Z%P!<%8%g%s![(B
-	FEPCTRL $B%i%$%V%i%j!<$HF1$8(B
+【バージョン】
+	FEPCTRL ライブラリーと同じ
 
-$B!Z7A<0![(B
-	fepctrl [$B%3%^%s%I(B]
-	$B%3%^%s%I(B:
-		help   - $B%X%k%W%a%C%;!<%8$rI=<($9$k(B
-		test   - $B=>Mh$HF1MM$N(B FEP $B%F%9%H$r9T$&(B
-		name   - $BAH$_9~$^$l$?(B FEP $BL>$rI=<($9$k(B
-		on     - FEP $B$rJQ49%*%s$K$9$k(B
-		off    - FEP $B$rJQ49%*%U$K$9$k(B
-		flip   - FEP $B$NJQ49>uBV$rH?E>$9$k(B
-		status - FEP $B$NJQ49>uBV$rJV$9(B
-		check [FEP$BL>(B ...]
-		       - $B;XDj$5$l$?(B FEP $B$,B8:_$9$k$+$I$&$+D4$Y$k(B
-	FEP$BL>(B:
+【形式】
+	fepctrl [コマンド]
+	コマンド:
+		help   - ヘルプメッセージを表示する
+		test   - 従来と同様の FEP テストを行う
+		name   - 組み込まれた FEP 名を表示する
+		on     - FEP を変換オンにする
+		off    - FEP を変換オフにする
+		flip   - FEP の変換状態を反転する
+		status - FEP の変換状態を返す
+		check [FEP名 ...]
+		       - 指定された FEP が存在するかどうか調べる
+	FEP名:
 		PC9801A, PC9801B, PC9801C, MSKANJI, VJE, ATOK6, ATOK7,
 		MTTK86, MTTK2, KATANA, FIXER, EGB2, EGB3, WXP, WX2,
 		MGR2, JJ, NEC, DFJ, DANGO, OTEMOTO, OMAC, AJIP1,
 		JOKER3, KAZE, OAK, MKK, B16, RICOH, WXPJ, MIJ,
 		FEPEX, AT6AX, AT6IBM, AT7IBM, AT7DOSV, IBMIAS
 
-$B!Z;HMQNc![(B
-	rem - FEP $B$,B8:_$7$FJQ49%*%s$J$iJQ49%*%U$K$9$k(B
-	rem - ($B<B:]$K$O(B fepctrl off $B$@$1$G$bJ@32$O$J$$(B)
+【使用例】
+	rem - FEP が存在して変換オンなら変換オフにする
+	rem - (実際には fepctrl off だけでも弊害はない)
 	fepctrl check
 	if not errorlevel 1 goto done
 	fepctrl status
@@ -412,563 +412,563 @@
 	fepctrl off
 	:done
 
-$B!Z@bL@![(B
-	$B$3$N%f!<%F%#%j%F%#!<$O!"%P%C%A%U%!%$%k$NFbIt$G(B FEP $B$N>uBV$r<hF@$7$?(B
-	$B$j@)8f$7$?$j$9$k$?$a$N$b$N$G$"$k!#5!G=$H$7$F$O!"FCDj$"$k$$$OITFCDj$N(B
-	FEP $B$NAH$_9~$_$r%A%'%C%/$9$k5!G=!"(BFEP $B$NJQ49>uBV$r<hF@$9$k5!G=!"JQ49(B
-	$B>uBV$rJQ99$9$k5!G=$J$I$,$"$k!#(B
+【説明】
+	このユーティリティーは、バッチファイルの内部で FEP の状態を取得した
+	り制御したりするためのものである。機能としては、特定あるいは不特定の
+	FEP の組み込みをチェックする機能、FEP の変換状態を取得する機能、変換
+	状態を変更する機能などがある。
 
-	$B<hF@$5$l$?AH$_9~$_>uBV$dJQ49>uBV$O%f!<%F%#%j%F%#!<$N=*N;%3!<%I$H$7$F(B
-	$B8F$S=P$7B&%W%m%;%9$KJV$5$l$k$?$a!"%P%C%A%U%!%$%kCf$G(B errorlevel $B$rH=(B
-	$BDj$9$k$3$H$K$h$C$F7k2L$rMxMQ$9$k$3$H$,$G$-$k!#(B
+	取得された組み込み状態や変換状態はユーティリティーの終了コードとして
+	呼び出し側プロセスに返されるため、バッチファイル中で errorlevel を判
+	定することによって結果を利用することができる。
 
-	$BFCDj$N(B FEP $B$,$I$N$h$&$JL>>N$GAH$_9~$_$r<1JL$5$l$k$+$O>u67$K0MB8$9$k!#(B
-	$BNc$($P!"(BVJE-$B&B$O(B VJE $B$G$J$/(B MSKANJI $B$H<1JL$5$l$k2DG=@-$,9b$$!#$3$N$?(B
-	$B$a!"FbItF0:n$KBP$9$k==J,$JCN<1$r;}$?$J$$$+$.$j!"$3$N%f!<%F%#%j%F%#!<(B
-	$B$rFCDj$N(B FEP $B$NAH$_9~$_%A%'%C%/$N$?$a$KMxMQ$9$k$3$H$OHr$1$?J}$,8-L@(B
-	$B$G$"$k!#(B
+	特定の FEP がどのような名称で組み込みを識別されるかは状況に依存する。
+	例えば、VJE-βは VJE でなく MSKANJI と識別される可能性が高い。このた
+	め、内部動作に対する十分な知識を持たないかぎり、このユーティリティー
+	を特定の FEP の組み込みチェックのために利用することは避けた方が賢明
+	である。
 
-	$B$J$*!"%^%/%m(B TEST $B$rDj5A$7$F(B fepctrl.c $B$r%3%s%Q%$%k$9$l$P$3$N%f!<%F(B
-	$B%#%j%F%#!<$,:n$i$l$k!#(B
+	なお、マクロ TEST を定義して fepctrl.c をコンパイルすればこのユーテ
+	ィリティーが作られる。
 
 ============================================================================
 
-$B!ZL>>N![(B
-	FEPDMY.SYS - $BG$0U$NL>>N$r;}$D%@%_!<%G%P%$%9$rEPO?$9$k(B
+【名称】
+	FEPDMY.SYS - 任意の名称を持つダミーデバイスを登録する
 
-$B!Z%P!<%8%g%s![(B
-	1.0 - 1990/06/05  $B=i4|%P!<%8%g%s(B
-	1.1 - 1990/06/10  $B%Q%i%a!<%?!<$K$h$k%G%P%$%9L>@_Dj5!G=$NDI2C(B
+【バージョン】
+	1.0 - 1990/06/05  初期バージョン
+	1.1 - 1990/06/10  パラメーターによるデバイス名設定機能の追加
 
-$B!Z7A<0![(B
-	DEVICE=FEPDMY.SYS <$B%G%P%$%9L>(B>
+【形式】
+	DEVICE=FEPDMY.SYS <デバイス名>
 
-$B!Z;HMQNc![(B
+【使用例】
 	DEVICE=FPLD.SYS DFJ.SYS
 	DEVICE=FEPDMY.SYS FP$DFJ
-	$B!J(BMELWARE Ver.4 $B$KIUB0$N(B FPLD.SYS $B$G(B DFJ $B$rAH$_9~$`>l9g!K(B
+	（MELWARE Ver.4 に付属の FPLD.SYS で DFJ を組み込む場合）
 
-$B!Z@bL@![(B
-	FEPDMY.SYS $B$O2?$b$7$J$$%@%_!<%G%P%$%9$G$"$j!"AH$_9~$_$N:]$K%Q%i%a!<(B
-	$B%?!<$H$7$F;XDj$5$l$?L>A0$r%G%P%$%9L>$H$7$F;}$D!#(BFEPDMY.SYS $B$O!"3F<o(B
-	MS-DOS $B5!$GMxMQ2DG=$G$"$k!#(B
+【説明】
+	FEPDMY.SYS は何もしないダミーデバイスであり、組み込みの際にパラメー
+	ターとして指定された名前をデバイス名として持つ。FEPDMY.SYS は、各種
+	MS-DOS 機で利用可能である。
 
-	FEPCTRL $B%i%$%V%i%j!<$G(B FEP $B$r@)8f$9$k>l9g!"$I$N(B FEP $B$,AH$_9~$^$l$F$$(B
-	$B$k$+$rH=Dj$9$kI,MW$,$"$k$,!"(BFEP $B$=$N$b$N$,AH$_9~$_H=Dj$N<jCJ$rMQ0U$7(B
-	$B$F$$$J$$>l9g$d!"$"$k<o$NAH$_9~$_%f!<%F%#%j%F%#!<$rMQ$$$FAH$_9~$s$@>l(B
-	$B9g$K$OH=Dj$,9T$($J$$$3$H$,$"$k!#(BFEPDMY.SYS $B$O!"E,Ev$J%G%P%$%9L>$rEP(B
-	$BO?$9$k$3$H$K$h$C$FAH$_9~$_H=DjITG=$J(B FEP $B$r(B FEPCTRL $B$+$iG'<1$5$;$k$?(B
-	$B$a$N;Y1g%f!<%F%#%j%F%#!<$G$"$k!#(B
+	FEPCTRL ライブラリーで FEP を制御する場合、どの FEP が組み込まれてい
+	るかを判定する必要があるが、FEP そのものが組み込み判定の手段を用意し
+	ていない場合や、ある種の組み込みユーティリティーを用いて組み込んだ場
+	合には判定が行えないことがある。FEPDMY.SYS は、適当なデバイス名を登
+	録することによって組み込み判定不能な FEP を FEPCTRL から認識させるた
+	めの支援ユーティリティーである。
 
-	FEPDMY.SYS $B$rMQ$$$l$P!"$I$s$J(B FEP $B$G$b(B FEPCTRL $B$+$iAH$_9~$_$rH=Dj$G(B
-	$B$-$k$h$&$K$J$k$,!"$I$N%G%P%$%9L>$,$I$N(B FEP $B$KBP1~$9$k$+$K$D$$$F$O$"(B
-	$B$i$+$8$a(B FEPCTRL $B$H9g0U$r<h$C$F$*$/I,MW$,$"$k!#8=:_(B FEPCTRL $B$,G'<1$9(B
-	$B$k%@%_!<%G%P%$%9L>$O<!$N$b$N$G$"$k!#$I$N>u67$G$I$N%G%P%$%9L>$rMxMQ$9(B
-	$B$Y$-$+$K$D$$$F$O!"IUI=!V(BFEPCTRL Ver.1.2 $B!A(B 1.5 $B$K$h$k(B FEP $B@)8f%F%9%H(B
-	$B7k2L!W$r;2>H$5$l$?$$!#(B
+	FEPDMY.SYS を用いれば、どんな FEP でも FEPCTRL から組み込みを判定で
+	きるようになるが、どのデバイス名がどの FEP に対応するかについてはあ
+	らかじめ FEPCTRL と合意を取っておく必要がある。現在 FEPCTRL が認識す
+	るダミーデバイス名は次のものである。どの状況でどのデバイス名を利用す
+	べきかについては、付表「FEPCTRL Ver.1.2 ～ 1.5 による FEP 制御テスト
+	結果」を参照されたい。
 
-	$B!!!!(BFP$PC98A$B!J(BPC-9801 $B$N(B BIOS $BNN0hA`:n$K$h$k@)8f(B (1)$B!K!"(B
-	$B!!!!(BFP$PC98B$B!J(BPC-9801 $B$N(B BIOS $BNN0hA`:n$K$h$k@)8f(B (2)$B!K!"(B
-	$B!!!!(BFP$PC98C$B!J(BPC-9801 $B$N(B BIOS $BNN0hA`:n$K$h$k@)8f(B (3)$B!K!"(B
-	$B!!!!(BFP$VJE$B!J(BVJE-$B&A(B/$B&B(B/$B&2!K!"(BFP$ATOK6$B!J(BATOK5/ATOK6$B!"(BDANGO $BJQ49!K!"(B
-	$B!!!!(BFP$MTTK$B!J>>B{(B86; FP$PC98A $B$HF15A!K!"(BFP$KTN$B!J(BKatana2/ACE$B!K!"(B
-	$B!!!!(BFP$EGB2$B!J(BEGBridge Ver.2$B!K!"(BFP$EGB3$B!J(BEGBridge Ver.3$B!K!"(B
-	$B!!!!(BFP$WXP$B!J(BWX$B!"(BWXS$B!"(BWXP Ver.1.03a$B!K!"(BFP$WX2$B!J(BWXP Ver.1.04c$B!"(BWX2$B!K!"(B
-	$B!!!!(BFP$MGR2$B!J(BMGR2/JJ$B!K!"(BFP$NEC$B!J(BNEC $BC`<!(B/AI $BJQ49!K!"(B
-	$B!!!!(BFP$DFJ$B!J(BDFJ; FP$PC98A $B$HF15A!K!"(BFP$KAZE$B!JIw!"Mr(BV2/V3$B!K!"(B
-	$B!!!!(BFP$AJIP1$B!J(BAJIP1; FP$PC98B $B$HF15A!K!"(BFP$JOKER$B!J(BJoker-III$B!K!"(B
-	$B!!!!(BFP$OMAC(OMAC; FP$PC98C $B$HF15A!K!"(BFP$OAK$B!J(BFM-R $B$N(B OAK$B!K(B
+	　　FP$PC98A（PC-9801 の BIOS 領域操作による制御 (1)）、
+	　　FP$PC98B（PC-9801 の BIOS 領域操作による制御 (2)）、
+	　　FP$PC98C（PC-9801 の BIOS 領域操作による制御 (3)）、
+	　　FP$VJE（VJE-α/β/Σ）、FP$ATOK6（ATOK5/ATOK6、DANGO 変換）、
+	　　FP$MTTK（松茸86; FP$PC98A と同義）、FP$KTN（Katana2/ACE）、
+	　　FP$EGB2（EGBridge Ver.2）、FP$EGB3（EGBridge Ver.3）、
+	　　FP$WXP（WX、WXS、WXP Ver.1.03a）、FP$WX2（WXP Ver.1.04c、WX2）、
+	　　FP$MGR2（MGR2/JJ）、FP$NEC（NEC 逐次/AI 変換）、
+	　　FP$DFJ（DFJ; FP$PC98A と同義）、FP$KAZE（風、嵐V2/V3）、
+	　　FP$AJIP1（AJIP1; FP$PC98B と同義）、FP$JOKER（Joker-III）、
+	　　FP$OMAC(OMAC; FP$PC98C と同義）、FP$OAK（FM-R の OAK）
 
 ============================================================================
 
-$B!ZL>>N![(B
-	FEPAID.SYS - PC-9801/PC-286 $B$N(B BIOS $BNN0h$K$h$k(B FEP $B@)8f$r;Y1g$9$k(B
+【名称】
+	FEPAID.SYS - PC-9801/PC-286 の BIOS 領域による FEP 制御を支援する
 
-$B!Z%P!<%8%g%s![(B
-	1.0 - 1990/10/19  $B=i4|%P!<%8%g%s(B
-	1.1 - 1991/03/18  CRT BIOS $B:n6HNN0h$rJ]B8$9$k$h$&JQ99(B
-	1.2 - 1992/03/23  $B%P%0=$@5(B(savework$B$N;2>H$K(Bcs:$B$rK:$l$F$$$?(B^_^;)
+【バージョン】
+	1.0 - 1990/10/19  初期バージョン
+	1.1 - 1991/03/18  CRT BIOS 作業領域を保存するよう変更
+	1.2 - 1992/03/23  バグ修正(saveworkの参照にcs:を忘れていた^_^;)
 
-$B!Z7A<0![(B
-	DEVICE=FEPAID.SYS [<$B%G%P%$%9L>(B>]
+【形式】
+	DEVICE=FEPAID.SYS [<デバイス名>]
 
-$B!Z;HMQNc![(B
+【使用例】
 	DEVICE=DFJ.SYS
 	DEVICE=FEPAID.SYS FP$DFJ
-	$B!J(BPC-286/386 $B%7%j!<%:>e$G(B DFJ $B$N@)8f$r9T$&>l9g!K(B
+	（PC-286/386 シリーズ上で DFJ の制御を行う場合）
 
-$B!Z@bL@![(B
-	FEPAID.SYS $B$O!"(BPC-9801/PC-286 $B$G$N(B BIOS $BNN0hA`:n$K$h$k(B FEP $B@)8f$r;Y(B
-	$B1g$9$k$?$a$N%@%_!<%G%P%$%9$G$"$k!#(BFEPDMY.SYS $B$HF1MM$K!"AH$_9~$_$N:](B
-	$B$K%Q%i%a!<%?!<$H$7$F%G%P%$%9L>$r;XDj$G$-$k!#(BFEPAID.SYS $B$O(B PC-9801 $B$*(B
-	$B$h$S(B PC-286/386 $B%7%j!<%:$GMxMQ2DG=$G$"$k!#(B
+【説明】
+	FEPAID.SYS は、PC-9801/PC-286 での BIOS 領域操作による FEP 制御を支
+	援するためのダミーデバイスである。FEPDMY.SYS と同様に、組み込みの際
+	にパラメーターとしてデバイス名を指定できる。FEPAID.SYS は PC-9801 お
+	よび PC-286/386 シリーズで利用可能である。
 
-	FEPCTRL $B$N@a$G=R$Y$?$h$&$K!"(BPC-9801 $B$G$O(B CRT BIOS $B$N:n6HNN0h$+$i(B FEP
-	$B$N>uBV$r8!=P$G$-$k>l9g$,$"$k!#(BFEP $B$,@)8f%$%s%?!<%U%'!<%9$rMQ0U$7$F$$(B
-	$B$J$$>l9g!"AH$_9~$_J}K!$K$h$C$F$OK\Mh$N>uBV8!=PJ}K!$,M-8z$G$J$$>l9g$J(B
-	$B$I$,B8:_$9$k$?$a!"(BFEPCTRL $B$G$O(B CRT BIOS $B:n6HNN0h$+$i$N>uBV8!=P$r@Q6K(B
-	$BE*$K3hMQ$7$F$$$k!#$7$+$7!"8_495!$G$"$k(B PC-286/386 $B$G$O(B BIOS $B$N8_49@-(B
-	$B$,ITB-$7$F$$$k$?$a$3$NJ}K!$,MxMQ$G$-$J$$!#$^$?!"(BFEP $B$K$h$C$F$O$3$N:n(B
-	$B6HNN0h$r;HMQ$7$J$$(B CRT BIOS $B8F$S=P$7$rMQ$$$k$b$N$b$"$k!#(B FEPAID.SYS
-	$B$O(B CRT BIOS $B8F$S=P$7$r4F;k$7!"I,MW$K1~$8$F(B CRT BIOS $B:n6HNN0h$r=q$-49(B
-	$B$($k$3$H$K$h$C$F$3$NNN0h$+$i$N>uBV8!=P$r2DG=$K$9$k$?$a$N%f!<%F%#%j%F(B
-	$B%#!<$G$"$k!#$3$l$O(B FEPCTRL $B$@$1$G$J$/!"(BCRT BIOS $B:n6HNN0h$+$i>uBV8!=P(B
-	$B$r9T$&$h$&$J%"%W%j%1!<%7%g%s!J(BEZKEY $B$J$I!K$9$Y$F$+$iMxMQ$G$-$k!#(B
+	FEPCTRL の節で述べたように、PC-9801 では CRT BIOS の作業領域から FEP
+	の状態を検出できる場合がある。FEP が制御インターフェースを用意してい
+	ない場合、組み込み方法によっては本来の状態検出方法が有効でない場合な
+	どが存在するため、FEPCTRL では CRT BIOS 作業領域からの状態検出を積極
+	的に活用している。しかし、互換機である PC-286/386 では BIOS の互換性
+	が不足しているためこの方法が利用できない。また、FEP によってはこの作
+	業領域を使用しない CRT BIOS 呼び出しを用いるものもある。 FEPAID.SYS
+	は CRT BIOS 呼び出しを監視し、必要に応じて CRT BIOS 作業領域を書き換
+	えることによってこの領域からの状態検出を可能にするためのユーティリテ
+	ィーである。これは FEPCTRL だけでなく、CRT BIOS 作業領域から状態検出
+	を行うようなアプリケーション（EZKEY など）すべてから利用できる。
 
-	FEPAID.SYS $B$O(B int 18h $B$r%U%C%/$7!"!V#1$D$NI=<(NN0h$N@_Dj!W$,9T$o$l$?(B
-	$B$H$-$K$O:n6HNN0h$K(B 0 $B$r@_Dj$7!"!VJ#?t$NI=<(NN0h$N@_Dj!W$,9T$o$l$?$H(B
-	$B$-$K$O:n6HNN0h$K(B dl $B%l%8%9%?!<$NCM$r@_Dj$9$k!#$=$l0J30$N(B int 18h $B8F(B
-	$B$S=P$7$,9T$o$l$?$H$-$K$O:n6HNN0h$NCM$rJ]B8$9$k!#6qBNE*$K$O0J2<$N$h$&(B
-	$B$JA`:n$r9T$C$F$$$k!#(B
+	FEPAID.SYS は int 18h をフックし、「１つの表示領域の設定」が行われた
+	ときには作業領域に 0 を設定し、「複数の表示領域の設定」が行われたと
+	きには作業領域に dl レジスターの値を設定する。それ以外の int 18h 呼
+	び出しが行われたときには作業領域の値を保存する。具体的には以下のよう
+	な操作を行っている。
 
-	$B!!!!(Bah $B"+(B 0eh; int 18h $B$N$H$-!"(B0000:053dh $B$K(B 0 $B$r=q$-9~$`(B
-	$B!!!!(Bah $B"+(B 0fh; int 18h $B$N$H$-!"(B0000:053dh $B$K(B dl $B$NCM$r=q$-9~$`(B
-	$B!!!!$=$l0J30$N(B int 18h $B$N$H$-!"(B0000:053dh $B$NCM$rJ]B8$9$k(B
+	　　ah ← 0eh; int 18h のとき、0000:053dh に 0 を書き込む
+	　　ah ← 0fh; int 18h のとき、0000:053dh に dl の値を書き込む
+	　　それ以外の int 18h のとき、0000:053dh の値を保存する
 
-	$B!VI=<(NN0h$N@_Dj!W0J30$N(B int 18h $B8F$S=P$7$K:]$7$F:n6HNN0h$NCM$rJ]B8(B
-	$B$9$k$h$&$K$7$?$N$O!"!V%+!<%=%k%?%$%W$N@_Dj!J(Bah $B"+(B 10h$B!K!W$,9T$o$l$k(B
-	$B$H:n6HNN0h$NCM$,(B 0 $B$KJQ99$5$l$k$3$H$,H=L@$7$?$?$a$G$"$k!J(BVer.1.1$B!K!#(B
+	「表示領域の設定」以外の int 18h 呼び出しに際して作業領域の値を保存
+	するようにしたのは、「カーソルタイプの設定（ah ← 10h）」が行われる
+	と作業領域の値が 0 に変更されることが判明したためである（Ver.1.1）。
 
-	FEPAID.SYS $B$OI8=`$G(B $FEPAID $B$H$$$&%G%P%$%9L>$r;}$D$,!"(BFEPDMY.SYS $B$H(B
-	$BF1MM$K%Q%i%a!<%?!<$H$7$F;XDj$9$k$3$H$K$h$C$FG$0U$N%G%P%$%9L>$KJQ99$9(B
-	$B$k$3$H$,$G$-$k!#(BFEPCTRL $B$+$iMxMQ$9$k>l9g$K$O>u67$K1~$8$F0J2<$N$$$:$l(B
-	$B$+$N%G%P%$%9L>$r;XDj$9$kI,MW$,$"$k!#$I$N$h$&$J%G%P%$%9L>$rAH$_9~$`$Y(B
-	$B$-$+!"$^$?(B FEP $B$NA08e$$$:$l$KAH$_9~$`$Y$-$+$K$D$$$F$O!"IUI=!V(BFEPCTRL
-	Ver.1.2 $B!A(B 1.5 $B$K$h$k(B FEP $B@)8f%F%9%H7k2L!W$r;2>H$5$l$?$$!#(B
+	FEPAID.SYS は標準で $FEPAID というデバイス名を持つが、FEPDMY.SYS と
+	同様にパラメーターとして指定することによって任意のデバイス名に変更す
+	ることができる。FEPCTRL から利用する場合には状況に応じて以下のいずれ
+	かのデバイス名を指定する必要がある。どのようなデバイス名を組み込むべ
+	きか、また FEP の前後いずれに組み込むべきかについては、付表「FEPCTRL
+	Ver.1.2 ～ 1.5 による FEP 制御テスト結果」を参照されたい。
 
-	$B!!!!(BFP$PC98A$B!"(BFP$PC98B$B!"(BFP$PC98C$B!"(BFP$NEC
+	　　FP$PC98A、FP$PC98B、FP$PC98C、FP$NEC
 
 ============================================================================
 
-$BIUI=(B: FEPCTRL Ver.1.2 $B!A(B 1.5 $B$K$h$k(B FEP $B@)8f%F%9%H7k2L(B
+付表: FEPCTRL Ver.1.2 ～ 1.5 による FEP 制御テスト結果
 
-1. NEC PC-9801 $B%7%j!<%:(B
+1. NEC PC-9801 シリーズ
 
-(1) CONFIG.SYS$B!"(BADDDRV $B$G%a%$%s%a%b%j!<$KAH$_9~$s$@>l9g(B
+(1) CONFIG.SYS、ADDDRV でメインメモリーに組み込んだ場合
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B  FEPDMY*1  $B@)8f7ABV(B          $B>oCsH=Dj(B
+日本語入力 FEP       制御  FEPDMY*1  制御形態          常駐判定
 ------------------------------------------------------------------------
-ATOK5 Ver.1.1          $B!{(B            INT               DEV
-ATOK6 Ver.1.2          $B!{(B            INT               DEV, VECT
-ATOK7 Ver.1.10         $B!{(B            FARCALL, INT*2    DEV, VECT
-VJE-$B&2(B Ver.1.05        $B!{(B            INT               DEV, VECT
-VJE-$B&B(B Ver.1.20R       $B!{(B            INT               DEV, VECT
-VJE-$B&B(B Ver.2.00 L24    $B!{(B            MSKANJIV, INT     DEV, VECT
-VJE-$B&B(B Ver.2.11 L02    $B!{(B            MSKANJIV, INT     DEV, VECT
-VJE-$B&B(B Ver.2.50 L19    $B!{(B            MSKANJIV, INT     DEV, VECT
-VJE-$B&B(B Ver.3.00 L00    $B!{(B            MSKANJIV, INT     DEV, VECT
-$B>>B{(B86 Ver.1.0         $B"$(B            BIOS              VECT
-$B>>B{(BV2 Ver.2.11        $B!{(B            INT               VECT
-$B>>B{(BV2 Ver.2.13$B&BHG(BB19 $B!{(B            INT               VECT
-$B>>B{(BV3 Ver.3.00$B3+H/(BB14 $B!{(B            INT               VECT
-EGBridge Ver.2.01      $B!{(B            INT               VECT
-EGBridge Ver.3.10      $B!{(B            INT, MSKANJI*3    VECT
-WX Ver.1.00            $B!{(B            INT+BIOS          VECT
-WXS Ver.1.01           $B!{(B            INT+BIOS          VECT
-WXP Ver.1.03a          $B!{(B            INT+BIOS          VECT
-WX2 Ver.1.50a          $B!{(B            MSKANJIV, INT*4   VECT
-WXA6 Ver.1.50a         $B!{(B            MSKANJIV, INT*4   VECT
-WXA6 Ver.1.53          $B!{(B            MSKANJI, INT*4    VECT
-WX2+ Ver.2.00          $B!{(B            MSKANJIV, INT*4   VECT
-WX2A6 Ver.2.00         $B!{(B            MSKANJIV, INT     VECT
-WX2A7 Ver.2.00         $B!{(B            MSKANJIV, FARCALL VECT
-WX2VJ Ver.2.00         $B!{(B            MSKANJIV, INT     VECT
-WX2MT Ver.2.00         $B!{(B            MSKANJIV, INT     VECT
-WX2+ Ver.2.00F         $B!{(B            MSKANJI, INT*4    VECT
-WX2A6 Ver.2.00F        $B!{(B            MSKANJI, INT      VECT
-WX2A7 Ver.2.00F        $B!{(B            MSKANJI, FARCALL  VECT
-WX2VJ Ver.2.00F        $B!{(B            MSKANJIV, INT     VECT
-WX2MT Ver.2.00F        $B!{(B            MSKANJI, INT      VECT
-ACE Ver.2.15           $B!{(B            INT               CON
-Katana2 Ver.1.25       $B!{(B            INT               CON
-Katana4 Ver.4.01       $B!{(B            MSKANJI, INT      VECT
-FIXER Ver.3.10 Rel.2.1 $B!{(B            FARCALL, INT*5    IOCTL
-FIXER Ver.4.13         $B!{(B            FARCALL, INT*5    IOCTL
-DFJ Ver.1.0            $B"$(B            BIOS              VECT
-DFJ2 Ver.1.00          $B!{(B            MSKANJI           DEV
-MGR2 Ver.1.00          $B!{(B            INT               DEV, VECT
-JJ Ver.1.00            $B!{(B            INT               DEV, VECT
-E1 Ver.1.05            $B!{(B            MSKANJI           DEV
-DANGO Ver.1.00         $B!{(B            INT               VECT
-$B$*$F$b$H(B Ver.1.01      $B!{(B            FARCALL           DEV
-OMAC Ver.1.00          $B"$(B            BIOS              VECT
-$B&A(BX-1 Ver.1.04         $B!{(B            MSKANJI           DEV
-AJIP1 Ver.1.05         $B"$(B            BIOS              DEV, VECT
-Joker-III Ver.1.00     $B!{(B            INT               VECT
-NEC AI (DOS3.3C$B0J9_(B)   $B!{(B            MSKANJIV          DEV, VECT
-NEC AI (DOS3.3B$B$^$G(B)   $B"$(B            BIOS+INT          DEV, VECT
-NEC $BC`<!(B/$BO"J8@aJQ49(B    $B"$(B            BIOS+INT          DEV, VECT
-NEC $BO"J8@aJQ49(B         $B!_(B            $B>uBV8!=PITG=(B      DEV, VECT
-NEC $BJ8@aJQ49(B           $B!_(B            $B>uBV8!=PITG=(B      DEV, VECT
-NEC $B=O8lJQ49(B           $B!_(B            $B>uBV8!=PITG=(B      $BAH$_9~$_H=DjITG=(B
-$BIw(B Ver.1.21            $B!{(B  FP$KAZE   VRAM              DEV
-$BMr(B Ver.2               $B!{(B  FP$KAZE   VRAM              DEV
-$BMr(B Ver.3               $B!{(B  FP$KAZE   VRAM              DEV
+ATOK5 Ver.1.1          ○            INT               DEV
+ATOK6 Ver.1.2          ○            INT               DEV, VECT
+ATOK7 Ver.1.10         ○            FARCALL, INT*2    DEV, VECT
+VJE-Σ Ver.1.05        ○            INT               DEV, VECT
+VJE-β Ver.1.20R       ○            INT               DEV, VECT
+VJE-β Ver.2.00 L24    ○            MSKANJIV, INT     DEV, VECT
+VJE-β Ver.2.11 L02    ○            MSKANJIV, INT     DEV, VECT
+VJE-β Ver.2.50 L19    ○            MSKANJIV, INT     DEV, VECT
+VJE-β Ver.3.00 L00    ○            MSKANJIV, INT     DEV, VECT
+松茸86 Ver.1.0         △            BIOS              VECT
+松茸V2 Ver.2.11        ○            INT               VECT
+松茸V2 Ver.2.13β版B19 ○            INT               VECT
+松茸V3 Ver.3.00開発B14 ○            INT               VECT
+EGBridge Ver.2.01      ○            INT               VECT
+EGBridge Ver.3.10      ○            INT, MSKANJI*3    VECT
+WX Ver.1.00            ○            INT+BIOS          VECT
+WXS Ver.1.01           ○            INT+BIOS          VECT
+WXP Ver.1.03a          ○            INT+BIOS          VECT
+WX2 Ver.1.50a          ○            MSKANJIV, INT*4   VECT
+WXA6 Ver.1.50a         ○            MSKANJIV, INT*4   VECT
+WXA6 Ver.1.53          ○            MSKANJI, INT*4    VECT
+WX2+ Ver.2.00          ○            MSKANJIV, INT*4   VECT
+WX2A6 Ver.2.00         ○            MSKANJIV, INT     VECT
+WX2A7 Ver.2.00         ○            MSKANJIV, FARCALL VECT
+WX2VJ Ver.2.00         ○            MSKANJIV, INT     VECT
+WX2MT Ver.2.00         ○            MSKANJIV, INT     VECT
+WX2+ Ver.2.00F         ○            MSKANJI, INT*4    VECT
+WX2A6 Ver.2.00F        ○            MSKANJI, INT      VECT
+WX2A7 Ver.2.00F        ○            MSKANJI, FARCALL  VECT
+WX2VJ Ver.2.00F        ○            MSKANJIV, INT     VECT
+WX2MT Ver.2.00F        ○            MSKANJI, INT      VECT
+ACE Ver.2.15           ○            INT               CON
+Katana2 Ver.1.25       ○            INT               CON
+Katana4 Ver.4.01       ○            MSKANJI, INT      VECT
+FIXER Ver.3.10 Rel.2.1 ○            FARCALL, INT*5    IOCTL
+FIXER Ver.4.13         ○            FARCALL, INT*5    IOCTL
+DFJ Ver.1.0            △            BIOS              VECT
+DFJ2 Ver.1.00          ○            MSKANJI           DEV
+MGR2 Ver.1.00          ○            INT               DEV, VECT
+JJ Ver.1.00            ○            INT               DEV, VECT
+E1 Ver.1.05            ○            MSKANJI           DEV
+DANGO Ver.1.00         ○            INT               VECT
+おてもと Ver.1.01      ○            FARCALL           DEV
+OMAC Ver.1.00          △            BIOS              VECT
+αX-1 Ver.1.04         ○            MSKANJI           DEV
+AJIP1 Ver.1.05         △            BIOS              DEV, VECT
+Joker-III Ver.1.00     ○            INT               VECT
+NEC AI (DOS3.3C以降)   ○            MSKANJIV          DEV, VECT
+NEC AI (DOS3.3Bまで)   △            BIOS+INT          DEV, VECT
+NEC 逐次/連文節変換    △            BIOS+INT          DEV, VECT
+NEC 連文節変換         ×            状態検出不能      DEV, VECT
+NEC 文節変換           ×            状態検出不能      DEV, VECT
+NEC 熟語変換           ×            状態検出不能      組み込み判定不能
+風 Ver.1.21            ○  FP$KAZE   VRAM              DEV
+嵐 Ver.2               ○  FP$KAZE   VRAM              DEV
+嵐 Ver.3               ○  FP$KAZE   VRAM              DEV
 ------------------------------------------------------------------------
-$B"$(B PC-286 $B$G$O(B FEPAID.SYS $B$rF1;~$KAH$_9~$s$@>l9g$N$_!J>\:Y$O(B(6)$B$r;2>H!K(B
-*1 FEPDMY.SYS $B$rAH$_9~$`I,MW$,$"$k>l9g!"0z?t$H$7$F;XDj$9$Y$-%G%P%$%9L>(B
-*2 ATOK7 $B$KIUB0$N(B 7TO6.COM $B$rF1;~$KAH$_9~$s$@>l9g$N$_(B
-*3 EGBridge $B$KIUB0$N(B EGB98IF.SYS $B$rF1;~$KAH$_9~$s$@>l9g$N$_(B
-*4 $BAH$_9~$_;~$K(B /VZ $B%Q%i%a!<%?!<$G(B WXP $B8_49(B API $B$rM-8z$K$7$?>l9g$N$_(B
-*5 $BAH$_9~$_;~$K(B /I $B%Q%i%a!<%?!<$G(B V3 $B3d$j9~$_%Y%/%?!<$r;X<($7$?>l9g$N$_(B
+△ PC-286 では FEPAID.SYS を同時に組み込んだ場合のみ（詳細は(6)を参照）
+*1 FEPDMY.SYS を組み込む必要がある場合、引数として指定すべきデバイス名
+*2 ATOK7 に付属の 7TO6.COM を同時に組み込んだ場合のみ
+*3 EGBridge に付属の EGB98IF.SYS を同時に組み込んだ場合のみ
+*4 組み込み時に /VZ パラメーターで WXP 互換 API を有効にした場合のみ
+*5 組み込み時に /I パラメーターで V3 割り込みベクターを指示した場合のみ
 ========================================================================
-$B@)8f7ABV(B  $B0UL#(B
+制御形態  意味
 ------------------------------------------------------------------------
-INT       $B%=%U%H%&%(%"3d$j9~$_(B
-FARCALL   $B@)8f4X?t$X$N(B far call
-MSKANJI   MS-KANJI $B%"%W%j%1!<%7%g%s%$%s%?!<%U%'!<%9!J@5<0!K(B
-MSKANJIV  MS-KANJI $B%"%W%j%1!<%7%g%s%$%s%?!<%U%'!<%9!J(BVJE $BJ}8@!K(B
-BIOS      PC-9801 CRT/KBD BIOS $B7PM3$G$N8!=P!&@)8f!J(BPC-286 $B$G$OMxMQIT2D!K(B
-VRAM      PC-9801 VRAM $B$NFCDj0LCV$,6uGr$+$I$&$+$G8!=P!"(BBIOS $B7PM3$G@)8f(B
+INT       ソフトウエア割り込み
+FARCALL   制御関数への far call
+MSKANJI   MS-KANJI アプリケーションインターフェース（正式）
+MSKANJIV  MS-KANJI アプリケーションインターフェース（VJE 方言）
+BIOS      PC-9801 CRT/KBD BIOS 経由での検出・制御（PC-286 では利用不可）
+VRAM      PC-9801 VRAM の特定位置が空白かどうかで検出、BIOS 経由で制御
 ========================================================================
-$B>oCsH=Dj(B  $B0UL#(B
+常駐判定  意味
 ------------------------------------------------------------------------
-DEV       $BFCDj%G%P%$%9$NB8:_(B
-VECT      $B%=%U%H%&%(%"3d$j9~$_@h%a%b%j!<>e$N<1JL(B ID
-IOCTL     $B%G%P%$%9$X$N(B IOCTL 
-CON       $B%3%s%=!<%k%9%F!<%?%9%l%]!<%H$^$?$O%U%C%/$5$l$?%Y%/%?!<(B
-========================================================================
-
-(2) MEMORY-PRO386 V1.5 $BIUB0$N(B LU.DRV V1.50 $B$G2>A[(B UMB $B$KAH$_9~$s$@>l9g(B
-========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B  FEPDMY*1  $BHw9M(B
-------------------------------------------------------------------------
-ATOK5 Ver.1.1          $B!](B            $BJQ49;~$K0[>oF0:n(B
-ATOK6 Ver.1.2          $B!{(B
-ATOK7 Ver.1.10         $B!{(B
-VJE-$B&2(B Ver.1.05        $B!{(B
-VJE-$B&B(B Ver.1.20R       $B!](B            $BAH$_9~$_;~$K%O%s%0%"%C%W(B
-VJE-$B&B(B Ver.2.00 L24    $B!{(B
-VJE-$B&B(B Ver.2.11 L02    $B!](B            $BAH$_9~$_;~$K%O%s%0%"%C%W(B
-VJE-$B&B(B Ver.2.50 L19    $B!](B            $BAH$_9~$_;~$K%O%s%0%"%C%W(B
-$B>>B{(B86 Ver.1.0         $B"$(B
-$B>>B{(BV2 Ver.2.11        $B!{(B
-$B>>B{(BV2 Ver.2.13$B&BHG(BB19 $B!{(B
-$B>>B{(BV3 Ver.3.00$B3+H/(BB14 $B!{(B
-EGBridge Ver.2.01      $B!{(B
-EGBridge Ver.3.10      $B!{(B            MS-KANJI API $B$OMxMQIT2D(B
-WXP Ver.1.03a          $B!{(B
-WX2 Ver.1.50a          $B!{(B
-WX2+ Ver.2.00          $B!{(B
-ACE Ver.2.15           $B!{(B
-Katana2 Ver.1.25       $B!{(B
-FIXER Ver.3.10 Rel.2.1 $B!{(B
-DFJ Ver.1.0            $B"$(B
-MGR2 Ver.1.00          $B!{(B
-NEC AI (DOS3.3C$B0J9_(B)   $B!{(B
-NEC AI (DOS3.3B$B$^$G(B)   $B"$(B
-NEC $BC`<!(B/$BO"J8@aJQ49(B    $B"$(B
-$BIw(B Ver.1.21            $B!](B            $BBg$-$9$.$FAH$_9~$a$J$$(B
-$BMr(B Ver.2               $B!{(B  FP$KAZE
-------------------------------------------------------------------------
-$B"$(B PC-286 $B$G$O(B FEPAID.SYS $B$rF1;~$KAH$_9~$`I,MW$,$"$k!J>\:Y$O(B(6)$B$r;2>H!K(B
-*1 FEPDMY.SYS $B$rAH$_9~$`I,MW$,$"$k>l9g!"0z?t$H$7$F;XDj$9$Y$-%G%P%$%9L>(B
+DEV       特定デバイスの存在
+VECT      ソフトウエア割り込み先メモリー上の識別 ID
+IOCTL     デバイスへの IOCTL 
+CON       コンソールステータスレポートまたはフックされたベクター
 ========================================================================
 
-(3) MELWARE V4 $BIUB0$N(B FPLD V1.0C $B$G%P%s%/%a%b%j!<$KAH$_9~$s$@>l9g(B*1
+(2) MEMORY-PRO386 V1.5 付属の LU.DRV V1.50 で仮想 UMB に組み込んだ場合
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B  FEPDMY*2  $BHw9M(B
+日本語入力 FEP       制御  FEPDMY*1  備考
 ------------------------------------------------------------------------
-ATOK5 Ver.1.1          $B!{(B
-ATOK6 Ver.1.2          $B!{(B
-ATOK7 Ver.1.10         $B!](B            $B5/F0;~$K%O%s%0%"%C%W(B
-VJE-$B&2(B Ver.1.05        $B!{(B
-VJE-$B&B(B Ver.1.20R       $B!](B            $BAH$_9~$_;~$KK=Av(B
-VJE-$B&B(B Ver.2.00 L24    $B!{(B            MS-KANJI API $B$OL58z(B
-VJE-$B&B(B Ver.2.11 L02    $B!{(B            MS-KANJI API $B$OL58z(B
-VJE-$B&B(B Ver.2.50 L19    $B!{(B            MS-KANJI API $B$OL58z(B
-$B>>B{(B86 Ver.1.0         $B"$(B
-$B>>B{(BV2 Ver.2.11        $B"$(B            BIOS $B7PM3$G@)8f!J>>B{(B86 $BAjEv!K(B
-$B>>B{(BV2 Ver.2.13$B&BHG(BB19 $B!](B            $BAH$_9~$_;~$KK=Av(B
-EGBridge Ver.2.01      $B!](B            $BAH$_9~$_;~$KK=Av(B
-EGBridge Ver.3.10      $B!](B            $B5/F0$G$-$J$$(B
-WXP Ver.1.03a          $B!](B            $BAH$_9~$_;~$KK=Av(B
-WX2 Ver.1.50a          $B!](B            $BAH$_9~$_;~$KK=Av(B
-ACE Ver.2.15           $B!{(B
-Katana2 Ver.1.25       $B!{(B
-FIXER Ver.3.10 Rel.2.1 $B!{(B            FARCALL $B$OL58z!"(BINT/BIOS $B$G@)8f(B*3
-FIXER Ver.4.13         $B!](B            $BAH$_9~$_;~$KK=Av(B
-DFJ Ver.1.0            $B"$(B  FP$DFJ
-MGR2 Ver.1.00          $B!](B            $B5/F0$G$-$J$$(B
-NEC AI (DOS3.3C$B0J9_(B)   $B"$(B
-NEC AI (DOS3.3B$B$^$G(B)   $B"$(B
-NEC $BC`<!(B/$BO"J8@aJQ49(B    $B"$(B
-$BIw(B Ver.1.21            $B!](B            $BBg$-$9$.$FAH$_9~$a$J$$(B
-$BMr(B Ver.2               $B!](B            $BAH$_9~$_;~$KK=Av(B
+ATOK5 Ver.1.1          －            変換時に異常動作
+ATOK6 Ver.1.2          ○
+ATOK7 Ver.1.10         ○
+VJE-Σ Ver.1.05        ○
+VJE-β Ver.1.20R       －            組み込み時にハングアップ
+VJE-β Ver.2.00 L24    ○
+VJE-β Ver.2.11 L02    －            組み込み時にハングアップ
+VJE-β Ver.2.50 L19    －            組み込み時にハングアップ
+松茸86 Ver.1.0         △
+松茸V2 Ver.2.11        ○
+松茸V2 Ver.2.13β版B19 ○
+松茸V3 Ver.3.00開発B14 ○
+EGBridge Ver.2.01      ○
+EGBridge Ver.3.10      ○            MS-KANJI API は利用不可
+WXP Ver.1.03a          ○
+WX2 Ver.1.50a          ○
+WX2+ Ver.2.00          ○
+ACE Ver.2.15           ○
+Katana2 Ver.1.25       ○
+FIXER Ver.3.10 Rel.2.1 ○
+DFJ Ver.1.0            △
+MGR2 Ver.1.00          ○
+NEC AI (DOS3.3C以降)   ○
+NEC AI (DOS3.3Bまで)   △
+NEC 逐次/連文節変換    △
+風 Ver.1.21            －            大きすぎて組み込めない
+嵐 Ver.2               ○  FP$KAZE
 ------------------------------------------------------------------------
-$B"$(B PC-286 $B$G$O(B FEPAID.SYS $B$rF1;~$KAH$_9~$`I,MW$,$"$k!J>\:Y$O(B(6)$B$r;2>H!K(B
-*1 $B85$N%G%P%$%9L>$bAH$_9~$^$l$k$?$a!"%G%P%$%97PM3$G>oCsH=Dj$,2DG=(B
-*2 FEPDMY.SYS $B$rAH$_9~$`I,MW$,$"$k>l9g!"0z?t$H$7$F;XDj$9$Y$-%G%P%$%9L>(B
-*3 PC-286 $B$G(B /I $B$r;XDj$;$:$KAH$_9~$s$@>l9g$O(B FEPAID.SYS $B$,I,MW(B
+△ PC-286 では FEPAID.SYS を同時に組み込む必要がある（詳細は(6)を参照）
+*1 FEPDMY.SYS を組み込む必要がある場合、引数として指定すべきデバイス名
 ========================================================================
 
-(4) IOS-10 V2.2 $BIUB0$N(B BNKDRV V1.01 $B$G%P%s%/%a%b%j!<$KAH$_9~$s$@>l9g(B*1
+(3) MELWARE V4 付属の FPLD V1.0C でバンクメモリーに組み込んだ場合*1
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B  FEPDMY*2  $BHw9M(B
+日本語入力 FEP       制御  FEPDMY*2  備考
 ------------------------------------------------------------------------
-ATOK5 Ver.1.1          $B!{(B  FP$ATOK6
-ATOK6 Ver.1.2          $B!{(B  FP$ATOK6
-ATOK7 Ver.1.10         $B!](B            $BAH$_9~$_;~$K%O%s%0%"%C%W(B
-VJE-$B&2(B Ver.1.00-05     $B!{(B            BNKDRV $B$,(B AS$VJE $B$r@_Dj(B
-VJE-$B&2(B Ver.1.10        $B!{(B            BNKDRV $B$,(B AS$VJE $B$r@_Dj(B
-VJE-$B&B(B Ver.1.20R       $B!](B            $BAH$_9~$_;~$K%O%s%0%"%C%W(B
-$B>>B{(BV2 Ver.2.04        $B"$(B  FP$MTTK   BIOS $B7PM3$G@)8f!J>>B{(B86 $BAjEv!K(B
-EGBridge Ver.3.10      $B!{(B  FP$EGB3   MS-KANJI API $B$OMxMQIT2D(B
-WXP Ver.1.03a          $B!{(B  FP$WXP    wxcolor$B!"(Bwxegg $B$J$I$OL58z(B
-ACE Ver.2.15           $B!](B            $B5/F0;~$KK=Av(B
-DFJ Ver.1.0            $B"$(B  FP$DFJ
+ATOK5 Ver.1.1          ○
+ATOK6 Ver.1.2          ○
+ATOK7 Ver.1.10         －            起動時にハングアップ
+VJE-Σ Ver.1.05        ○
+VJE-β Ver.1.20R       －            組み込み時に暴走
+VJE-β Ver.2.00 L24    ○            MS-KANJI API は無効
+VJE-β Ver.2.11 L02    ○            MS-KANJI API は無効
+VJE-β Ver.2.50 L19    ○            MS-KANJI API は無効
+松茸86 Ver.1.0         △
+松茸V2 Ver.2.11        △            BIOS 経由で制御（松茸86 相当）
+松茸V2 Ver.2.13β版B19 －            組み込み時に暴走
+EGBridge Ver.2.01      －            組み込み時に暴走
+EGBridge Ver.3.10      －            起動できない
+WXP Ver.1.03a          －            組み込み時に暴走
+WX2 Ver.1.50a          －            組み込み時に暴走
+ACE Ver.2.15           ○
+Katana2 Ver.1.25       ○
+FIXER Ver.3.10 Rel.2.1 ○            FARCALL は無効、INT/BIOS で制御*3
+FIXER Ver.4.13         －            組み込み時に暴走
+DFJ Ver.1.0            △  FP$DFJ
+MGR2 Ver.1.00          －            起動できない
+NEC AI (DOS3.3C以降)   △
+NEC AI (DOS3.3Bまで)   △
+NEC 逐次/連文節変換    △
+風 Ver.1.21            －            大きすぎて組み込めない
+嵐 Ver.2               －            組み込み時に暴走
 ------------------------------------------------------------------------
-$B"$(B PC-286 $B$G$O(B FEPAID.SYS $B$rF1;~$KAH$_9~$`I,MW$,$"$k!J>\:Y$O(B(6)$B$r;2>H!K(B
-*1 $B0lIt$r=|$-85$N%G%P%$%9L>$,AH$_9~$^$l$J$$$?$a!"(BFEPDMY $B7PM3$G>oCsH=Dj(B
-*2 FEPDMY.SYS $B$rAH$_9~$`I,MW$,$"$k>l9g!"0z?t$H$7$F;XDj$9$Y$-%G%P%$%9L>(B
+△ PC-286 では FEPAID.SYS を同時に組み込む必要がある（詳細は(6)を参照）
+*1 元のデバイス名も組み込まれるため、デバイス経由で常駐判定が可能
+*2 FEPDMY.SYS を組み込む必要がある場合、引数として指定すべきデバイス名
+*3 PC-286 で /I を指定せずに組み込んだ場合は FEPAID.SYS が必要
 ========================================================================
 
-(5) IOS-10II V3 $BIUB0$N(B BNKDRV V1.13 $B$G%P%s%/%a%b%j!<$KAH$_9~$s$@>l9g(B*1
+(4) IOS-10 V2.2 付属の BNKDRV V1.01 でバンクメモリーに組み込んだ場合*1
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B  FEPDMY*2  $BHw9M(B
+日本語入力 FEP       制御  FEPDMY*2  備考
 ------------------------------------------------------------------------
-ATOK5 Ver.1.1          $B!{(B  FP$ATOK6
-ATOK6 Ver.1.2          $B!{(B  FP$ATOK6
-ATOK7 Ver.1.10         $B!_(B            FARCALL $B$OL58z!">uBV8!=PITG=(B
-VJE-$B&2(B Ver.1.05        $B!{(B            BNKDRV $B$,(B AS$VJE $B$r@_Dj(B
-VJE-$B&B(B Ver.1.20R       $B!{(B            BNKDRV $B$,(B AS$VJE $B$r@_Dj(B
-VJE-$B&B(B Ver.2.00 L24    $B!{(B            BNKDRV $B$,(B MS$KANJI$B!"(BAS$VJE $B$r@_Dj(B
-VJE-$B&B(B Ver.2.11 L02    $B!{(B            BNKDRV $B$,(B MS$KANJI$B!"(BAS$VJE $B$r@_Dj(B
-VJE-$B&B(B Ver.2.50 L19    $B!{(B            BNKDRV $B$,(B MS$KANJI$B!"(BAS$VJE $B$r@_Dj(B
-$B>>B{(B86 Ver.1.0         $B"$(B            $B3d$j9~$_%Y%/%?!<>e$N<1JL(B ID $B$,M-8z(B
-$B>>B{(BV2 Ver.2.11        $B"$(B  FP$MTTK   BIOS $B7PM3$G@)8f!J>>B{(B86 $BAjEv!K(B
-$B>>B{(BV2 Ver.2.13$B&BHG(BB19 $B!_(B            $B>uBV8!=PITG=(B
-$B>>B{(BV2 Ver.3.00$B3+H/(BB14 $B!_(B            $B>uBV8!=PITG=(B
-EGBridge Ver.2.01      $B!{(B  FP$EGB2
-EGBridge Ver.3.10      $B!{(B  FP$EGB3   MS-KANJI API $B$OMxMQIT2D(B
-WXP Ver.1.03a          $B!{(B  FP$WXP    wxcolor$B!"(Bwxegg $B$J$I$OL58z(B
-WX2 Ver.1.50a          $B!](B            $BAH$_9~$_;~$KK=Av(B*3
-WX2+ Ver.2.00          $B!](B            $BAH$_9~$_;~$KK=Av(B*3
-ACE Ver.2.15           $B!](B            $B5/F0;~$KK=Av(B*3
-Katana2 Ver.1.25       $B!{(B  FP$KTN
-FIXER Ver.3.10 Rel.2.1 $B!{(B            FARCALL $B$OL58z!"(BINT/BIOS $B$G@)8f(B*4
-FIXER Ver.4.13         $B!](B            $BAH$_9~$_;~$KK=Av(B
-DFJ Ver.1.0            $B!{(B  FP$DFJ
-MGR2 Ver.1.00          $B!{(B  FP$MGR2
-NEC AI (DOS3.3C$B0J9_(B)   $B"$(B  FP$NEC
-NEC AI (DOS3.3B$B$^$G(B)   $B"$(B  FP$NEC
-NEC $BC`<!(B/$BO"J8@aJQ49(B    $B"$(B  FP$NEC
-$BIw(B Ver.1.21            $B!](B            $BBg$-$9$.$FAH$_9~$a$J$$(B
-$BMr(B Ver.2               $B!{(B  FP$KAZE
+ATOK5 Ver.1.1          ○  FP$ATOK6
+ATOK6 Ver.1.2          ○  FP$ATOK6
+ATOK7 Ver.1.10         －            組み込み時にハングアップ
+VJE-Σ Ver.1.00-05     ○            BNKDRV が AS$VJE を設定
+VJE-Σ Ver.1.10        ○            BNKDRV が AS$VJE を設定
+VJE-β Ver.1.20R       －            組み込み時にハングアップ
+松茸V2 Ver.2.04        △  FP$MTTK   BIOS 経由で制御（松茸86 相当）
+EGBridge Ver.3.10      ○  FP$EGB3   MS-KANJI API は利用不可
+WXP Ver.1.03a          ○  FP$WXP    wxcolor、wxegg などは無効
+ACE Ver.2.15           －            起動時に暴走
+DFJ Ver.1.0            △  FP$DFJ
 ------------------------------------------------------------------------
-$B"$(B PC-286 $B$G$O(B FEPAID.SYS $B$rF1;~$KAH$_9~$`I,MW$,$"$k!J>\:Y$O(B(6)$B$r;2>H!K(B
-*1 $B0lIt$r=|$-85$N%G%P%$%9L>$,AH$_9~$^$l$J$$$?$a!"(BFEPDMY $B7PM3$G>oCsH=Dj(B
-*2 FEPDMY.SYS $B$rAH$_9~$`I,MW$,$"$k>l9g!"0z?t$H$7$F;XDj$9$Y$-%G%P%$%9L>(B
-*3 BNKDRV V1.14 $B$G$OAH$_9~$_2DG=!"$+$D(B MS-KANJI API $B$G@)8f2DG=(B
-*4 PC-286 $B$G(B /I $B$r;XDj$;$:$KAH$_9~$s$@>l9g$O(B FEPAID.SYS $B$,I,MW(B
+△ PC-286 では FEPAID.SYS を同時に組み込む必要がある（詳細は(6)を参照）
+*1 一部を除き元のデバイス名が組み込まれないため、FEPDMY 経由で常駐判定
+*2 FEPDMY.SYS を組み込む必要がある場合、引数として指定すべきデバイス名
 ========================================================================
 
-(6) BNKDRV V1.13 $B$GAH$_9~$_!"F1;~$K!V(BFEPAID V1.0$B!W(B*1 $B$rAH$_9~$s$@>l9g(B*2
+(5) IOS-10II V3 付属の BNKDRV V1.13 でバンクメモリーに組み込んだ場合*1
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B  FEPAID*3  $BAH9~=g=x(B*4  $BHw9M(B
+日本語入力 FEP       制御  FEPDMY*2  備考
 ------------------------------------------------------------------------
-ATOK5 Ver.1.1          $B!_(B                        $B>uBV8!=PITG=(B
-ATOK6 Ver.1.2          $B!_(B                        $B>uBV8!=PITG=(B
-ATOK7 Ver.1.10         $B!_(B                        $B>uBV8!=PITG=(B
-VJE-$B&2(B Ver.1.05        $B!{(B  FP$PC98B  FEP$B$h$j8e(B
-VJE-$B&B(B Ver.1.20R       $B!{(B  FP$PC98B  any
-VJE-$B&B(B Ver.2.00 L24    $B!{(B  any     $B!!(Bany
-VJE-$B&B(B Ver.2.11 L02    $B!{(B  any     $B!!(Bany
-VJE-$B&B(B Ver.2.50 L19    $B!{(B  any     $B!!(Bany
-$B>>B{(B86 Ver.1.0         $B!{(B  any     $B!!(Bany
-$B>>B{(BV2 Ver.2.11        $B!{(B  any     $B!!(Bany
-$B>>B{(BV2 Ver.2.13$B&BHG(BB19 $B!{(B  FP$PC98A  any
-$B>>B{(BV3 Ver.3.00$B3+H/(BB14 $B!_(B                        $B5/F0;~$KK=Av(B
-EGBridge Ver.2.01      $B!_(B                        $B@)8f$G$-$J$$(B
-EGBridge Ver.3.10      $B!{(B  FP$PC98B  FEP$B$h$j8e(B
-WXP Ver.1.03a          $B!{(B  any     $B!!(Bany
-WX2 Ver.1.50a          $B!{(B  FP$PC98B  FEP$B$h$jA0(B   $B!J(BBNKDRV V1.14 $B$N>l9g!K(B
-WX2+ Ver.2.00          $B!{(B  FP$PC98B  FEP$B$h$jA0(B   $B!J(BBNKDRV V1.14 $B$N>l9g!K(B
-ACE Ver.2.15           $B!{(B  any     $B!!(BFEP$B$h$jA0(B   $B!J(BBNKDRV V1.14 $B$N>l9g!K(B
-Katana2 Ver.1.25       $B!{(B  any     $B!!(BFEP$B$h$jA0(B
-FIXER Ver.3.10 Rel.2.1 $B!{(B  FP$PC98B  any
-FIXER Ver.4.13         $B!_(B                        $B>uBV8!=PITG=(B
-DFJ Ver.1.0            $B!{(B  any     $B!!(Bany
-MGR2 Ver.1.00          $B!_(B                        $B>uBV8!=PITG=(B
-NEC AI (DOS3.3C$B0J9_(B)   $B!{(B  FP$NEC    any         $B@)8f$N$_(B INT $B7PM3$G9T$&(B
-NEC AI (DOS3.3B$B$^$G(B)   $B!{(B  FP$NEC  $B!!(Bany         $B@)8f$N$_(B INT $B7PM3$G9T$&(B
-NEC $BC`<!(B/$BO"J8@aJQ49(B    $B!{(B  FP$NEC    any         $B@)8f$N$_(B INT $B7PM3$G9T$&(B
-$BMr(B Ver.2               $B!_(B                        $B>uBV8!=PITG=(B
+ATOK5 Ver.1.1          ○  FP$ATOK6
+ATOK6 Ver.1.2          ○  FP$ATOK6
+ATOK7 Ver.1.10         ×            FARCALL は無効、状態検出不能
+VJE-Σ Ver.1.05        ○            BNKDRV が AS$VJE を設定
+VJE-β Ver.1.20R       ○            BNKDRV が AS$VJE を設定
+VJE-β Ver.2.00 L24    ○            BNKDRV が MS$KANJI、AS$VJE を設定
+VJE-β Ver.2.11 L02    ○            BNKDRV が MS$KANJI、AS$VJE を設定
+VJE-β Ver.2.50 L19    ○            BNKDRV が MS$KANJI、AS$VJE を設定
+松茸86 Ver.1.0         △            割り込みベクター上の識別 ID が有効
+松茸V2 Ver.2.11        △  FP$MTTK   BIOS 経由で制御（松茸86 相当）
+松茸V2 Ver.2.13β版B19 ×            状態検出不能
+松茸V2 Ver.3.00開発B14 ×            状態検出不能
+EGBridge Ver.2.01      ○  FP$EGB2
+EGBridge Ver.3.10      ○  FP$EGB3   MS-KANJI API は利用不可
+WXP Ver.1.03a          ○  FP$WXP    wxcolor、wxegg などは無効
+WX2 Ver.1.50a          －            組み込み時に暴走*3
+WX2+ Ver.2.00          －            組み込み時に暴走*3
+ACE Ver.2.15           －            起動時に暴走*3
+Katana2 Ver.1.25       ○  FP$KTN
+FIXER Ver.3.10 Rel.2.1 ○            FARCALL は無効、INT/BIOS で制御*4
+FIXER Ver.4.13         －            組み込み時に暴走
+DFJ Ver.1.0            ○  FP$DFJ
+MGR2 Ver.1.00          ○  FP$MGR2
+NEC AI (DOS3.3C以降)   △  FP$NEC
+NEC AI (DOS3.3Bまで)   △  FP$NEC
+NEC 逐次/連文節変換    △  FP$NEC
+風 Ver.1.21            －            大きすぎて組み込めない
+嵐 Ver.2               ○  FP$KAZE
 ------------------------------------------------------------------------
-*1 $BB@ED=c:n@.$N(B PC-9801/286 CRT BIOS $B:n6HNN0h6/@)99?7%G%P%$%9%I%i%$%P!<(B
-*2 PC-9801 CRT/KBD BIOS $B7PM3$G8!=P!&@)8f$r9T$&!J(BPC-286 $B$G$bMxMQ2DG=!K(B
-*3 FEPAID.SYS $B$N0z?t$K;XDj$9$Y$-%G%P%$%9L>!J(Bany: FP$PC98A/B $B$N$$$:$l$+!K(B
-*4 FEP $B$KBP$9$k(B FEPAID.SYS $B$NAH$_9~$_=g=x!J(Bany: $BA08e$$$:$l$b2D!K(B
+△ PC-286 では FEPAID.SYS を同時に組み込む必要がある（詳細は(6)を参照）
+*1 一部を除き元のデバイス名が組み込まれないため、FEPDMY 経由で常駐判定
+*2 FEPDMY.SYS を組み込む必要がある場合、引数として指定すべきデバイス名
+*3 BNKDRV V1.14 では組み込み可能、かつ MS-KANJI API で制御可能
+*4 PC-286 で /I を指定せずに組み込んだ場合は FEPAID.SYS が必要
 ========================================================================
 
-(7) BNKDRV V1.13 $B$GAH$_9~$_!"!V(BBDSETID V1.0$B!W(B*1 $B$GG'<1$5$;$?>l9g(B*2
+(6) BNKDRV V1.13 で組み込み、同時に「FEPAID V1.0」*1 を組み込んだ場合*2
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B  BDSETID*3 $BHw9M(B
+日本語入力 FEP       制御  FEPAID*3  組込順序*4  備考
 ------------------------------------------------------------------------
-ATOK5 Ver.1.1          $B!{(B  ATOK6
-ATOK6 Ver.1.2          $B!{(B  ATOK6     *4
-EGBridge Ver.2.01      $B!{(B  EGB2
-EGBridge Ver.3.10      $B!{(B  EGB3      *4
-WXP Ver.1.03a          $B!{(B  WXP       *4$B!"(Bwxcolor$B!"(Bwxatok $B$J$I$OL58z(B*5
-MGR2 Ver.1.00          $B!{(B  MGR2
-NEC AI (DOS3.3C$B0J9_(B)   $B!_(B
-NEC AI (DOS3.3B$B$^$G(B)   $B!{(B  NECAIK
-NEC $BC`<!(B/$BO"J8@aJQ49(B    $B!{(B  NECAIK
+ATOK5 Ver.1.1          ×                        状態検出不能
+ATOK6 Ver.1.2          ×                        状態検出不能
+ATOK7 Ver.1.10         ×                        状態検出不能
+VJE-Σ Ver.1.05        ○  FP$PC98B  FEPより後
+VJE-β Ver.1.20R       ○  FP$PC98B  any
+VJE-β Ver.2.00 L24    ○  any     　any
+VJE-β Ver.2.11 L02    ○  any     　any
+VJE-β Ver.2.50 L19    ○  any     　any
+松茸86 Ver.1.0         ○  any     　any
+松茸V2 Ver.2.11        ○  any     　any
+松茸V2 Ver.2.13β版B19 ○  FP$PC98A  any
+松茸V3 Ver.3.00開発B14 ×                        起動時に暴走
+EGBridge Ver.2.01      ×                        制御できない
+EGBridge Ver.3.10      ○  FP$PC98B  FEPより後
+WXP Ver.1.03a          ○  any     　any
+WX2 Ver.1.50a          ○  FP$PC98B  FEPより前   （BNKDRV V1.14 の場合）
+WX2+ Ver.2.00          ○  FP$PC98B  FEPより前   （BNKDRV V1.14 の場合）
+ACE Ver.2.15           ○  any     　FEPより前   （BNKDRV V1.14 の場合）
+Katana2 Ver.1.25       ○  any     　FEPより前
+FIXER Ver.3.10 Rel.2.1 ○  FP$PC98B  any
+FIXER Ver.4.13         ×                        状態検出不能
+DFJ Ver.1.0            ○  any     　any
+MGR2 Ver.1.00          ×                        状態検出不能
+NEC AI (DOS3.3C以降)   ○  FP$NEC    any         制御のみ INT 経由で行う
+NEC AI (DOS3.3Bまで)   ○  FP$NEC  　any         制御のみ INT 経由で行う
+NEC 逐次/連文節変換    ○  FP$NEC    any         制御のみ INT 経由で行う
+嵐 Ver.2               ×                        状態検出不能
 ------------------------------------------------------------------------
-*1 $B6b;RM5;a:n@.$N(B BNKDRV $BMQ%G%P%$%9(B/$B<1JL(B ID $B=q$-9~$_%W%m%0%i%`!J(Bjunet$B!K(B
-*2 BNKDRV V1.01 $B$G$OMxMQ$G$-$J$$(B
-*3 BDSETID $B%3%^%s%I$K;XDj$9$k0z?t(B
-*4 BNKDRV V1.12 $B$G$bF0:n3NG':Q$_(B
-*5 ID $B=q$-9~$_$r!V(BWX      01.00$B!W$K$9$l$P(B wxcolor $B$OMxMQ2DG=$H;W$o$l$k(B
+*1 太田純作成の PC-9801/286 CRT BIOS 作業領域強制更新デバイスドライバー
+*2 PC-9801 CRT/KBD BIOS 経由で検出・制御を行う（PC-286 でも利用可能）
+*3 FEPAID.SYS の引数に指定すべきデバイス名（any: FP$PC98A/B のいずれか）
+*4 FEP に対する FEPAID.SYS の組み込み順序（any: 前後いずれも可）
 ========================================================================
 
-(8) BNKDRV V1.13 $B$GAH$_9~$_!"!V(BAtokID V1.03$B!W(B*1 $B$GG'<1$5$;$?>l9g(B
+(7) BNKDRV V1.13 で組み込み、「BDSETID V1.0」*1 で認識させた場合*2
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B  AtokID*2  $BHw9M(B
+日本語入力 FEP       制御  BDSETID*3 備考
 ------------------------------------------------------------------------
-ATOK5 Ver.1.1          $B!{(B  ATOKID5   $B%a%b%j!<>e$N<1JL(BID $B$G$N$_>oCsH=Dj2D(B
-ATOK6 Ver.1.2          $B!{(B  ATOKID6   $B%a%b%j!<>e$N<1JL(BID $B$G$N$_>oCsH=Dj2D(B
-ATOK7 Ver.1.10         $B!_(B  ATOKID7   AtokID $B$NITHw$K$h$jK=Av$N2DG=@-$"$j(B
+ATOK5 Ver.1.1          ○  ATOK6
+ATOK6 Ver.1.2          ○  ATOK6     *4
+EGBridge Ver.2.01      ○  EGB2
+EGBridge Ver.3.10      ○  EGB3      *4
+WXP Ver.1.03a          ○  WXP       *4、wxcolor、wxatok などは無効*5
+MGR2 Ver.1.00          ○  MGR2
+NEC AI (DOS3.3C以降)   ×
+NEC AI (DOS3.3Bまで)   ○  NECAIK
+NEC 逐次/連文節変換    ○  NECAIK
 ------------------------------------------------------------------------
-*1 NCC-1701A $B;a:n@.!"(BASCII-NET PCS $B$J$I$GG[I[(B
-*2 $B>oCs$5$;$k%3%^%s%I$N%P!<%8%g%s(B
+*1 金子裕氏作成の BNKDRV 用デバイス/識別 ID 書き込みプログラム（junet）
+*2 BNKDRV V1.01 では利用できない
+*3 BDSETID コマンドに指定する引数
+*4 BNKDRV V1.12 でも動作確認済み
+*5 ID 書き込みを「WX      01.00」にすれば wxcolor は利用可能と思われる
 ========================================================================
 
-(9) BNKDRV V1.13 $B$GAH$_9~$_!"!V(BBDATOK7 V0.91$B!W(B*1 $B$G(B API $B$r:F@_Dj$7$?>l9g(B
+(8) BNKDRV V1.13 で組み込み、「AtokID V1.03」*1 で認識させた場合
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B            $BHw9M(B
+日本語入力 FEP       制御  AtokID*2  備考
 ------------------------------------------------------------------------
-ATOK7 Ver.1.10         $B!{(B            bdatok7 -6 $B$G$O(B ATOK6 API $B$G@)8f(B
+ATOK5 Ver.1.1          ○  ATOKID5   メモリー上の識別ID でのみ常駐判定可
+ATOK6 Ver.1.2          ○  ATOKID6   メモリー上の識別ID でのみ常駐判定可
+ATOK7 Ver.1.10         ×  ATOKID7   AtokID の不備により暴走の可能性あり
 ------------------------------------------------------------------------
-*1 $BB@ED=c:n@.$N(B BNKDRV $BBP1~(B ATOK7 API $B:F@_Dj%W%m%0%i%`!J(Bjunet$B!"(BMSA-NET$B!K(B
+*1 NCC-1701A 氏作成、ASCII-NET PCS などで配布
+*2 常駐させるコマンドのバージョン
 ========================================================================
 
-(10) $B!VN"$7$^$CB@O:(B V1.2a$B!W(B*1 $B$GN"(B G-VRAM $B$KAH$_9~$s$@>l9g(B
+(9) BNKDRV V1.13 で組み込み、「BDATOK7 V0.91」*1 で API を再設定した場合
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B            $BHw9M(B
+日本語入力 FEP       制御            備考
 ------------------------------------------------------------------------
-ATOK6 Ver.1.2          $B!{(B            $B%G%P%$%9L>$G$N$_>oCsH=Dj2D(B
+ATOK7 Ver.1.10         ○            bdatok7 -6 では ATOK6 API で制御
 ------------------------------------------------------------------------
-*1 $B%5%6%s%Q%7%U%#%C%/$N(B QUICKSILVER$B!"(BdBXL $B$KIUB0(B
+*1 太田純作成の BNKDRV 対応 ATOK7 API 再設定プログラム（junet、MSA-NET）
 ========================================================================
 
-(11) $B!V>>B{MQ(B G-RAM $BE>Aw%I%i%$%P(B V1.00$B!W(B*1 $B$G(B G-VRAM $B$KAH$_9~$s$@>l9g(B
+(10) 「裏しまっ太郎 V1.2a」*1 で裏 G-VRAM に組み込んだ場合
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B            $BHw9M(B
+日本語入力 FEP       制御            備考
 ------------------------------------------------------------------------
-$B>>B{(B86 Ver.1.0         $B!{(B
-$B>>B{(BV2 Ver.2.11        $B!{(B
-$B>>B{(BV2 Ver.2.13$B&BHG(BB19 $B!{(B
-$B>>B{(BV3 Ver.3.00$B3+H/(BB14 $B!{(B
+ATOK6 Ver.1.2          ○            デバイス名でのみ常駐判定可
 ------------------------------------------------------------------------
-*1 $BF|7P(B MIX $B$N(B k3/pds $B2q5D$GG[I[(B
+*1 サザンパシフィックの QUICKSILVER、dBXL に付属
 ========================================================================
 
-2. $BEl<G(B J3100
-
-(1) $B%7%9%F%`I8=`$NJ}K!$G%a%$%s%a%b%j!<$KAH$_9~$s$@>l9g(B
+(11) 「松茸用 G-RAM 転送ドライバ V1.00」*1 で G-VRAM に組み込んだ場合
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B            $B@)8f7ABV(B          $B>oCsH=Dj(B
+日本語入力 FEP       制御            備考
 ------------------------------------------------------------------------
-ATOK5T Ver.1.2         $B!{(B            INT               DEV, VECT
-ATOK7R Ver.1.00        $B!{(B            FARCALL, INT*1    DEV, VECT
-WXP Ver.1.03           $B!{(B            INT               VECT
-WX2+ Ver.2.00A         $B!{(B            MSKANJI           DEV
-WX2A5 Ver.2.00A        $B!{(B            MSKANJI, INT      DEV, VECT
-WX2A7 Ver.2.00A        $B!{(B            MSKANJI, INT*1    DEV, VECT
+松茸86 Ver.1.0         ○
+松茸V2 Ver.2.11        ○
+松茸V2 Ver.2.13β版B19 ○
+松茸V3 Ver.3.00開発B14 ○
 ------------------------------------------------------------------------
-*1 7TO5.COM $B$rF1;~$KAH$_9~$s$@>l9g$N$_(B
+*1 日経 MIX の k3/pds 会議で配布
 ========================================================================
 
-3. $BIY;NDL(B FM-R $B%7%j!<%:(B
+2. 東芝 J3100
 
-(1) CONFIG.SYS $B$G%a%$%s%a%b%j!<$KAH$_9~$s$@>l9g(B
+(1) システム標準の方法でメインメモリーに組み込んだ場合
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B  FEPDMY*1  $B@)8f7ABV(B          $B>oCsH=Dj(B
+日本語入力 FEP       制御            制御形態          常駐判定
 ------------------------------------------------------------------------
-OAK Ver.1.10           $B!{(B            INT               VECT
-OAK Ver.1.30           $B!{(B            INT               VECT
-OAK Ver.4.20           $B!{(B  FP$OAK    INT               VECT
-VJE-$B&B(B Ver.2.50 L10    $B!{(B            MSKANJI           DEV
+ATOK5T Ver.1.2         ○            INT               DEV, VECT
+ATOK7R Ver.1.00        ○            FARCALL, INT*1    DEV, VECT
+WXP Ver.1.03           ○            INT               VECT
+WX2+ Ver.2.00A         ○            MSKANJI           DEV
+WX2A5 Ver.2.00A        ○            MSKANJI, INT      DEV, VECT
+WX2A7 Ver.2.00A        ○            MSKANJI, INT*1    DEV, VECT
 ------------------------------------------------------------------------
-*1 FEPDMY.SYS $B$rAH$_9~$`I,MW$,$"$k>l9g!"0z?t$H$7$F;XDj$9$Y$-%G%P%$%9L>(B
+*1 7TO5.COM を同時に組み込んだ場合のみ
 ========================================================================
 
-4. $B>>2<(B Panacom M $B%7%j!<%:(B
+3. 富士通 FM-R シリーズ
 
-(1) CONFIG.SYS $B$G%a%$%s%a%b%j!<$KAH$_9~$s$@>l9g(B
+(1) CONFIG.SYS でメインメモリーに組み込んだ場合
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B            $B@)8f7ABV(B          $B>oCsH=Dj(B
+日本語入力 FEP       制御  FEPDMY*1  制御形態          常駐判定
 ------------------------------------------------------------------------
-$B$+$J4A;z(B Ver.2.00 L13  $B!{(B            INT               VECT
-ATOK6 Ver.1.2          $B!{(B            INT               DEV, VECT
-========================================================================
-
-5. $BF|N)(B B16 $B%7%j!<%:!"%j%3!<(B Mr.$B%^%$%D!<%k(B
-
-(1) CONFIG.SYS $B$G%a%$%s%a%b%j!<$KAH$_9~$s$@>l9g(B
-========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B            $B@)8f7ABV(B          $B>oCsH=Dj(B
+OAK Ver.1.10           ○            INT               VECT
+OAK Ver.1.30           ○            INT               VECT
+OAK Ver.4.20           ○  FP$OAK    INT               VECT
+VJE-β Ver.2.50 L10    ○            MSKANJI           DEV
 ------------------------------------------------------------------------
-$BO"J8@a(B Ver.2.05A       $B!{(B            INT               VECT
-$B<+F0JQ49(B Ver.1.04A     $B!{(B            INT               VECT
-$B<+F0JQ49(B Ver.2.04A     $B!{(B            INT               VECT
+*1 FEPDMY.SYS を組み込む必要がある場合、引数として指定すべきデバイス名
 ========================================================================
 
-6. $B%j%3!<(B Mr.$B%^%$%D!<%k(B MAGUS
+4. 松下 Panacom M シリーズ
 
-(1) CONFIG.SYS $B$G%a%$%s%a%b%j!<$KAH$_9~$s$@>l9g(B
+(1) CONFIG.SYS でメインメモリーに組み込んだ場合
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B            $B@)8f7ABV(B          $B>oCsH=Dj(B
+日本語入力 FEP       制御            制御形態          常駐判定
 ------------------------------------------------------------------------
-$BF|K\8lF~NO(B Ver.1.00    $B!{(B            INT               DEV
+かな漢字 Ver.2.00 L13  ○            INT               VECT
+ATOK6 Ver.1.2          ○            INT               DEV, VECT
 ========================================================================
 
-7. $B2-(B IF800 $B%7%j!<%:(B
+5. 日立 B16 シリーズ、リコー Mr.マイツール
 
-(1) CONFIG.SYS $B$G%a%$%s%a%b%j!<$KAH$_9~$s$@>l9g(B
+(1) CONFIG.SYS でメインメモリーに組み込んだ場合
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B            $B@)8f7ABV(B          $B>oCsH=Dj(B
+日本語入力 FEP       制御            制御形態          常駐判定
 ------------------------------------------------------------------------
-FEPEX Ver.2.5          $B!{(B            INT               DEV
+連文節 Ver.2.05A       ○            INT               VECT
+自動変換 Ver.1.04A     ○            INT               VECT
+自動変換 Ver.2.04A     ○            INT               VECT
 ========================================================================
 
-8. AX $B6(5D2q5!(B
+6. リコー Mr.マイツール MAGUS
 
-(1) CONFIG.SYS $B$G%a%$%s%a%b%j!<$KAH$_9~$s$@>l9g(B
+(1) CONFIG.SYS でメインメモリーに組み込んだ場合
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B            $B@)8f7ABV(B          $B>oCsH=Dj(B
+日本語入力 FEP       制御            制御形態          常駐判定
 ------------------------------------------------------------------------
-ATOK6AX Ver.1.2        $B!{(B            INT               VECT
-VJE-$B&B(B Ver.2.11        $B!{(B            MSKANJI           DEV
+日本語入力 Ver.1.00    ○            INT               DEV
 ========================================================================
 
-9. IBM PS/55 $B%7%j!<%:(B
+7. 沖 IF800 シリーズ
 
-(1) CONFIG.SYS $B$G%a%$%s%a%b%j!<$KAH$_9~$s$@>l9g(B
+(1) CONFIG.SYS でメインメモリーに組み込んだ場合
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B            $B@)8f7ABV(B          $B>oCsH=Dj(B
+日本語入力 FEP       制御            制御形態          常駐判定
 ------------------------------------------------------------------------
-ATOK6 Ver.1.2          $B!{(B            INT               VECT
-ATOK7 Ver.1.10         $B!{(B            FARCALL, INT*1    VECT
+FEPEX Ver.2.5          ○            INT               DEV
+========================================================================
+
+8. AX 協議会機
+
+(1) CONFIG.SYS でメインメモリーに組み込んだ場合
+========================================================================
+日本語入力 FEP       制御            制御形態          常駐判定
 ------------------------------------------------------------------------
-*1 ATOK7 $B$KIUB0$N(B 7TO6.COM $B$rF1;~$KAH$_9~$s$@>l9g$N$_(B
+ATOK6AX Ver.1.2        ○            INT               VECT
+VJE-β Ver.2.11        ○            MSKANJI           DEV
+========================================================================
+
+9. IBM PS/55 シリーズ
+
+(1) CONFIG.SYS でメインメモリーに組み込んだ場合
+========================================================================
+日本語入力 FEP       制御            制御形態          常駐判定
+------------------------------------------------------------------------
+ATOK6 Ver.1.2          ○            INT               VECT
+ATOK7 Ver.1.10         ○            FARCALL, INT*1    VECT
+------------------------------------------------------------------------
+*1 ATOK7 に付属の 7TO6.COM を同時に組み込んだ場合のみ
 ========================================================================
 
 10. IBM DOS J4.0x/V, J5.0x/V
 
-(1) CONFIG.SYS $B$G%a%$%s%a%b%j!<$KAH$_9~$s$@>l9g(B
+(1) CONFIG.SYS でメインメモリーに組み込んだ場合
 ========================================================================
-$BF|K\8lF~NO(B FEP       $B@)8f(B            $B@)8f7ABV(B          $B>oCsH=Dj(B
+日本語入力 FEP       制御            制御形態          常駐判定
 ------------------------------------------------------------------------
-IBM SKK Ver.1.00       $B!{(B            IAS*1             DEV
-IBM $BO"J8@a(B Ver.3.01    $B!{(B            IAS*1             DEV
-ATOK7 Ver.1.10         $B!{(B            IAS*1, INT*2      VECT
-VJE-$B&B(B Ver.2.50        $B!{(B            MSKANJI           DEV
-WX2+ Ver.2.00          $B!{(B            MSKANJI           DEV
-WX2I Ver.2.00          $B!{(B            MSKANJI, IAS*1    DEV
-WX2A7 Ver.2.00         $B!{(B            MSKANJI           DEV
+IBM SKK Ver.1.00       ○            IAS*1             DEV
+IBM 連文節 Ver.3.01    ○            IAS*1             DEV
+ATOK7 Ver.1.10         ○            IAS*1, INT*2      VECT
+VJE-β Ver.2.50        ○            MSKANJI           DEV
+WX2+ Ver.2.00          ○            MSKANJI           DEV
+WX2I Ver.2.00          ○            MSKANJI, IAS*1    DEV
+WX2A7 Ver.2.00         ○            MSKANJI           DEV
 ------------------------------------------------------------------------
-*1 DOS/V $BF|K\8lF~NO%5%V%7%9%F%`!J(B$IAS.SYS$B!K7PM3$G$N@)8f(B
-*2 ATOK7 $B$KIUB0$N(B 7TO6.COM $B$rF1;~$KAH$_9~$s$@>l9g$N$_(B
+*1 DOS/V 日本語入力サブシステム（$IAS.SYS）経由での制御
+*2 ATOK7 に付属の 7TO6.COM を同時に組み込んだ場合のみ
 ========================================================================

@@ -65,7 +65,7 @@ repository and would drift within three releases.
 - Two cases in `scripts/test-encoding.sh` for autodetection where the file is
   not perfectly one thing: a UTF-8 file with one byte that is not, and a
   Shift-JIS file that has to stay Shift-JIS. They pin what happens today rather
-  than fixing anything; see the note below. 227 cases in all.
+  than fixing anything; see the note below. 230 cases in all.
 - `scripts/build-unix.sh asan` and `scripts/build-unix.sh ubsan` build with
   AddressSanitizer or UndefinedBehaviorSanitizer and then run the same suites
   the `test` target does, and CI runs both on every push. ASan had only ever
@@ -76,8 +76,47 @@ repository and would drift within three releases.
   report would otherwise vanish with it — and UBSan carries on after a finding
   and exits 0, which would have made the job green while it was finding things.
 
+### Changed
+
+- **Every Japanese document in the tree is UTF-8 now**, including
+  `doc.j/vim.hlp`, which `:help` reads and which the Windows package ships
+  beside the exe. They were ISO-2022-JP, from 2002, and unreadable without
+  telling an editor or a browser what they were. `judge_jcode()` detects UTF-8
+  the same way it detected JIS, so `:help` and opening any of them work as
+  before, and the help file now needs no conversion at all on the way in.
+  Four files are deliberately left in their old encoding, because there the
+  bytes are the content and not the text: `src/jptab.c` decides which way to
+  convert by testing its own string literals for raw Shift-JIS bytes and walks
+  them two at a time, and it generates the committed `jptab.h` that `kanji.c`
+  and `track.c` compile in; `doc.j/vim32.ini` and `src/vim32s/vim32s.ini` are
+  read with `GetPrivateProfileStringA`, where `fontname=ＭＳ ゴシック` has to
+  be in the ANSI code page or the font is not found; and `src/vim32s/vim32s.rc`
+  is a resource script compiled in that same code page. `doc/digraph.doc` keeps
+  its bytes too — it is two tables of byte values in two different code pages,
+  and says so itself. `src/inc/` is vendored and untouched.
+
 ### Fixed
 
+- **`:help` displayed an empty screen, and leaving it ended the editor.** On the
+  Windows GUI that is what choosing Help from the menu did: nothing appeared,
+  and RETURN — which the help screen itself offers as the way out — took the
+  process with it, unwritten buffers and no question asked. `kopen()` in
+  `src/help.c` gave the conversion a destination the size of the help file, so
+  every `helpfile` that was not already UTF-8 failed to convert: the shipped one
+  was ISO-2022-JP, and turning its 32241 bytes into the internal UTF-8 needs
+  33784, so `kanjiconvsfrom()` returned -1 every time. The -1 was stored as the
+  text's length, which both emptied the screen and wrote a NUL one byte in front
+  of the buffer, and the `free()` on the way out then fell over the damaged
+  heap. The buffer is sized for what the conversion can produce now, and a
+  conversion that fails says the help file could not be read instead of guessing.
+  Every build was affected — the console one drew the same empty screen — but
+  only the GUI, where the crash lands in the message loop, ended the session.
+- The Windows GUI drew the help screen a line at a time and dropped the last
+  byte of each line on the way, so the final character of every line was lost
+  and a Japanese one came out as half of itself. On an empty line it wrote that
+  NUL in front of `IObuff` and displayed the previous line again in place of the
+  blank. Both are the same `IObuff[--col]`, which was there to drop a CR: it
+  drops one only when there is one now.
 - **`:s///g` on a long line is no longer quadratic.** Two million substitutions
   on one line now take half a second where they took about twenty minutes; 400k
   characters went from 53 seconds to 0.11. `dosub()` allocated exactly what the
@@ -194,7 +233,7 @@ written into the known limits instead (#30):
 - `scripts/test-encoding.sh` にケースを 2 件追加しました。ファイルが完全に
   1 つの符号ではない場合の自動判別で、不正なバイトが 1 個ある UTF-8 ファイルと、
   Shift-JIS のままであるべき Shift-JIS ファイルです。何かを直したのではなく、
-  現在の挙動を固定するものです（下記の注記を参照）。合わせて 227 ケースに
+  現在の挙動を固定するものです（下記の注記を参照）。合わせて 230 ケースに
   なりました。
 - 敵性入力スイートは、エディタが通らない 3 件を持って入りました。うち 2 件は
   下記の `:s` と `>>` の修正です。残る 1 件は調べた結果バグではなく、既知の
@@ -218,6 +257,41 @@ written into the known limits instead (#30):
   stderr は `/dev/null` に捨てているため、そのままではレポートも一緒に消える
   うえ、UBSan は検出しても実行を続けて 0 で終わるので、ジョブが緑のまま何かを
   見つけ続けることになります。
+- **リポジトリ内の日本語ドキュメントをすべて UTF-8 にしました。** `:help` が
+  読み、Windows パッケージが exe と並べて同梱する `doc.j/vim.hlp` も含みます。
+  これまでは 2002 年当時の ISO-2022-JP で、エディタやブラウザに符号を教えない
+  限り読めないものでした。`judge_jcode()` は JIS と同じように UTF-8 を判別する
+  ので、`:help` も各ファイルを開く動作もこれまで通りで、ヘルプファイルに
+  至っては読み込み時の変換自体が不要になります。
+  次の 4 ファイルは意図的に元の符号のまま残しています。そこではバイト列が
+  テキストではなく内容そのものだからです。`src/jptab.c` は自身の文字列リテラルを
+  生の Shift-JIS バイトで判定して変換方向を決め、2 バイトずつ走査します
+  （生成物の `jptab.h` はコミット済みで、`kanji.c` と `track.c` が取り込みます）。
+  `doc.j/vim32.ini` と `src/vim32s/vim32s.ini` は `GetPrivateProfileStringA` で
+  読まれ、`fontname=ＭＳ ゴシック` が ANSI コードページでないとフォントが
+  見つかりません。`src/vim32s/vim32s.rc` は同じコードページでコンパイルされる
+  リソーススクリプトです。`doc/digraph.doc` もバイトのまま残します。異なる
+  2 つのコードページによるバイト値の表が 2 つ入っており、その旨がファイル自身に
+  書かれています。`src/inc/` は他所から持ち込んだものなので触っていません。
+- **`:help` が何も表示せず、抜けるとエディタごと終了していました。** Windows の
+  GUI でメニューからヘルプを選ぶとまさにこれで、画面には何も出ず、ヘルプ自身が
+  「抜けるにはこれ」と案内している RETURN でプロセスが落ちました。未保存の
+  バッファがあっても確認は出ません。`src/help.c` の `kopen()` が符号変換の
+  出力先をヘルプファイルと同じ大きさで渡していたためで、UTF-8 でない
+  `helpfile` はすべて変換に失敗していました。同梱のものは ISO-2022-JP で、
+  32241 バイトを内部の UTF-8 にすると 33784 バイトになるので、
+  `kanjiconvsfrom()` は毎回 -1 を返していました。その -1 がテキストの長さとして
+  保存され、画面が空になると同時にバッファの 1 バイト手前へ NUL を書き、
+  終了時の `free()` が壊れたヒープの上で転んでいた、という筋です。変換が
+  生成しうる大きさで確保するようにし、変換に失敗した場合は当て推量をせず
+  ヘルプファイルを読めなかったと言うようにしました。影響は全ビルドに及び
+  （コンソール版も同じ空の画面を描いていました）、セッションが終わるのは
+  クラッシュがメッセージループに落ちる GUI だけです。
+- Windows GUI はヘルプ画面を 1 行ずつ描く際に各行の最後の 1 バイトを捨てて
+  いたため、行末の文字が失われ、日本語なら半分だけになっていました。空行では
+  その NUL を `IObuff` の手前に書き、空行の代わりに前の行をもう一度表示して
+  いました。どちらも CR を落とすための `IObuff[--col]` が原因で、CR がある
+  ときだけ落とすようにしました。
 - **長い 1 行に対する `:s///g` が二次オーダーではなくなりました。** 1 行
   200 万文字の全置換が、およそ 20 分から 0.5 秒になりました。40 万文字では
   53 秒から 0.11 秒です。`dosub()` は次のマッチに必要な分だけを確保して、

@@ -1593,7 +1593,7 @@ msknj_kkfunc(struct Funcparm far *bufp)
 	regs.x.sp = work_offset() + RSTACK_SIZE-4;
 	_go32_dpmi_simulate_fcall(&regs);
 /*	dosmemget(work_poffset()+woffset,sizeof(struct Funcparm),bufp);*/
-	dosmemget(work_poffset()+woffset,4,bufp); /* 4 byte ‚¾‚¯–ß‚· */
+	dosmemget(work_poffset()+woffset,4,bufp); /* 4 byte ã ã‘æˆ»ã™ */
 
 	woffset -= sizeof(struct Dataparm);
 	if (bufp->lpDataparm)

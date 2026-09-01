@@ -1,108 +1,108 @@
 
-Cygwin$B$G;HMQ;~$NJdB-(B
+Cygwinで使用時の補足
 
 
-* Cygwin$B$N%P!<%8%g%s(B
+* Cygwinのバージョン
 
-B20.1$B0J9_$G$NF0:n$r3NG'$7$F$$$^$9$,!"(B2000/04/21$B8=:_(BCygwin 1.1$B$,%j%j!<%9(B
-$B$5$l$F$$$k$N$G!"$=$A$i$r;H$C$?J}$,$$$$$G$7$g$&!#(B
-# ftp site$B$N!V(Bcygwin-b20$B!W%G%#%l%/%H%j$K$"$kJ*$O(BB20.1$B$G$9(B
+B20.1以降での動作を確認していますが、2000/04/21現在Cygwin 1.1がリリース
+されているので、そちらを使った方がいいでしょう。
+# ftp siteの「cygwin-b20」ディレクトリにある物はB20.1です
 
 
-* make$BJ}K!(B
+* make方法
 
-$B4pK\E*$K(BUn*x$B0lHL$N(Bmake$BJ}K!$HF1$8$G!"(B
+基本的にUn*x一般のmake方法と同じで、
 	% cp makjunix.mak Makefile
 	% vi Makefile
-		# Cygwin (TESTED 1.1-NetRelease) $B$NItJ,$r%3%a%s%H%"%&%H(B
+		# Cygwin (TESTED 1.1-NetRelease) の部分をコメントアウト
 	% make
 	% make install
-$B$G9T$1$k$O$:$G$9!#(B
+で行けるはずです。
 
 
-* termlib$B$K4X$7$F(B
+* termlibに関して
 
-B20.1$B0J9_I8=`$G(Blibtermcap.a$B$,IU$$$F$/$k$N$G!"(BLIBS=-ltermcap$B$G(Bmake$B$G$-$^(B
-$B$9$,!"(BCygwin$BMQ$K(Bport$B$5$l$?(Bncurses$B$d!"(Bjvim$BFbB"$N(Btermlib$B$r;H$&;v$b$G$-$^(B
-$B$9!#(B
+B20.1以降標準でlibtermcap.aが付いてくるので、LIBS=-ltermcapでmakeできま
+すが、Cygwin用にportされたncursesや、jvim内蔵のtermlibを使う事もできま
+す。
 
-  * Cygwin$B$N(Btermcap$B$r;H$&>l9g(B($B$3$l$r%G%U%)%k%H$K$7$F$"$j$^$9(B)
+  * Cygwinのtermcapを使う場合(これをデフォルトにしてあります)
 	LIBS=-ltermcap
 
-  * ncurses$B$r;H$&>l9g(B($BF~<j@h$O8e=R$N(BURL$B$r;2>H(B)
+  * ncursesを使う場合(入手先は後述のURLを参照)
   	LIBS=-lncurses
 
-  * jvim$BFbB"$N(Btermlib$B$r;HMQ$9$k>l9g(B
+  * jvim内蔵のtermlibを使用する場合
 	TERMLIB=termlib.o
 	LIBS=
 
 
-* $BL/$J%(%i!<$,=P$F%3%s%Q%$%k$G$-$J$$>l9g(B
+* 妙なエラーが出てコンパイルできない場合
 
-Cygwin$B$G$3$N<j$N%(%i!<$,=P$k>l9g$O!"BgDq%U%!%$%k$N2~9T%3!<%I$,860x$G(B
-$B$9!#Nc$($P!"(Bmakefile$B$,(BCRLF$B$K$J$C$F$$$k$H(B(make$B$O(BCRLF$B$rM}2r$7$F$/$l$J$$(B
-$B$N$G(B)$B0UL#ITL@$N%(%i!<%a%C%;!<%8$r=P$7$F%3%1$^$9!#(B
+Cygwinでこの手のエラーが出る場合は、大抵ファイルの改行コードが原因で
+す。例えば、makefileがCRLFになっていると(makeはCRLFを理解してくれない
+ので)意味不明のエラーメッセージを出してコケます。
 
-Cygwin$B$K$O(Btext mode$B$H(Bbinary mode$B$,$"$j!"(Btext mode$B$G$O(BCygwin$BFbIt$G(B
-LF <-> CRLF$BJQ49$,9T$o$l$k(B($B%"%W%j%1!<%7%g%s$K$O(BCRLF$B$,EO$k(B)$B0Y!"$=$l$r9MN8(B
-$B$7$F$$$J$$%"%W%j%1!<%7%g%s$O8mF0:n$7$^$9!#(B
+Cygwinにはtext modeとbinary modeがあり、text modeではCygwin内部で
+LF <-> CRLF変換が行われる(アプリケーションにはCRLFが渡る)為、それを考慮
+していないアプリケーションは誤動作します。
 
-Cygwin$B$K(Bport$B$5$l$?%P%$%J%j$O!"(BCRLF$B$G$bF0:n$9$k$h$&$K%Q%C%A$,Ev$?$C$F$$(B
-$B$k;v$,$"$j$^$9$,!"$=$&$G$J$$J*$b7k9=B8:_$9$k$N$G!"G:$_$?$/$J$$$J$i0J2<(B
-$B$N$I$l$+$G(Bbinary mode$B$r;H$&$h$&$K$9$k$HNI$$$G$7$g$&!#(B
+Cygwinにportされたバイナリは、CRLFでも動作するようにパッチが当たってい
+る事がありますが、そうでない物も結構存在するので、悩みたくないなら以下
+のどれかでbinary modeを使うようにすると良いでしょう。
 
-  1. CRLF$B$@$H:$$k%G%#%l%/%H%j(B($B$K8B$i$:A4$F$G$bNI$$$,(B)$B$O(Bmount -b$B$G(Bbinary
-     mount$B$9$k!#(B
-  2. $B4D6-JQ?t(BCYGWIN=binmode$B$r@_Dj$7$F$+$i(BCygwin$B$r5/F0$9$k!#(B
+  1. CRLFだと困るディレクトリ(に限らず全てでも良いが)はmount -bでbinary
+     mountする。
+  2. 環境変数CYGWIN=binmodeを設定してからCygwinを起動する。
 
-# $B2a5n$K;d$,$d$C$?%1!<%9$G$O!"%3%s%Q%$%k$9$k:n6H%G%#%l%/%H%j$,1?0-$/(B
-# text mode$B$G(Bmount$B$5$l$F$$$?0Y!"(Bpatch -p1 < jvim.diff $B$7$?;~$K(Bpatch$B$N(B
-# $BEv$?$C$?%U%!%$%k$,(BCRLF$BJQ49$5$l!"(Bmake$B$G%(%i!<!#2?8N(B? $B$H$$$&$N$,$"$j$^(B
-# $B$7$?!#(B
+# 過去に私がやったケースでは、コンパイルする作業ディレクトリが運悪く
+# text modeでmountされていた為、patch -p1 < jvim.diff した時にpatchの
+# 当たったファイルがCRLF変換され、makeでエラー。何故? というのがありま
+# した。
 
 
-* $B$=$NB>(B
+* その他
 
-o telnet/X$B$+$i;HMQ;~$K%&%#%s%I%&%5%$%:$rJQ99$9$k$H!"(B
+o telnet/Xから使用時にウィンドウサイズを変更すると、
 	Vim: Error reading input, exiting...
-  $B$H8@$C$F=*N;$7$F$7$^$&;v$,$"$k$N$G!"(B1.3j$B0J9_$=$NItJ,$K<j$rF~$l$F$$$^(B
-  $B$9(B(unix.c)$B!#$A$g$C$HJQ$JF0$-(B($B2?2s$b:FIA2h$9$k(B)$B$r$7$^$9$,!"$$$-$J$j;`(B
-  $B$L$h$j$O$^$7$G$7$g$&(B(^^;
+  と言って終了してしまう事があるので、1.3j以降その部分に手を入れていま
+  す(unix.c)。ちょっと変な動き(何回も再描画する)をしますが、いきなり死
+  ぬよりはましでしょう(^^;
 
-o jvim 2.0a$B$^$G$G$O!"(BCygwin$B$N(Blibtermcap.a$B$r;H$C$F(Bmake$B$7$?%P%$%J%j$r(B
-  CYGWIN=tty$B$GF0$+$9$H%"%/%;%90cH?$GMn$A$F$$$^$7$?!#$3$l$O(BCygwin$B$N(B
-  libtermcap.a$B$,!"(Bvim.h$B$GDj5A$5$l$F$$$k(BTBUFSZ(1024$B%P%$%H(B)$B$rD6$($k%(%s(B
-  $B%H%j$rLa$7$F!"%P%C%U%!%*!<%P!<%U%m!<$,5/$3$C$F$$$?0Y$G$9!#(B
+o jvim 2.0aまででは、Cygwinのlibtermcap.aを使ってmakeしたバイナリを
+  CYGWIN=ttyで動かすとアクセス違反で落ちていました。これはCygwinの
+  libtermcap.aが、vim.hで定義されているTBUFSZ(1024バイト)を超えるエン
+  トリを戻して、バッファオーバーフローが起こっていた為です。
 
 
-o $B4XO"(BURL
+o 関連URL
 
   The Cygwin Project
   http://sourceware.cygnus.com/cygwin/
-	Cygwin$B$NAmK\;3$G$9!#(B
+	Cygwinの総本山です。
 
   Ring server
   ftp://ftp.ring.gr.jp/archives/pc/gnu-win32/latest/
-	$B9qFb$N(Bmirror$B$N(B1$B$D$G$9!#(Bring server$B$O3F=j$K$"$k$N$G!"<+J,$N=j$+(B
-	$B$i6a$$%5!<%P!<$rA*$V$HNI$$$G$7$g$&!#(B
+	国内のmirrorの1つです。ring serverは各所にあるので、自分の所か
+	ら近いサーバーを選ぶと良いでしょう。
 
-  Cygwin$B>pJs(B
+  Cygwin情報
   http://www.jaist.ac.jp/~fujieda/cygwin/
-	JAIST$B$NF#;^$5$s$K$h$k:G?7>pJsDI$C$+$1%5%$%H$G$9(B:-)
+	JAISTの藤枝さんによる最新情報追っかけサイトです:-)
 
   Cygwin Nightly Snapshots
   http://sourceware.cygnus.com/cygwin/snapshots/
-	cygwin1.dll$BEy$N!VLk$4$H$N:G?7(Bsnapshot$B!W$,$"$j$^$9!#(BCygwin 1.1
-	$B0J9_$N(Bbugfix$BHG$,M_$7$$;~$O$3$l$r;n$7$F$_$k$H$$$$$G$7$g$&!#$?$@(B
-	$B$7$3$3$K$"$kJ*$O3+H/$N:GA0@~$NJ*$J$N$G!"?7$?$J%P%0$,F~$C$F$$$k(B
-	$B;v$b$"$j$^$9!#(B
+	cygwin1.dll等の「夜ごとの最新snapshot」があります。Cygwin 1.1
+	以降のbugfix版が欲しい時はこれを試してみるといいでしょう。ただ
+	しここにある物は開発の最前線の物なので、新たなバグが入っている
+	事もあります。
 
   CygUtils
   http://cygutils.netpedia.net/
-	Cygwin$B$K(Bport$B$5$l$?%f!<%F%#%j%F%#$N%P%$%J%j(B/$B%Q%C%A$,$^$H$a$i$l(B
-	$B$F$$$^$9!#(Bncurses$B!"(Bperl$B!"(Bautoconf$B!"(Bautomake$B!"(Binetutils$B$J$I$O(B
-	$B$3$3$+$i(Bdownload$B$9$k$HNI$$$G$7$g$&!#(B
+	Cygwinにportされたユーティリティのバイナリ/パッチがまとめられ
+	ています。ncurses、perl、autoconf、automake、inetutilsなどは
+	ここからdownloadすると良いでしょう。
 
 
 2000/04/22
-$BHu8}(B $BBY;V(B (yzone@mail.raidway.ne.jp)
+樋口 泰志 (yzone@mail.raidway.ne.jp)

@@ -21,7 +21,7 @@ derived from JVim 3.0-j2.1b (2002 Dec 24)
 ```
 Platforms        Windows 10/11 (Win32 GUI + console), Linux,
                  FreeBSD, NetBSD, OpenBSD, DragonFly
-Tests            227 cases, run on all of the above in CI, plus 6 that run
+Tests            230 cases, run on all of the above in CI, plus 6 that run
                  the Windows executables there. The Windows keyboard has 16
                  more in scripts/test-winkeys.sh, typed on the real thing
                  from WSL
@@ -38,7 +38,7 @@ Licence          Public domain — see LICENSE, and uganda.txt for the
 | File names outside CP932 | The manifest asks for UTF-8 as the process code page, so the `...A` file APIs take UTF-8 and a file called `🍣.txt` opens. |
 | Display scaling | The process is per-monitor DPI aware, and the stored font and window sizes are restated for the DPI in front of them, so text is sharp at 125% and 150% and stays that way when the window is dragged between monitors. |
 | Builds anywhere Unix-ish | `scripts/build-unix.sh` asks the compiler what the machine has instead of asking you to uncomment three lines in a makefile. `scripts/build-mingw.sh` cross builds the Windows executables with mingw-w64. |
-| 227 tests | 50 encoding cases, 76 editing cases, 75 syntax colouring cases, 9 that read the escapes the terminal is actually sent, and 17 that hand it input nobody intended, or a hostile end — 2 MB on one line, every byte value there is, a multi-byte sequence cut in half by the end of the file, the session dropping mid-edit. All driven through a real pty. Every push runs them on five operating systems, and again under AddressSanitizer and UndefinedBehaviorSanitizer. |
+| 230 tests | 51 encoding cases, 78 editing cases, 75 syntax colouring cases, 9 that read the escapes the terminal is actually sent, and 17 that hand it input nobody intended, or a hostile end — 2 MB on one line, every byte value there is, a multi-byte sequence cut in half by the end of the file, the session dropping mid-edit. All driven through a real pty. Every push runs them on five operating systems, and again under AddressSanitizer and UndefinedBehaviorSanitizer. |
 | Long standing bugs fixed | Fifteen of them, listed in [BUILDING-mingw.md](BUILDING-mingw.md#bugs-found-along-the-way) — `[あ]` in a regexp also matching `い`, a command line reading `buff[-1]`, encoding detection tipping a whole file over to Shift-JIS because of one emoji, terminal input mangling a character split across two reads. |
 | Colour schemes | `:colorscheme` and a Vim-compatible `:highlight`, eleven bundled themes, on the GUI and over a terminal's SGR alike. [USAGE.md](USAGE.md#colour-schemes) has the reference. |
 | Two features removed | BDF font rendering and editing inside LHA/ZIP/TAR archives are gone, sources and all, because their terms made the tree awkward to redistribute. See [below](#licence). |
@@ -72,7 +72,7 @@ doing.
 ```sh
 git clone https://github.com/kuwa72/jvim3
 cd jvim3
-./scripts/build-unix.sh test        # build src/jvim3, then run the 227 tests
+./scripts/build-unix.sh test        # build src/jvim3, then run the 230 tests
 ```
 
 You need a C compiler and, for the real terminal database rather than the
@@ -139,7 +139,7 @@ Vim 3.0's own manuals, from 1994, in `doc/`:
 | [doc/vim.hlp](doc/vim.hlp) | The `:help` file, English. |
 | [README](README) | Vim 3.0's own README, from 1994, kept as it was. Its build instructions are the ones this tree replaced. |
 
-JVim's own manuals, in Japanese, in `doc.j/` (ISO-2022-JP):
+JVim's own manuals, in Japanese, in `doc.j/` (UTF-8):
 
 | | |
 | --- | --- |
@@ -165,8 +165,8 @@ for actual use.
 
 ```sh
 ./scripts/build-unix.sh test           # build and run all five suites
-./scripts/test-encoding.sh src/jvim3   # 50 cases: encodings, multi-byte editing
-./scripts/test-editing.sh  src/jvim3   # 76 cases: motions, operators, registers,
+./scripts/test-encoding.sh src/jvim3   # 51 cases: encodings, multi-byte editing
+./scripts/test-editing.sh  src/jvim3   # 78 cases: motions, operators, registers,
                                        #   marks, undo, ex ranges, :g, :s, :!
 ./scripts/test-syntax.sh   src/jvim3   # 75 cases: what syntax/ actually colours
 ./scripts/test-sgr.sh      src/jvim3   # 9 cases: the escapes a terminal is sent
@@ -179,7 +179,7 @@ seconds before it is killed, so a case that leaves the editor waiting for a key
 fails rather than hanging the suite — which is also how the hostile-input suite
 notices that something has become too slow to finish at all.
 
-Every push and pull request builds and runs all 227 on Linux, FreeBSD, NetBSD,
+Every push and pull request builds and runs all 230 on Linux, FreeBSD, NetBSD,
 OpenBSD and DragonFly, and cross builds both Windows architectures. A
 tag matching `v*` does the same and then publishes the Windows zips, so a broken
 build cannot become a release. See

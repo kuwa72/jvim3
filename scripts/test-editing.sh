@@ -128,6 +128,46 @@ runrc() {
 	verdict "$name" "$expect"
 }
 
+# runhelp <name> <expect> <keys after ":help"> <wanted on the screen>
+#
+# ":help" is the one screen the editor paints itself, a character at a time,
+# instead of through updateScreen(), and none of it reaches a buffer -- so
+# reading the terminal is the only way to see whether anything was drawn. The
+# help file is doc.j/vim.hlp as it is in the tree, so this is the shipped one
+# working, end to end. The wanted text is looked for in what went to the
+# terminal, which holds the cursor motions between lines but nothing inside one.
+#
+# vim.hlp is UTF-8 and so needs no conversion; a help file in any other code
+# does, and that is where ":help" used to draw nothing at all. The case for it
+# is "ISO-2022-JP help file" in test-encoding.sh, which writes its own.
+runhelp() {
+	counted && return
+	local name=$1 expect=$2 keys=$3 want=$4
+
+	keys=${keys//%/%%}
+	printf 'a\n' > "$tmp/in"
+	printf ':set helpfile=%s/doc.j/vim.hlp\r:help\r%s:q!\r' "$root" "$keys" \
+			> "$tmp/keys"
+	rm -f "$tmp/screen"
+	pty "TERM=xterm $jvim -T xterm -s $tmp/keys $tmp/in" > "$tmp/screen" 2>&1
+
+	local got=bad
+	grep -qF -- "$want" "$tmp/screen" && got=ok
+
+	if [ "$expect" = ok ] && [ "$got" = ok ]; then
+		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
+	elif [ "$expect" = ok ]; then
+		printf '  FAIL        %s\n' "$name"
+		printf '                nothing matching %s on the screen\n' "$want"
+		fail=$((fail+1))
+	elif [ "$got" = bad ]; then
+		printf '  KNOWN-FAIL  %s\n' "$name"; xfail=$((xfail+1))
+	else
+		printf '  NOW PASSES  %s  <- update the expectation\n' "$name"
+		xpass=$((xpass+1))
+	fi
+}
+
 verdict() {
 	local name=$1 expect=$2
 
@@ -287,6 +327,15 @@ runrc "CTRL-V holds a name off"  ok 'map q i\026<CR><Esc>\n' \
 # The old way still works: a real CR in the argument is still a real CR.
 runrc "a real CR still works"    ok 'map q ihello\015\033\n' \
 	'q' '' 'hello\n\n'
+
+echo
+echo "the help screen:"
+# RETURN leaves the help again, and the first screen has to have been drawn
+# before it. Nothing here is about the wording -- it is about anything at all
+# arriving on the terminal, which for a long time nothing did.
+runhelp ":help draws the first screen" ok '\r' 'VIM stands for Vi IMproved.'
+# SPACE is the next screen, so the text looked for is one that is only there.
+runhelp "SPACE reaches the second screen" ok ' \r' 'N  f<char>'
 
 if [ -n "$count_only" ]; then
 	printf 'cases %d\n' "$cases"
