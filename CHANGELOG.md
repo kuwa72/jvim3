@@ -10,6 +10,8 @@ repository and would drift within three releases.
 
 ## Unreleased
 
+## 1.2.1 — 2026-09-01
+
 ### Added
 
 - **CI runs the Windows executables now**, which nothing automatic had ever
