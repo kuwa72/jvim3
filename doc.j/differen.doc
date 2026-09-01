@@ -1,107 +1,107 @@
 /* vi:set tw=70 sw=2 ts=2 et: */
-$B!t$3$l$O(B vim 2.0 $B$N(B difference.doc $B$r@nF#!w%"%s%j%D(B
-$B!t!J(Bkawafuji@acdpe0.anritu.co.jp$B!KB>M-;V$,0ULu$7$?$b$N$G$9!#86J8$K$O$"$^$jCi(B
-$B!t<B$G$O$"$j$^$;$s(B ;-) $B!#4V0c$C$F$$$kItJ,$b$"$k$+$bCN$l$^$;$s!#5$$,IU$$$?J}$O(B
-$B!t@nF#$^$G$40lJsD:$1$k$H9,$$$G$9!#(B
-$B!t(B
-$B!t$3$NJ8>O$K4X$9$kCx:n8"Ey$O0l@ZJ|4~$7$^$9!#$^$?!"$3$NLu$K$h$C$F@8$8$?0l@Z$N(B
-$B!tMx1W!&ITMx1W$K4X$7$F$N@UG$$b;}$A$^$;$s!#(B
+＃これは vim 2.0 の difference.doc を川藤＠アンリツ
+＃（kawafuji@acdpe0.anritu.co.jp）他有志が意訳したものです。原文にはあまり忠
+＃実ではありません ;-) 。間違っている部分もあるかも知れません。気が付いた方は
+＃川藤までご一報頂けると幸いです。
+＃
+＃この文章に関する著作権等は一切放棄します。また、この訳によって生じた一切の
+＃利益・不利益に関しての責任も持ちません。
 
-$B!t$3$N%I%-%e%a%s%H$O!"EZED(B (ken_t@st.rim.or.jp) $B$,>e5-$N%I%-%e%a%s%H$r(B
-$B!t85$K(B vim 3.0 $B$N(B difference.doc $BBP1~$K0ULu$7$?$b$N$G$9!#(B
-$B!t$-$C$H4V0c$C$F$$$kItJ,$,$"$j$^$9$,!"$4MF<O$r!#(B
-$B!t$3$NJ8>O$K4X$9$kCx:n8"Ey$O0l@ZJ|4~$7$^$9!#$^$?!"$3$NLu$K$h$C$F@8$8$?0l@Z$N(B
-$B!tMx1W!&ITMx1W$K4X$7$F$N@UG$$b;}$A$^$;$s!#(B
+＃このドキュメントは、土田 (ken_t@st.rim.or.jp) が上記のドキュメントを
+＃元に vim 3.0 の difference.doc 対応に意訳したものです。
+＃きっと間違っている部分がありますが、ご容赦を。
+＃この文章に関する著作権等は一切放棄します。また、この訳によって生じた一切の
+＃利益・不利益に関しての責任も持ちません。
 
-  VIM $B$H(B vi $B$N0c$$$NMWLs$G$9!#40A4$G$O$J$$$N$G!"(B reference.doc $B$H(B {}
-$BFb$N%3%a%s%H$r8+$F$/$@$5$$!#(B
-
-
-$B<g$JDI2C5!G=!'(B
-
-vi $B$H$N8_49@-(B
-  $B%*%W%7%g%s(B 'compatible' $B$r%;%C%H$9$k$H!"$9$Y$F$N%*%W%7%g%s$NCM$O(B vi
-$B8_49$K$J$k$h$&$K@_Dj$5$l$k!#(Bvim $B$O$G$-$k$@$1!VK\J*$N!W(Bvi $B$HF1$8$h$&$K(B
-$B?6Iq$&!#(B
+  VIM と vi の違いの要約です。完全ではないので、 reference.doc と {}
+内のコメントを見てください。
 
 
-$BB?CJ(B undo
-  'u' $B$GAL$j!J(Bundo$B!K!"(B'ctrl-R' $B$GLa$k!J(Bredo$B!K!#%*%W%7%g%s(B 'undolevels'
-$B$K(B undo $B$G$-$k?t$r%;%C%H$G$-$k!J%G%U%)%k%H$O(B 100$B!K!#(B'undolevels' $B$r(B 0
-$B$K$9$k$H!"(Bvi $B8_49$N0lCJ(B undo $B$K$J$k!#(B
-$B!tLuCm!'86J8$G$O(B 'undolines' $B$H$J$C$F$$$k$,!"4V0c$$$@$m$&!#(B
+主な追加機能：
 
-$B%^%k%A%&%$%s%I%&!?%^%k%A%P%C%U%!(B
-  Vim $B$O$=$l$>$l$N%&%$%s%I%&$rJ,3d$7$F0[$J$k%P%C%U%!$+F1$8%P%C%U%!$N0[(B
-$B$J$k>l=j$rJT=8$9$k;v$,$G$-$^$9!#(B
-  $B$3$N5!G=$N0Y$KB?$/$N%3%^%s%I$d%*%W%7%g%s$,DI2C$5$l$F$$$^$9$N$G!"(B
-windows.doc $B$r8+$F$/$@$5$$!#(B
+vi との互換性
+  オプション 'compatible' をセットすると、すべてのオプションの値は vi
+互換になるように設定される。vim はできるだけ「本物の」vi と同じように
+振舞う。
 
 
-$B%3%^%s%I$N7+JV$7(B
-  'q'<c> $B$GF~NO$7$?J8;z$N5-O?$rL>A0$D$-%l%8%9%?(B <c> $B$K5-O?$7;O$a$k!J%l(B
-$B%8%9%?$NL>A0$,BgJ8;z$N>l9g$ODI2C!K!#<!$N(B 'q' $B$G5-O?$r=*$($k!#%P%C%U%!(B
-$B$NFbMF$r(B '@'<c> $B$G<B9T$9$k$3$H$,$G$-$k!#$3$l$OJ#;($JF0:n$N>l9g$KM-8z$G(B
-$B$"$k!#(B
+多段 undo
+  'u' で遡り（undo）、'ctrl-R' で戻る（redo）。オプション 'undolevels'
+に undo できる数をセットできる（デフォルトは 100）。'undolevels' を 0
+にすると、vi 互換の一段 undo になる。
+＃訳注：原文では 'undolines' となっているが、間違いだろう。
+
+マルチウインドウ／マルチバッファ
+  Vim はそれぞれのウインドウを分割して異なるバッファか同じバッファの異
+なる場所を編集する事ができます。
+  この機能の為に多くのコマンドやオプションが追加されていますので、
+windows.doc を見てください。
 
 
-$B=@Fp$JA^F~%b!<%I(B
-  $BA^F~%b!<%I$G$bLp0u%-!<$K$h$C$F%+!<%=%k$r0\F0$G$-$k!#$3$l$K$h$C$F(B
-undo/redo $B$NC10L$H$J$kA^F~$OFs$D$KJ,3d$5$l$k!#(B
-  $BA^F~%b!<%I$G%3%^%s%I%b!<%I$N%3%^%s%I$r<B9T$9$k$K$O(B CTRL-O $B$r;H$&!#$3(B
-$B$l$O!"(BESC$B$r2!$7$F!"%3%^%s%I$r<B9T$7!"(B'a' $B$r2!$7$?$3$H$H$[$\F1$8$G$"$k!#(B
-$B$3$l$K$h$C$F(Bundo/redo $B$NC10L$H$J$kA^F~$OFs$D$KJ,3d$5$l$k!#(B
+コマンドの繰返し
+  'q'<c> で入力した文字の記録を名前つきレジスタ <c> に記録し始める（レ
+ジスタの名前が大文字の場合は追加）。次の 'q' で記録を終える。バッファ
+の内容を '@'<c> で実行することができる。これは複雑な動作の場合に有効で
+ある。
 
 
-$B%S%8%e%"%k%b!<%I(B
-  $B!V%S%8%e%"%k%b!<%I!W$r;H$($P!"%F%-%9%H$N0lIt$rA*Br$7$F$+$i!J2?$i$+$N(B
-$BF0:n$r9T$&!K%3%^%s%I$rF~NO$G$-$k!#$3$l$O!"$^$:%3%^%s%I$rF~NO$7$F<!$K(B
-$B$=$l$,$*$h$VHO0O$^$G0\F0$9$k!"$H$$$&$3$H$NJL$N!J4JC1$J!K$d$jJ}$G$"$k!#(B
-  'v' $B$H(B 'V' $B$G%S%8%e%"%k%b!<%I$N;O$a$r;XDj$9$k!#(B'v' $B$OJ8;z$KBP$7$F:n(B
-$BMQ$7!"(B'V' $B$O9T$KBP$7$F:nMQ$9$k!#(B
-  $B%+!<%=%k$r0\F0$5$;$l$P!"%S%8%e%"%k%b!<%I$NBP>]HO0O$,3HBg$5$l$k!#$3$l(B
-$B$O9b51EY!J$^$?$OH?E>!K$G<($5$l$k!#(B'o' $B$G0O$_$NH?BPB&$K0\F0$G$-$k!#(B
-  $B%S%8%e%"%k%b!<%I$O<!$N%3%^%s%I$KBP$7$FM-8z$G$"$k!'(B
-
-        d       $B:o=|(B
-        c       $BJQ99(B
-        y       $B%d%s%/(B
-        > $B$H(B <  $B%$%s%G%s%H$NA^F~!?:o=|(B
-        !       $B30It%3%^%s%I$K$h$k%U%#%k%?(B
-        =       indent $B%3%^%s%I$KDL$9(B
-        :       : $B$K$h$k%3%^%s%I(B
-        Q       'textwidth' $B7e$X$N@07A(B
-        J       $B9T$N7k9g(B
-        ~       $BBgJ8;z!&>.J8;zJQ49(B
-        u       $B>.J8;z$XJQ49(B
-        U       $BBgJ8;z$XJQ49(B
+柔軟な挿入モード
+  挿入モードでも矢印キーによってカーソルを移動できる。これによって
+undo/redo の単位となる挿入は二つに分割される。
+  挿入モードでコマンドモードのコマンドを実行するには CTRL-O を使う。こ
+れは、ESCを押して、コマンドを実行し、'a' を押したこととほぼ同じである。
+これによってundo/redo の単位となる挿入は二つに分割される。
 
 
-$B%V%m%C%/;XDj(B
-  $B%F%-%9%H$rD9J}7A$N%V%m%C%/$K0O$`$3$H$,$G$-$k!#(BCTRL-V $B$G0O$_;O$a$r;X(B
-$BDj$9$k!#$3$N%V%m%C%/$KBP$7$F$O!":o=|!J(B'd'$B!K!"%d%s%/!J(B'y'$B!K!"BgJ8;z>.J8(B
-$B;zJQ49!J(B'~', 'u', 'U'$B!K$r9T$&$3$H$,$G$-$k!#:o=|$d%d%s%/$7$?%V%m%C%/$O(B
-'p' $B$d(B 'P' $B%3%^%s%I$G%Z!<%9%H$G$-$k!#(B
+ビジュアルモード
+  「ビジュアルモード」を使えば、テキストの一部を選択してから（何らかの
+動作を行う）コマンドを入力できる。これは、まずコマンドを入力して次に
+それがおよぶ範囲まで移動する、ということの別の（簡単な）やり方である。
+  'v' と 'V' でビジュアルモードの始めを指定する。'v' は文字に対して作
+用し、'V' は行に対して作用する。
+  カーソルを移動させれば、ビジュアルモードの対象範囲が拡大される。これ
+は高輝度（または反転）で示される。'o' で囲みの反対側に移動できる。
+  ビジュアルモードは次のコマンドに対して有効である：
+
+        d       削除
+        c       変更
+        y       ヤンク
+        > と <  インデントの挿入／削除
+        !       外部コマンドによるフィルタ
+        =       indent コマンドに通す
+        :       : によるコマンド
+        Q       'textwidth' 桁への整形
+        J       行の結合
+        ~       大文字・小文字変換
+        u       小文字へ変換
+        U       大文字へ変換
 
 
-$B%*%s%i%$%s%X%k%W(B
-  ':help' $B%3%^%s%I$+(B help $B%-!<!J(BMSDOS $B$J$i(B F1$B!K$G?t%Z!<%8$N4J0W$J%X%k(B
-$B%W$rI=<($9$k!#%*%W%7%g%s(B 'helpfile' $B$G%X%k%W%U%!%$%k$r;XDj$G$-$k!#(B
+ブロック指定
+  テキストを長方形のブロックに囲むことができる。CTRL-V で囲み始めを指
+定する。このブロックに対しては、削除（'d'）、ヤンク（'y'）、大文字小文
+字変換（'~', 'u', 'U'）を行うことができる。削除やヤンクしたブロックは
+'p' や 'P' コマンドでペーストできる。
 
 
-$B%3%^%s%I9T$NJT=8(B
-  $B%+!<%=%k%-!<$G%3%^%s%I9T$NG$0U$N0LCV$KA^F~!?:o=|$G$-$k!#:8!?1&$N%+!<(B
-$B%=%k%-!<$OA0!?8e$K0lJ8;z$:$D0\F0$9$k!#%7%U%H%-!<$r2!$7$J$,$i$N:8!?1&$N(B
-$B%+!<%=%k%-!<$OA0!?8e$K0l8l$:$D0\F0$9$k!#(BCTRL-B/CTRL-E $B$G%3%^%s%I%i%$%s(B
-$B$N@hF,!?:G8e$K0\F0$9$k$3$H$,$G$-$k!#(B
-  $B%3%^%s%I9T$O5-21$5$l$F$$$k!#>e!?2<$N%+!<%=%k%-!<$G2a5n$N%3%^%s%I9T$r(B
-$B8F$S=P$9$3$H$,$G$-$k!#%*%W%7%g%s(B 'history' $B$G5-21$7$F$*$/%3%^%s%I9T$N(B
-$B?t$r;XDj$G$-$k!#(B
+オンラインヘルプ
+  ':help' コマンドか help キー（MSDOS なら F1）で数ページの簡易なヘル
+プを表示する。オプション 'helpfile' でヘルプファイルを指定できる。
 
 
-$B%3%^%s%I9TJd40(B
-  $B!J2hLL$N:G2<9T$G!K%3%^%s%I9T$rJT=8$7$F$$$k$H$-!"(B <TAB> $B$rF~NO$9$k;v(B
-$B$K$h$C$FJd40$,9T$o$l$k!#(B
+コマンド行の編集
+  カーソルキーでコマンド行の任意の位置に挿入／削除できる。左／右のカー
+ソルキーは前／後に一文字ずつ移動する。シフトキーを押しながらの左／右の
+カーソルキーは前／後に一語ずつ移動する。CTRL-B/CTRL-E でコマンドライン
+の先頭／最後に移動することができる。
+  コマンド行は記憶されている。上／下のカーソルキーで過去のコマンド行を
+呼び出すことができる。オプション 'history' で記憶しておくコマンド行の
+数を指定できる。
+
+
+コマンド行補完
+  （画面の最下行で）コマンド行を編集しているとき、 <TAB> を入力する事
+によって補完が行われる。
 
      what         example         where
   - a command     :e<TAB>         at start of command line
@@ -109,397 +109,397 @@ undo/redo $B$NC10L$H$J$kA^F~$OFs$D$KJ,3d$5$l$k!#(B
   - an option     :set sc<TAB>    after :set
   - a filename    :e v<TAB>       after any command that accepts a filename
 
-  $BJ#?t$K%^%C%A$9$k>l9g!"(BCTRL-N$B!J<!!K$H(B CTRL-P$B!JA0!K$G%^%C%A$9$k$b$N$r(B
-$B=g$KI=<($9$k!#(B
-  $B%*%W%7%g%s(B 'wildchar' $B$K$h$C$F%U%!%$%kL>Jd40$r3+;O$9$kJ8;z$r;XDj$G$-(B
-$B$k!#%G%U%)%k%H$O(B <TAB> $B$G$"$k!#%o%$%k%I%+!<%I$r;HMQ$7$?!JIT40A4$J!KJd(B
-$B40$N8e$G(B CTRL-D $B$rF~NO$9$k$H0lMw$,I=<($5$l$k!#(B CTRL-A $B$G$O$9$Y$F$,A^F~(B
-$B$5$l$k!#(BCTRL-L $B$O6&DL$JItJ,$^$G$rA^F~$9$k!#(B
+  複数にマッチする場合、CTRL-N（次）と CTRL-P（前）でマッチするものを
+順に表示する。
+  オプション 'wildchar' によってファイル名補完を開始する文字を指定でき
+る。デフォルトは <TAB> である。ワイルドカードを使用した（不完全な）補
+完の後で CTRL-D を入力すると一覧が表示される。 CTRL-A ではすべてが挿入
+される。CTRL-L は共通な部分までを挿入する。
 
 
-$B?eJ?%9%/%m!<%k(B
-  $B%*%W%7%g%s(B 'wrap' $B$r%*%U$K$7$F$*$/$H!"D9$$9T$O@^$jJV$5$l$:0lIt$@$1$,(B
-$BI=<($5$l$k!#%+!<%=%k$,I=<($5$l$F$$$J$$ItJ,$K0\F0$9$k$H!"2hLL$O?eJ?J}8~(B
-$B$K%9%/%m!<%k$9$k!#%9%/%m!<%k$N:G>.C10L$O%*%W%7%g%s(B 'sidescroll' $B$G;XDj(B
-$B$G$-$k!#(B
+水平スクロール
+  オプション 'wrap' をオフにしておくと、長い行は折り返されず一部だけが
+表示される。カーソルが表示されていない部分に移動すると、画面は水平方向
+にスクロールする。スクロールの最小単位はオプション 'sidescroll' で指定
+できる。
 
 
-$B%F%-%9%H$N@07A(B
-  $B%*%W%7%g%s(B 'textwidth'$B!J(Btw$B!K$G0l9T$ND9$5$r@)8B$G$-$k!#$3$l$O(B vi $B$N(B
-$B!J$"$^$j;H$$>!<j$N$h$/$J$$!K%*%W%7%g%s(B 'wrapmargin' $B$rJd=u$9$k$b$N$G$"(B
-$B$k!#(B'Q' $B%3%^%s%I$G%F%-%9%H$N0lIt$r@07A$9$k$3$H$,$G$-$k!J(B"Q}" $B$O#1%Q%i(B
-$B%0%i%U$r@07A$9$k!K!#%3%^%s%I(B ":center", ":left", ":right" $B$G%F%-%9%H$r(B
-$B@0Ns$5$;$k$3$H$,$G$-$k!#(B
+テキストの整形
+  オプション 'textwidth'（tw）で一行の長さを制限できる。これは vi の
+（あまり使い勝手のよくない）オプション 'wrapmargin' を補助するものであ
+る。'Q' コマンドでテキストの一部を整形することができる（"Q}" は１パラ
+グラフを整形する）。コマンド ":center", ":left", ":right" でテキストを
+整列させることができる。
 
 
-$B%(%G%#%C%H!]%3%s%Q%$%k!]%(%G%#%C%H$N9bB.2=(B
-  $B%3%^%s%I(B ":make" $B$O%3%s%Q%$%i$r5/F0$7!":G=i$N%(%i!<$K%8%c%s%W$9$k!#(B
-$BJL$NJ}K!$H$7$F$O!"%*%W%7%g%s(B "-e" $B$rIU$1$F(B vim $B$r%3%s%Q%$%i$+$i5/F0$9(B
-$B$k!#%3%s%Q%$%i$+$i$N%(%i!<%a%C%;!<%8$N%U%!%$%k$O2r<a$5$l$k!#%(%i!<%U%!(B
-$B%$%k$N3F9T$O%U%!%$%kL>!"9THV9f!"%(%i!<%a%C%;!<%8$rD4$Y$k$?$a$K%9%-%c%s(B
-$B$5$l$k!#(Bvim $B$O:G=i$N%(%i!<$+$i%(%G%#%C%H$r3+;O$9$k!#%(%i!<%U%!%$%kL>$O(B
-"-e errorfile" $B$H$7$FM?$($k$3$H$b$G$-$k!#%3%^%s%I(B ":cn" $B$O<!$N%(%i!<$K(B
-$B%8%c%s%W$9$k!#(B":cl" $B$O$9$Y$F$N%(%i!<%a%C%;!<%8$rI=<($9$k!#B>$K$bMxMQ2D(B
-$BG=$J%3%^%s%I$,$"$k!J(BManx$B$N(B Z $B%(%G%#%?$H$[$\F1MM$G$"$k!K!#%*%W%7%g%s(B
-'errorfile' $B$,%(%i!<%a%C%;!<%8$N%U%!%$%kL>$G$"$k!#%*%W%7%g%s(B
-'errorformat' $B$K!"$5$^$6$^$J%3%s%Q%$%i$+$i$N%(%i!<%a%C%;!<%8$r07$&$?$a(B
-$B$NJ8;zNs$r(B scanf $B%i%$%/$K@_Dj$G$-$k!#%*%W%7%g%s(B 'makeprg' $B$K$O%3%^%s%I(B
-":make" $B$G<B9T$9$k%W%m%0%i%`$NL>A0$r@_Dj$9$k!#(B 'shellpipe' $B%*%W%7%g%s(B
-$B$K%3%s%Q%$%i$N=PNO$r(B errfile $B$K%j%@%$%l%/%H$9$k:]$NJ8;zNs$r;XDj$G$-$k!#(B
+エディット－コンパイル－エディットの高速化
+  コマンド ":make" はコンパイラを起動し、最初のエラーにジャンプする。
+別の方法としては、オプション "-e" を付けて vim をコンパイラから起動す
+る。コンパイラからのエラーメッセージのファイルは解釈される。エラーファ
+イルの各行はファイル名、行番号、エラーメッセージを調べるためにスキャン
+される。vim は最初のエラーからエディットを開始する。エラーファイル名は
+"-e errorfile" として与えることもできる。コマンド ":cn" は次のエラーに
+ジャンプする。":cl" はすべてのエラーメッセージを表示する。他にも利用可
+能なコマンドがある（Manxの Z エディタとほぼ同様である）。オプション
+'errorfile' がエラーメッセージのファイル名である。オプション
+'errorformat' に、さまざまなコンパイラからのエラーメッセージを扱うため
+の文字列を scanf ライクに設定できる。オプション 'makeprg' にはコマンド
+":make" で実行するプログラムの名前を設定する。 'shellpipe' オプション
+にコンパイラの出力を errfile にリダイレクトする際の文字列を指定できる。
 
 
-$B5/F0%*%W%7%g%s!'(B
+起動オプション：
 
-  "-v"$B!J(BView$B!K$rIU$1$F(B vim $B$r5/F0$9$k$H%j!<%I%*%s%j%b!<%I$K$J$k!J(B"-n"
-$B$r4^$`!K!#(B
+  "-v"（View）を付けて vim を起動するとリードオンリモードになる（"-n"
+を含む）。
 
-  "-b" (Binary) $B$rIU$1$F(B vim $B$r5/F0$9$k$H!"%P%$%J%j%U%!%$%k$d<B9T7A<0$N(B
-$B%U%!%$%k$r%(%G%#%C%H$G$-$k$h$&$K!"$$$/$D$+$N%*%W%7%g%s$,%;%C%H$5$l$k!#(B
+  "-b" (Binary) を付けて vim を起動すると、バイナリファイルや実行形式の
+ファイルをエディットできるように、いくつかのオプションがセットされる。
 
-  "-s scriptfile" $B$rIU$1$F(B vim $B$r5/F0$9$k$H(B "scriptfile" $B$rFI$_9~$_!"$=(B
-$B$NFbMF$r%-!<%\!<%I$+$iF~NO$7$?>l9g$HF1MM$K?6Iq$&!#%(%G%#%?$r=*N;$9$kA0(B
-$B$K%U%!%$%k$,=*N;$9$k$H!"%3%s%=!<%k$+$iB3$-$rFI$`!#(B
+  "-s scriptfile" を付けて vim を起動すると "scriptfile" を読み込み、そ
+の内容をキーボードから入力した場合と同様に振舞う。エディタを終了する前
+にファイルが終了すると、コンソールから続きを読む。
 
-  $B%*%W%7%g%s(B "-w" $B$GF~NO$7$?$9$Y$F$NJ8;z$r%9%/%j%W%H%U%!%$%k$K5-O?$9$k!#(B
-$B$3$N%U%!%$%k$O!"B>$N%U%!%$%k$NJT=8$KMxMQ$7$?$j!"%9%/%j%W%H%U%!%$%k$rJQ(B
-$B99$7$F:FJT=8$KMQ$$$k$3$H$,$G$-$k!#(B
+  オプション "-w" で入力したすべての文字をスクリプトファイルに記録する。
+このファイルは、他のファイルの編集に利用したり、スクリプトファイルを変
+更して再編集に用いることができる。
 
-  $B%*%W%7%g%s(B "-n" $B$O(B ".swp" $B%U%!%$%k$r:n$i$J$$$3$H$r;XDj$9$k!J$3$N@h;2(B
-$B>H!K!#(B
+  オプション "-n" は ".swp" ファイルを作らないことを指定する（この先参
+照）。
 
-  $B%*%W%7%g%s(B "-c command" $B$O%*%W%7%g%s(B "+command" $B$HF1$8!#(B
+  オプション "-c command" はオプション "+command" と同じ。
 
-  $B%*%W%7%g%s(B "-T terminal" $B$OC<Kv$N%?%$%W$r;XDj$9$k!#(B
+  オプション "-T terminal" は端末のタイプを指定する。
 
-  $B%*%W%7%g%s(B "-e" $B$O(B vim $B$r(B quickfix $B%b!<%I$G5/F0$9$k!#(B
+  オプション "-e" は vim を quickfix モードで起動する。
 
-  $B%*%W%7%g%s(B "-o" $B$O%*!<%W%s$9$k%&%$%s%I%&$N?t$r;XDj$9$k!#(B "-o4" $B$H$9(B
-$B$k$H#4$D$N%&%$%s%I%&$,%*!<%W%s$9$k!#(B
+  オプション "-o" はオープンするウインドウの数を指定する。 "-o4" とす
+ると４つのウインドウがオープンする。
 
 
-$B%3%^%s%I%b!<%I!'(B
+コマンドモード：
 
-  $B<!$N%3%^%s%I$,$J$$!'(B'Q'$B!J(Bex $B%b!<%I$X$N0\9T!K!#(B
-  $B<!$N(B ex $B%3%^%s%I$,$J$$!'(Bappend, change, insert, open, recover, z $B!#(B
+  次のコマンドがない：'Q'（ex モードへの移行）。
+  次の ex コマンドがない：append, change, insert, open, recover, z 。
 
-  $B%3%^%s%I$NJ8;z$,:G2<9T$KI=<($5$l$k!#%3%^%s%I$,=*N;$9$k$H!"$3$l$O>C$((B
-$B$k!#$3$l$rI=<($7$?$/$J$$>l9g$O!"%*%W%7%g%s(B 'showcmd' $B$r%j%;%C%H$9$l$P(B
-$B$h$$!#(B
+  コマンドの文字が最下行に表示される。コマンドが終了すると、これは消え
+る。これを表示したくない場合は、オプション 'showcmd' をリセットすれば
+よい。
 
-  $B%*%W%7%g%s(B 'ruler' $B$r%;%C%H$9$k$H!"%+!<%=%k$N8=:_0LCV$r:G2<9T$KI=<((B
-$B$9$k!#(B
+  オプション 'ruler' をセットすると、カーソルの現在位置を最下行に表示
+する。
 
-  'u' $B$H(B CTRL-R $B$G(B undo/redo $B$N2s?t;XDj$,$G$-$k!#(B
+  'u' と CTRL-R で undo/redo の回数指定ができる。
 
-  'U' $B$O!":G8e$KJQ99$7$?9T$+$i0\F0$7$?8e$G$b!"$^$?(B 'u' $B$N8e$G$bF/$/!#(B
+  'U' は、最後に変更した行から移動した後でも、また 'u' の後でも働く。
 
-  $B%L%k$OFbItE*$K(B <LF> $B$KCV$-49$($i$l$k!#$3$l$O!"%P%$%J%j%U%!%$%k$N%(%G%#(B
-$B%C%H$r!JB?>/$J$j$H$b!K2DG=$K$9$k!#(B
+  ヌルは内部的に <LF> に置き換えられる。これは、バイナリファイルのエディ
+ットを（多少なりとも）可能にする。
 
-  8 bit $BL\$,%;%C%H$5$l$F$$$kJ8;z$rI=<($9$k!#%*%W%7%g%s(B 'graphic' $B$r%;%C(B
-$B%H$7$F$$$J$1$l$P(B '~' $B$+$i(B 0xa0 $B$^$G$NJ8;z$O(B "~?", "~@", "~A" $BEy$N$h$&(B
-$B$KI=<($9$k!#(B
+  8 bit 目がセットされている文字を表示する。オプション 'graphic' をセッ
+トしていなければ '~' から 0xa0 までの文字は "~?", "~@", "~A" 等のよう
+に表示する。
 
-  $B%3%^%s%I(B '=' $B$O%F%-%9%H$r%U%#%k%?%3%^%s%I$KDL$9!J(Bvi $B$G$O(B lisp $BMQ!K!#(B
-$B%U%#%k%?%3%^%s%IL>$O%*%W%7%g%s(B 'equalprg' $B$G;XDj$G$-$k!#%G%U%)%k%H$O(B
-"indent" $B!#(B
+  コマンド '=' はテキストをフィルタコマンドに通す（vi では lisp 用）。
+フィルタコマンド名はオプション 'equalprg' で指定できる。デフォルトは
+"indent" 。
 
-  '][' $B$O<!$N(B C $B$N4X?t$N=*$j!JBh0l%+%i%`$,(B '}'$B!K$K0\F0$9$k!#(B
-  '[]' $B$OA0$N(B C $B$N4X?t$N=*$j!JBh0l%+%i%`$,(B '}'$B!K$K0\F0$9$k!#(B
+  '][' は次の C の関数の終り（第一カラムが '}'）に移動する。
+  '[]' は前の C の関数の終り（第一カラムが '}'）に移動する。
 
-  ']f', '[f', 'gf' $B$O%+!<%=%k0LCV$N%U%!%$%k$NJT=8$r3+;O$9$k!#(B CTRL-W
-$B$G$O!"%&%$%s%I%&J,3d$r$7$F%+!<%=%k0LCV$N%U%!%$%k$NJT=8$r3+;O$9$k!#(B
+  ']f', '[f', 'gf' はカーソル位置のファイルの編集を開始する。 CTRL-W
+では、ウインドウ分割をしてカーソル位置のファイルの編集を開始する。
 
-  '*' $B$O8=:_%+!<%=%k$,$"$kC18l$rA0J}$K8!:w$9$k!#(B'#' $B$O8eJ}$K8!:w$9$k!#(B
-  'K' $B$O8=:_%+!<%=%k$,$"$kC18l$r0z?t$H$7$F!"%*%W%7%g%s(B 'keywordprg' $B$G(B
-$B;XDj$5$l$?%W%m%0%i%`$r<B9T$9$k!#(B
+  '*' は現在カーソルがある単語を前方に検索する。'#' は後方に検索する。
+  'K' は現在カーソルがある単語を引数として、オプション 'keywordprg' で
+指定されたプログラムを実行する。
 
-  '%' $B$NA0$K?t;z$rIU$1$F!"%U%!%$%k$N$=$N3d9g$N0LCV$K0\F0$G$-$k!#%^%C%A(B
-$B$9$k3g8L$K%8%c%s%W$9$kDL>o$N(B '%' $B$O!"0zMQIdCf$N3g8L$r%9%-%C%W$9$k!#(B
+  '%' の前に数字を付けて、ファイルのその割合の位置に移動できる。マッチ
+する括弧にジャンプする通常の '%' は、引用符中の括弧をスキップする。
 
-  $B%3%^%s%I(B CTRL-] $B$G!"%+!<%=%k$O<1JL;R$NESCf$K$"$C$F$b$h$$!#(B
+  コマンド CTRL-] で、カーソルは識別子の途中にあってもよい。
 
-  $B;HMQ$7$?%?%0$O5-21$5$l$k!#5-21$7$?%?%0!J%?%0%9%?%C%/!K$rMxMQ$9$k%3%^(B
-$B%s%I$O!"(B CTRL-T, ':pop', ':tag' $B$G$"$k!#(B':tags' $B$O%?%0%9%?%C%/$N0lMw$r(B
-$BI=<($9$k!#(B
+  使用したタグは記憶される。記憶したタグ（タグスタック）を利用するコマ
+ンドは、 CTRL-T, ':pop', ':tag' である。':tags' はタグスタックの一覧を
+表示する。
 
-  $B%*%W%7%g%s(B 'tags' $B$K$O!"%?%0%U%!%$%kL>$N%j%9%H$r;XDj$G$-$k!#$D$^$j!"(B
-$BJ#?t$N%?%0%U%!%$%k$r;HMQ$9$k$3$H$,$G$-$k!#(B
+  オプション 'tags' には、タグファイル名のリストを指定できる。つまり、
+複数のタグファイルを使用することができる。
 
-  $B0JA0$K07$C$?%U%!%$%kL>$O%U%!%$%kL>%j%9%H$K5-21$5$l$F$$$k!#(BCTRL-^ $B$K(B
-$B$O2s?t$,;XDj$G$-!"$=$NCM$O%j%9%HCf$N0LCV$r<($9!#(B
+  以前に扱ったファイル名はファイル名リストに記憶されている。CTRL-^ に
+は回数が指定でき、その値はリスト中の位置を示す。
 
-  $B8!:w%Q%?!<%s$,$h$jB?$/$N5!G=$r;}$C$F$$$k!#(B <NL> $BJ8;z$r8!:w%Q%?!<%s$H(B
-":s" $B$NCV49J8;zNs$K4^$`;v$,$G$-$k!#(B vi $B$G$O%3%^%s%I$N=*N;$r<($9!#(B
+  検索パターンがより多くの機能を持っている。 <NL> 文字を検索パターンと
+":s" の置換文字列に含む事ができる。 vi ではコマンドの終了を示す。
 
-  $B8!:w$G$O%^%C%A$7$?%F%-%9%H$NKvHx$K0\F0$G$-!"0\F0@h$+$iA08e$X$N%*%U%;%C(B
-$B%H$b;XDj$G$-$k!#(B
+  検索ではマッチしたテキストの末尾に移動でき、移動先から前後へのオフセッ
+トも指定できる。
 
-  '~', ':next', ':Next', 'n', 'N' $B$K2s?t$r;XDj$9$k$3$H$,$G$-$k!#(B
+  '~', ':next', ':Next', 'n', 'N' に回数を指定することができる。
 
-  ":next!" $B%3%^%s%I$O!"(B 'autowrite' $B%*%W%7%g%s$,@_Dj$5$l$F$$$k>l9g%U%!(B
-$B%$%k$K=q$-9~$^$J$$!#(B vi $B$G$O!"=q$-9~$_$r9T$&$,!"(B ':rewind!' $B$G$OEvA3$N(B
-$B$3$H$J$,$i=q$-9~$^$J$$$N$G(B vi $B$N%P%0$H9M$($i$l$k!#(B
+  ":next!" コマンドは、 'autowrite' オプションが設定されている場合ファ
+イルに書き込まない。 vi では、書き込みを行うが、 ':rewind!' では当然の
+ことながら書き込まないので vi のバグと考えられる。
 
-  "5r<CR>" $B$O8^J8;z$r8^$D$N2~9T$KCV$-49$($k!#(Bvi $B$N>l9g$O8^J8;z$r0l$D$N(B
-$B2~9T$KCV$-49$($k!#(B
+  "5r<CR>" は五文字を五つの改行に置き換える。vi の場合は五文字を一つの
+改行に置き換える。
 
-  $B%3%^%s%I(B ':wnext' $B$NDI2C!#$3$l$O!"(B':write' $B$KB3$1$F(B ':next' $B$r9T$C$?(B
-$B$N$HF1$8!#(B
+  コマンド ':wnext' の追加。これは、':write' に続けて ':next' を行った
+のと同じ。
 
-  ":w!" $B%3%^%s%I$O!"%i%$%H%W%m%F%/%H$,@_Dj$5$l$F$$$F$b>o$K=q$-9~$_$r9T(B
-$B$&!#(B
+  ":w!" コマンドは、ライトプロテクトが設定されていても常に書き込みを行
+う。
 
-  $B%*%W%7%g%s(B 'tildeop' $B$r%;%C%H$9$k$H!"(B'~' $B$O%*%Z%l!<%?$H$7$F5!G=$9$k(B
-$B!J0\F0%3%^%s%I$rB3$1$kI,MW$,$"$k!K!#(B
+  オプション 'tildeop' をセットすると、'~' はオペレータとして機能する
+（移動コマンドを続ける必要がある）。
 
-  $B%3%^%s%I(B 'J' (join) $B$r;H$&$H$-!"%*%W%7%g%s(B 'joinspaces' (js) $B$r%j%;%C(B
-$B%H$7$F$*$/$H!"%T%j%*%I$N8e$K6uGr$r0l$D$@$1IU$1$k!J(Bvi $B$OFs$DIU$1$k!K!#(B
+  コマンド 'J' (join) を使うとき、オプション 'joinspaces' (js) をリセッ
+トしておくと、ピリオドの後に空白を一つだけ付ける（vi は二つ付ける）。
 
-  'cw' $B$,J#?t$N%[%o%$%H%9%Z!<%9$KBP$7$FM-8z$G$"$k!J(Bvi $B$G$O!"(B'cw' $B$O0l(B
-$B$D$N6uGr$@$1$rJQ99$9$k$,!"(B'dw' $B$O$9$Y$F$N%[%o%$%H%9%Z!<%9$r:o=|$9$k!K!#(B
+  'cw' が複数のホワイトスペースに対して有効である（vi では、'cw' は一
+つの空白だけを変更するが、'dw' はすべてのホワイトスペースを削除する）。
 
-  'o' $B$H(B 'O' $B$K2s?t;XDj$,$G$-$k!J(Bvi $B$G$O;XDj$rL5;k$9$k!K!#(B
+  'o' と 'O' に回数指定ができる（vi では指定を無視する）。
 
-  $B%3%^%s%I(B ':dis' $B$G%d%s%/%l%8%9%?$NFbMF$rI=<($9$k!#(B
+  コマンド ':dis' でヤンクレジスタの内容を表示する。
 
-  $B$3$l$^$G$K07$C$?%U%!%$%kL>$r5-21$7$F$$$k!#(B
-  $B%3%^%s%I(B ":files" $B$G$=$N0lMw$rI=<($9$k!#(B
-  '#'<N> $B$G$=$N0lMw$N(B <N> $BHVL\$N$b$N$KCV$-49$o$k!#(B
-  "#<" $B$O8=:_$N%U%!%$%kL>$+$i3HD%;R$r<h$j=|$$$?$b$N$KCV$-49$o$k!#(B
+  これまでに扱ったファイル名を記憶している。
+  コマンド ":files" でその一覧を表示する。
+  '#'<N> でその一覧の <N> 番目のものに置き換わる。
+  "#<" は現在のファイル名から拡張子を取り除いたものに置き換わる。
 
-  ex $B%3%^%s%I$N8e$K;XDj$9$k%U%i%0$O%5%]!<%H$7$F$$$J$$!J$=$NM=Dj$b$J$$!K!#(B
+  ex コマンドの後に指定するフラグはサポートしていない（その予定もない）。
 
-  $BHs(B UNIX $B%7%9%F%`$G$O!"%3%^%s%I(B ":cd" $B$O%[!<%`%G%#%l%/%H%j$K9T$/$N$G(B
-$B$O$J$/!"8=:_%G%#%l%/%H%j$rI=<($9$k!#(B":pwd" $B$J$i$I$N%7%9%F%`$G$b8=:_%G%#(B
-$B%l%/%H%j$rI=<($9$k!#(B
+  非 UNIX システムでは、コマンド ":cd" はホームディレクトリに行くので
+はなく、現在ディレクトリを表示する。":pwd" ならどのシステムでも現在ディ
+レクトリを表示する。
 
-  $B%3%^%s%I(B ':source!' $B$G(B vi $B$N%3%^%s%I$r%U%!%$%k$+$iFI$_9~$`!#(B
+  コマンド ':source!' で vi のコマンドをファイルから読み込む。
 
-  $B%3%^%s%I(B ':mkexrc' $B$GJQ99$N$"$C$?%*%W%7%g%s$H%^%C%W$r%U%!%$%k(B ".exrc"
-$B$K=q$-=P$9!#(B':mkvimrc' $B$J$i(B ".vimrc" $B$K=q$-=P$9!#(B
+  コマンド ':mkexrc' で変更のあったオプションとマップをファイル ".exrc"
+に書き出す。':mkvimrc' なら ".vimrc" に書き出す。
 
-  $B%^%C%W$G$OKvHx:F5"Dj5A$r%A%'%C%/$7$F$$$J$$!#(B":map! foo ^]foo" $B$N$h$&(B
-$B$JDj5A$,2DG=$G$"$k!#(B
+  マップでは末尾再帰定義をチェックしていない。":map! foo ^]foo" のよう
+な定義が可能である。
 
-  $B%3%^%s%I(B ':put!' $B$G%l%8%9%?$NFbMF$r8=:_9T$N>e$K=q$-=P$9!#(B
+  コマンド ':put!' でレジスタの内容を現在行の上に書き出す。
 
-  $BL>A0IU%l%8%9%?(B '.' $B$O%3%^%s%I(B p, P, ":put" $B$G;HMQ$G$-$k!#$3$N%l%8%9(B
-$B%?$NFbMF$O:G8e$KA^F~$7$?%F%-%9%H$G$"$k!#(B
+  名前付レジスタ '.' はコマンド p, P, ":put" で使用できる。このレジス
+タの内容は最後に挿入したテキストである。
 
-  'p' $B$H(B 'P' $B%3%^%s%I$O(B vi $B$G$O9T$,L5$$>l9g(B '.' $B$G7+$jJV$9;v$,$G$-$J$$!#(B
-$B$7$+$7!"(B vim $B$G$O$$$D$G$b7+$jJV$;$k!#(B
+  'p' と 'P' コマンドは vi では行が無い場合 '.' で繰り返す事ができない。
+しかし、 vim ではいつでも繰り返せる。
 
-  $B%3%^%s%I(B ":noremap" $B$G!":F%^%C%W$,9T$o$l$J$$%^%C%T%s%0$r@_Dj$G$-$k!#(B
-$B$3$l$OFs$D$N%-!<$N0UL#$rF~$lBX$($k$H$-$KJXMx$G$"$k!#(B":cmap", ":cunmap"
-$B$*$h$S(B":cnoremap" $B$O%3%^%s%I%i%$%s$NJT=8$N>l9g$K$@$1;H$($k%^%C%T%s%0$r(B
-$B9T$&!#(B":imap", ":iunmap" $B$*$h$S(B ":inoremap" $B$OA^F~%b!<%I$N>l9g$K$@$1;H(B
-$B$($k%^%C%T%s%0$r9T$&!#F1MM$NC;=L7A%3%^%s%I$H$7$F!"(B":noreabbrev",
+  コマンド ":noremap" で、再マップが行われないマッピングを設定できる。
+これは二つのキーの意味を入れ替えるときに便利である。":cmap", ":cunmap"
+および":cnoremap" はコマンドラインの編集の場合にだけ使えるマッピングを
+行う。":imap", ":iunmap" および ":inoremap" は挿入モードの場合にだけ使
+えるマッピングを行う。同様の短縮形コマンドとして、":noreabbrev",
 ":iabbrev", ":cabbrev",":iunabbrev", ":cunabbrev", ":inoreabbrev",
-":cnoreabbrev" $B$,$"$k!#(B
+":cnoreabbrev" がある。
 
-  vi $B$G$O!"%3%^%s%I(B ":map foo bar" $B$O0JA0$N%^%C%T%s%0(B ":map bug foo"
-$B$r:o=|$9$k!#$3$l$O%P%0$G$"$k$H9M$($i$l$k$N$G!"(Bvim $B$K$O<BAu$7$F$$$J$$!#(B
-$B%"%s%^%C%W$OHs>o$KFq$7$$$N$G!"(B":unmap! foo" $B$O(B ":map! bug foo"$B$r:o=|$9(B
-$B$k!J$3$l$O(B vi$B$HF1MM!K!#(B
+  vi では、コマンド ":map foo bar" は以前のマッピング ":map bug foo"
+を削除する。これはバグであると考えられるので、vim には実装していない。
+アンマップは非常に難しいので、":unmap! foo" は ":map! bug foo"を削除す
+る（これは viと同様）。
 
-  $B%3%^%s%I(B ':@r' $B$O!"%l%8%9%?(B r $B$r<B9T$9$k!J(Bvi $B$G$b%5%]!<%H$7$F$$$k%P!<(B
-$B%8%g%s$,$"$k!K!#(B
+  コマンド ':@r' は、レジスタ r を実行する（vi でもサポートしているバー
+ジョンがある）。
 
-  ':' $B%l%8%9%?$O!":G8e$N%3%^%s%I%i%$%s$NFbMF$,@_Dj$5$l$k!#(B
-  '%' $B%l%8%9%?$O!"8=:_$N%U%!%$%kL>$,@_Dj$5$l$k!#(B
+  ':' レジスタは、最後のコマンドラインの内容が設定される。
+  '%' レジスタは、現在のファイル名が設定される。
 
-  CTRL-O/CTRL-I $B$G5l!??7%]%8%7%g%s$K%8%c%s%W$G$-$k!#$3$l$O%3%^%s%I(B ''
-$B$G0\F0$9$k$N$HF1$8$G$"$k$,!"Ht$S@h$,B>$N%U%!%$%k$G$b$h$$!#%3%^%s%I(B
-':jumps' $B$G%]%8%7%g%s$N0lMw$rI=<($9$k!#(B
+  CTRL-O/CTRL-I で旧／新ポジションにジャンプできる。これはコマンド ''
+で移動するのと同じであるが、飛び先が他のファイルでもよい。コマンド
+':jumps' でポジションの一覧を表示する。
 
-  $B%*%W%7%g%s(B 'shiftround' $B$r%;%C%H$9$k$H!"%3%^%s%I(B '>' $B$H(B '<' $B$G%$%s%G(B
-$B%s%HNL$r(B'shiftwidth' $B$N@0?tG\$K4]$a$k$3$H$,$G$-$k!#(B
+  オプション 'shiftround' をセットすると、コマンド '>' と '<' でインデ
+ント量を'shiftwidth' の整数倍に丸めることができる。
 
-  $B%*%W%7%g%s(B 'scrolljump' $B$K!"%+!<%=%k$,2hLL$+$iHt$S=P$9>l9g$K%9%/%m!<(B
-$B%k$5$;$k:G>.$N9T?t$r;XDj$G$-$k!#%9%/%m!<%k$,CY$$>l9g$K;H$&$H$h$$!#(B
+  オプション 'scrolljump' に、カーソルが画面から飛び出す場合にスクロー
+ルさせる最小の行数を指定できる。スクロールが遅い場合に使うとよい。
 
-  $BBgJ8;z$N%^!<%/$O%U%!%$%k$r1[$($F%8%c%s%W$G$-$k!#%3%^%s%I(B ":marks" $B$O(B
-$B8=:_@_Dj$5$l$F$$$k%^!<%/$N0lMw$rI=<($9$k!#%3%^%s%I(B "']" $B$H(B "`]" $B$OA0$N(B
-$B%*%Z%l!<%?$N=*N;COE@$+%3%^%s%I(B put $B$GA^F~$7$?%F%-%9%H$N=*N;COE@$K%8%c(B
-$B%s%W$9$k!#(B"'[" $B$H(B "`["$B$O3+;OCOE@$K%8%c%s%W$9$k!#(B
+  大文字のマークはファイルを越えてジャンプできる。コマンド ":marks" は
+現在設定されているマークの一覧を表示する。コマンド "']" と "`]" は前の
+オペレータの終了地点かコマンド put で挿入したテキストの終了地点にジャ
+ンプする。"'[" と "`["は開始地点にジャンプする。
 
-  $B%*%W%7%g%s(B 'shelltype' $B$K$O!"MxMQ$9$k%7%'%k$N%?%$%W$rH?1G$7$?CM$r@_(B
-$BDj$9$k!#(B
+  オプション 'shelltype' には、利用するシェルのタイプを反映した値を設
+定する。
 
-  'highlight' $B%*%W%7%g%*%s$K$O!"(B highlight mode $B$r;H$&$=$l$>$l$N%3%^%s(B
-$B%I$r@_Dj$9$k!#(B
+  'highlight' オプショオンには、 highlight mode を使うそれぞれのコマン
+ドを設定する。
 
-  $B%3%^%s%I(B CTRL-A$B!J2C;;!K$H(B CTRL-X$B!J8:;;!K$r?75,<BAu!#$3$l$i$N%3%^%s%I(B
-$B$K;XDj$5$l$?2s?t!J%G%U%)%k%H$O#1!K$,!"%+!<%=%k0J9_$N?tCM$K2C$($i$l$k!?(B
-$B?tCM$+$i8:$8$i$l$k!#?tCM$O==?JK!!"H,?JK!!J(B'0' $B$G;O$^$k!K!"==O;?JK!(B
-$B!J(B'0x' $B$G;O$^$k!K$G$"$C$F$h$$!#%^%/%m$G$N;HMQ$KJXMx$G$"$k!#(B
+  コマンド CTRL-A（加算）と CTRL-X（減算）を新規実装。これらのコマンド
+に指定された回数（デフォルトは１）が、カーソル以降の数値に加えられる／
+数値から減じられる。数値は十進法、八進法（'0' で始まる）、十六進法
+（'0x' で始まる）であってよい。マクロでの使用に便利である。
 
-  $B%H%0%k%*%W%7%g%s$OF,$K(B "inv" $B$rIU$1$F%;%C%H$9$k$H>uBV$,H?E>$9$k!#(B
+  トグルオプションは頭に "inv" を付けてセットすると状態が反転する。
 
-  vi $B$G$b(B vim $B$G$b%3%^%s%I(B ":substitute" $B$G(B CTRL-M $B$r;H$&$3$H$K$h$C$F(B
-$B2~9T$r:n$k$3$H$,$G$-$k!#(Bvi $B$K$*$$$F$O!"$3$l$O%F%-%9%H$r??$N(B CTRL-M$B$KCV(B
-$B49$G$-$J$$$3$H$r0UL#$9$k!#(Bvim $B$G$O(B CTRL-V $B$rA0CV$9$k$3$H$K$h$C$F??$N(B
-CTRL-M $B$KCV49$9$k$3$H$,$G$-$k!#(B
-
-
-$BA^F~%b!<%I!'(B
-
-  $B%*%W%7%g%s(B 'revins' $B$r%;%C%H$9$k$H5U8~$-$KF~NO$5$l$k!#$3$l$O%X%V%i%$(B
-$B8l$NF~NOMQ$G$"$k!#DL>o$NJ8;z$NF~NO$G$O%+!<%=%k$O0\F0$;$:!"%F%-%9%H$,1&(B
-$B$K0\F0$9$k!#CV49%b!<%I$G$O%+!<%=%k$,:8$K0\F0$9$k!#(BBS, CTRL-W, CTRL-U
-$B$b$^$?5U8~$-$KF0:n$9$k!#(BCTRL-B $B$G%*%W%7%g%s(B 'revins' $B$O%H%0%k$9$k!#(B
-
-  BS $B%-!<$O(B CTRL-D $B$N$h$&$K%$%s%G%s%H$r>C$9!#(B
-
-  $B%*%W%7%g%s(B 'backspace' (bs) $B$rHs#0$K@_Dj$7$F$*$/$H!"(BCTRL-U $B$d(B CTRL-W
-$B$G2~9T$r1[$($F:o=|$9$k$3$H$,$G$-$k!#(B'backspace' $B$r#2$K@_Dj$9$k$H!"A^F~(B
-$B3+;O0LCV$r1[$($F:o=|$G$-$k!#(B
-
-  $B%*%W%7%g%s(B 'paste' $B$r%;%C%H$9$k$H!"$$$/$D$+$N%*%W%7%g%s$,%j%;%C%H$5(B
-$B$l!"$^$?A^F~%b!<%I$G$N%^%C%T%s%0$*$h$SC;=LF~NO$OL58z$K$J$k!#$3$l$K$h$C(B
-$B$F!"%&%#%s%I%&%7%9%F%`MxMQ;~$K@5>o$K%Z!<%9%H$,$G$-$k$h$&$K$J$k!#%*%W%7%g(B
-$B%s(B 'paste'$B$r%j%;%C%H$9$k$H85$NCM$K@_Dj$7D>$5$l$k!#(B
-
-  CTRL-T$B!?(BCTRL-D $B$O!"%+!<%=%k$,$I$3$K$"$k$+$K$h$i$:!">o$K%$%s%G%s%H$N(B
-$BA^F~!?:o=|$r9T$&!#(B
-
-  CTRL-@$B!JD>A0$KA^F~$7$?%F%-%9%H$NA^F~!K$O$$$D$G$b;H$($k!J(Bvi: $B:G=i$NJ8(B
-$B;z$H$7$F$7$+;H$($J$$!K!#(B
-
-  CTRL-A $B$O(B CTRL-@ $B$HF1$8$h$&$KF/$/$,!"A^F~%b!<%I$r=*N;$5$;$J$$!#(B
-
-  CTRL-R <0-9a-z> $B$O%l%8%9%?$NFbMF$rA^F~$9$k!#(B
-
-  $B%*%W%7%g%s(B 'smartindent' (si) $B$r%;%C%H$9$k$H!"(BC $B$N%W%m%0%i%`$O$h$j$h(B
-$B$/<+F0%$%s%G%s%H$5$l$k!#(B
-
-  CTRL-Y $B$H(B CTRL-E $B$O%+!<%=%k$N>e!?2<$NJ8;z$r%+!<%=%k0LCV$K%3%T!<$9$k!#(B
-
-  CTRL-V $B$KB3$1$F;07e$N==?J?t$rF~$l$k$H!"$=$l$KBP1~$9$k0lJ8;z$H$7$FF~(B
-$BNO$5$l$k!#%-!<%\!<%I$K$J$$9q:]E*$JJ8;z$rF~NO$9$k$N$KM-8z$G$"$k!#(B
-
-  $B%*%W%7%g%s(B 'expandtab' (et) $B$r%;%C%H$9$k$H!"(BTAB $B$OE,@Z$J8D?t$N6uGr$K(B
-$BE83+$5$l$k!#(B
-
-  $B2hLL$O>o$K%P%C%U%!$NFbMF$rH?1G$7$F$$$k!J(Bvi $B$O%F%-%9%HJQ99$N>l9g$J$I(B
-$B$OH?1G$7$F$$$J$$!K!#(B
-
-  DIGRAPHS $B$rDj5A$7$F(B vim $B$r%3%s%Q%$%k$9$k$H!"(Bdigraph $B$,%5%]!<%H$5$l$k!#(B
-$B$3$l$O!"DL>o$N(B Amiga digraph $B$r4^$`!#(Bdigraph $B$O%3%^%s%I(B ":digraph"$B$GI=(B
-$B<($5$l$k!#DI2C$O!"(B":digraph {char1}{char2} {number}" $B$N$h$&$K9T$&!#(B
-digraph$B$NF~NO$O(B"CTRL-K {char1} {char2}" $B$H$9$k!#$^$?!"%*%W%7%g%s(B
-"digraph" $B$,%;%C%H$5$l$F$$$k>l9g$O!"(B"{char1} BS {char2}" $B$G$b$h$$!#(B
+  vi でも vim でもコマンド ":substitute" で CTRL-M を使うことによって
+改行を作ることができる。vi においては、これはテキストを真の CTRL-Mに置
+換できないことを意味する。vim では CTRL-V を前置することによって真の
+CTRL-M に置換することができる。
 
 
-$B%3%^%s%I%i%$%s%b!<%I!'(B
+挿入モード：
 
-  $B%3%^%s%I%i%$%s$NF~NO$r(B ESC $B$G=*N;$5$;$k$H!"$=$N%3%^%s%I$O<B9T$7$J$$!#(B
-vi $B$G$O<B9T$9$k$,!"DL>o$O$=$l$OK>$^$J$$$3$H$@$m$&!J(BESC $B$rF~NO$9$k$H%3(B
-$B%^%s%I%b!<%I$KLa$k$Y$-$G$"$k!K!#FbMF$,$h$/$o$+$i$J$$%^%/%m$r<B9T$7$F$b(B
-$BLdBj$,5/$-$J$$$h$&$K!"%^%/%mCf$N(BESC$B$O!J=>MhDL$j!K$=$N%3%^%s%I$r<B9T$5(B
-$B$;$k!#(Bvi $B$N$h$&$K(BESC $B$G%3%^%s%I$r<B9T$9$k$K$O<!$N$h$&$K$9$l$P$h$$!#(B
+  オプション 'revins' をセットすると逆向きに入力される。これはヘブライ
+語の入力用である。通常の文字の入力ではカーソルは移動せず、テキストが右
+に移動する。置換モードではカーソルが左に移動する。BS, CTRL-W, CTRL-U
+もまた逆向きに動作する。CTRL-B でオプション 'revins' はトグルする。
+
+  BS キーは CTRL-D のようにインデントを消す。
+
+  オプション 'backspace' (bs) を非０に設定しておくと、CTRL-U や CTRL-W
+で改行を越えて削除することができる。'backspace' を２に設定すると、挿入
+開始位置を越えて削除できる。
+
+  オプション 'paste' をセットすると、いくつかのオプションがリセットさ
+れ、また挿入モードでのマッピングおよび短縮入力は無効になる。これによっ
+て、ウィンドウシステム利用時に正常にペーストができるようになる。オプショ
+ン 'paste'をリセットすると元の値に設定し直される。
+
+  CTRL-T／CTRL-D は、カーソルがどこにあるかによらず、常にインデントの
+挿入／削除を行う。
+
+  CTRL-@（直前に挿入したテキストの挿入）はいつでも使える（vi: 最初の文
+字としてしか使えない）。
+
+  CTRL-A は CTRL-@ と同じように働くが、挿入モードを終了させない。
+
+  CTRL-R <0-9a-z> はレジスタの内容を挿入する。
+
+  オプション 'smartindent' (si) をセットすると、C のプログラムはよりよ
+く自動インデントされる。
+
+  CTRL-Y と CTRL-E はカーソルの上／下の文字をカーソル位置にコピーする。
+
+  CTRL-V に続けて三桁の十進数を入れると、それに対応する一文字として入
+力される。キーボードにない国際的な文字を入力するのに有効である。
+
+  オプション 'expandtab' (et) をセットすると、TAB は適切な個数の空白に
+展開される。
+
+  画面は常にバッファの内容を反映している（vi はテキスト変更の場合など
+は反映していない）。
+
+  DIGRAPHS を定義して vim をコンパイルすると、digraph がサポートされる。
+これは、通常の Amiga digraph を含む。digraph はコマンド ":digraph"で表
+示される。追加は、":digraph {char1}{char2} {number}" のように行う。
+digraphの入力は"CTRL-K {char1} {char2}" とする。また、オプション
+"digraph" がセットされている場合は、"{char1} BS {char2}" でもよい。
+
+
+コマンドラインモード：
+
+  コマンドラインの入力を ESC で終了させると、そのコマンドは実行しない。
+vi では実行するが、通常はそれは望まないことだろう（ESC を入力するとコ
+マンドモードに戻るべきである）。内容がよくわからないマクロを実行しても
+問題が起きないように、マクロ中のESCは（従来通り）そのコマンドを実行さ
+せる。vi のようにESC でコマンドを実行するには次のようにすればよい。
         ":cmap ^V<ESC> ^V<CR>"
 
 
-$B$=$NB>!'(B
+その他：
 
-  $B0J2<$N%*%W%7%g%s$r%5%]!<%H$7$F$$$J$$!'(B
+  以下のオプションをサポートしていない：
   autoprint (ap), beautify (bf), edcompatible, hardtabs (ht), lisp,
 mesg, open, optimize (op), prompt, redraw, slowopen (slow), terse,
-window, w300, w1200 and w9600$B!#(B
-$B%*%W%7%g%s(Bthese $B$O@_Dj$G$-$k$,L5;k$5$l$k!#(B
+window, w300, w1200 and w9600。
+オプションthese は設定できるが無視される。
 
-  $B%*%W%7%g%s(B 'compatible' $B$r%;%C%H$9$k$H!"$9$Y$F$N%*%W%7%g%s$r:GBg8B(B
-vi $B8_49$K$J$k$h$&$K@_Dj$9$k!#(B
+  オプション 'compatible' をセットすると、すべてのオプションを最大限
+vi 互換になるように設定する。
 
-  $B%*%W%7%g%s(B 'ttimeout' $B!#$3$l$O(B 'timeout' $B$H;w$F$$$k$,!"%+!<%=%k%-!<(B
-$B$*$h$S%U%!%s%/%7%g%s%-!<$@$1$KBP$7$FM-8z$G$"$j!"DL>o$N%^%C%W$5$l$?J8;z(B
-$B$K$OE,MQ$5$l$J$$!#%*%W%7%g%s(B 'timoutlen' $B$K%_%jICC10L$GBT$A;~4V$r@_Dj(B
-$B$G$-$k!#%*%W%7%g%s(B'esckeys' $B$,%;%C%H$5$l$F$$$J$$$H!"(B<ESC> $B$+$i;O$^$k%+!<(B
-$B%=%k%-!<$H%U%!%s%/%7%g%s%-!<$OA^F~%b!<%I$GG'<1$5$l$J$$!#(B
+  オプション 'ttimeout' 。これは 'timeout' と似ているが、カーソルキー
+およびファンクションキーだけに対して有効であり、通常のマップされた文字
+には適用されない。オプション 'timoutlen' にミリ秒単位で待ち時間を設定
+できる。オプション'esckeys' がセットされていないと、<ESC> から始まるカー
+ソルキーとファンクションキーは挿入モードで認識されない。
 
-  $BC<Kv$N2hLL@)8fJ8;zNs$=$l$>$l$KBP$9$k%*%W%7%g%s$,MQ0U$5$l$F$$$k!#$3$l(B
-$B$i$O(B termcap $B$,%5%]!<%H$5$l$F$$$J$$$+!"$^$?$O8D!9$NJ8;zNs$rJQ99$7$?$$(B
-$B$H$-$K;H$&!#(B
+  端末の画面制御文字列それぞれに対するオプションが用意されている。これ
+らは termcap がサポートされていないか、または個々の文字列を変更したい
+ときに使う。
 
-  $B%*%W%7%g%s(B 'textmode' $B$r%;%C%H$9$k$H!J(BMSDOS $B$N>l9g$N%G%U%)%k%H!K!"(B
-<CR><LF> $B$,9TKv$H$7$F07$o$l$k!#%j%;%C%H$9$k$H!J(BUnix $B$d(B Amiga $B$N>l9g$N(B
-$B%G%U%)%k%H!K!"(B<LF> $B$,9TKv$K$J$k!#%*%W%7%g%s(B 'textauto' $B$r%;%C%H$9$k$H!"(B
-vim $B$O:G=i$N(B <LF> $B$,8=$l$k$^$GD4$Y$F9TKv%3!<%I$r7h$a$k!#%*%W%7%g%s(B
-'textmode' $B$OE,59@_Dj$5$l$k!#(B
+  オプション 'textmode' をセットすると（MSDOS の場合のデフォルト）、
+<CR><LF> が行末として扱われる。リセットすると（Unix や Amiga の場合の
+デフォルト）、<LF> が行末になる。オプション 'textauto' をセットすると、
+vim は最初の <LF> が現れるまで調べて行末コードを決める。オプション
+'textmode' は適宜設定される。
 
-  $B%8%g%V%3%s%H%m!<%k$N$G$-$J$$%7%9%F%`!J(BBSD-UNIX $B$r=|$/$[$H$s$I$N%7%9(B
-$B%F%`!K$G$O!"(BCTRL-Z $B$H%3%^%s%I(B ":stop", ":suspend" $B$O?7$?$J%7%'%k$r5/F0(B
-$B$9$k!#(B
+  ジョブコントロールのできないシステム（BSD-UNIX を除くほとんどのシス
+テム）では、CTRL-Z とコマンド ":stop", ":suspend" は新たなシェルを起動
+する。
 
-  Amiga $B>e$G!"=PNOMQ$NBPOC%&%#%s%I%&$J$7$K(B vim $B$r5/F0$9$k$H!"?7$?$J%&%#(B
-$B%s%I%&$,3+$+$l$k!J(B':sh' $B$bMxMQ$G$-$k!K!#0z?t(B "-d" $B$G%G%P%$%9$N;XDj$,$G(B
-$B$-$k!#Nc(B "-d con:20/20/600/150"$B!K!#(B
+  Amiga 上で、出力用の対話ウィンドウなしに vim を起動すると、新たなウィ
+ンドウが開かれる（':sh' も利用できる）。引数 "-d" でデバイスの指定がで
+きる。例 "-d con:20/20/600/150"）。
 
-  $B5/F0;~$K!"4D6-JQ?t(B VIMINIT $B$+(B EXINIT $B!"%U%!%$%k(B s:.vimrc $B$+(B s:.exrc$B!"(B
-$B$5$i$K(B.vimrc $B$+(B .exrc $B$r=i4|2=%3%^%s%I$H$7$FFI$_9~$`!#(B.vimrc $B$d(B .exrc
-$B$+$iFI$`>l9g!"$$$/$D$+$N%3%^%s%I$O%;%-%e%j%F%#$N$?$a$KMxMQ$G$-$J$$(B
-$B!J(Bshell $B%3%^%s%I$d%U%!%$%k=q$-9~$_$N%3%^%s%I$r;X$9!#$^$?!"(B:map $B%3%^%s(B
-$B%I$O%(%3!<$5$l$k!K!#$3$l$O%*%W%7%g%s(B 'secure' $B$K$h$C$FL5;k$9$k$3$H$,$G(B
-$B$-$k!#(B
+  起動時に、環境変数 VIMINIT か EXINIT 、ファイル s:.vimrc か s:.exrc、
+さらに.vimrc か .exrc を初期化コマンドとして読み込む。.vimrc や .exrc
+から読む場合、いくつかのコマンドはセキュリティのために利用できない
+（shell コマンドやファイル書き込みのコマンドを指す。また、:map コマン
+ドはエコーされる）。これはオプション 'secure' によって無視することがで
+きる。
 
-  $B0l9T$ND9$5$O(B int $B$N:GBgCM$^$G!J(BAmiga $B$N>l9g$O(B 32767$B7e!"B?$/$N(B 32-bit
-$B%^%7%s$G$O$=$l0J>e!K!#$=$N$h$&$J9T$,>o$KJT=8$G$-$k$o$1$G$O$J$$!#%U%!%$(B
-$B%kA4BN$G$O(B2147483646$B9T$^$G!#2hLL$h$jD9$$9T$N>l9g!":G8e$N9T$O(B <@>$B$GKd$a(B
-$B$i$l$F$=$NA0$N9T$^$G$,I=<($5$l$k!J%*%W%7%g%s(B 'wrap' $B%;%C%H$5$l$F$$$k>l(B
-$B9g!K!#(B
+  一行の長さは int の最大値まで（Amiga の場合は 32767桁、多くの 32-bit
+マシンではそれ以上）。そのような行が常に編集できるわけではない。ファイ
+ル全体では2147483646行まで。画面より長い行の場合、最後の行は <@>で埋め
+られてその前の行までが表示される（オプション 'wrap' セットされている場
+合）。
 
-  $B%*%W%7%g%s(B 'columns' $B$GI=<($NI}$r@_Dj!?I=<($G$-$k!#(B
+  オプション 'columns' で表示の幅を設定／表示できる。
 
-  $B8=:_$N%U%!%$%kL>$,%&%#%s%I%&$N%?%$%H%k%P!<$KI=<($5$l$k!#(B
+  現在のファイル名がウィンドウのタイトルバーに表示される。
 
-  $B%U%!%$%kL>$N%o%$%k%I%+!<%I$OE83+$5$l$k!#(B
+  ファイル名のワイルドカードは展開される。
 
-  $B%U%!%$%k$N@hF,$HKvHx$N?t9T$+$i%*%W%7%g%s$N@_Dj$,FI$_9~$^$l$k!#%*%W%7%g(B
-$B%s(B 'modelines' $B$G2?9T$[$I$=$NBP>]$K$9$k$+;XDj$9$k!J%G%U%)%k%H$O#59T!K!#(B
-  $BCm(B: vi $B$N$$$/$D$+$N%P!<%8%g%s$G$O!"(Bmodeline $B$G$$$+$J$k(B ex $B%3%^%s%I$b(B
-$B<B9T$G$-$k!J$3$l$O%;%-%e%j%F%#>e$N=EBg$JLdBj$@!K$,!"(Bvim $B$O0c$&!#(B
+  ファイルの先頭と末尾の数行からオプションの設定が読み込まれる。オプショ
+ン 'modelines' で何行ほどその対象にするか指定する（デフォルトは５行）。
+  注: vi のいくつかのバージョンでは、modeline でいかなる ex コマンドも
+実行できる（これはセキュリティ上の重大な問題だ）が、vim は違う。
 
-  $B!JNc$($P(B .exrc $B$G!K%*%W%7%g%s(B 'insertmode' $B$,@_Dj$5$l$k$H!"(Bvim $B$OA^(B
-$BF~%b!<%I$G5/F0$9$k!#(B
+  （例えば .exrc で）オプション 'insertmode' が設定されると、vim は挿
+入モードで起動する。
 
-  $B%F%-%9%H$O$9$Y$F%a%b%j$KJ];}$5$l$k!#;HMQ2DG=$J%a%b%j$,07$($k%U%!%$%k(B
-$B%5%$%:!J$*$h$S(B undo $BEy!K$N8B3&$G$"$k!#$3$l$O(B MSDOS $B$G$OLdBj$K$J$k$@$m(B
-$B$&$,!"(BAmiga $B$G$O$a$C$?$KLdBj$K$J$k$3$H$O$J$/!"(BUNIX $B$G$O$^$:LdBj$K$J$i(B
-$B$J$$!#(B
+  テキストはすべてメモリに保持される。使用可能なメモリが扱えるファイル
+サイズ（および undo 等）の限界である。これは MSDOS では問題になるだろ
+うが、Amiga ではめったに問題になることはなく、UNIX ではまず問題になら
+ない。
 
-  $B%*%W%7%g%s(B 'backup' $B$d(B 'writebackup' $B$,%;%C%H$5$l$k$H!"%U%!%$%k$K>e(B
-$B=q$-$9$kA0$K%P%C%/%"%C%W%U%!%$%k(B (.bak) $B$,:n$i$l$k!#%*%W%7%g%s(B "backup"
-$B$,%;%C%H$5$l$k$H!"%P%C%/%"%C%W%U%!%$%k$O(B vim $B=*N;8e$b;D$k!#(B
+  オプション 'backup' や 'writebackup' がセットされると、ファイルに上
+書きする前にバックアップファイル (.bak) が作られる。オプション "backup"
+がセットされると、バックアップファイルは vim 終了後も残る。
 
-  $B%*%W%7%g%s(B 'binary' $B$,%;%C%H$5$l!"$+$D!"%U%!%$%k$N:G8e$K(B end-of-line
-$B$,$J$$>l9g!"=q9~$_;~$K(B end-of-line $B$OIU2C$7$J$$!#(B
+  オプション 'binary' がセットされ、かつ、ファイルの最後に end-of-line
+がない場合、書込み時に end-of-line は付加しない。
 
-  vim $B$O!"(B ".swp" $B$H$$$&L>A0$G=*$o$k%9%o%C%W%U%!%$%k$r:n@.$9$k!#$3$N%U%!(B
-$B%$%k$r;H$&;v$GJT=8Cf$K%"%\!<%H$7$?>l9g$K(B "vim -r file" $B$G$=$l$^$G$K9T$C(B
-$B$?;v$r%j%+%P!<$9$k;v$,$G$-$k!#%*%W%7%g%s(B 'updatecount' $B$r#0$K$9$k$+!"(B
-$B5/F0;~$K(B "-n" $B%*%W%7%g%s$r;XDj$9$k$H!"$3$l$,5!G=$7$J$$$h$&$K$G$-$k!#(B
-'directory' $B%*%W%7%g%s$G!"(B .swp $B%U%!%$%k$rCV$/%G%#%l%/%H%j$r;XDj$G$-$k!#(B
+  vim は、 ".swp" という名前で終わるスワップファイルを作成する。このファ
+イルを使う事で編集中にアボートした場合に "vim -r file" でそれまでに行っ
+た事をリカバーする事ができる。オプション 'updatecount' を０にするか、
+起動時に "-n" オプションを指定すると、これが機能しないようにできる。
+'directory' オプションで、 .swp ファイルを置くディレクトリを指定できる。
 
-  $B%*%W%7%g%s(B 'shortname' (sn) $B$,%;%C%H$5$l$k$H!"(B".bak" $B$H(B ".swp" $B%U%!(B
-$B%$%k$NL>A0$O(B MSDOS $B%i%$%/!J#8J8;z!\#3J8;z$N3HD%;R!K$K$J$k!#(BMSDOS $B$d(B
-Amiga$B$N(B crossdos$B%U%!%$%k%7%9%F%`$G$O!"$3$l$r;XDj$7$F$*$/$Y$-$G$"$k!#$3(B
-$B$N%*%W%7%g%s$,%;%C%H$5$l$F$$$J$$>l9g!"(Bvim $B$O(B MSDOS $B$N%U%!%$%kL>@)8B$,(B
-$BB8:_$9$k$+$I$&$+D4$Y$h$&$H$9$k!#(B
+  オプション 'shortname' (sn) がセットされると、".bak" と ".swp" ファ
+イルの名前は MSDOS ライク（８文字＋３文字の拡張子）になる。MSDOS や
+Amigaの crossdosファイルシステムでは、これを指定しておくべきである。こ
+のオプションがセットされていない場合、vim は MSDOS のファイル名制限が
+存在するかどうか調べようとする。
 
-  $B%/%i%C%7%e8e$K%j%+%P!<$,@.8y$9$k2DG=@-$ODc$$!#$3$l$O!"%F%s%]%i%j%U%!(B
-$B%$%k$,$J$$$?$a$G$"$k!#(B
+  クラッシュ後にリカバーが成功する可能性は低い。これは、テンポラリファ
+イルがないためである。
 
-  $B%(%i!<%a%C%;!<%8$O:GDc#1IC4VI=<($5$l$k!J(Bvi $B$O%(%i!<%a%C%;!<%8$r>e=q(B
-$B$-$9$k!K!#(Bvim $B$,(B "Hit RETURN to continue" $B$H%a%C%;!<%8$r=P$7$?$H$-$K$O!"(B
-$B$I$N%-!<$r$?$?$$$F$b9=$o$J$$!#(B<CR>, <LF>, <SPACE> $B0J30$N%-!<$O%3%^%s%I(B
-$B!J$N;O$^$j!K$H2r<a$5$l$k!J(Bvi $B$G$O(B ':' $B$+$i;O$^$k%3%^%s%I$@$1$7$+<u$1IU(B
-$B$1$J$$!K!#(B
+  エラーメッセージは最低１秒間表示される（vi はエラーメッセージを上書
+きする）。vim が "Hit RETURN to continue" とメッセージを出したときには、
+どのキーをたたいても構わない。<CR>, <LF>, <SPACE> 以外のキーはコマンド
+（の始まり）と解釈される（vi では ':' から始まるコマンドだけしか受け付
+けない）。
 
-  $BL>A0IU$-$*$h$SL>A0$J$7%l%8%9%?$NFbMF$O%U%!%$%k$rBX$($F$b;D$k!#(B
+  名前付きおよび名前なしレジスタの内容はファイルを替えても残る。
 
-  Amiga $B$N(B AUX: $B%G%P%$%9$r%5%]!<%H$7$F$$$k!#(B
+  Amiga の AUX: デバイスをサポートしている。
 
 
 
