@@ -406,6 +406,42 @@ case_ 'text: mail headers and quoting' t.txt \
 'From: me@x.example\nSubject: hi\n\n> quoted\n>> deeper\nsee http://x.example/p\n' \
 '1:0-18 Type i/^[-a-z]*From: .*$\n2:0-11 String i/^Subject: .*$\n4:0-8 Comment n/^\\s*[|>].*\n5:0-9 Identifier n/^\\s*[|>]\\s*[|>].*\n6:4-22 Url n/http:\\/\\/[-:&\\~\\%_?=/\\.a-zA-Z0-9]*\n'
 
+case_ 'TypeScript: interface, type, keywords' t.ts \
+'// c\ninterface User {\n  id: number;\n  name: string;\n}\nconst u: User = { id: 1, name: "alice" };\n' \
+'1:0-4 Comment n/\\/\\/.*$\n2:0-9 Structure w/interface\n3:6-12 Type w/number\n4:8-14 Type w/string\n6:0-5 StorageClass w/const\n6:22-23 Number w/\\d\\+\n6:31-38 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n'
+
+case_ 'Zig: const, struct, fn, error' t.zig \
+'// c\nconst Point = struct {\n    x: i32,\n    y: i32,\n};\npub fn main() void {\n    const p = Point{ .x = 1, .y = 2 };\n}\n' \
+'1:0-4 Comment n/\\/\\/.*$\n2:0-5 StorageClass w/const\n2:14-20 Structure w/struct\n3:7-10 Type w/i32\n4:7-10 Type w/i32\n6:0-3 StorageClass w/pub\n6:4-6 Statement w/fn\n6:14-18 Type w/void\n7:4-9 StorageClass w/const\n7:26-27 Number w/\\d\\+\n7:34-35 Number w/\\d\\+\n'
+
+case_ 'Julia: function, struct, types' t.jl \
+'# c\nstruct Point\n    x::Int64\n    y::Int64\nend\nfunction add(a, b)\n    return a + b\nend\n' \
+'1:0-3 Comment n/#.*$\n2:0-6 Structure w/struct\n3:7-12 Type w/Int64\n4:7-12 Type w/Int64\n5:0-3 Statement w/end\n6:0-8 Statement w/function\n7:4-10 Statement w/return\n8:0-3 Statement w/end\n'
+
+case_ 'Dart: class, async, types' t.dart \
+'// c\nclass Person {\n  final String name;\n  Person(this.name);\n  Future<void> run() async {\n    print("hi");\n  }\n}\n' \
+'1:0-4 Comment n/\\/\\/.*$\n2:0-5 Structure w/class\n3:2-7 StorageClass w/final\n3:8-14 Type w/String\n4:9-13 Constant w/this\n5:2-8 Type w/Future\n5:9-13 Type w/void\n5:21-26 Statement w/async\n6:4-9 Function w/print\n6:10-14 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n'
+
+case_ 'Elixir: defmodule, def, atom' t.ex \
+'# c\ndefmodule Math do\n  def add(a, b) do\n    {:ok, a + b}\n  end\nend\n' \
+'1:0-3 Comment n/#.*$\n2:0-9 Statement w/defmodule\n2:15-17 Statement w/do\n3:2-5 Statement w/def\n3:16-18 Statement w/do\n4:5-8 Constant n/:\\i\\+\n5:2-5 Statement w/end\n6:0-3 Statement w/end\n'
+
+case_ 'Erlang: module, fun, export' t.erl \
+'% c\n-module(math).\n-export([add/2]).\nadd(A, B) ->\n    A + B.\n' \
+'1:0-3 Comment n/%.*$\n2:0-7 PreProc n/^\\s*-\\i\\+\n3:0-7 PreProc n/^\\s*-\\i\\+\n3:13-14 Number w/\\d\\+\n'
+
+case_ 'GraphQL: type, query, scalar' t.graphql \
+'# c\ntype User {\n  id: ID!\n  name: String\n}\nquery GetUser {\n  user\n}\n' \
+'1:0-3 Comment n/#.*$\n2:0-4 Structure w/type\n3:6-8 Type w/ID\n4:8-14 Type w/String\n6:0-5 Statement w/query\n'
+
+case_ 'Nix: let, in, import' t.nix \
+'# c\nlet\n  pkgs = import <nixpkgs> {};\nin\npkgs.stdenv.mkDerivation {\n  name = "pkg";\n}\n' \
+'1:0-3 Comment n/#.*$\n2:0-3 Statement w/let\n3:9-15 Function w/import\n4:0-2 Statement w/in\n6:9-14 String n/"\\([^"\\\\]\\|\\\\.\\)*"\n'
+
+case_ 'SCSS: mixin, variable, include' t.scss \
+'// c\n$primary: #ff0000;\n@mixin flex {\n  display: flex;\n}\n.box {\n  color: $primary;\n  @include flex;\n}\n' \
+'1:0-4 Comment n/\\/\\/.*$\n2:0-8 Identifier n/\\$[a-zA-Z0-9_-]\\+\n2:10-17 Constant n/#\\x\\x\\x\\x\\x\\x\n3:0-6 PreProc n/@\\i\\+\n4:0-9 Identifier m-/^\\s\\+[-a-zA-Z]\\+\\s*:\n6:0-4 Tag n/[.#]\\i[-_a-zA-Z0-9]*\n7:0-7 Identifier m-/^\\s\\+[-a-zA-Z]\\+\\s*:\n7:9-17 Identifier n/\\$[a-zA-Z0-9_-]\\+\n8:2-10 PreProc n/@\\i\\+\n'
+
 case_ 'Java: types, character, numbers' T.java \
 '// c\npackage a.b;\npublic class T {\n    static char c = \047x\047;\n    static double d = 1.5;\n    static int n = 0x1f;\n}\n' \
 '1:0-4 Comment n/\\/\\/.*$\n2:0-7 Include w/package\n3:0-6 StorageClass w/public\n3:7-12 Typedef w/class\n4:4-10 StorageClass w/static\n4:11-15 Type w/char\n4:20-23 Character n/\047\\([^\047\\\\]\\|\\\\.\\)*\047\n5:4-10 StorageClass w/static\n5:11-17 Type w/double\n5:22-25 Float n/\\d*\\.\\d\\+\n6:4-10 StorageClass w/static\n6:11-14 Type w/int\n6:19-23 Number w/0x\\x\\+\n'

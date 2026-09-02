@@ -18,7 +18,7 @@ repository and would drift within three releases.
 - Five cases in `scripts/test-editing.sh`: two for `Q` and three for the help
   screen under the cursor keys, and `runhelptyped` to run them — the help keys
   had only ever been fed through `-s`, which a cursor key cannot go through.
-  240 cases now.
+  249 cases now.
 
 ### Fixed
 

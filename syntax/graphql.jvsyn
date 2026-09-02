@@ -1,0 +1,11 @@
+syntax Comment			n/#.*$
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
+syntax String			p/\"\"\"/\"\"\"/
+syntax Float			n/\d*\.\d\+
+syntax Number			w/\d\+
+syntax Statement		w/query/mutation/subscription/fragment
+syntax Structure		w/type/interface/union/enum/input/scalar/extend/schema
+syntax StorageClass	w/implements/on/directive
+syntax Boolean			w/true/false/null
+syntax Type			w/Int/Float/String/Boolean/ID
+syntax Todo			w/TODO/FIXME/XXX/NOTE

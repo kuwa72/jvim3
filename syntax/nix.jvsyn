@@ -1,0 +1,13 @@
+syntax Comment			n/#.*$
+syntax Comment			p/\/\*/\*\/
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
+syntax String			p/''/''/
+syntax Float			n/\d*\.\d\+
+syntax Number			w/\d\+
+syntax Statement		w/let/in/inherit
+syntax Conditional		w/if/then/else
+syntax StorageClass	w/with/rec
+syntax Boolean			w/true/false/null
+syntax Operator		w/or/assert
+syntax Function		w/import/builtins/derivation/fetchurl/fetchGit/fetchTarball
+syntax Todo			w/TODO/FIXME/XXX/NOTE
