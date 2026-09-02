@@ -122,13 +122,13 @@ strsize(char_u *s)
 	int
 chartabsize(char_u *p, long col)
 {
-	register int	c = *p;
+	int	c = *p;
 
 #ifdef KANJI
 	if (c >= ' ' &&  c != DEL)
 	{
 		if (c < 0x80)
-			return(1);
+			return 1;
 		return utf_width(p);	/* 0 for a trailing byte, 4 for junk */
 	}
 #else
@@ -147,54 +147,54 @@ chartabsize(char_u *p, long col)
 	int
 isidchar(int c)
 {
-		return (
-#ifdef __STDC__
-				isalnum(c)
-#else
-				isalpha(c) || isdigit(c)
-#endif
-				|| c == '_'
+	/* A key code is not an identifier character, and is not a value the
+	 * ctype functions are defined for either: this is reached with what
+	 * vgetc() returned, on the ":" line and while inserting. See vim.h. */
+	if ((unsigned)c > 0xff)
+		return FALSE;
+	return (
+			isalnum(c)
+			|| c == '_'
 	/*
-	 * we also accept alhpa's with accents
+	 * we also accept alpha's with accents
 	 */
 #ifdef MSDOS
-				|| (c >= 0x80 && c <= 0xa7) || (c >= 0xe0 && c <= 0xeb)
+			|| (c >= 0x80 && c <= 0xa7) || (c >= 0xe0 && c <= 0xeb)
 #else
-				|| (c >= 0xc0 && c <= 0xff)
+			|| (c >= 0xc0 && c <= 0xff)
 #endif
 #ifdef KANJI
-				|| ISdisp(c)
+			|| ISdisp(c)
 #endif
-				);
+			);
 }
 
-#ifndef notdef
 /*
  * return TRUE if 'c' is an abbr character
  */
 	int
 isabchar(int c)
 {
-		return (
-#ifdef __STDC__
-				isalnum(c)
-#else
-				isalpha(c) || isdigit(c)
-#endif
-				|| c == '_'
-				|| (isascii(c) && isgraph(c))
+	/* A key code is not an abbreviation character, and is not a value the
+	 * ctype functions are defined for either: this is reached with what
+	 * vgetc() returned, on the ":" line and while inserting. See vim.h. */
+	if ((unsigned)c > 0xff)
+		return FALSE;
+	return (
+			isalnum(c)
+			|| c == '_'
+			|| (isascii(c) && isgraph(c))
 	/*
-	 * we also accept alhpa's with accents
+	 * we also accept alpha's with accents
 	 */
 #ifdef MSDOS
-				|| (c >= 0x80 && c <= 0xa7) || (c >= 0xe0 && c <= 0xeb)
+			|| (c >= 0x80 && c <= 0xa7) || (c >= 0xe0 && c <= 0xeb)
 #else
 # ifdef KANJI
-				|| ISdisp(c)
+			|| ISdisp(c)
 # else
-				|| (c >= 0xc0 && c <= 0xff)
+			|| (c >= 0xc0 && c <= 0xff)
 # endif
 #endif
-				);
+			);
 }
-#endif
