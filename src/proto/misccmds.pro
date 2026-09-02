@@ -1,6 +1,9 @@
 /* misccmds.c */
+int in_cinwords __PARMS((unsigned char *p, int len));
+int is_block_closer __PARMS((unsigned char *p));
 int get_indent __PARMS((void));
 void set_indent __PARMS((int size, int delete));
+
 int Opencmd __PARMS((int dir, int redraw, int delspaces));
 int plines __PARMS((long p));
 int plines_win __PARMS((struct window *wp, long p));

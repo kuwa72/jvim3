@@ -41,7 +41,8 @@ It is POSIX `sh` and avoids `make -C`, so it works with the BSDs' `/bin/sh` and
 `bmake` as well as with bash and GNU make.
 
 `test` runs all five suites: `scripts/test-encoding.sh` (51 cases — kanji,
-UTF-8, multi-byte editing, file names), `scripts/test-editing.sh` (89 cases —
+UTF-8, multi-byte editing, file names), `scripts/test-editing.sh` (90 cases —
+
 motions, operators, registers, marks, undo, ex ranges, `:g`, `:s`, searching,
 the `:!` filter and wildcard expansion), `scripts/test-syntax.sh` (88 cases
 — what the rules in `syntax/` actually colour, read back with `:syntax dump`,
@@ -50,7 +51,8 @@ escapes the terminal is actually sent, which is the only check of the painter
 rather than the rules) and `scripts/test-hostile.sh` (18 cases — input nobody
 intended: 2 MB on one line, every byte value there is, a multi-byte sequence cut
 in half by the end of the file, a regexp deep enough to exhaust a recursive
-matcher, and the session dropping mid-edit). 255 cases in all.
+matcher, and the session dropping mid-edit). 256 cases in all.
+
 
 
 The hostile suite is the one that can report a case as failed without anything
@@ -159,7 +161,7 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 - Distribution hardening: `-D_FORTIFY_SOURCE=2 -Werror=format-security
   -fstack-protector-strong`
 - `/bin/sh` being dash
-- All 255 tests, and the same again under both sanitizers
+- All 256 tests, and the same again under both sanitizers
   (`./scripts/build-unix.sh asan`, `./scripts/build-unix.sh ubsan`; CI runs
   both). Each points the sanitizer at `log_path` and collects the reports when
   the suites are done, because the suites throw the editor's stderr away — and
@@ -173,7 +175,7 @@ Verified here, on Ubuntu 24.04 / gcc 13.3, x86-64:
 Verified on FreeBSD 14.3-RELEASE-p16, clang 19.1.7, amd64, in the QEMU guest
 `scripts/test-bsd-docker.sh` builds:
 
-- All 255 tests
+- All 256 tests
 - `./scripts/build-unix.sh strict` with clang 19, which is what the FreeBSD CI
   job runs after the tests
 - `-DTERMCAP` against base ncurses, found as `-ltinfo`
@@ -184,8 +186,9 @@ Verified on FreeBSD 14.3-RELEASE-p16, clang 19.1.7, amd64, in the QEMU guest
 
 Verified on NetBSD 10.1, gcc 10.5.0, amd64, the same way:
 
-- All 255 tests, and `-DTERMCAP` against base curses (found as `-lcurses`),
+- All 256 tests, and `-DTERMCAP` against base curses (found as `-lcurses`),
   with no warnings
+
 
 
 Verified in CI, on whatever release the VM images carry — FreeBSD 15.1,

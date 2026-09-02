@@ -25,9 +25,9 @@ extern char *mktemp __ARGS((char *));	/* for vim_mktemp() at the end */
 #endif
 
 /*
- * Check if the word at 'p' of length 'len' matches a word in 'p_cinwords'
+ * Check if word 'p' of length 'len' matches one of cinwords
  */
-	static int
+	int
 in_cinwords(char_u *p, int len)
 {
 	char_u	*cw;
@@ -55,7 +55,7 @@ in_cinwords(char_u *p, int len)
 /*
  * Check if a word represents a block closing keyword (like end, fi, done, esac)
  */
-	static int
+	int
 is_block_closer(char_u *p)
 {
 	static const char *closers[] = {"end", "fi", "done", "esac", "elseif", "else", "catch", "finally", "except"};

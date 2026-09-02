@@ -204,10 +204,12 @@ if [ "$TARGET" = release ]; then
 			"$root/dist/$arch/jvimrc.sample" "$rel/$name/"
 		cp -pR "$root/dist/$arch/syntax" "$rel/$name/syntax"
 		cp -pR "$root/dist/$arch/colors" "$rel/$name/colors"
+		[ -d "$root/dist/$arch/tools" ] && cp -pR "$root/dist/$arch/tools" "$rel/$name/tools"
 		# makefile.mingw calls its targets jvim32*.exe whatever the architecture
 		# is; the name in the package says which one it actually is.
 		cp -p "$root/dist/$arch/jvim32w.exe" "$rel/$name/jvim${bits}w.exe"
 		cp -p "$root/dist/$arch/jvim32.exe" "$rel/$name/jvim$bits.exe"
+
 		if command -v zip >/dev/null 2>&1; then
 			(cd "$rel" && zip -qr "$name.zip" "$name")
 		else		# no zip(1) here, but python3 can do it
@@ -281,6 +283,14 @@ mkdir -p "$dist/colors"
 for f in "$root"/colors/*; do
 	[ -f "$f" ] && cp_crlf "$f" "$dist/colors/$(basename "$f")"
 done
+
+rm -rf "$dist/tools"
+mkdir -p "$dist/tools"
+if [ -f "$root/tools/cformat.c" ]; then
+	"${CROSS}gcc" -O2 -s "$root/tools/cformat.c" -o "$dist/tools/cformat.exe" 2>/dev/null || true
+fi
+
+
 
 
 # vim.hlp is deliberately not converted: ":help" opens it as a buffer, where a

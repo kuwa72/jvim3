@@ -517,7 +517,9 @@ full descriptions are in [doc.j/readme.doc](doc.j/readme.doc) §6 to §9.
 | Extended regexps | The Vim 5.7 set — `\d \w \s \a \l \u \h \i \k \f \p \x \o` and their negations, `\e \t \r \b \n`. Character classes compare whole characters, so `[あ]` matches `あ` and nothing else. §6.29. |
 | Key names for `map` | `#[UP]`, `#[SLEFT]`, `#[F01]`–`#[F20]`, `#[HELP]`, `#[UNDO]`, `#1`–`#0`. §6.30. |
 | Character names for `map` | `<CR>` `<NL>` `<LF>` `<Esc>` `<Tab>` `<Space>` `<BS>` `<Nul>`, in either half and in any case, so a mapping can press Enter without holding a carriage return of its own: `map q ihello<CR>`. A rule that does hold one still works, but only in a file with CRLF endings — `dosource` takes one CR off the end of every line and cannot tell that one from a separator, which is why the same rc could not be written for a Unix and for Windows before. A `<` that starts nothing in the list stays a `<`, so a mapping that types `<div>` still says so; `CTRL-V` before it holds off one that would otherwise be read as a name. |
+| `=` operator / internal re-indent | Re-indents the specified range using `=` commands (`==`, `=G`, etc.). When `equalprg` (`ep`) is empty, JVim re-indents internally using buffer settings (`smartindent`, `cinwords`, `shiftwidth`) without requiring external tools. For external formatters, set `:set equalprg=clang-format`. Windows releases include a standalone lightweight C code formatter `tools/cformat.exe`. |
 | `CTRL-G` | Reports the character code under the cursor and the file's encoding as well as the position: `line 36 of 36 --100%-- col 0/1 ch 0x31 [E]`. |
+
 | Windows GUI | Menus, scrollbars, drag and drop, a tray icon, four saved profiles, an about box that reports what it found. |
 
 ## What was removed

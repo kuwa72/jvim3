@@ -2406,7 +2406,6 @@ error:
 		  case FILTER:
 			bangredo = TRUE;			/* dobang() will put cmd in redo buffer */
 
-		  case INDENT:
 		  case COLON:
 dofilter:
 			sprintf((char *)IObuff, ":%ld,%ld", (long)curbuf->b_startop.lnum, (long)curbuf->b_endop.lnum);
@@ -2426,6 +2425,14 @@ dofilter:
 				/*	docmdline() does the rest */
 			break;
 
+		  case INDENT:
+			if (p_ep != NULL && *p_ep != NUL)
+				goto dofilter;		/* use external command */
+			if (!no_op)
+				doequal();			/* use internal function */
+			modified = TRUE;
+			break;
+
 		  case TILDE:
 		  case UPPER:
 		  case LOWER:
@@ -2442,6 +2449,7 @@ dofilter:
 			doformat();				/* use internal function */
 			modified = TRUE;
 			break;
+
 
 		  default:
 			CLEAROPBEEP;
