@@ -15,10 +15,9 @@ repository and would drift within three releases.
 - The cursor keys page the `:help` screen: down is SPACE, up is `b`. Only the
   *shifted* arrows did, which is not what anybody reaches for, and the plain
   ones fell through to the fault below.
-- Five cases in `scripts/test-editing.sh`: two for `Q` and three for the help
-  screen under the cursor keys, and `runhelptyped` to run them — the help keys
-  had only ever been fed through `-s`, which a cursor key cannot go through.
-  249 cases now.
+- Command-line (: mode) completion enhancements for `:colorscheme`, `:highlight`, and `:syntax`.
+- Three cases in `scripts/test-editing.sh` for command-line completion testing.
+  252 cases now.
 
 ### Fixed
 
