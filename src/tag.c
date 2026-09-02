@@ -193,7 +193,7 @@ findtag(char_u *tag)
 	int			cmplen;
 	char_u		*m = (char_u *)"No tags file";
 	char_u		*marg = NULL;
-	register char_u	*p;
+	char_u		*p;
 	char_u		*p2;
 	char_u		*np;					/* pointer into file name string */
 	char_u		sbuf[CMDBUFFSIZE + 1];	/* tag file name */
@@ -436,7 +436,7 @@ findtag(char_u *tag)
 						p_ws = TRUE;		/* Switch wrap-scan on temporarily */
 						if (!dosearch(pbuf[0], pbuf + 1, FALSE, (long)1, FALSE, FALSE))
 						{
-							register int notfound = FALSE;
+							int notfound = FALSE;
 
 							/*
 							 * Failed to find pattern, take a guess:
@@ -513,7 +513,7 @@ findtagex(char_u *tag)
 	int			cmplen;
 	char_u		*m = (char_u *)"No tags file";
 	char_u		*marg = NULL;
-	register char_u	*p;
+	char_u		*p;
 	char_u		*p2;
 	char_u		*np;					/* pointer into file name string */
 	char_u		sbuf[CMDBUFFSIZE + 1];	/* tag file name */
@@ -979,7 +979,7 @@ clear:
 			p_ws = TRUE;		/* Switch wrap-scan on temporarily */
 			if (!dosearch(pbuf[0], pbuf + 1, FALSE, (long)1, FALSE, FALSE))
 			{
-				register int notfound = FALSE;
+				int notfound = FALSE;
 
 				/*
 				 * Failed to find pattern, take a guess:

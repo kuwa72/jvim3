@@ -261,7 +261,7 @@ error:
 }
 
 static int
-grepsub(register GREP *gp, register char_u *string, int at_bol, linenr_t lnum, int *look, char_u **match, char_u **matchend)
+grepsub(GREP *gp, char_u *string, int at_bol, linenr_t lnum, int *look, char_u **match, char_u **matchend)
 {
 	linenr_t		i;
 	int				found = FALSE;
@@ -397,7 +397,7 @@ grepsub(register GREP *gp, register char_u *string, int at_bol, linenr_t lnum, i
 }
 
 static int
-grepexec(register regexp *prog, register char_u *string, int at_bol, linenr_t lnum)
+grepexec(regexp *prog, char_u *string, int at_bol, linenr_t lnum)
 {
 	int				look = FALSE;
 	char_u		*	match		= NULL;
@@ -557,10 +557,10 @@ searchit(FPOS *pos, int dir, char_u *str, long count, int end, int message)
 	linenr_t			lnum = 0;			/* init to shut up gcc */
 	linenr_t			startlnum;
 	regexp				*prog;
-	register char_u		*s;
+	char_u				*s;
 	char_u				*ptr;
-	register int		i;
-	register char_u		*match, *matchend;
+	int					i;
+	char_u				*match, *matchend;
 	int 				loop;
 #ifdef USE_GREP
 	int					wscan = p_ws;
@@ -791,8 +791,8 @@ dosearch(int dirc, char_u *str, int reverse, long count, int echo, int message)
 	int				old_lastend;
 	long			old_lastoff;
 	int				ret;		/* Return value */
-	register char_u	*p;
-	register long	c;
+	char_u			*p;
+	long			c;
 	char_u			*dircp = NULL;
 
 	/*
@@ -985,9 +985,9 @@ end_dosearch:
  */
 	int
 #ifndef KANJI
-searchc(int c, register int dir, int type, long count)
+searchc(int c, int dir, int type, long count)
 #else
-searchc(int c, int k, register int dir, int type, long count)
+searchc(int c, int k, int dir, int type, long count)
 #endif
 {
 	static int	 	lastc = NUL;	/* last character searched for */
@@ -996,7 +996,7 @@ searchc(int c, int k, register int dir, int type, long count)
 #endif
 	static int		lastcdir;		/* last direction of character search */
 	static int		lastctype;		/* last type of search ("find" or "to") */
-	register int	col;
+	int				col;
 	char_u			*p;
 	int 			len;
 
@@ -1097,8 +1097,8 @@ showmatch(int initc)
 	static char_u 	table[8] = {'(', ')', '[', ']', '{', '}', '<', '>'};
 #endif
 	int 			inquote = 0;		/* non-zero when inside quotes */
-	register char_u	*linep;				/* pointer to current line */
-	register char_u	*ptr;
+	char_u			*linep;				/* pointer to current line */
+	char_u			*ptr;
 	int				do_quotes;			/* check for quotes in current line */
 	int				hash_dir = 0;		/* Direction searched for # things */
 	int				comment_dir = 0;	/* Direction searched for comments */
@@ -1538,7 +1538,7 @@ findfunc(int dir, int what, long count)
 findsent(int dir, long count)
 {
 	FPOS			pos, tpos;
-	register int	c;
+	int				c;
 	int 			(*func) __PARMS((FPOS *));
 	int 			startlnum;
 	int				noskip = FALSE;			/* do not skip blanks */
@@ -1648,9 +1648,9 @@ found:
  * If 'both' is TRUE also stop at '}'.
  */
 	int
-findpar(register int dir, long count, int what, int both)
+findpar(int dir, long count, int what, int both)
 {
-	register linenr_t	curr;
+	linenr_t			curr;
 	int					did_skip;		/* TRUE after separating lines have
 												been skipped */
 	int					first;			/* TRUE on first line */
@@ -1696,9 +1696,9 @@ findpar(register int dir, long count, int what, int both)
  * check if the string 's' is a nroff macro that is in option 'opt'
  */
 	static int
-inmacro(char_u *opt, register char_u *s)
+inmacro(char_u *opt, char_u *s)
 {
-		register char_u *macro;
+		char_u *macro;
 
 		for (macro = opt; macro[0]; ++macro)
 		{
@@ -1720,7 +1720,7 @@ inmacro(char_u *opt, register char_u *s)
 	int
 startPS(linenr_t lnum, int para, int both)
 {
-	register char_u *s;
+	char_u *s;
 
 	s = ml_get(lnum);
 	if (*s == para || *s == '\f' || (both && *s == '}'))
@@ -1758,7 +1758,7 @@ static int		stype;			/* type of the word motion being performed */
 	static int
 cls(void)
 {
-	register int c;
+	int c;
 
 	c = gchar_cursor();
 #ifdef KANJI

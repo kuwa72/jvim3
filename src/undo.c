@@ -450,7 +450,7 @@ u_sync(void)
 	void
 u_unchanged(BUF *buf)
 {
-	register struct u_header *uh;
+	struct u_header *uh;
 
 	for (uh = buf->b_u_newhead; uh; uh = uh->uh_next)
 		uh->uh_changed = 1;
@@ -464,7 +464,7 @@ u_unchanged(BUF *buf)
 	static void
 u_getbot(void)
 {
-	register struct u_entry *uep;
+	struct u_entry *uep;
 
 	if (curbuf->b_u_newhead == NULL || (uep = curbuf->b_u_newhead->uh_entry) == NULL)
 	{
@@ -499,7 +499,7 @@ u_getbot(void)
 	static void
 u_freelist(struct u_header *uhp)
 {
-	register struct u_entry *uep, *nuep;
+	struct u_entry *uep, *nuep;
 
 	for (uep = uhp->uh_entry; uep != NULL; uep = nuep)
 	{
@@ -528,7 +528,7 @@ u_freelist(struct u_header *uhp)
  * free entry 'uep' and 'n' lines in uep->ue_array[]
  */
 	static void
-u_freeentry(struct u_entry *uep, register long n)
+u_freeentry(struct u_entry *uep, long n)
 {
 	while (n)
 		u_free_line(uep->ue_array[--n]);
@@ -735,9 +735,9 @@ u_blockfree(BUF *buf)
 	static void
 u_free_line(char_u *ptr)
 {
-	register info_t		*next;
-	register info_t		*prev, *curr;
-	register info_t		*mp;
+	info_t		*next;
+	info_t		*prev, *curr;
+	info_t		*mp;
 	struct m_block		*nextb;
 
 	if (ptr == NULL || ptr == IObuff)
@@ -834,9 +834,9 @@ u_free_line(char_u *ptr)
  * 'size' characters plus a terminating NUL.
  */
 	static char_u *
-u_alloc_line(register unsigned size)
+u_alloc_line(unsigned size)
 {
-	register info_t *mp, *mprev, *mp2;
+	info_t *mp, *mprev, *mp2;
 	struct m_block	*mbp;
 	int		 		size_align;
 
@@ -931,9 +931,9 @@ u_alloc_line(register unsigned size)
 	static char_u *
 u_save_line(linenr_t lnum)
 {
-	register char_u *src;
-	register char_u *dst;
-	register unsigned len;
+	char_u *src;
+	char_u *dst;
+	unsigned len;
 
 	src = ml_get(lnum);
 	len = STRLEN(src);
