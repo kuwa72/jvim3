@@ -32,8 +32,8 @@ static char_u *(si_tab[]) = {(char_u *)"if", (char_u *)"else", (char_u *)"while"
 	int
 get_indent(void)
 {
-	register char_u *ptr;
-	register int count = 0;
+	char_u *ptr;
+	int count = 0;
 
 	for (ptr = ml_get(curwin->w_cursor.lnum); *ptr; ++ptr)
 	{
@@ -52,7 +52,7 @@ get_indent(void)
  * leaves the cursor on the first non-blank in the line
  */
 	void
-set_indent(register int size, int delete)
+set_indent(int size, int delete)
 {
 	int				oldstate = State;
 	char_u		   *line;
@@ -339,9 +339,9 @@ plines(linenr_t p)
 	int
 plines_win(WIN *wp, linenr_t p)
 {
-	register long		col = 0;
-	register char_u		*s;
-	register int		lines;
+	long		col = 0;
+	char_u		*s;
+	int			lines;
 
 	if (!wp->w_p_wrap)
 		return 1;
@@ -448,7 +448,7 @@ inschar(char_u *bytes, int nbytes)
 inschar(int c)
 #endif
 {
-	register char_u  *p;
+	char_u  *p;
 	int				rir0;		/* reverse replace in column 0 */
 	char_u			*new;
 	char_u			*old;
@@ -601,11 +601,11 @@ inschar1(int c)
  * insert a string at the cursor position
  */
 	void
-insstr(register char_u *s)
+insstr(char_u *s)
 {
-	register char_u		*old, *new;
-	register int		newlen = STRLEN(s);
-	int					oldlen;
+	char_u		*old, *new;
+	int			newlen = STRLEN(s);
+	int			oldlen;
 	colnr_t				col = curwin->w_cursor.col;
 	linenr_t			lnum = curwin->w_cursor.lnum;
 
@@ -764,8 +764,8 @@ pchar_cursor(int c)
 	int
 inindent(void)
 {
-	register char_u *ptr;
-	register int col;
+	char_u *ptr;
+	int col;
 
 	for (col = 0, ptr = ml_get(curwin->w_cursor.lnum); iswhite(*ptr); ++col)
 		++ptr;
@@ -783,7 +783,7 @@ inindent(void)
 	void
 skipspace(char_u **pp)
 {
-    register char_u *p;
+    char_u *p;
 
 #ifdef KANJI
     for(p = *pp; *p; ++p)
@@ -810,7 +810,7 @@ skipspace(char_u **pp)
 	void
 skiptospace(char_u **pp)
 {
-	register char_u *p;
+	char_u *p;
 
 	for (p = *pp; *p != ' ' && *p != '\t' && *p != NUL; ++p)
 #ifdef KANJI
@@ -834,7 +834,7 @@ skiptospace(char_u **pp)
 	void
 skiptodigit(char_u **pp)
 {
-	register char_u *p;
+	char_u *p;
 
 	for (p = *pp; !isdigit(*p) && *p != NUL; ++p)
 		;
@@ -850,7 +850,7 @@ skiptodigit(char_u **pp)
 	long
 getdigits(char_u **pp)
 {
-    register char_u *p;
+    char_u *p;
 	long retval;
 
 	p = *pp;
@@ -1159,7 +1159,7 @@ fullpathcmp(char_u *s1, char_u *s2)
 	char_u *
 gettail(char_u *fname)
 {
-	register char_u *p1, *p2;
+	char_u *p1, *p2;
 
 	for (p1 = p2 = fname; *p2; ++p2)	/* find last part of path */
 	{

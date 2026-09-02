@@ -28,8 +28,8 @@
 coladvance(colnr_t wcol)
 {
 	int 				index;
-	register char_u		*ptr;
-	register colnr_t	col;
+	char_u				*ptr;
+	colnr_t				col;
 
 	ptr = ml_get(curwin->w_cursor.lnum);
 
@@ -83,9 +83,9 @@ inc_cursor(void)
 }
 
 	int
-inc(register FPOS *lp)
+inc(FPOS *lp)
 {
-	register char_u  *p = ml_get_pos(lp);
+	char_u  *p = ml_get_pos(lp);
 
 	if (*p != NUL)
 	{			/* still within line */
@@ -112,9 +112,9 @@ inc(register FPOS *lp)
  * incl(lp): same as inc(), but skip the NUL at the end of non-empty lines
  */
 	int
-incl(register FPOS *lp)
+incl(FPOS *lp)
 {
-	register int r;
+	int r;
 
 	if ((r = inc(lp)) == 1 && lp->col)
 		r = inc(lp);
@@ -134,7 +134,7 @@ dec_cursor(void)
 }
 
 	int
-dec(register FPOS *lp)
+dec(FPOS *lp)
 {
 	if (lp->col > 0)
 	{			/* still within line */
@@ -160,9 +160,9 @@ dec(register FPOS *lp)
  * decl(lp): same as dec(), but skip the NUL at the end of non-empty lines
  */
 	int
-decl(register FPOS *lp)
+decl(FPOS *lp)
 {
-		register int r;
+		int r;
 
 		if ((r = dec(lp)) == 1 && lp->col)
 				r = dec(lp);

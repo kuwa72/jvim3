@@ -288,8 +288,8 @@ updateScreen(int type)
 win_update(WIN *wp)
 {
 	int				type = wp->w_redr_type;
-	register int	row;
-	register int	endrow;
+	int				row;
+	int				endrow;
 	linenr_t		lnum;
 	linenr_t		lastline = 0; /* only valid if endrow != Rows -1 */
 	int				done;		/* if TRUE, we hit the end of the file */
@@ -1573,7 +1573,7 @@ screen_char(char_u *p, int row, int col)
 		 */
 		if (oldrow == row && oldcol < col)
 		{
-			register int i;
+			int i;
 
 			i = col - oldcol;
 			if (i <= 4 + noinvcurs && canopt
@@ -1799,7 +1799,7 @@ screenalloc(int clear)
 {
 	static int		old_Rows = 0;
 	static int		old_Columns = 0;
-	register int	i;
+	int				i;
 	WIN				*wp;
 	int				outofmem = FALSE;
 
@@ -2290,7 +2290,7 @@ getvcol(WIN *wp, FPOS *pos, int type)
 	void
 scrolldown(long nlines)
 {
-	register long	done = 0;	/* total # of physical lines done */
+	long	done = 0;	/* total # of physical lines done */
 
 	/* Scroll up 'nlines' lines. */
 	while (nlines--)
@@ -2314,7 +2314,7 @@ scrolldown(long nlines)
 scrollup(long nlines)
 {
 #ifdef NEVER
-	register long	done = 0;	/* total # of physical lines done */
+	long	done = 0;	/* total # of physical lines done */
 
 	/* Scroll down 'nlines' lines. */
 	while (nlines--)
