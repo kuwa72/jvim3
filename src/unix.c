@@ -1695,7 +1695,7 @@ has_wildcard(char_u *p)
 	int
 have_wildcard(int num, char_u **file)
 {
-	register int i;
+	int i;
 
 	for (i = 0; i < num; i++)
 		if (has_wildcard(file[i]))

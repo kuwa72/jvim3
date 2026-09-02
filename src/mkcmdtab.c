@@ -17,7 +17,7 @@
 int
 main(int argc, char **argv)
 {
-	register int	c;
+	int				c;
 	char			buffer[100];
 	int				count;
 	int				i;

@@ -339,10 +339,10 @@ skip_regexp(char_u *p, int dirc)
 	regexp		   *
 regcomp(char_u *exp)
 {
-	register regexp *r;
-	register char_u  *scan;
-	register char_u  *longest;
-	register int	len;
+	regexp *r;
+	char_u  *scan;
+	char_u  *longest;
+	int	len;
 	int 			flags;
 /*	extern char    *malloc();*/
 
@@ -459,10 +459,10 @@ regcomp(char_u *exp)
 	static char_u *
 reg(int paren, int *flagp)
 {
-	register char_u  *ret;
-	register char_u  *br;
-	register char_u  *ender;
-	register int	parno = 0;
+	char_u  *ret;
+	char_u  *br;
+	char_u  *ender;
+	int	parno = 0;
 	int 			flags;
 
 	*flagp = HASWIDTH;			/* Tentatively. */
@@ -536,9 +536,9 @@ reg(int paren, int *flagp)
 	static char_u    *
 regbranch(int *flagp)
 {
-	register char_u  *ret;
-	register char_u  *chain;
-	register char_u  *latest;
+	char_u  *ret;
+	char_u  *chain;
+	char_u  *latest;
 	int 			flags;
 
 	*flagp = WORST; 			/* Tentatively. */
@@ -574,9 +574,9 @@ regbranch(int *flagp)
 static char_u    *
 regpiece(int *flagp)
 {
-	register char_u  *ret;
-	register int	op;
-	register char_u  *next;
+	char_u  *ret;
+	int	op;
+	char_u  *next;
 	int 			flags;
 
 	ret = regatom(&flags);
@@ -635,7 +635,7 @@ regpiece(int *flagp)
 static char_u    *
 regatom(int *flagp)
 {
-	register char_u  *ret;
+	char_u  *ret;
 	int 			flags;
 
 	*flagp = WORST; 			/* Tentatively. */
@@ -731,8 +731,8 @@ regatom(int *flagp)
 					if (*regparse == ']' || *regparse == '\0')
 						regc('-');
 					else {
-						register int	class;
-						register int	classend;
+						int	class;
+						int	classend;
 
 						class = UCHARAT(regparse - 2) + 1;
 						classend = UCHARAT(regparse);
@@ -775,7 +775,7 @@ regatom(int *flagp)
 #ifdef TILDE
 	  case Magic('~'):			/* previous substitute pattern */
 			if (reg_prev_sub) {
-				register char_u *p;
+				char_u *p;
 
 				ret = regnode(EXACTLY);
 				p = reg_prev_sub;
@@ -824,7 +824,7 @@ regatom(int *flagp)
 		break;
 #endif
 	  default:{
-			register int	len;
+			int	len;
 			int				chr;
 
 			ungetchr();
@@ -877,8 +877,8 @@ regatom(int *flagp)
 static char_u    *				/* Location. */
 regnode(int op)
 {
-	register char_u  *ret;
-	register char_u  *ptr;
+	char_u  *ret;
+	char_u  *ptr;
 
 	ret = regcode;
 	if (ret == &regdummy) {
@@ -950,9 +950,9 @@ unregc(void)
 static void
 reginsert(int op, char_u *opnd)
 {
-	register char_u  *src;
-	register char_u  *dst;
-	register char_u  *place;
+	char_u  *src;
+	char_u  *dst;
+	char_u  *place;
 
 	if (regcode == &regdummy) {
 		regsize += 3;
@@ -976,9 +976,9 @@ reginsert(int op, char_u *opnd)
 static void
 regtail(char_u *p, char_u *val)
 {
-	register char_u  *scan;
-	register char_u  *temp;
-	register int	offset;
+	char_u  *scan;
+	char_u  *temp;
+	int	offset;
 
 	if (p == &regdummy)
 		return;
@@ -1163,9 +1163,9 @@ static char_u    *regprop __ARGS((char_u *));
  - regexec - match a regexp against a string
  */
 int
-regexec(register regexp *prog, register char_u *string, int at_bol)
+regexec(regexp *prog, char_u *string, int at_bol)
 {
-	register char_u  *s;
+	char_u  *s;
 
 	/* Be paranoid... */
 	if (prog == NULL || string == NULL) {
@@ -1251,9 +1251,9 @@ regexec(register regexp *prog, register char_u *string, int at_bol)
 static int						/* 0 failure, 1 success */
 regtry(regexp *prog, char_u *string)
 {
-	register int	i;
-	register char_u **sp;
-	register char_u **ep;
+	int	i;
+	char_u **sp;
+	char_u **ep;
 
 	reginput = string;
 	regstartp = prog->startp;
@@ -1286,7 +1286,7 @@ regtry(regexp *prog, char_u *string)
 static int						/* 0 failure, 1 success */
 regmatch(char_u *prog)
 {
-	register char_u  *scan;		/* Current node. */
+	char_u  *scan;		/* Current node. */
 	char_u		   *next;		/* Next node. */
 
 	scan = prog;
@@ -1394,8 +1394,8 @@ regmatch(char_u *prog)
 			reginput++;
 			break;
 		  case EXACTLY:{
-				register int	len;
-				register char_u  *opnd;
+				int	len;
+				char_u  *opnd;
 
 				opnd = OPERAND(scan);
 				/* Inline the first character, for speed. */
@@ -1459,8 +1459,8 @@ regmatch(char_u *prog)
 		  case MOPEN + 7:
 		  case MOPEN + 8:
 		  case MOPEN + 9:{
-				register int	no;
-				register char_u  *save;
+				int	no;
+				char_u  *save;
 
 				no = OP(scan) - MOPEN;
 				save = regstartp[no];
@@ -1494,8 +1494,8 @@ regmatch(char_u *prog)
 		  case MCLOSE + 7:
 		  case MCLOSE + 8:
 		  case MCLOSE + 9:{
-				register int	no;
-				register char_u  *save;
+				int	no;
+				char_u  *save;
 
 				no = OP(scan) - MCLOSE;
 				save = regendp[no];
@@ -1530,7 +1530,7 @@ regmatch(char_u *prog)
 		  case BACKREF + 7:
 		  case BACKREF + 8:
 		  case BACKREF + 9:{
-				register int	no;
+				int	no;
 				int				len;
 
 				no = OP(scan) - BACKREF;
@@ -1547,7 +1547,7 @@ regmatch(char_u *prog)
 			break;
 #endif
 		  case BRANCH:{
-				register char_u  *save;
+				char_u  *save;
 
 				if (OP(next) != BRANCH) /* No choice. */
 					next = OPERAND(scan);		/* Avoid recursion. */
@@ -1566,10 +1566,10 @@ regmatch(char_u *prog)
 			break;
 		  case STAR:
 		  case PLUS:{
-				register int	nextch;
-				register int	no;
-				register char_u  *save;
-				register int	min;
+				int	nextch;
+				int	no;
+				char_u  *save;
+				int	min;
 
 				/*
 				 * Lookahead to avoid useless match attempts when we know
@@ -1632,9 +1632,9 @@ regmatch(char_u *prog)
 static int
 regrepeat(char_u *p)
 {
-	register int	count = 0;
-	register char_u  *scan;
-	register char_u  *opnd;
+	int	count = 0;
+	char_u  *scan;
+	char_u  *opnd;
 
 	scan = reginput;
 	opnd = OPERAND(p);
@@ -1719,9 +1719,9 @@ regrepeat(char_u *p)
  - regnext - dig the "next" pointer out of a node
  */
 static char_u    *
-regnext(register char_u *p)
+regnext(char_u *p)
 {
-	register int	offset;
+	int	offset;
 
 	if (p == &regdummy)
 		return NULL;
@@ -1744,9 +1744,9 @@ regnext(register char_u *p)
 void
 regdump(regexp *r)
 {
-	register char_u  *s;
-	register int	op = EXACTLY;		/* Arbitrary non-END op. */
-	register char_u  *next;
+	char_u  *s;
+	int	op = EXACTLY;		/* Arbitrary non-END op. */
+	char_u  *next;
 	/*extern char_u    *strchr();*/
 
 
@@ -1787,7 +1787,7 @@ regdump(regexp *r)
 static char_u    *
 regprop(char_u *op)
 {
-	register char_u  *p;
+	char_u  *p;
 	static char_u 	buf[50];
 
 	(void) strcpy(buf, ":");
@@ -1891,9 +1891,9 @@ regprop(char_u *op)
 static int
 strcspn(const char_u *s1, const char_u *s2)
 {
-	register char_u  *scan1;
-	register char_u  *scan2;
-	register int	count;
+	char_u  *scan1;
+	char_u  *scan2;
+	int	count;
 
 	count = 0;
 	for (scan1 = s1; *scan1 != '\0'; scan1++) {
@@ -1928,9 +1928,9 @@ cstrncmp(char_u *s1, char_u *s2, int n)
  * cstrchr: This function is used a lot for simple searches, keep it fast!
  */
 	char_u *
-cstrchr(char_u *s, register int c)
+cstrchr(char_u *s, int c)
 {
-	register char_u		   *p;
+	char_u		   *p;
 
 	if (!reg_ic)
 #ifdef KANJI
