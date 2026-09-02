@@ -62,7 +62,7 @@ static colnr_t	textcol;
 	void
 doshift(int op, int curs_top, int amount)
 {
-	register long	i;
+	long			i;
 	int				first_char;
 
 	if (!u_save((linenr_t)(curwin->w_cursor.lnum - 1), (linenr_t)(curwin->w_cursor.lnum + nlines)))
@@ -107,8 +107,8 @@ doshift(int op, int curs_top, int amount)
 	void
 shift_line(int left, int round, int amount)
 {
-	register int count;
-	register int i, j;
+	int count;
+	int i, j;
 	int p_sw = (int)curbuf->b_p_sw;
 
 	count = get_indent();			/* get current indent */
@@ -150,7 +150,9 @@ shift_line(int left, int round, int amount)
  	int
 is_yank_buffer(int c, int write)
 {
-	if (isalnum(c) || (!write && strchr(".%:", c) != NULL) || c == '"')
+	/* isasciialnum() and not isalnum(): c is whatever key was pressed after the
+	 * '"', and a cursor key is a key code rather than a character. See vim.h. */
+	if (isasciialnum(c) || (!write && strchr(".%:", c) != NULL) || c == '"')
 		return TRUE;
 #ifdef NT
 	if (c == '@')
@@ -168,7 +170,7 @@ is_yank_buffer(int c, int write)
 	static void
 get_yank_buffer(int writing)
 {
-	register int i;
+	int i;
 
 	yankappend = FALSE;
 	if (((yankbuffer == 0 && !writing) || yankbuffer == '"') && y_previous != NULL)
@@ -177,11 +179,11 @@ get_yank_buffer(int writing)
 		return;
 	}
 	i = yankbuffer;
-	if (isdigit(i))
+	if (isasciidigit(i))
 		i -= '0';
-	else if (islower(i))
+	else if (isasciilower(i))
 		i -= 'a' - 10;
-	else if (isupper(i))
+	else if (isasciiupper(i))
 	{
 		i -= 'A' - 10;
 		yankappend = TRUE;
@@ -216,7 +218,7 @@ dorecord(int c)
 
 	if (Recording == FALSE) 		/* start recording */
 	{
-		if (!isalnum(c) && c != '"')	/* registers 0-9, a-z and " are allowed */
+		if (!isasciialnum(c) && c != '"')	/* registers 0-9, a-z and " are allowed */
 			retval = FAIL;
 		else
 		{
@@ -410,7 +412,7 @@ insertbuf(int c)
 	void
 dodelete(void)
 {
-	register int	n;
+	int				n;
 	linenr_t		lnum;
 	char_u			*ptr;
 	char_u			*new, *old;
@@ -710,7 +712,7 @@ swapchar(FPOS *pos)
 	void
 dochange(void)
 {
-	register colnr_t 		   l;
+	colnr_t 		   l;
 
 	l = curbuf->b_startop.col;
 
@@ -729,7 +731,7 @@ dochange(void)
 	void
 init_yank(void)
 {
-		register int i;
+		int i;
 
 #ifdef NT
 		y_clip.y_array = NULL;
@@ -747,7 +749,7 @@ free_yank(long n)
 {
 	if (y_current->y_array != NULL)
 	{
-		register long i;
+		long i;
 
 		for (i = n; --i >= 0; )
 		{
@@ -783,7 +785,7 @@ doyank(int deleting)
 	struct yankbuf		*curr;			/* copy of y_current */
 	struct yankbuf		new; 			/* new yank buffer when appending */
 	char_u				**new_ptr;
-	register linenr_t	lnum;			/* current line number */
+	linenr_t			lnum;			/* current line number */
 	long 				j;
 	int					yanktype = mtype;
 	long				yanklines = nlines;
@@ -1350,10 +1352,10 @@ error:
 	void
 dodis(void)
 {
-	register int			i, n;
-	register long			j;
-	register char_u			*p;
-	register struct yankbuf *yb;
+	int						i, n;
+	long					j;
+	char_u					*p;
+	struct yankbuf 			*yb;
 
 	gotocmdline(TRUE, NUL);
 
@@ -1819,7 +1821,7 @@ block_prep(linenr_t lnum, int delete)
 	int
 doaddsub(int command, linenr_t Prenum1)
 {
-	register int 	col;
+	int 			col;
 	char_u			buf[NUMBUFLEN];
 	int				hex;		/* 'x' or 'X': hexadecimal; '0': octal */
 	static int		hexupper = FALSE;	/* 0xABC */

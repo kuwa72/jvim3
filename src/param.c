@@ -600,7 +600,7 @@ set_init(void)
 	int
 doset(char_u *arg)
 {
-	register int i;
+	int			i;
 	char_u		*s;
 	char_u		*errmsg;
 	char_u		*startarg;
