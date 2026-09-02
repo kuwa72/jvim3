@@ -1,0 +1,17 @@
+syntax Comment			n/%.*$
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
+syntax Character		n/\$\\.\|\$.\?
+syntax Float			n/\d*\.\d\+
+syntax Number			n/\d\+#[0-9a-zA-Z]\+
+syntax Number			w/0x\x\+
+syntax Number			w/\d\+
+syntax PreProc			n/^\s*-\i\+
+syntax Statement		w/fun/end/receive/after
+syntax Conditional		w/if/case/cond
+syntax Exception		w/try/catch/throw
+syntax StorageClass	w/spec/export/import/module/include/record
+syntax Boolean			w/true/false
+syntax Operator		w/and/or/not/band/bor/bxor/bsl/bsr/div/rem/when/orelse/andalso
+syntax Constant		n/:\i\+
+syntax Function		w/io/lists/maps/gen_server/ets/timer
+syntax Todo			w/TODO/FIXME/XXX/NOTE

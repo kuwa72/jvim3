@@ -1,0 +1,16 @@
+syntax Comment			p/\/\*/\*\/
+syntax Comment			n/\/\/.*$
+syntax String			n/\"\([^\"\\]\\|\\.\)*\"
+syntax String			m/'.*'
+syntax Constant		n/#\x\x\x\x\x\x\x\x
+syntax Constant		n/#\x\x\x\x\x\x
+syntax Constant		n/#\x\x\x
+syntax PreProc			n/@\i\+
+syntax Identifier		n/\$[a-zA-Z0-9_-]\+
+syntax Tag				n/[.#]\i[-_a-zA-Z0-9]*
+syntax Identifier		m-/^\s\+[-a-zA-Z]\+\s*:
+syntax Float			n/\d*\.\d\+[a-z%]*
+syntax Number			n/\d\+[a-z%]*
+syntax Statement		w/!important/!default/!global/important/inherit/initial/unset/auto/none
+syntax Type			w/rgb/rgba/hsl/hsla/calc/var/url
+syntax Todo			w/TODO/FIXME/XXX/NOTE
