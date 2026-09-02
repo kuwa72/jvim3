@@ -146,13 +146,63 @@ runhelp() {
 
 	keys=${keys//%/%%}
 	printf 'a\n' > "$tmp/in"
-	printf ':set helpfile=%s/doc.j/vim.hlp\r:help\r%s:q!\r' "$root" "$keys" \
-			> "$tmp/keys"
+	# Three printfs, because an escape in the keys has to be a format of its
+	# own: what "%s" substitutes is not looked at again, so "\r" written that
+	# way would go to the editor as a backslash and an "r".
+	printf ':set helpfile=%s/doc.j/vim.hlp\r:help\r' "$root" > "$tmp/keys"
+	printf "$keys" >> "$tmp/keys"
+	printf ':q!\r' >> "$tmp/keys"
 	rm -f "$tmp/screen"
 	pty "TERM=xterm $jvim -T xterm -s $tmp/keys $tmp/in" > "$tmp/screen" 2>&1
 
 	local got=bad
 	grep -qF -- "$want" "$tmp/screen" && got=ok
+
+	if [ "$expect" = ok ] && [ "$got" = ok ]; then
+		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
+	elif [ "$expect" = ok ]; then
+		printf '  FAIL        %s\n' "$name"
+		printf '                nothing matching %s on the screen\n' "$want"
+		fail=$((fail+1))
+	elif [ "$got" = bad ]; then
+		printf '  KNOWN-FAIL  %s\n' "$name"; xfail=$((xfail+1))
+	else
+		printf '  NOW PASSES  %s  <- update the expectation\n' "$name"
+		xpass=$((xpass+1))
+	fi
+}
+
+# runhelptyped <name> <expect> <keys after ":help"> <wanted on the screen> [times]
+#
+# runhelp with the keys typed rather than fed through "-s", for the same reason
+# runtyped exists: a cursor key is a termcap string on the way in and an
+# internal code by the time help() sees it, and "-s" can carry neither.
+#
+# redrawhelp() writes the whole screen every time it is asked for one, so a
+# screen visited twice leaves its text on the terminal twice. That is what
+# <times> counts, and it is the only way to tell a key that went back to a
+# screen from one that never left it.
+runhelptyped() {
+	counted && return
+	local name=$1 expect=$2 keys=$3 want=$4 times=${5:-}
+
+	keys=${keys//%/%%}
+	printf 'a\n' > "$tmp/in"
+	rm -f "$tmp/screen"
+	{ printf ':set helpfile=%s/doc.j/vim.hlp\r:help\r' "$root"
+	  printf "$keys"
+	  printf ':q!\r'; } \
+			| pty "TERM=xterm $jvim -T builtin_xterm $tmp/in" > "$tmp/screen" 2>&1
+
+	local got=bad
+	if [ -n "$times" ]; then
+		# -o and not -c: the whole screen arrives as one line, cursor motions
+		# and all, so grep counting lines would answer 1 however many times the
+		# text is there.
+		[ "$(grep -oF -- "$want" "$tmp/screen" | wc -l)" -eq "$times" ] && got=ok
+	else
+		grep -qF -- "$want" "$tmp/screen" && got=ok
+	fi
 
 	if [ "$expect" = ok ] && [ "$got" = ok ]; then
 		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
@@ -223,6 +273,13 @@ run "<< removes indent"     ok ":set sw=4\r<<"  '        a\n'  '    a\n'
 # which builds the whole indent at once.
 run ">> fills with tabs"     ok ":set sw=12\r>>"    'a\n'      '\t    a\n'
 run ">> with et uses spaces" ok ":set sw=12 et\r>>" 'a\n'      '            a\n'
+# "Q" joins its range and lays it out again at 'textwidth'. With no 'formatprg'
+# it goes to doformat(), which called insertchar() with no bytes at all -- and
+# the KANJI build reads bytes[0] before it looks at the count, so every "Q" with
+# a motion after it was a null dereference.
+run "Q joins two lines"      ok "Qj"  'one two\nthree four\n'   'one two three four\n'
+run "Q lays out at tw"       ok ":set tw=10\rQj" 'one two\nthree four\n' \
+		'one two\nthree four\n'
 
 echo
 echo "registers, marks and undo:"
@@ -336,6 +393,17 @@ echo "the help screen:"
 runhelp ":help draws the first screen" ok '\r' 'VIM stands for Vi IMproved.'
 # SPACE is the next screen, so the text looked for is one that is only there.
 runhelp "SPACE reaches the second screen" ok ' \r' 'N  f<char>'
+# The cursor keys page as well, one screen at a time: the down arrow used to be
+# handed to isalpha(), which is undefined for a key code and said yes on
+# Windows, so "c - 'b'" indexed filepos[] hundreds of entries past its end -- an
+# arbitrary screen, and a crash once the stack behind it held something else.
+# Two presses have to reach the third screen and no further.
+runhelptyped "the down arrow reaches the second screen" ok '\033OB\r' 'N  f<char>'
+runhelptyped "twice reaches the third and no further" ok '\033OB\033OB\r' \
+		'N sentences forward'
+# The up arrow is "b": down twice and up once draws the second screen twice.
+runhelptyped "the up arrow goes back a screen" ok '\033OB\033OB\033OA\r' \
+		'N  f<char>' 2
 
 if [ -n "$count_only" ]; then
 	printf 'cases %d\n' "$cases"

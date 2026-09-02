@@ -252,7 +252,7 @@ help(void)
 
 		if (c == ' ' ||
 #ifdef KANJI
-				(c == K_SDARROW) ||	/* page down */
+				(c == K_SDARROW) || (c == K_DARROW) ||	/* page down */
 #else
 # ifdef MSDOS
 				(c == K_NUL && vpeekc() == 'Q') ||	/* page down */
@@ -260,14 +260,16 @@ help(void)
 #endif
 				c == Ctrl('F'))						/* one screen forwards */
 		{
-			if (screennr < MAXSCREENS && !eof)
+			/* MAXSCREENS - 1: filepos[] is read at [screennr] below, and its
+			 * last entry is MAXSCREENS - 1. */
+			if (screennr < MAXSCREENS - 1 && !eof)
 				++screennr;
 		}
 		else if (c == 'a')					/* go to first screen */
 			screennr = 0;
 		else if (c == 'b' ||
 #ifdef KANJI
-				(c == K_SUARROW) ||	/* page up */
+				(c == K_SUARROW) || (c == K_UARROW) ||	/* page up */
 #else
 # ifdef MSDOS
 				(c == K_NUL && vpeekc() == 'I') ||	/* page up */
@@ -278,9 +280,18 @@ help(void)
 			if (screennr > 0)
 				--screennr;
 		}
-		else if (isalpha(c))				/* go to specified screen */
+		/*
+		 * Only a letter names a screen, and only an ASCII one: what arrives
+		 * here is a key code, not a character, and every special key is a value
+		 * past 255 where isalpha() is undefined. On Windows it answered yes for
+		 * a cursor key -- K_DARROW is 322 -- so "c - 'b'" came to 224 and
+		 * filepos[] was read hundreds of entries past its end, which showed as
+		 * a jump to an arbitrary screen and, sooner or later, a crash. See
+		 * vim.h for the rest of the family.
+		 */
+		else if (isasciialpha(c))			/* go to specified screen */
 		{
-			if (isupper(c))
+			if (isasciiupper(c))
 				c = c - 'A' + 'z' + 1;		/* 'A' comes after 'z' */
 			screennr = c - 'b';
 		}

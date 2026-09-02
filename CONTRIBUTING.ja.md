@@ -10,7 +10,7 @@ request、コミットメッセージ、いずれも日本語で構いません�
 
 3 つあります。
 
-1. `./scripts/build-unix.sh test` が通ること。235 ケースで、1 分半ほどで終わります。
+1. `./scripts/build-unix.sh test` が通ること。240 ケースで、1 分半ほどで終わります。
 2. `./scripts/build-unix.sh strict` が通ること。CI と同じ `-Werror=` 群
    （暗黙の宣言、ポインタ型の不一致、プロトタイプなし、return なし、暗黙の
    `int`、未初期化変数の使用）を push の前に確認できます。この中には gcc では

@@ -30,13 +30,17 @@ setmark(int c)
 {
 	int 		i;
 
-	if (islower(c))
+	/* The ASCII tests, not islower()/isupper(): c is the key pressed after "m",
+	 * and a cursor key is a key code, not a character. Windows called one an
+	 * upper case letter, and "c - 'A'" then indexed namedfm[] out of its 26
+	 * entries -- a write, at namedfm[257] for the down arrow. See vim.h. */
+	if (isasciilower(c))
 	{
 		i = c - 'a';
 		curbuf->b_namedm[i] = curwin->w_cursor;
 		return OK;
 	}
-	if (isupper(c))
+	if (isasciiupper(c))
 	{
 		i = c - 'A';
 		namedfm[i].mark = curwin->w_cursor;
@@ -203,9 +207,9 @@ getmark(int c, int changefile)
 						curbuf->b_endop.lnum <= curbuf->b_ml.ml_line_count)
 			posp = &(curbuf->b_endop);
 	}
-	else if (islower(c))				/* normal named mark */
+	else if (isasciilower(c))			/* normal named mark */
 		posp = &(curbuf->b_namedm[c - 'a']);
-	else if (isupper(c))				/* named file mark */
+	else if (isasciiupper(c))			/* named file mark */
 	{
 		c -= 'A';
 		posp = &(namedfm[c].mark);

@@ -10,6 +10,101 @@ repository and would drift within three releases.
 
 ## Unreleased
 
+### Added
+
+- The cursor keys page the `:help` screen: down is SPACE, up is `b`. Only the
+  *shifted* arrows did, which is not what anybody reaches for, and the plain
+  ones fell through to the fault below.
+- Five cases in `scripts/test-editing.sh`: two for `Q` and three for the help
+  screen under the cursor keys, and `runhelptyped` to run them — the help keys
+  had only ever been fed through `-s`, which a cursor key cannot go through.
+  240 cases now.
+
+### Fixed
+
+- **`Q` crashed the editor.** `Qj`, `Q}`, `Q` with any motion at all: a null
+  dereference before it had formatted anything, on every platform. `doformat()`
+  in `src/ops.c` calls `insertchar()` with no character to insert, which the
+  original spells `insertchar(NUL)`; the KANJI build takes a pointer and a byte
+  count instead, so `NUL` arrived as a null pointer and `bytes[0]` read it on
+  the first line of the function — before the `c == NUL` that means "format
+  only, insert nothing" was ever looked at. `Q` has been unusable in JVim's
+  KANJI build since the signature changed. There is no `formatprg` in the
+  default settings, so nothing pushed the command down the external-filter path
+  that would have avoided it.
+- **A cursor key on the `:help` screen jumped to an arbitrary screen, and then
+  crashed.** The down arrow was handed to `isalpha()`, which is undefined for a
+  key code: `K_DARROW` is 322, not a character, and the Windows C runtime
+  answered yes. `screennr = c - 'b'` then came to 224, and `filepos[]` — 52
+  entries on the stack — was read that far past its end. What came back was
+  whatever the stack held: usually a plausible-looking file offset, which is why
+  it looked like a jump to a random page, and sooner or later a seek to
+  somewhere that is not in the help text at all, which is the crash while paging
+  back with `b`. Only ASCII letters name a screen now, and `screennr` no longer
+  reaches `MAXSCREENS` itself, which was one past the last entry.
+- The rest of that family, found by auditing every `ctype` call in the tree.
+  `isasciilower()` and the four beside it are in `src/vim.h` now, and everything
+  that classifies a value straight from `vgetc()` asks those instead:
+  - `isidchar()` and `isabchar()` in `src/charset.c` say no to anything that is
+    not a byte. This one was reachable on Linux as well as Windows — a function
+    key on the `:` line went to `isalnum(329)`, and whether an abbreviation
+    expanded in front of it was then whatever the locale table happened to hold
+    past its end.
+  - the register name after `"` (`is_yank_buffer()`), and the one after `q`
+    (`dorecord()`) — a name that got through indexed `y_buf[]`, 36 entries, at
+    277 for the down arrow.
+  - the mark name after `m`, `'` and `` ` `` (`setmark()`, `getmark()`) — a
+    **write** to `namedfm[]`, 26 entries, at 257.
+  - the count after `z`, and the digits of `CTRL-V nnn` and `CTRL-V #nnnn`.
+
+  These four need the key to arrive as a code, which today happens only where
+  the terminal codes are translated -- so `:help` is the one that bit. The
+  others are the same defect and stop being a question of what a C runtime
+  answers for a value it was never given.
+
+### 日本語
+
+- `:help` 画面をカーソルキーでめくれるようになりました。↓ が SPACE、↑ が `b`
+  と同じ動きです。これまで反応したのは *Shift* 付きの矢印だけで、普通の矢印は
+  下の不具合の入口になっていました。
+- **`Q` でエディタが落ちていました。** `Qj`、`Q}`、`Q` に何かモーションを
+  続けた場合すべてで、整形を始める前に NULL 参照で落ちます。プラットフォームを
+  問いません。`src/ops.c` の `doformat()` は挿入する文字を持たないまま
+  `insertchar()` を呼びます。オリジナルの `insertchar(NUL)` に対し KANJI 版は
+  引数がバイト列とバイト数なので、`NUL` がヌルポインタとして渡り、関数の
+  1 行目の `bytes[0]` がそれを読んでいました。「NUL は挿入せず整形だけ」という
+  判定にたどり着く前です。シグネチャが変わって以来、KANJI 版の `Q` は
+  使えない状態でした。既定では `formatprg` が空で、設定されていれば通る外部
+  フィルタ経路には行かないため、誰も回避できませんでした。
+- **`:help` でカーソルキーを押すと無関係な画面に飛び、その後落ちていました。**
+  ↓ が `isalpha()` に渡っていました。キーコードに対しては未定義で、`K_DARROW`
+  は文字ではなく 322 です。Windows の C ランタイムはこれを「英字」と答えます。
+  すると `screennr = c - 'b'` が 224 になり、スタック上の 52 要素の配列
+  `filepos[]` をそこまではみ出して読みます。読めた値はスタックの残骸で、
+  たいていはそれらしいファイル位置に見えるため「でたらめなページに飛ぶ」
+  ように見え、いずれヘルプ本文の外を指したところで落ちます。`b` で戻っている
+  最中に突然落ちるのはこれです。画面を指定できるのは ASCII の英字だけにし、
+  `screennr` が最後の要素の 1 つ先である `MAXSCREENS` に達しないようにしました。
+- 同じ種類の問題を、ツリー内の `ctype` 呼び出しを全数監査して洗い出しました。
+  `isasciilower()` ほか 4 つを `src/vim.h` に置き、`vgetc()` から来た値を
+  分類している箇所はすべてそちらを使います。
+  - `src/charset.c` の `isidchar()` と `isabchar()` は、バイトでない値には
+    FALSE を返します。ここは Windows だけでなく Linux でも到達しました。
+    `:` 行でファンクションキーを押すと `isalnum(329)` に渡り、その手前の
+    アブリビエーションが展開されるかどうかが、ロケールのテーブルの
+    はみ出した先に何があるか次第になっていました。
+  - `"` の後のレジスタ名（`is_yank_buffer()`）と `q` の後のレジスタ名
+    （`dorecord()`）。通ってしまうと 36 要素の `y_buf[]` を、↓ なら 277 番目で
+    参照します。
+  - `m`・`'`・`` ` `` の後のマーク名（`setmark()`、`getmark()`）。26 要素の
+    `namedfm[]` の 257 番目への**書き込み**です。
+  - `z` の後のカウントと、`CTRL-V nnn`・`CTRL-V #nnnn` の数字。
+
+  この 4 つはキーがコードとして届く必要があり、現状それが起きるのは端末の
+  キーコードを変換する経路だけです。実害が出ていたのは `:help` でした。
+  残りも欠陥としては同じで、C ランタイムが「渡されるはずのない値」に
+  どう答えるか次第、という状態ではなくなりました。
+
 ## 1.2.1 — 2026-09-01
 
 ### Added
