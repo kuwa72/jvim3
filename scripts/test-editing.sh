@@ -355,6 +355,11 @@ runtyped "typed CTRL-@"         ok 'iabc\033i\000'        'X\n'       'ababccX\n
 runtyped "command-line completion: :colorscheme" ok ':colo dra\t\r' "$ABC" "$ABC"
 runtyped "command-line completion: :syntax"      ok ':syn en\t\r'  "$ABC" "$ABC"
 runtyped "command-line completion: :highlight"   ok ':hi Nor\t guifg=white\r' "$ABC" "$ABC"
+run "smartindent: colon block indentation" ok ':set si sw=4\rodef foo():\rpass\033' '' '\ndef foo():\n    pass\n'
+run "smartindent: custom cinwords" ok ':set si sw=4 cinw=function\rofunction bar()\rx\033' '' '\nfunction bar()\n    x\n'
+run "smartindent: comment # on python file keeps indent" ok ':file foo.py\r:set si sw=4\rodef foo():\r# comment\033' '' '\ndef foo():\n    # comment\n'
+
+
 
 
 # The characters a mapping names rather than holds. Before these, a mapping

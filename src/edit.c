@@ -28,6 +28,7 @@ static void start_arrow __ARGS((void));
 static void stop_arrow __ARGS((void));
 static void stop_insert __ARGS((void));
 static int echeck_abbr __ARGS((int));
+static int is_c_preproc_file __ARGS((void));
 
 int arrow_used;				/* Normally FALSE, set to TRUE after hitting
 							 * cursor key in insert mode. Used by vgetorpeek()
@@ -39,6 +40,39 @@ static int		last_insert_skip;
 							/* number of chars in front of the previous insert */
 static int		new_insert_skip;
 							/* number of chars in front of the current insert */
+
+/*
+ * Return TRUE if current buffer is a C-like source file where '#' starts preprocessor.
+ */
+	static int
+is_c_preproc_file(void)
+{
+	char_u *fname = curbuf->b_filename;
+	char_u *ext;
+
+	if (fname == NULL)
+		return TRUE;
+
+	ext = (char_u *)strrchr((char *)fname, '.');
+	if (ext != NULL)
+	{
+		ext++;
+		if (stricmp((char *)ext, "py") == 0 || stricmp((char *)ext, "rb") == 0 ||
+			stricmp((char *)ext, "sh") == 0 || stricmp((char *)ext, "bash") == 0 ||
+			stricmp((char *)ext, "zsh") == 0 || stricmp((char *)ext, "yaml") == 0 ||
+			stricmp((char *)ext, "yml") == 0 || stricmp((char *)ext, "toml") == 0 ||
+			stricmp((char *)ext, "pl") == 0 || stricmp((char *)ext, "pm") == 0 ||
+			stricmp((char *)ext, "ex") == 0 || stricmp((char *)ext, "exs") == 0 ||
+			stricmp((char *)ext, "nix") == 0 || stricmp((char *)ext, "jl") == 0 ||
+			stricmp((char *)ext, "r") == 0 || stricmp((char *)ext, "graphql") == 0 ||
+			stricmp((char *)ext, "gql") == 0 || stricmp((char *)ext, "ps1") == 0 ||
+			stricmp((char *)ext, "ini") == 0 || stricmp((char *)ext, "conf") == 0)
+			return FALSE;
+
+	}
+	return TRUE;
+}
+
 
 	void
 edit(long count)
@@ -1290,13 +1324,14 @@ normalchar:
 					else
 						shift_line(TRUE, TRUE, 1);
 				}
-					/* set indent of '#' always to 0 */
-				if (curwin->w_cursor.col > 0 && can_si && c == '#')
+					/* set indent of '#' always to 0 for C-like preprocessor files */
+				if (curwin->w_cursor.col > 0 && can_si && c == '#' && is_c_preproc_file())
 				{
 								/* remember current indent for next line */
 					old_indent = get_indent();
 					set_indent(0, TRUE);
 				}
+
 
 				if (isidchar(c) || !echeck_abbr(c))
 #ifdef KANJI

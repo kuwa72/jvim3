@@ -123,7 +123,9 @@ static struct param params[] =
 #if defined(MSDOS) && !defined(TERMCAP)		/* DOSGEN */
 		{"bioskey",		"biosk",P_BOOL,				(char_u *)&p_biosk},
 #endif
+		{"cinwords",	"cinw",	P_STRING,			(char_u *)&p_cinwords},
 		{"cmdheight",	"ch",	P_NUM,				(char_u *)&p_ch},
+
 #ifdef NT
 		{"codepage",	"cpg",	P_NUM,				(char_u *)&p_cpage},
 #endif
@@ -507,8 +509,10 @@ set_init(void)
 	p_bg = strsave((char_u *)"dark");
 	p_colo = strsave((char_u *)"default");
 #endif
+	p_cinwords = strsave((char_u *)"if,else,while,for,do,switch");
 	curbuf->b_p_sw = 8;
 	curbuf->b_p_ts = 8;
+
 #ifdef MSDOS
 	curbuf->b_p_tx = TRUE;		/* texmode is default for MSDOS */
 #endif

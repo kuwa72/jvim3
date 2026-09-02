@@ -4820,8 +4820,11 @@ ExpandColorschemes(regexp *prog, int *num_file, char_u ***file)
 				if (len > 4 && strcmp((char *)tail + len - 4, ".vim") == 0)
 				{
 					char_u scheme[64];
-					STRNCPY(scheme, tail, len - 4);
-					scheme[len - 4] = NUL;
+					int n = len - 4;
+					if (n >= (int)sizeof(scheme))
+						n = (int)sizeof(scheme) - 1;
+					STRNCPY(scheme, tail, n);
+					scheme[n] = NUL;
 					if (regexec(prog, scheme, TRUE))
 					{
 						int dup = FALSE;
@@ -4855,8 +4858,12 @@ ExpandColorschemes(regexp *prog, int *num_file, char_u ***file)
 				if (len > 6 && strcmp((char *)tail + len - 6, ".jvsyn") == 0)
 				{
 					char_u scheme[64];
-					STRNCPY(scheme, tail, len - 6);
-					scheme[len - 6] = NUL;
+					int n = len - 6;
+					if (n >= (int)sizeof(scheme))
+						n = (int)sizeof(scheme) - 1;
+					STRNCPY(scheme, tail, n);
+					scheme[n] = NUL;
+
 					if (regexec(prog, scheme, TRUE))
 					{
 						int dup = FALSE;
@@ -5053,7 +5060,7 @@ ExpandSyntax(regexp *prog, int *num_file, char_u ***file)
 		}
 	}
 
-	/* Search $VIM/syntax/*.jvsyn for filetypes */
+	/* Search filetypes under $VIM/syntax */
 	vimdir = vimgetenv((char_u *)"VIM");
 #ifdef VIMDIR
 	if (vimdir == NULL || *vimdir == NUL)
@@ -5073,9 +5080,13 @@ ExpandSyntax(regexp *prog, int *num_file, char_u ***file)
 				if (len > 6 && strcmp((char *)tail + len - 6, ".jvsyn") == 0)
 				{
 					char_u synname[64];
-					STRNCPY(synname, tail, len - 6);
-					synname[len - 6] = NUL;
+					int n = len - 6;
+					if (n >= (int)sizeof(synname))
+						n = (int)sizeof(synname) - 1;
+					STRNCPY(synname, tail, n);
+					synname[n] = NUL;
 					if (regexec(prog, synname, TRUE))
+
 					{
 						int dup = FALSE;
 						for (k = 0; k < count; k++)

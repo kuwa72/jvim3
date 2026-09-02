@@ -16,8 +16,10 @@ repository and would drift within three releases.
   *shifted* arrows did, which is not what anybody reaches for, and the plain
   ones fell through to the fault below.
 - Command-line (: mode) completion enhancements for `:colorscheme`, `:highlight`, and `:syntax`.
-- Three cases in `scripts/test-editing.sh` for command-line completion testing.
-  252 cases now.
+- Enhanced `smartindent` support beyond C: added `'cinwords'` (`'cinw'`) option, supported trailing colon `:` block indenting (e.g. Python), supported block closer keywords, and preserved indentation for `#` comments in non-C languages (Python, Ruby, Shell, YAML, etc.).
+- Three cases in `scripts/test-editing.sh` for smartindent testing.
+  255 cases now.
+
 
 ### Fixed
 

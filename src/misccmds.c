@@ -24,7 +24,58 @@ static void check_status __ARGS((BUF *));
 extern char *mktemp __ARGS((char *));	/* for vim_mktemp() at the end */
 #endif
 
-static char_u *(si_tab[]) = {(char_u *)"if", (char_u *)"else", (char_u *)"while", (char_u *)"for", (char_u *)"do"};
+/*
+ * Check if the word at 'p' of length 'len' matches a word in 'p_cinwords'
+ */
+	static int
+in_cinwords(char_u *p, int len)
+{
+	char_u	*cw;
+	char_u	*end;
+
+	if (p_cinwords == NULL || *p_cinwords == NUL || len <= 0)
+		return FALSE;
+
+	for (cw = p_cinwords; *cw != NUL; )
+	{
+		while (*cw == ' ' || *cw == ',')
+			cw++;
+		if (*cw == NUL)
+			break;
+		end = cw;
+		while (*end != NUL && *end != ' ' && *end != ',')
+			end++;
+		if ((end - cw) == len && STRNCMP(p, cw, (size_t)len) == 0)
+			return TRUE;
+		cw = end;
+	}
+	return FALSE;
+}
+
+/*
+ * Check if a word represents a block closing keyword (like end, fi, done, esac)
+ */
+	static int
+is_block_closer(char_u *p)
+{
+	static const char *closers[] = {"end", "fi", "done", "esac", "elseif", "else", "catch", "finally", "except"};
+	int		i;
+	int		len;
+	char_u	*pp;
+
+	for (pp = p; islower(*pp); ++pp)
+		;
+	if (isidchar(*pp))
+		return FALSE;
+	len = (int)(pp - p);
+	for (i = (int)(sizeof(closers)/sizeof(closers[0])); --i >= 0; )
+	{
+		if (STRLEN(closers[i]) == (size_t)len && STRNCMP(p, closers[i], (size_t)len) == 0)
+			return TRUE;
+	}
+	return FALSE;
+}
+
 
 /*
  * count the size of the indent in the current line
@@ -170,7 +221,8 @@ Opencmd(int dir, int redraw, int delspaces)
 		{
 			char_u	*p;
 			char_u	*pp;
-			int		i, save;
+			int		save;
+
 
 			if (dir == FORWARD)
 			{
@@ -195,11 +247,11 @@ Opencmd(int dir, int redraw, int delspaces)
 					}
 				}
 end_while:
-				if (ISkanjiPointer(ptr,p) == 0 && *p == '{')					/* line ends in '{': do indent */
+				if (ISkanjiPointer(ptr,p) == 0 && (*p == '{' || *p == ':'))	/* line ends in '{' or ':': do indent */
 #else
 				while (p > ptr && isspace(*p))	/* find last non-blank in line */
 					--p;
-				if (*p == '{')					/* line ends in '{': do indent */
+				if (*p == '{' || *p == ':')		/* line ends in '{' or ':': do indent */
 #endif
 				{
 					did_si = TRUE;
@@ -215,12 +267,8 @@ end_while:
 					{
 						save = *pp;
 						*pp = NUL;
-						for (i = sizeof(si_tab)/sizeof(char_u *); --i >= 0; )
-							if (STRCMP(p, si_tab[i]) == 0)
-							{
-								did_si = TRUE;
-								break;
-							}
+						if (in_cinwords(p, (int)(pp - p)))
+							did_si = TRUE;
 						*pp = save;
 					}
 				}
@@ -229,11 +277,12 @@ end_while:
 			{
 				p = ptr;
 				skipspace(&p);
-				if (*p == '}')			/* if line starts with '}': do indent */
+				if (*p == '}' || is_block_closer(p))	/* if line starts with '}' or block closer: do indent */
 					did_si = TRUE;
 			}
 		}
 		did_ai = TRUE;
+
 		if (curbuf->b_p_si)
 			can_si = TRUE;
 	}

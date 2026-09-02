@@ -38,7 +38,9 @@ EXTERN int	p_biosk	INIT(= TRUE);		/* Use bioskey() instead of kbhit() */
 #if defined(UNIX) || (defined(NT) && !defined(notdef))
 EXTERN char_u *p_bdir	INIT(= (char_u *)BACKUPDIR);	/* directory for backups */
 #endif
+EXTERN char_u *p_cinwords	INIT(= (char_u *)"if,else,while,for,do,switch");	/* cinwords */
 EXTERN long	p_ch	INIT(= 1L);			/* command line height */
+
 #ifdef CRMARK
 EXTERN char *p_cc	INIT(= CRSTR);		/* cr mark string */
 #endif
