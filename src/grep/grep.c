@@ -404,9 +404,7 @@ int					and;
 }
 
 static int
-grepsub(gp, look)
-register GREP	*	gp;
-int				*	look;
+grepsub(GREP *gp, int *look)
 {
 	int					i;
 	int					found = FALSE;

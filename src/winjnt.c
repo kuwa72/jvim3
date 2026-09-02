@@ -8929,7 +8929,7 @@ scroll(void)
 }
 
 	static void
-gotoxy(register int x, register int y)
+gotoxy(int x, int y)
 {
 	ntcoord.X = x - 1;
 	ntcoord.Y = y - 1;

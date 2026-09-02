@@ -445,11 +445,10 @@ exit:
  *				 This will cause the filename to remain exactly the same.
  */
 	void
-fname_case(name)
-	char_u	*name;
+fname_case(char_u *name)
 {
-	register struct FileInfoBlock	*fib;
-	register size_t					len;
+	struct FileInfoBlock	*fib;
+	size_t					len;
 
 	fib = get_fib(name);
 	if (fib != NULL)
@@ -467,11 +466,10 @@ fname_case(name)
  * Returns NULL on error.
  */
 	static struct FileInfoBlock *
-get_fib(fname)
-	char_u *fname;
+get_fib(char_u *fname)
 {
-	register BPTR					flock;
-	register struct FileInfoBlock	*fib;
+	BPTR					flock;
+	struct FileInfoBlock	*fib;
 
 	if (fname == NULL)		/* safety check */
 		return NULL;

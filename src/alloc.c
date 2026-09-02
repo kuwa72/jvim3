@@ -169,7 +169,7 @@ nofreeNULL(void *x)
 	char *
 bsdmemset(char *ptr, int c, long size)
 {
-	register char *p = ptr;
+	char *p = ptr;
 
 	while (size-- > 0)
 		*p++ = (char)c;

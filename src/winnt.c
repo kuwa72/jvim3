@@ -1085,7 +1085,7 @@ scroll()
 }
 
 gotoxy(x, y)
-    register int    x,
+    int             x,
                     y;
 {
     ntcoord.X = x - 1;

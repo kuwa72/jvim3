@@ -749,11 +749,9 @@ has_wildcard(p)
 }
 
 	int
-have_wildcard(num, file)
-	int		num;
-	char	**file;
+have_wildcard(int num, char **file)
 {
-	register int i;
+	int i;
 
 	for (i = 0; i < num; i++)
 		if (has_wildcard(file[i]))
