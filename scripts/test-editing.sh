@@ -352,6 +352,10 @@ runtyped "typed cursor in insert" ok 'i\033OC\033'        'abc\n'     'abc\n'
 runtyped "typed shift-right"    ok '0\033Ovx'             'one two\n' 'one wo\n'
 runtyped "typed up on the : line" ok ':1d\r:\033OA\r'     "$ABC"      'c\nd\ne\n'
 runtyped "typed CTRL-@"         ok 'iabc\033i\000'        'X\n'       'ababccX\n'
+runtyped "command-line completion: :colorscheme" ok ':colo dra\t\r' "$ABC" "$ABC"
+runtyped "command-line completion: :syntax"      ok ':syn en\t\r'  "$ABC" "$ABC"
+runtyped "command-line completion: :highlight"   ok ':hi Nor\t guifg=white\r' "$ABC" "$ABC"
+
 
 # The characters a mapping names rather than holds. Before these, a mapping
 # that pressed Enter had to carry a real carriage return, which made the line

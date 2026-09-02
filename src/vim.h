@@ -314,6 +314,9 @@ typedef unsigned long	long_u;
 #define EXPAND_SETTINGS			4
 #define EXPAND_BOOL_SETTINGS	5
 #define EXPAND_TAGS				6
+#define EXPAND_COLORSCHEMES		7
+#define EXPAND_HIGHLIGHT		8
+#define EXPAND_SYNTAX			9
 #endif /* WEBB_COMPLETE */
 /*
  * Boolean constants

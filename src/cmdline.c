@@ -69,6 +69,11 @@ static int		showmatches __ARGS((char_u *));
 static void		set_expand_context __ARGS((int, char_u *));
 static char_u	*set_one_cmd_context __ARGS((int, char_u *));
 static int		ExpandFromContext __ARGS((char_u *, int *, char_u ***, int, int));
+# ifdef USE_SYNTAX
+static int		ExpandColorschemes __ARGS((regexp *, int *, char_u ***));
+static int		ExpandHighlights __ARGS((regexp *, int *, char_u ***));
+static int		ExpandSyntax __ARGS((regexp *, int *, char_u ***));
+# endif
 #else
 static void		nextwild __ARGS((char_u *, int));
 static void		showmatches __ARGS((char_u *, int));
@@ -4562,6 +4567,32 @@ set_one_cmd_context(int firstc, char_u *buff)
 			expand_context = EXPAND_TAGS;
 			expand_pattern = arg;
 			break;
+#ifdef USE_SYNTAX
+		case CMD_colorscheme:
+			expand_context = EXPAND_COLORSCHEMES;
+			expand_pattern = arg;
+			break;
+		case CMD_highlight:
+			p = arg;
+			while (*p && !iswhite(*p))
+				p++;
+			if (cmdbuff + cmdpos <= p)
+			{
+				expand_context = EXPAND_HIGHLIGHT;
+				expand_pattern = arg;
+			}
+			break;
+		case CMD_syntax:
+			p = arg;
+			while (*p && !iswhite(*p))
+				p++;
+			if (cmdbuff + cmdpos <= p)
+			{
+				expand_context = EXPAND_SYNTAX;
+				expand_pattern = arg;
+			}
+			break;
+#endif
 		default:
 			break;
 	}
@@ -4676,10 +4707,408 @@ ExpandFromContext(char_u *pat, int *num_file, char_u ***file, int files_only, in
 		ret = ExpandSettings(prog, num_file, file);
 	else if (expand_context == EXPAND_TAGS)
 		ret = ExpandTags(prog, num_file, file);
+#ifdef USE_SYNTAX
+	else if (expand_context == EXPAND_COLORSCHEMES)
+		ret = ExpandColorschemes(prog, num_file, file);
+	else if (expand_context == EXPAND_HIGHLIGHT)
+		ret = ExpandHighlights(prog, num_file, file);
+	else if (expand_context == EXPAND_SYNTAX)
+		ret = ExpandSyntax(prog, num_file, file);
+#endif
 	else
 		ret = FAIL;
 
 	free(prog);
 	return ret;
 }
+
+#ifdef USE_SYNTAX
+	static int
+sort_compare_names(const void *s1, const void *s2)
+{
+	return strcmp(*(char **)s1, *(char **)s2);
+}
+
+/*
+ * ExpandColorschemes: Find matching color schemes for command line completion.
+ */
+	static int
+ExpandColorschemes(regexp *prog, int *num_file, char_u ***file)
+{
+	static const char * const builtins[] = {
+		"default", "default-dark", "default-light",
+		"desert", "dracula", "gruvbox", "monokai",
+		"nord", "one-dark", "solarized-dark", "solarized-light",
+		"tokyonight", NULL
+	};
+	char_u		*dirs[4];
+	int			num_dirs = 0;
+	char_u		path[MAXPATHL];
+	char_u		*home;
+	char_u		*vimdir;
+	char_u		**found = NULL;
+	int			num_found = 0;
+	int			max_candidates = 256;
+	char_u		**candidates;
+	int			count = 0;
+	int			i, d, k;
+
+	candidates = (char_u **)alloc((unsigned)(max_candidates * sizeof(char_u *)));
+	if (candidates == NULL)
+	{
+		*file = (char_u **)"";
+		*num_file = 0;
+		return FAIL;
+	}
+
+	/* Add matching builtins */
+	for (i = 0; builtins[i] != NULL; i++)
+	{
+		if (regexec(prog, (char_u *)builtins[i], TRUE))
+		{
+			int dup = FALSE;
+			for (k = 0; k < count; k++)
+			{
+				if (strcmp((char *)candidates[k], builtins[i]) == 0)
+				{
+					dup = TRUE;
+					break;
+				}
+			}
+			if (!dup && count < max_candidates)
+				candidates[count++] = strsave((char_u *)builtins[i]);
+		}
+	}
+
+	/* Directories to search */
+	home = vimgetenv((char_u *)"HOME");
+	if (home != NULL && *home != NUL)
+	{
+		snprintf((char *)path, sizeof(path), "%s/.jvim/colors", home);
+		dirs[num_dirs++] = strsave(path);
+#ifdef NT
+		snprintf((char *)path, sizeof(path), "%s/_jvim/colors", home);
+		dirs[num_dirs++] = strsave(path);
+#endif
+	}
+
+	vimdir = vimgetenv((char_u *)"VIM");
+#ifdef VIMDIR
+	if (vimdir == NULL || *vimdir == NUL)
+		vimdir = (char_u *)VIMDIR;
+#endif
+	if (vimdir != NULL && *vimdir != NUL)
+	{
+		snprintf((char *)path, sizeof(path), "%s/colors", vimdir);
+		dirs[num_dirs++] = strsave(path);
+	}
+
+	for (d = 0; d < num_dirs; d++)
+	{
+		char_u *pat1, *pat2;
+		char_u patbuf[MAXPATHL];
+
+		/* Expand *.vim */
+		snprintf((char *)patbuf, sizeof(patbuf), "%s/*.vim", dirs[d]);
+		pat1 = strsave(patbuf);
+		if (ExpandWildCards(1, &pat1, &num_found, &found, TRUE, FALSE) != FAIL)
+		{
+			for (i = 0; i < num_found; i++)
+			{
+				char_u *tail = gettail(found[i]);
+				int len = STRLEN(tail);
+				if (len > 4 && strcmp((char *)tail + len - 4, ".vim") == 0)
+				{
+					char_u scheme[64];
+					STRNCPY(scheme, tail, len - 4);
+					scheme[len - 4] = NUL;
+					if (regexec(prog, scheme, TRUE))
+					{
+						int dup = FALSE;
+						for (k = 0; k < count; k++)
+						{
+							if (strcmp((char *)candidates[k], (char *)scheme) == 0)
+							{
+								dup = TRUE;
+								break;
+							}
+						}
+						if (!dup && count < max_candidates)
+							candidates[count++] = strsave(scheme);
+					}
+				}
+				free(found[i]);
+			}
+			free(found);
+		}
+		free(pat1);
+
+		/* Expand *.jvsyn */
+		snprintf((char *)patbuf, sizeof(patbuf), "%s/*.jvsyn", dirs[d]);
+		pat2 = strsave(patbuf);
+		if (ExpandWildCards(1, &pat2, &num_found, &found, TRUE, FALSE) != FAIL)
+		{
+			for (i = 0; i < num_found; i++)
+			{
+				char_u *tail = gettail(found[i]);
+				int len = STRLEN(tail);
+				if (len > 6 && strcmp((char *)tail + len - 6, ".jvsyn") == 0)
+				{
+					char_u scheme[64];
+					STRNCPY(scheme, tail, len - 6);
+					scheme[len - 6] = NUL;
+					if (regexec(prog, scheme, TRUE))
+					{
+						int dup = FALSE;
+						for (k = 0; k < count; k++)
+						{
+							if (strcmp((char *)candidates[k], (char *)scheme) == 0)
+							{
+								dup = TRUE;
+								break;
+							}
+						}
+						if (!dup && count < max_candidates)
+							candidates[count++] = strsave(scheme);
+					}
+				}
+				free(found[i]);
+			}
+			free(found);
+		}
+		free(pat2);
+
+		free(dirs[d]);
+	}
+
+	if (count == 0)
+	{
+		free(candidates);
+		*file = (char_u **)"";
+		*num_file = 0;
+		return OK;
+	}
+
+	qsort(candidates, count, sizeof(char_u *), sort_compare_names);
+	*num_file = count;
+	*file = candidates;
+	return OK;
+}
+
+/*
+ * ExpandHighlights: Find matching highlight groups for command line completion.
+ */
+	static int
+ExpandHighlights(regexp *prog, int *num_file, char_u ***file)
+{
+	static const char * const hl_groups[] = {
+		"ColorColumn",
+		"Comment",
+		"Conditional",
+		"Constant",
+		"Cursor",
+		"CursorColumn",
+		"CursorLine",
+		"CursorLineNr",
+		"Delimiter",
+		"DiffAdd",
+		"DiffChange",
+		"DiffDelete",
+		"DiffText",
+		"Directory",
+		"Error",
+		"ErrorMsg",
+		"Exception",
+		"Float",
+		"FoldColumn",
+		"Folded",
+		"Function",
+		"Identifier",
+		"Ignore",
+		"IncSearch",
+		"Include",
+		"Keyword",
+		"Label",
+		"LineNr",
+		"Macro",
+		"MatchParen",
+		"ModeMsg",
+		"MoreMsg",
+		"NonText",
+		"Normal",
+		"Number",
+		"Operator",
+		"Pmenu",
+		"PmenuSbar",
+		"PmenuSel",
+		"PmenuThumb",
+		"PreCondit",
+		"PreProc",
+		"Question",
+		"Repeat",
+		"Search",
+		"SignColumn",
+		"Special",
+		"SpecialChar",
+		"SpecialComment",
+		"SpecialKey",
+		"Statement",
+		"StatusLine",
+		"StatusLineNC",
+		"StorageClass",
+		"String",
+		"Structure",
+		"TabLine",
+		"TabLineFill",
+		"TabLineSel",
+		"Tag",
+		"Title",
+		"Todo",
+		"Type",
+		"Typedef",
+		"Underlined",
+		"VertSplit",
+		"Visual",
+		"VisualNOS",
+		"WarningMsg",
+		"WildMenu",
+		"clear",
+		"link",
+		"default",
+		NULL
+	};
+	int count = 0;
+	int i;
+	char_u **candidates;
+
+	for (i = 0; hl_groups[i] != NULL; i++)
+	{
+		if (regexec(prog, (char_u *)hl_groups[i], TRUE))
+			count++;
+	}
+
+	if (count == 0)
+	{
+		*file = (char_u **)"";
+		*num_file = 0;
+		return OK;
+	}
+
+	candidates = (char_u **)alloc((unsigned)(count * sizeof(char_u *)));
+	if (candidates == NULL)
+	{
+		*file = (char_u **)"";
+		*num_file = 0;
+		return FAIL;
+	}
+
+	count = 0;
+	for (i = 0; hl_groups[i] != NULL; i++)
+	{
+		if (regexec(prog, (char_u *)hl_groups[i], TRUE))
+			candidates[count++] = strsave((char_u *)hl_groups[i]);
+	}
+
+	qsort(candidates, count, sizeof(char_u *), sort_compare_names);
+	*num_file = count;
+	*file = candidates;
+	return OK;
+}
+
+/*
+ * ExpandSyntax: Find matching syntax subcommands and filetypes for command line completion.
+ */
+	static int
+ExpandSyntax(regexp *prog, int *num_file, char_u ***file)
+{
+	static const char * const subcmds[] = {
+		"case", "clear", "cluster", "dump", "enable", "files",
+		"include", "item", "keyword", "list", "match", "off",
+		"on", "region", "sync", NULL
+	};
+	char_u		path[MAXPATHL];
+	char_u		*vimdir;
+	char_u		**found = NULL;
+	int			num_found = 0;
+	int			max_candidates = 256;
+	char_u		**candidates;
+	int			count = 0;
+	int			i, k;
+
+	candidates = (char_u **)alloc((unsigned)(max_candidates * sizeof(char_u *)));
+	if (candidates == NULL)
+	{
+		*file = (char_u **)"";
+		*num_file = 0;
+		return FAIL;
+	}
+
+	/* Add matching subcommands */
+	for (i = 0; subcmds[i] != NULL; i++)
+	{
+		if (regexec(prog, (char_u *)subcmds[i], TRUE))
+		{
+			if (count < max_candidates)
+				candidates[count++] = strsave((char_u *)subcmds[i]);
+		}
+	}
+
+	/* Search $VIM/syntax/*.jvsyn for filetypes */
+	vimdir = vimgetenv((char_u *)"VIM");
+#ifdef VIMDIR
+	if (vimdir == NULL || *vimdir == NUL)
+		vimdir = (char_u *)VIMDIR;
+#endif
+	if (vimdir != NULL && *vimdir != NUL)
+	{
+		char_u *pat;
+		snprintf((char *)path, sizeof(path), "%s/syntax/*.jvsyn", vimdir);
+		pat = strsave(path);
+		if (ExpandWildCards(1, &pat, &num_found, &found, TRUE, FALSE) != FAIL)
+		{
+			for (i = 0; i < num_found; i++)
+			{
+				char_u *tail = gettail(found[i]);
+				int len = STRLEN(tail);
+				if (len > 6 && strcmp((char *)tail + len - 6, ".jvsyn") == 0)
+				{
+					char_u synname[64];
+					STRNCPY(synname, tail, len - 6);
+					synname[len - 6] = NUL;
+					if (regexec(prog, synname, TRUE))
+					{
+						int dup = FALSE;
+						for (k = 0; k < count; k++)
+						{
+							if (strcmp((char *)candidates[k], (char *)synname) == 0)
+							{
+								dup = TRUE;
+								break;
+							}
+						}
+						if (!dup && count < max_candidates)
+							candidates[count++] = strsave(synname);
+					}
+				}
+				free(found[i]);
+			}
+			free(found);
+		}
+		free(pat);
+	}
+
+	if (count == 0)
+	{
+		free(candidates);
+		*file = (char_u **)"";
+		*num_file = 0;
+		return OK;
+	}
+
+	qsort(candidates, count, sizeof(char_u *), sort_compare_names);
+	*num_file = count;
+	*file = candidates;
+	return OK;
+}
+#endif /* USE_SYNTAX */
 #endif /* WEBB_COMPLETE */
