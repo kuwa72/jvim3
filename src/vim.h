@@ -216,12 +216,6 @@ typedef unsigned long	long_u;
 # ifndef __PARMS
 #  define __PARMS(x) x
 # endif /* __PARMS */
-# if defined(_SEQUENT_)
-#  include "ptx_stdlib.h"
-# endif
-# if defined(sun) && !defined(SOLARIS)
-#  include "sun_stdlib.h"
-# endif
 #else /*__STDC__*/
 # if defined(_SEQUENT_) && !defined(_STDLIB_H_)
   extern char *getenv();
@@ -463,6 +457,30 @@ typedef unsigned		colnr_t;	/* column number type */
  * iswhite() is used for "^" and the like
  */
 #define iswhite(x)	((x) == ' ' || (x) == '\t')
+
+/*
+ * A key code is not a character.
+ *
+ * vgetc() returns one value for every key, and a special key is a number past
+ * 255: K_UARROW is 321 in this build, K_DARROW 322, and the function keys go up
+ * from there (see keymap.h). The ctype functions are defined only for a value
+ * that fits in an unsigned char, plus EOF, and a C runtime is free to index its
+ * table with whatever it is given: the Windows one does, so it answered "yes, an
+ * upper case letter" for a cursor key. Where that answer decided an array index
+ * -- a register name, a mark name -- the index landed hundreds of entries past
+ * the end of the array.
+ *
+ * Nothing that names a register, a mark, a count or a digraph is outside ASCII,
+ * so ask these instead of ctype wherever the value came from the keyboard. They
+ * are range tests: no table, no locale, the same answer on every platform.
+ */
+#define isasciilower(c)	((c) >= 'a' && (c) <= 'z')
+#define isasciiupper(c)	((c) >= 'A' && (c) <= 'Z')
+#define isasciidigit(c)	((c) >= '0' && (c) <= '9')
+#define isasciialpha(c)	(isasciilower(c) || isasciiupper(c))
+#define isasciialnum(c)	(isasciialpha(c) || isasciidigit(c))
+#define isasciixdigit(c) (isasciidigit(c) || ((c) >= 'a' && (c) <= 'f') \
+										  || ((c) >= 'A' && (c) <= 'F'))
 
 #include "structs.h"		/* file that defines many structures */
 
