@@ -49,7 +49,8 @@ EXTERN int	p_cp	INIT(= FALSE);		/* vi-compatible */
 EXTERN int	p_dg	INIT(= FALSE);		/* enable digraphs */
 #endif /* DIGRAPHS */
 EXTERN char_u *p_dir	INIT(= (char_u *)DEF_DIR);	/* directory for swap file */
-EXTERN char_u *p_ep	INIT(= (char_u *)"indent");	/* program name for '=' command */
+EXTERN char_u *p_ep	INIT(= (char_u *)"");	/* program name for '=' command */
+
 EXTERN int	p_ea	INIT(= TRUE);		/* make windows equal height */
 EXTERN int	p_ed	INIT(= FALSE);		/* :s is ed compatible */
 EXTERN int	p_eb	INIT(= FALSE);		/* ring bell for errors */

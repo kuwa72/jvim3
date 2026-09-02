@@ -1648,8 +1648,109 @@ doformat(void)
 	updateScreen(NOT_VALID);
 }
 
+/*
+ * implementation of the equal operator '=' (reindent lines)
+ */
+	void
+doequal(void)
+{
+	linenr_t	lnum;
+	linenr_t	start_lnum = curbuf->b_startop.lnum;
+	linenr_t	end_lnum = curbuf->b_endop.lnum;
+	int			sw = (int)curbuf->b_p_sw;
+	int			indent = 0;
+	int			has_prev = FALSE;
+
+	if (start_lnum > end_lnum)
+	{
+		start_lnum = curbuf->b_endop.lnum;
+		end_lnum = curbuf->b_startop.lnum;
+	}
+
+	if (!u_save((linenr_t)(start_lnum - 1), (linenr_t)(end_lnum + 1)))
+		return;
+
+	/* Find initial indent from preceding line if available */
+	if (start_lnum > 1)
+	{
+		curwin->w_cursor.lnum = start_lnum - 1;
+		indent = get_indent();
+		has_prev = TRUE;
+	}
+
+	for (lnum = start_lnum; lnum <= end_lnum; ++lnum)
+	{
+		char_u	*ptr;
+		char_u	*p;
+
+		curwin->w_cursor.lnum = lnum;
+		ptr = ml_get(lnum);
+
+		/* Skip leading spaces */
+		p = ptr;
+		while (*p == ' ' || *p == '\t')
+			p++;
+
+		if (*p == NUL)
+		{
+			/* Empty line: leave it */
+			continue;
+		}
+
+		if (has_prev)
+		{
+			/* Check if current line starts with '}' or block closer */
+			if (*p == '}' || is_block_closer(p))
+			{
+				indent -= sw;
+				if (indent < 0)
+					indent = 0;
+			}
+		}
+		else
+		{
+			indent = get_indent();
+			has_prev = TRUE;
+		}
+
+		set_indent(indent, TRUE);
+
+		/* Update indent for subsequent lines based on current line */
+		ptr = ml_get(lnum);
+		p = ptr;
+		while (*p == ' ' || *p == '\t')
+			p++;
+
+		if (*p != NUL)
+		{
+			char_u	*end = p + STRLEN(p) - 1;
+			int		len;
+
+			while (end > p && (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n'))
+				end--;
+
+			len = 0;
+			while (isalpha(p[len]) || p[len] == '_')
+				len++;
+
+			if (*end == '{' || *end == ':' || in_cinwords(p, len))
+			{
+				indent += sw;
+			}
+		}
+	}
+
+	curwin->w_cursor.lnum = start_lnum;
+	beginline(TRUE);
+	updateScreen(CURSUPD);
+
+	if (nlines > p_report)
+		smsg((char_u *)"%ld line%s indented", nlines, plural(nlines));
+}
+
 	void
 startinsert(int initstr, int startln, long count)
+
 {
 	Insstart = curwin->w_cursor;
 	if (startln)

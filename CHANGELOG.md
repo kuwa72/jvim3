@@ -16,9 +16,11 @@ repository and would drift within three releases.
   *shifted* arrows did, which is not what anybody reaches for, and the plain
   ones fell through to the fault below.
 - Command-line (: mode) completion enhancements for `:colorscheme`, `:highlight`, and `:syntax`.
-- Enhanced `smartindent` support beyond C: added `'cinwords'` (`'cinw'`) option, supported trailing colon `:` block indenting (e.g. Python), supported block closer keywords, and preserved indentation for `#` comments in non-C languages (Python, Ruby, Shell, YAML, etc.).
-- Three cases in `scripts/test-editing.sh` for smartindent testing.
-  255 cases now.
+- Supported internal re-indentation for `=` operator (`==`, `=G`, etc.) when `equalprg` is empty, removing external `indent` dependency on Windows and Unix.
+- Bundled standalone lightweight C code formatter tool (`tools/cformat.c` / `cformat.exe`) in Windows packages.
+- Added tests in `scripts/test-editing.sh` for internal re-indentation.
+  256 cases now.
+
 
 
 ### Fixed
