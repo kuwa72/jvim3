@@ -133,7 +133,7 @@ static void		map_expand __ARGS((char_u *, int));
 	static void
 free_buff(struct buffheader *buf)
 {
-		register struct bufblock *p, *np;
+		struct bufblock *p, *np;
 
 		for (p = buf->bh_first.b_next; p != NULL; p = np)
 		{
@@ -202,7 +202,7 @@ get_inserted(void)
  * add string "s" after the current block of buffer "buf"
  */
 	static void
-add_buff(register struct buffheader *buf, char_u *s)
+add_buff(struct buffheader *buf, char_u *s)
 {
 	struct bufblock *p;
 	long_u 			n;
@@ -275,8 +275,8 @@ add_char_buff(struct buffheader *buf, int c)
 	static int
 read_stuff(int advance)
 {
-	register char_u c;
-	register struct bufblock *curr;
+	char_u c;
+	struct bufblock *curr;
 
 
 	if (stuffbuff.bh_first.b_next == NULL)	/* buffer is empty */
@@ -448,7 +448,7 @@ read_redo(int init)
 	void
 copy_redo(void)
 {
-	register int c;
+	int c;
 
 	while ((c = read_redo(FALSE)) != NUL)
 		stuffcharReadbuff(c);
@@ -464,7 +464,7 @@ extern int redo_Visual_busy;		/* this is in normal.c */
 	int
 start_redo(long count)
 {
-	register int c;
+	int c;
 
 	if (read_redo(TRUE) == FAIL)	/* init the pointers; return if nothing to redo */
 		return FAIL;
@@ -513,7 +513,7 @@ start_redo(long count)
 	int
 start_redo_ins(void)
 {
-	register int c;
+	int c;
 
 	if (read_redo(TRUE) == FAIL)
 		return FAIL;
@@ -571,9 +571,9 @@ init_typestr(void)
 	int
 ins_typestr(char_u *str, int noremap)
 {
-	register char_u	*s;
-	register int	newlen;
-	register int	addlen;
+	char_u	*s;
+	int	newlen;
+	int	addlen;
 
 	init_typestr();
 
@@ -833,13 +833,13 @@ vpeekc(void)
 	static int
 vgetorpeek(int advance)
 {
-	register int	c;
+	int				c;
 	int				n = 0;		/* init for GCC */
 	int				len;
 #ifdef AMIGA
 	char_u			*s;
 #endif
-	register struct mapblock *mp;
+	struct mapblock *mp;
 	int				timedout = FALSE;		/* waited for more than 1 second
 												for mapping to complete */
 	int				mapdepth = 0;			/* check for recursive mapping */

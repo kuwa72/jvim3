@@ -254,13 +254,13 @@ regtilde(char_u *source, int magic)
 	int
 regsub(regexp *prog, char_u *source, char_u *dest, int copy, int magic)
 {
-	register char_u  *src;
-	register char_u  *dst;
-	register int	c;
-	register int	no;
-	register int	len;
+	char_u  *src;
+	char_u  *dst;
+	int		c;
+	int		no;
+	int		len;
 #ifdef CASECONVERT
-	fptr			func = (fptr)do_Copy;
+	fptr	func = (fptr)do_Copy;
 #endif
 
 	if (prog == NULL || source == NULL || dest == NULL)

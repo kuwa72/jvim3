@@ -82,7 +82,7 @@ extern int		restart_edit;	/* this is in edit.c */
 	void
 normal(void)
 {
-	register int	c;
+	int				c;
 	long 			n;
 	int				flag = FALSE;
 	int				flag2 = FALSE;
@@ -98,7 +98,7 @@ normal(void)
 	linenr_t		Prenum1;
 	char_u			searchbuff[CMDBUFFSIZE];/* buffer for search string */
 	FPOS			*pos = NULL;			/* init for gcc */
-	register char_u	*ptr;
+	char_u			*ptr;
 	int				command_busy = FALSE;
 	static int		didwarn = FALSE;		/* warned for broken inversion */
 	int				modified = FALSE;		/* changed current buffer */
@@ -368,7 +368,7 @@ retry_input:
 
 	  case 'z':
 		CHECKCLEAROP;
-		if (isdigit(nchar))
+		if (isasciidigit(nchar))		/* nchar can be a key code -- see vim.h */
 		{
 			/*
 			 * we misuse some variables to be able to call premsg()
@@ -383,7 +383,7 @@ retry_input:
 				State = NORMAL;
 				if (nchar == DEL)
 					Prenum /= 10;
-				else if (isdigit(nchar))
+				else if (isasciidigit(nchar))
 					Prenum = Prenum * 10 + (nchar - '0');
 				else if (nchar == CR)
 				{
@@ -430,8 +430,8 @@ retry_input:
 
 	dozcmd:
 			{
-				register linenr_t	lp = curwin->w_cursor.lnum;
-				register long		l = plines(lp);
+				linenr_t	lp = curwin->w_cursor.lnum;
+				long		l = plines(lp);
 
 				do
 				{
@@ -517,8 +517,8 @@ retry_input:
 	  case '#': 				/* ? to current identifier or string */
 	  case 'K':					/* run program for current identifier */
 		{
-			register int 	col;
-			register int	i;
+			int 	col;
+			int		i;
 
 			/*
 			 * if i == 0: try to find an identifier

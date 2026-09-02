@@ -407,7 +407,7 @@ qf_free(void)
    void
 qf_mark_adjust(linenr_t line1, linenr_t line2, long inc)
 {
-	register int i;
+	int i;
 	struct qf_line *qfp;
 
 	if (qf_count)

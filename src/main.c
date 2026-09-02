@@ -27,7 +27,7 @@ static void usage __PARMS((int));
 	static void
 usage(int n)
 {
-	register int i;
+	int i;
 	static char_u *(use[]) = {(char_u *)"[file ..]\n",
 							(char_u *)"-t tag\n",
 							(char_u *)"-e [errorfile]\n"};
