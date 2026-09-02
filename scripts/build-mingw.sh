@@ -280,6 +280,8 @@ for f in "$root"/syntax/*; do
 done
 rm -rf "$dist/colors"
 mkdir -p "$dist/colors"
+for f in "$root"/colors/*; do
+	[ -f "$f" ] && cp_crlf "$f" "$dist/colors/$(basename "$f")"
 done
 
 rm -rf "$dist/tools"
@@ -287,6 +289,7 @@ mkdir -p "$dist/tools"
 if [ -f "$root/tools/cformat.c" ]; then
 	"${CROSS}gcc" -O2 -s "$root/tools/cformat.c" -o "$dist/tools/cformat.exe" 2>/dev/null || true
 fi
+
 
 
 
