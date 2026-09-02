@@ -279,7 +279,7 @@ msg_outnum(long n)
  * return the number of characters it takes on the screen
  */
 	int
-msg_outtrans(register char_u *str, register int len)
+msg_outtrans(char_u *str, int len)
 {
 	int retval = 0;
 
@@ -319,9 +319,9 @@ msg_outtrans(register char_u *str, register int len)
 	void
 msg_prt_line(char_u *s)
 {
-	register int	si = 0;
-	register int	c;
-	register int	col = 0;
+	int	si = 0;
+	int	c;
+	int	col = 0;
 
 	int 			n_extra = 0;
 	int             n_spaces = 0;

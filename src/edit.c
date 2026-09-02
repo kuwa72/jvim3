@@ -1346,7 +1346,7 @@ get_literal(int *nextc)
 				nc = vgetc();
 				if (ISkanji(nc))
 					*kp = vgetc();
-				if (!isxdigit(nc))
+				if (!isasciixdigit(nc))
 				{
 					cc = '#';
 					i = 1;
@@ -1355,7 +1355,7 @@ get_literal(int *nextc)
 				if ('0' <= nc && nc <= '9')
 					cc = cc * 16 + nc - '0';
 				else
-					cc = cc * 16 + toupper(nc) - 'A' + 10;
+					cc = cc * 16 + (isasciilower(nc) ? nc - 'a' : nc - 'A') + 10;
 			}
 			if (i >= 4)
 			{
@@ -1366,7 +1366,7 @@ get_literal(int *nextc)
 			break;
 		}
 #endif
-		if (!isdigit(nc))
+		if (!isasciidigit(nc))
 			break;
 		cc = cc * 10 + nc - '0';
 		nc = 0;
@@ -1394,7 +1394,7 @@ get_literal(int *nextc)
 				nc = 0;
 				break;
 			}
-			if (!isdigit(nc))
+			if (!isasciidigit(nc))
 			{
 				cc = '\n';
 				nc = 0;
@@ -1442,7 +1442,9 @@ insertchar(unsigned c)
 	int		haveto_redraw = FALSE;
 	int		textwidth;
 #ifdef KANJI
-	unsigned	c = bytes[0];
+	/* doformat() has no character to insert and passes no bytes at all: a
+	 * NULL here means the same as c == NUL below, "format only". */
+	unsigned	c = (bytes == NULL) ? NUL : bytes[0];
 #endif
 
 	stop_arrow();
@@ -1737,7 +1739,7 @@ beginline(int flag)
 	curwin->w_cursor.col = 0;
 	if (flag)
 	{
-		register char_u *ptr;
+		char_u *ptr;
 
 		for (ptr = ml_get(curwin->w_cursor.lnum); iswhite(*ptr); ++ptr)
 			++curwin->w_cursor.col;

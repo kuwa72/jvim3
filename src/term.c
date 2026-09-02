@@ -603,7 +603,7 @@ outstrn(char_u *s)
  * If TERMCAP is defined use the termcap parser. (jw)
  */
 	void
-outstr(register char_u *s)
+outstr(char_u *s)
 {
 	if (bpos > BSIZE - 20)		/* avoid terminal strings being split up */
 		flushbuf();
@@ -726,8 +726,8 @@ inchar(char_u *buf, int maxlen, int time)
 {
 	int				len;
 	int				retesc = FALSE;		/* return ESC with gotint */
-	register int 	c;
-	register int	i;
+	int 			c;
+	int				i;
 #ifdef KANJI
 	char			*top;
 	static int		kanji = JP_ASCII;
@@ -932,7 +932,7 @@ check_termcode(char_u *buf)
  * outnum - output a (big) number fast
  */
 	void
-outnum(register long n)
+outnum(long n)
 {
 	OUTSTRN(tltoa((unsigned long)n));
 }
@@ -959,7 +959,7 @@ check_winsize(void)
 	void
 set_winsize(int width, int height, int mustset)
 {
-	register int 		tmp;
+	int 		tmp;
 
 	if (width < 0 || height < 0)	/* just checking... */
 		return;

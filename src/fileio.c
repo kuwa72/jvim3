@@ -82,15 +82,15 @@ readfile(char_u *fname, char_u *sfname, linenr_t from, int newfile, linenr_t ski
 #else
 	int 				fd;
 #endif
-	register char_u 	c;
-	register linenr_t	lnum = from;
-	register char_u 	*ptr = NULL;			/* pointer into read buffer */
-	register char_u		*buffer = NULL;			/* read buffer */
+	char_u 				c;
+	linenr_t			lnum = from;
+	char_u 				*ptr = NULL;			/* pointer into read buffer */
+	char_u				*buffer = NULL;			/* read buffer */
 	char_u				*new_buffer = NULL;		/* init to shut up gcc */
 	char_u				*line_start = NULL;		/* init to shut up gcc */
 	colnr_t				len;
-	register long		size;
-	register char_u		*p;
+	long				size;
+	char_u				*p;
 	long				filesize = 0;
 	int					split = 0;				/* number of split lines */
 #define UNKNOWN		0x0fffffff					/* file size is unknown */
@@ -633,11 +633,11 @@ buf_write(BUF *buf, char_u *fname, char_u *sfname, linenr_t start, linenr_t end,
 	int 				fd;
 	char_u			   *backup = NULL;
 	char_u			   *ffname;
-	register char_u	   *s;
-	register char_u	   *ptr;
-	register char_u		c;
-	register int		len;
-	register linenr_t	lnum;
+	char_u			   *s;
+	char_u			   *ptr;
+	char_u				c;
+	int					len;
+	linenr_t			lnum;
 	long				nchars;
 	char_u				*errmsg = NULL;
 	char_u				*buffer;
@@ -1568,8 +1568,8 @@ do_mlines(void)
 	static void
 chk_mline(linenr_t lnum)
 {
-	register char_u	*s;
-	register char_u	*e;
+	char_u	*s;
+	char_u	*e;
 	char_u			*cs;			/* local copy of any modeline found */
 	int				prev;
 	int				end;
@@ -1633,14 +1633,10 @@ modname(char_u *fname, char_u *ext)
 buf_modname(BUF *buf, char_u *fname, char_u *ext)
 {
 	char_u			*retval;
-	register char_u   *s;
-	register char_u   *ptr;
-	register int	fnamelen, extlen;
-#ifdef notdef
-	char_u			currentdir[512];
-#else
+	char_u   		*s;
+	char_u   		*ptr;
+	int				fnamelen, extlen;
 	char_u			currentdir[MAXPATHL + 2];
-#endif
 
 	extlen = STRLEN(ext);
 
