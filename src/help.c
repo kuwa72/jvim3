@@ -19,7 +19,9 @@
 #endif
 
 static long helpfilepos;		/* position in help file */
+#ifndef KANJI
 static FILE *helpfd;			/* file descriptor of help file */
+#endif
 
 #ifdef KANJI
 #include "kanji.h"

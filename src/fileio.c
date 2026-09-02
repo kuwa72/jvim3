@@ -227,15 +227,19 @@ readfile(char_u *fname, char_u *sfname, linenr_t from, int newfile, linenr_t ski
 			filemess(fname, (char_u *)"is a directory");
 		else
 #endif
+		{
 			if (newfile)
+			{
 #ifdef UNIX
 				if (perm < 0)
-#endif
 					filemess(fname, (char_u *)"[New File]");
-#ifdef UNIX
 				else
 					filemess(fname, (char_u *)"[Permission Denied]");
+#else
+				filemess(fname, (char_u *)"[New File]");
 #endif
+			}
+		}
 
 #if 0
 			*code = JP_FILE;

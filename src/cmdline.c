@@ -278,12 +278,14 @@ getcmdline(int firstc, char_u *buff)
 				 * character, except at end of line
 				 */
 				if (c == DEL && cmdpos != cmdlen)
+				{
 #ifdef KANJI
 					if (ISkanji(buff[cmdpos]))
 						cmdpos += utf_lenat(buff, cmdpos);
 					else
 #endif
 					++cmdpos;
+				}
 				if (cmdpos > 0)
 				{
 					j = cmdpos;
