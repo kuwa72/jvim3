@@ -61,7 +61,7 @@ edit(long count)
 	colnr_t		 mincol;
 	static linenr_t o_lnum = 0;
 	static int	 o_eol = FALSE;
-#ifdef KANJI
+#if defined(MSDOS) && defined(TERMCAP)
 	int			 k = NUL;
 #endif
 #ifdef WEBB_KEYWORD_COMPL
@@ -191,7 +191,9 @@ edit(long count)
 				while (clen < want)
 					cbuf[clen++] = vgetc();
 			}
+# if defined(MSDOS) && defined(TERMCAP)
 			k = (clen > 1) ? cbuf[1] : NUL;
+# endif
 #endif
 #if defined(MSDOS) && defined(TERMCAP)		/* DOSGEN */
 			chk_ctlkey(&c, &k);
@@ -496,12 +498,14 @@ dodel:
 						--curwin->w_cursor.lnum;
 						(void)dojoin(FALSE, TRUE);
 						if (temp == NUL && gchar_cursor() != NUL)
+						{
 #ifdef KANJI
 							if (ISkanji(gchar_cursor()))
 								curwin->w_cursor.col += 2;
 							else
 #endif
 							++curwin->w_cursor.col;
+						}
 						if (saved_char)				/* restore what NL replaced */
 						{
 							State = NORMAL;			/* no replace for this char */
@@ -1031,6 +1035,7 @@ redraw:
 						temp++;
 						complete_pat = alloc(curwin->w_cursor.col - temp + 3);
 						if (complete_pat != NULL)
+						{
 #ifdef KANJI
 							if (NR_TYPE(ocls))
 								sprintf((char *)complete_pat, "%.*s",
@@ -1039,6 +1044,7 @@ redraw:
 #endif
 							sprintf((char *)complete_pat, "\\<%.*s",
 								(int)(curwin->w_cursor.col - temp), ptr + temp);
+						}
 						complete_any_word = FALSE;
 					}
 					last_completion_str = strsave((char_u *)" ");
@@ -1252,7 +1258,6 @@ copychar:
 					if (ISkanjiPointer(ml_get(lnum), ptr) == 2)
 						--ptr;
 				}
-				k = *(ptr + 1);
 #else
 						--ptr;
 #endif

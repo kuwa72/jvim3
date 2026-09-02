@@ -1793,12 +1793,14 @@ block_prep(linenr_t lnum, int delete)
 			{
 				endspaces = vcol - endvcol - 1;
 				if (!delete && pend != textstart && endspaces)
+				{
 #ifdef KANJI
 					if (ISkanjiPointer(textstart, pend - 1) == 2)
 						endspaces--;
 					else
 #endif
 					--pend;
+				}
 			}
 		}
 		if (delete && startspaces)
