@@ -39,7 +39,7 @@ alloc(unsigned size)
 	char_u *
 lalloc(long_u size, int message)
 {
-	register char_u   *p;			/* pointer to new storage space */
+	char_u   *p;			/* pointer to new storage space */
 	static int	releasing = FALSE;	/* don't do mf_release_all() recursive */
 	int			try_again;
 
@@ -55,7 +55,7 @@ lalloc(long_u size, int message)
 	 */
 	for (;;)
 	{
-		if ((p = (char_u *)malloc(size)) != NULL)
+		if ((p = (char_u *)malloc((size_t)size)) != NULL)
 		{
 			if (mch_avail_mem(TRUE) < KEEP_ROOM && !releasing)
 			{ 								/* System is low... no go! */
@@ -96,10 +96,8 @@ strsave(char_u *string)
 {
 	char_u *p;
 
-#ifndef notdef
 	if (string == NULL)
-		string = "";
-#endif
+		string = (char_u *)"";
 	p = alloc((unsigned) (STRLEN(string) + 1));
 	if (p != NULL)
 		STRCPY(p, string);
@@ -111,10 +109,8 @@ strnsave(char_u *string, int len)
 {
 	char_u *p;
 
-#ifndef notdef
 	if (string == NULL)
-		string = "";
-#endif
+		string = (char_u *)"";
 	p = alloc((unsigned) (len + 1));
 	if (p != NULL)
 	{
@@ -130,11 +126,10 @@ strnsave(char_u *string, int len)
 	void
 copy_spaces(char_u *ptr, size_t count)
 {
-	register size_t	i = count;
-	register char_u	*p = ptr;
+	size_t	i;
 
-	while (i--)
-		*p++ = ' ';
+	for (i = 0; i < count; ++i)
+		ptr[i] = ' ';
 }
 
 /*
@@ -145,9 +140,16 @@ del_spaces(char_u *ptr)
 {
 	char_u	*q;
 
+	if (ptr == NULL || *ptr == NUL)
+		return;
+
 	q = ptr + STRLEN(ptr);
-	while (--q > ptr && isspace(q[0]) && q[-1] != '\\' && q[-1] != Ctrl('V'))
+	while (--q >= ptr && isspace(*q))
+	{
+		if (q > ptr && (q[-1] == '\\' || q[-1] == Ctrl('V')))
+			break;
 		*q = NUL;
+	}
 }
 
 #ifdef NO_FREE_NULL
