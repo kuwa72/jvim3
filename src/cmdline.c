@@ -93,11 +93,11 @@ getcmdline(int firstc, char_u *buff)
 	char_u				cbuf[UTF8_MAXLEN + 1];	/* the character just typed */
 			 int		clen = 1;				/* its length in bytes */
 #else
-	register char_u 	c;
+	char_u 				c;
 #endif
 			 int		cc;
 			 int		nextc = 0;
-	register int		i;
+			 int		i;
 			 int		retval;
 			 int		hiscnt;				/* current history line in use */
 	static	 char_u		**history = NULL;	/* history table */
@@ -699,7 +699,7 @@ compute_cmdrow(void)
 	void
 redrawcmd(void)
 {
-	register int	i;
+	int	i;
 
 	msg_start();
 	msg_outchar(cmdfirstc);
@@ -854,7 +854,7 @@ DoOneCmd(char_u *buff)
 {
 	char_u				cmdbuf[CMDBUFFSIZE];	/* for '%' and '#' expansion */
 	char_u				c;
-	register char_u		*p;
+	char_u				*p;
 	char_u				*q;
 	char_u				*cmd, *arg;
 	char_u				*editcmd = NULL;		/* +command arg. for doecmd() */
@@ -862,7 +862,7 @@ DoOneCmd(char_u *buff)
 	int 				i = 0;					/* init to shut up gcc */
 	int					cmdidx;
 	int					argt;
-	register linenr_t	lnum;
+	linenr_t			lnum;
 	long				n;
 	int					addr_count;	/* number of address specifications */
 	FPOS				pos;
@@ -1592,7 +1592,7 @@ donextfile:		if (i < 0 || i >= arg_count)
 				}
 				else
 				{
-					register int other = FALSE;
+					int other = FALSE;
 
 					/*
 					 * if 'hidden' set, only check for changed file when re-editing
@@ -3826,10 +3826,10 @@ docmd_colorscheme(char_u *name)
  * return FAIL if file could not be opened, OK otherwise
  */
 	int
-dosource(register char_u *fname)
+dosource(char_u *fname)
 {
-	register FILE	*fp;
-	register int	len;
+	FILE	*fp;
+	int		len;
 	int				save_finished = sourcing_finished;
 #if defined(KANJI) || defined(FEXRC)
 	char_u			*p;
@@ -4199,7 +4199,7 @@ set_expand_context(int firstc, char_u *buff)
 	static char_u *
 set_one_cmd_context(int firstc, char_u *buff)
 {
-	register char_u		*p;
+	char_u		*p;
 	char_u				*cmd, *arg;
 	int 				i;
 	int					cmdidx;
