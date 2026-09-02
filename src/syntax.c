@@ -345,20 +345,18 @@ syn_isregstr(char_u *str)
 			if (ISkanji(*str))
 				str += utf_lenat(str, 0) - 1;
 			else if (*str != '\0' && strchr("<>+=|(", *str) != NULL)
-				return(TRUE);
+				return TRUE;
 			else if (*str != '\0' && strchr("etrbn", *str) != NULL)
 				str++;
-#ifndef notdef
 			else if (*str != '\0' && strchr("iIkKfFpPsSdDxXoOwWhHaAlLuUetrbn", *str) != NULL)
-				return(TRUE);
-#endif
+				return TRUE;
 		}
 		else if (strchr(".^$[*", *str) != NULL)
-			return(TRUE);
+			return TRUE;
 		if (*str != '\0')
 			str++;
 	}
-	return(FALSE);
+	return FALSE;
 }
 
 static int
