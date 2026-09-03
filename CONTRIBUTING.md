@@ -25,7 +25,7 @@ Three things:
    suites discard.
 
 `-Wpointer-sign` warnings are expected and stay — the sources mix `char` and
-`unsigned char` deliberately (`char_u`), and there are 236 of them.
+`unsigned char` deliberately (`char_u`); 236 of them remain.
 [BUILDING-unix.md](BUILDING-unix.md#warnings) says why.
 
 CI runs the whole thing on Linux, FreeBSD, NetBSD, OpenBSD and DragonFly, and
@@ -35,11 +35,11 @@ cannot publish anything.
 
 ## What is most wanted
 
-- **Running the 64 bit Windows build.** CI only compiles it; there is no
-  automated runtime test for either Windows architecture. Say what happens.
+- **Running the 64 bit Windows build.** CI only compiles it; no automated
+  runtime test exists for either Windows architecture. Say what happens.
 - **Using any of this with a real IME on real hardware.** CI is runners, ptys
   and serial consoles. Nothing here has been tried at length with a real IME.
-- **A package for a distribution.** There is none anywhere yet. If you make one,
+- **A package for a distribution.** None exists anywhere yet. If you make one,
   say so and it will be linked from the README.
 
 You do not need a mingw toolchain to test the exact binary a release ships:
@@ -73,7 +73,7 @@ An English or Japanese sentence saying what the change does, in the imperative,
 with no `fix:` or `feat:` prefix — see `git log`. Around 50 characters. Put a
 reason worth knowing in the body.
 
-There is no CLA and no sign-off. This is public domain (see
+No CLA or sign-off is required. This is public domain (see
 [LICENSE](LICENSE)); by sending a patch you put it in the public domain too.
 
 ## Branches and releases
@@ -85,11 +85,11 @@ for the workstream, and comes back by rebase rather than a merge commit.
 Releases are cut from a tag, by CI, only after the build and tests pass
 everywhere — so a broken build cannot become a release. They are for changes
 that matter to someone who is not watching the repository; CI, test and
-documentation work sits on `master` until there is something worth releasing.
+documentation work sits on `master` until something worth releasing accumulates.
 [RELEASING.md](RELEASING.md) is the procedure.
 
 ## Security
 
-There is no private disclosure channel. This is a local text editor with no
+No private disclosure channel exists. This is a local text editor with no
 network features, maintained by one person. Please open a normal public
 issue.

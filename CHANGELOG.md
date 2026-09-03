@@ -32,8 +32,8 @@ repository and would drift within three releases.
   count instead, so `NUL` arrived as a null pointer and `bytes[0]` read it on
   the first line of the function — before the `c == NUL` that means "format
   only, insert nothing" was ever looked at. `Q` has been unusable in JVim's
-  KANJI build since the signature changed. There is no `formatprg` in the
-  default settings, so nothing pushed the command down the external-filter path
+  KANJI build since the signature changed. The default settings do not include
+  `formatprg`, so nothing pushed the command down the external-filter path
   that would have avoided it.
 - **A cursor key on the `:help` screen jumped to an arbitrary screen, and then
   crashed.** The down arrow was handed to `isalpha()`, which is undefined for a
@@ -138,7 +138,7 @@ repository and would drift within three releases.
 - `scripts/test-hostile.sh`, a fifth suite: 18 cases that hand the editor input
   nobody intended, or a hostile end, where the other four hand it input it is
   meant to accept.
-  2 MB on one line, every byte value there is, invalid and truncated UTF-8, a
+  2 MB on one line, every possible byte value, invalid and truncated UTF-8, a
   1015 character pattern to `:syntax` (`pattern[1024]` on the stack is as close
   as the command line can get to it), 60 nested groups in `:s`, a tabstop of two
   billion, 200k lines through `:g`, a colour scheme whose every token is
@@ -217,7 +217,7 @@ repository and would drift within three releases.
   and a Japanese one came out as half of itself. On an empty line it wrote that
   NUL in front of `IObuff` and displayed the previous line again in place of the
   blank. Both are the same `IObuff[--col]`, which was there to drop a CR: it
-  drops one only when there is one now.
+  drops one only when one is present.
 - **`:s///g` on a long line is no longer quadratic.** Two million substitutions
   on one line now take half a second where they took about twenty minutes; 400k
   characters went from 53 seconds to 0.11. `dosub()` allocated exactly what the
@@ -274,8 +274,8 @@ repository and would drift within three releases.
   character that is neither a quote nor a backslash, or a backslash and whatever
   follows it), then a quote — which cannot reach past a closing quote, because
   neither branch matches one. A string holding an escaped quote, which is what
-  the old form was written for, still works: there is a case for all three in
-  `test-syntax.sh` now. The new form is also **8 times faster** on a 33 kB
+  the old form was written for, still works: `test-syntax.sh` now covers all
+  three. The new form is also **8 times faster** on a 33 kB
   minified `.js` held on one line, since it gives up at the first character that
   cannot be in a string rather than scanning to the end of the line from every
   quote. `syntax/README` has the pattern to copy and says not to simplify it.
@@ -301,7 +301,7 @@ repository and would drift within three releases.
   tag, so it also matched from any apostrophe to the next: "It's fine, isn't it"
   came out coloured from the first apostrophe to the second. It is anchored at
   the `=` and confined to a tag now, like the double quoted one. A quote outside
-  a tag means nothing in HTML, so there was nothing out there for it to find.
+  a tag means nothing in HTML, so nothing out there awaited it.
 - **A regexp on a long line asked which byte of its character it was on the slow
   way.** `ISkanjiPointer()` was a wrapper on the offset form, which walks the
   string from the start to reach the byte, so a `*` or `\+` backing off over a
@@ -614,7 +614,7 @@ written into the known limits instead (#30):
   whatever Text/Back Color happened to be configured while embedded
   markdown-code/HTML regions used the scheme's own (differently intended)
   background — the mismatch that made those regions read as low-contrast.
-  Still nothing to override on a plain terminal, where there was never a
+  Still nothing to override on a plain terminal, which never had a
   configured base colour to begin with.
 - `syntax/` colours the file types tracked in #5, plus a further batch asked
   for directly: OCaml (`.ml`, `.mli`), Standard ML (`.sml`, `.sig`, `.fun`), D
@@ -748,7 +748,7 @@ written into the known limits instead (#30):
   and installed into `$VIM` on a Unix. Copy it to `~/.jvimrc` or
   `%HOME%\_jvimrc` — the "j" name, which JVim reads in preference to `.vimrc`
   and nothing else reads at all, so an ordinary vim on the same machine is not
-  handed `set fexrc` and a syntax rule set. There was no rc at all that a Unix
+  handed `set fexrc` and a syntax rule set. No rc existed that a Unix
   build could use: `doc.j/_jvimrc` stops at `set fepkeys`, which needs FEPCTRL.
 - `$VIM` has a default on a Unix — `$PREFIX/lib/jvim3`, where `make install`
   puts the rule files. Windows already set it to the directory of the exe.
@@ -871,14 +871,14 @@ written into the known limits instead (#30):
   takes the flags from `build-unix.sh strict` rather than spelling them out a
   second time. FreeBSD is the only job here that compiles with clang, so it is
   the only one that can tell whether the set is green on clang — and it was not.
-  Two lists of the same flags could have drifted apart as well; now there is
-  one, and it is the one anybody can run before pushing.
+  Two lists of the same flags could have drifted apart as well; now they are
+  one list, the one anybody can run before pushing.
 
 ### Fixed
 
 - The Windows package carries Windows line separators. `dosource()` opens a
   sourced file in binary mode and takes one trailing CR off each line, warning
-  `Wrong line separator, ^M may be missing` when there is none — and the
+  `Wrong line separator, ^M may be missing` when none is present — and the
   package was built from a Unix checkout, so it warned three times before it
   had finished starting: once for the rc, once for `filetype.jvsyn`, once for
   the rules it pulls in. Three messages is enough to make the editor stop at
@@ -958,7 +958,7 @@ written into the known limits instead (#30):
   An unchanged space in front of a coloured word came out inside that word's
   colour. Nobody saw it, because a space has no ink to be the wrong colour.
   The cells are now retyped only when they are already in that colour, and
-  skipped over otherwise — they did not change, so there is nothing to draw.
+  skipped over otherwise — they did not change, so nothing needs drawing.
 - Syntax rules match Japanese again. Every walk over the text in `syntax.c`
   still stepped two bytes for a multi-byte character, which was Shift-JIS; the
   buffer has held UTF-8 since 1.0.0, where a kanji or a kana is three. A rule
@@ -1050,13 +1050,13 @@ written into the known limits instead (#30):
   `term.c`'s `TGETSTR` cast the area argument to `char *` for everything except
   Linux and MSDOS, while the `tgetstr()` declaration a dozen lines above it in
   the same file says `char **`. A cast to the wrong type is the one thing a cast
-  must not be, and there were 19 of them in `set_term()`. It is one macro now,
+  must not be, and `set_term()` held 19 of them. It is one macro now,
   casting to `char **`, which is what Linux's `<termcap.h>` and the BSDs' curses
   both declare. This is also what the 58 warnings BUILDING-unix.md recorded for
   NetBSD were, and it said they were not worth 58 casts to be rid of: they were
   worth one. The NetBSD guest now builds with no warnings at all.
-- The `ansi` terminal built into JVim — used when there is no termcap/terminfo
-  library to fall back on, or `$TERM` names it directly — had `t_el` (clear to
+- The `ansi` terminal built into JVim — used without a termcap/terminfo
+  library to fall back on, or when `$TERM` names it directly — had `t_el` (clear to
   end of line) clear the whole line instead: `ANSI_TCAP` wrote `\033[2K` where
   `\033[K` was meant. Every redraw that only means to erase ahead of the
   cursor — the tail of a line that got shorter, a status line, retyping a word
@@ -1487,7 +1487,7 @@ across the nine tags `v3.0-j2.1b-utf8.1` … `.9`, between 2026-08-19 and
 
 - BDF font rendering and editing inside LHA/ZIP/TAR archives, sources and all,
   because their terms made the tree awkward to redistribute.
-- macOS from CI: nobody here has one to try, so a failure there was a puzzle
+- macOS from CI: nobody here has one to try, so a failure there became a puzzle
   nobody was in a position to solve. The `__APPLE__` paths stay, shared with the
   BSDs, but nothing checks them.
 
