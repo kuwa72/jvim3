@@ -4,8 +4,8 @@
 
 JVim 3 は、Bram Moolenaar の Vim 3.0 を土田健一さんが日本語化したエディタです。
 最終版 3.0-j2.1b は 2002 年 12 月のものです。このリポジトリはそれを現代のシステ
-ムで動くようにしたもので、内部にひとつ大きな変更を入れています。**バッファが
-Shift-JIS ではなく UTF-8 を保持する**ようになりました。CP932 に席のない文字 —
+ムで動くようにしたもので、内部にひとつ大きな変更を入れています。**バッファは
+UTF-8 を保持する**ようになりました。Shift-JIS ではありません。CP932 に席のない文字 —
 ハングル、アクセント付きラテン文字、絵文字、BMP 外の文字 — が、読み込み・編集・
 保存を通って壊れずに残ります。
 
@@ -40,7 +40,7 @@ JVim 3.0-j2.1b (2002 Dec 24) 由来
 
 | 長年のバグを修正 | 15 件。一覧は [BUILDING-mingw.md](BUILDING-mingw.md#bugs-found-along-the-way) にあります。正規表現の `[あ]` が `い` にもマッチする、コマンドラインが `buff[-1]` を読む、絵文字 1 個でファイル全体が Shift-JIS と誤判定される、端末入力で 2 回の読み込みにまたがった文字が化ける、など。 |
 | 配色テーマ | `:colorscheme` と Vim 互換の `:highlight`、同梱の 11 テーマ。GUI でも端末の SGR でも使えます。詳細は [USAGE.ja.md](USAGE.ja.md#配色テーマ)。 |
-| 削除した機能 2 つ | BDF フォント描画と、書庫 (LHA/ZIP/TAR) 内のファイル編集をソースごと削除しました。再配布の条件が扱いにくかったためです。[後述](#ライセンス)。 |
+| 削除した機能 3 つ | BDF フォント描画、書庫 (LHA/ZIP/TAR) 内のファイル編集、MIME / uuencode / base64 デコードをソースごと削除しました。再配布の条件が扱いにくかったためです。[後述](#ライセンス)。 |
 
 ## 入手する
 
@@ -75,13 +75,13 @@ cd jvim3
 
 ```
 
-必要なのは C コンパイラと、組み込みの端末定義ではなく本物の端末データベースを
-使うための curses / termcap ライブラリです (Debian・Ubuntu なら
+必要なのは C コンパイラと、本物の端末データベースを使うための curses / termcap
+ライブラリです (Debian・Ubuntu なら
 `libncurses-dev`、BSD には最初から入っています)。スクリプトは何を見つけ
 たかを表示します。
 
-macOS でもビルドは通りますが、CI の対象ではなく未検証です
-([BUILDING-unix.md](BUILDING-unix.md) の未検証の項を参照)。
+macOS でもビルドは通りますが、未検証です。
+CI では扱っていません ([BUILDING-unix.md](BUILDING-unix.md) の未検証の項を参照)。
 
 ```
 configuring for Linux 6.18.33, cc
@@ -113,8 +113,8 @@ sudo apt install gcc-mingw-w64-i686-win32   # Linux または WSL からクロ�
 ```
 
 MSYS2 の **MINGW32** シェルなら `pacman -S mingw-w64-i686-gcc make` を入れて同じ
-スクリプトを実行します。`mingw-w64` メタパッケージではなくこのパッケージなのは、
-ビルドが msvcrt に対して行われる必要があるためです。スクリプトはそうでない
+スクリプトを実行します。このパッケージを使うのは、ビルドが msvcrt に対して行われる
+必要があるためです。`mingw-w64` メタパッケージは UCRT 対象なので使えません。スクリプトはそうでない
 ツールチェインを拒否します。詳細は [BUILDING.ja.md](BUILDING.ja.md) と
 [BUILDING-mingw.md](BUILDING-mingw.md)。
 
@@ -150,7 +150,7 @@ Vim 3.0 のマニュアル (`doc/`、1994 年、英語):
 | [README](README) | Vim 3.0 自身の README (1994 年)。そのまま残しています。ここに書かれたビルド手順は、このリポジトリが置き換えたものです。 |
 
 `doc.j/` の中で MS-DOS、Windows 95、BOW、書庫内編集、BDF フォントについて書いて
-ある箇所は、もう手順ではなく歴史です。
+ある箇所は、もう手順ではありません。あくまで歴史です。
 
 ## 現状と限界
 
@@ -204,7 +204,7 @@ Issue と pull request は <https://github.com/kuwa72/jvim3> へ。日本語で�
 ## ライセンス
 
 Vim 3.0 は**パブリックドメイン**です。そのうえで Bram Moolenaar は、気に入ったら
-自分ではなくウガンダの Kibaale Children's Centre に寄付してほしいと書きました
+ウガンダの Kibaale Children's Centre に寄付してほしいと書きました
 (charityware)。本人の文章が [uganda.txt](uganda.txt)、日本語訳が
 [doc.j/uganda.jp](doc.j/uganda.jp) です。この呼びかけは今も有効で、現在の寄付方法
 は [Vim の ICCF のページ](https://www.vim.org/iccf/)にあります。
