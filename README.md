@@ -42,7 +42,7 @@ Licence          Public domain — see LICENSE, and uganda.txt for the
 
 | Long standing bugs fixed | Fifteen of them, listed in [BUILDING-mingw.md](BUILDING-mingw.md#bugs-found-along-the-way) — `[あ]` in a regexp also matching `い`, a command line reading `buff[-1]`, encoding detection tipping a whole file over to Shift-JIS because of one emoji, terminal input mangling a character split across two reads. |
 | Colour schemes | `:colorscheme` and a Vim-compatible `:highlight`, eleven bundled themes, on the GUI and over a terminal's SGR alike. [USAGE.md](USAGE.md#colour-schemes) has the reference. |
-| Two features removed | BDF font rendering and editing inside LHA/ZIP/TAR archives are gone, sources and all, because their terms made the tree awkward to redistribute. See [below](#licence). |
+| Three features removed | BDF font rendering, editing inside LHA/ZIP/TAR archives, and MIME / uuencode / base64 decoding are gone, sources and all, because their terms made the tree awkward to redistribute. See [below](#licence). |
 
 ## Get it
 

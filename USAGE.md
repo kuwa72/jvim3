@@ -492,8 +492,9 @@ Vim 3.0 is vi plus this short list:
 - **Block operations**, counts on nearly everything, `showmatch`, `smartindent`,
   digraphs, recording, `:!` filters, quickfix (`-e`, `:cn`).
 - **Keyword completion** in insert mode, `CTRL-N` / `CTRL-P`.
+- **Text formatting** with the `Q` operator, e.g. `Q}` formats a paragraph to `textwidth`.
 
-The `Q` command is missing. That is the only thing from vi that is not here, and
+The `Q` command (go to Ex mode) from vi is missing. That is the only thing from vi that is not here, and
 [doc/difference.doc](doc/difference.doc) is the full account of what changed in
 either direction.
 
