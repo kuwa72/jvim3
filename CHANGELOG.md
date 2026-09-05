@@ -19,8 +19,9 @@ repository and would drift within three releases.
 - Supported internal re-indentation for `=` operator (`==`, `=G`, etc.) when `equalprg` is empty, removing external `indent` dependency on Windows and Unix.
 - Bundled standalone lightweight C code formatter tool (`tools/cformat.c` / `cformat.exe`) in Windows packages.
 - Added `:macros` command to display recorded keyboard macros only.
-- Added tests in `scripts/test-editing.sh` for `:macros` and internal re-indentation.
-  272 cases now.
+- Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
+- Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, and tag jump candidate selection.
+  275 cases now.
 
 
 

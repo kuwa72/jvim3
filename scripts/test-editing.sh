@@ -199,6 +199,46 @@ runscreen() {
 	fi
 }
 
+runtag() {
+	counted && return
+	local name=$1 expect=$2 tags_content=$3 keys=$4 want1=$5 want2=${6:-} want3=${7:-}
+
+	printf '%b' "$tags_content" > "$tmp/tags"
+	printf 'sample text\n' > "$tmp/t1.c"
+	printf 'sample text\n' > "$tmp/t2.c"
+
+	keys=${keys//%/%%}
+	printf 'a\n' > "$tmp/in"
+	printf ':set tags=%s/tags\r' "$tmp" > "$tmp/keys"
+	printf "$keys" >> "$tmp/keys"
+	printf ':q!\r' >> "$tmp/keys"
+	rm -f "$tmp/screen"
+	pty "TERM=xterm $jvim -T xterm -s $tmp/keys $tmp/in" > "$tmp/screen" 2>&1
+	rm -f "$tmp/tags" "$tmp/t1.c" "$tmp/t2.c"
+
+	local got=ok
+	grep -qF -- "$want1" "$tmp/screen" || got=bad
+	if [ -n "$want2" ]; then
+		grep -qF -- "$want2" "$tmp/screen" || got=bad
+	fi
+	if [ -n "$want3" ]; then
+		grep -qF -- "$want3" "$tmp/screen" || got=bad
+	fi
+
+	if [ "$expect" = ok ] && [ "$got" = ok ]; then
+		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
+	elif [ "$expect" = ok ]; then
+		printf '  FAIL        %s\n' "$name"
+		printf '                nothing matching %s on the screen\n' "$want1"
+		fail=$((fail+1))
+	elif [ "$got" = bad ]; then
+		printf '  KNOWN-FAIL  %s\n' "$name"; xfail=$((xfail+1))
+	else
+		printf '  NOW PASSES  %s  <- update the expectation\n' "$name"
+		xpass=$((xpass+1))
+	fi
+}
+
 # runhelptyped <name> <expect> <keys after ":help"> <wanted on the screen> [times]
 #
 # runhelp with the keys typed rather than fed through "-s", for the same reason
@@ -327,6 +367,15 @@ run "redo with ."           ok "dd."       "$ABC"              'c\nd\ne\n'
 runscreen ":macros shows recorded macro" ok 'qaix\033q:macros\r ' '"a   ix^[q'
 runscreen ":macros uppercase append"     ok 'qaix\033qqAiy\033q:macros\r ' '"a   ix^[qiy^[q'
 runscreen ":macros excludes normal yank" ok '"byy:macros\r ' '--- Macros ---'
+runtag "tag select header with tag name" ok \
+	'foo\tt1.c\t/^void foo()$/;"\tf\nfoo\tt2.c\t/^int foo()$/;"\tf\n' \
+	':tag foo\rq' '#  file' 'type' 'tag'
+runtag "tag select shows filename, type, and tag" ok \
+	'foo\tt1.c\t/^void foo()$/;"\tf\nfoo\tt2.c\t/^int foo()$/;"\tf\n' \
+	':tag foo\rq' '01: t1.c' 'function' 'foo'
+runtag "tag select unknown kind displays ?" ok \
+	'bar\tt1.c\t10;"\t?\nbar\tt2.c\t20\n' \
+	':tag bar\rq' '01: t1.c' '?' 'bar'
 
 echo
 echo "ex ranges and commands:"
