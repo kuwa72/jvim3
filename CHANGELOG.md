@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  282 cases now.
+  287 cases now.
 
 
 
