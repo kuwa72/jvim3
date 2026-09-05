@@ -221,6 +221,7 @@ char_u		   *reg_prev_sub;
  */
 
 int				reg_magic = 1;
+static int		reg_verymagic = 0;	/* 1: \v (very magic), -1: \V (very nomagic) */
 
 /*
  * Global work variables for regcomp().
@@ -1024,6 +1025,15 @@ static int		nextchr;	/* used for ungetchr() */
 static void
 initchr(char_u *str)
 {
+	reg_verymagic = 0;
+	if (str[0] == '\\' && (str[1] == 'v' || str[1] == 'V'))
+	{
+		if (str[1] == 'v')
+			reg_verymagic = 1;
+		else
+			reg_verymagic = -1;
+		str += 2;
+	}
 	regparse = str;
 	curchr = prevchr = nextchr = -1;
 }
@@ -1035,27 +1045,83 @@ peekchr(void)
 		switch (curchr = regparse[0]) {
 		case '.':
 		case '*':
-	/*	case '+':*/
-	/*	case '=':*/
 		case '[':
 		case '~':
-			if (reg_magic)
+			if (reg_verymagic == -1)
+				;
+			else if (reg_verymagic == 1 || reg_magic)
+				curchr = Magic(curchr);
+			break;
+		case '+':
+		case '=':
+		case '?':
+		case '|':
+		case '(':
+		case ')':
+		case '<':
+		case '>':
+			if (reg_verymagic == 1)
 				curchr = Magic(curchr);
 			break;
 		case '^':
 			/* ^ is only magic as the very first character */
-			if (prevchr < 0)
+			if (reg_verymagic == -1)
+				;
+			else if (prevchr < 0)
 				curchr = Magic('^');
 			break;
 		case '$':
-			/* $ is only magic as the very last character and in front of '\|' */
-			if (regparse[1] == NUL || (regparse[1] == '\\' && regparse[2] == '|'))
+			/* $ is only magic as the very last character and in front of '\|' (or '|' in \v) */
+			if (reg_verymagic == -1)
+				;
+			else if (regparse[1] == NUL || (regparse[1] == '\\' && regparse[2] == '|')
+					|| (reg_verymagic == 1 && regparse[1] == '|'))
 				curchr = Magic('$');
 			break;
 		case '\\':
 			regparse++;
 			if (regparse[0] == NUL)
 				curchr = '\\';	/* trailing '\' */
+			else if (reg_verymagic == 1)
+			{
+				/* In very magic mode:
+				 * If following char is meta (one of . * [ ~ + = ? | ( ) < > ^ $ \),
+				 * backslash makes it literal!
+				 * Otherwise (like \d, \1, etc.), backslash can make it magic.
+				 */
+				if (STRCHR(".[*~+=?|()<>^$\\", regparse[0]))
+					curchr = regparse[0];
+				else if (STRCHR(META, regparse[0]))
+				{
+					curchr = -1;
+					peekchr();
+					curchr ^= Magic(0);
+				}
+				else
+					curchr = regparse[0];
+			}
+			else if (reg_verymagic == -1)
+			{
+				/* In very nomagic mode:
+				 * Only META characters can be made magic with \,
+				 * or \\ for a literal backslash.
+				 * Other \x should be treated as literal \ followed by x.
+				 */
+				if (STRCHR(META, regparse[0]))
+				{
+					curchr = -1;
+					peekchr();
+					curchr ^= Magic(0);
+				}
+				else if (regparse[0] == '\\')
+					curchr = '\\';
+				else
+				{
+					/* Treat '\' as literal character */
+					regparse--;
+					curchr = '\\';
+				}
+			}
 			else if (STRCHR(META, regparse[0]))
 			{
 				/*
@@ -2103,7 +2169,11 @@ regstrext(char_u *exp)
 		free(exptop);
 		exptop = NULL;
 	}
-	if (!reg_magic || exp == NULL)
+	if (exp == NULL)
+		return(exp);
+	if (exp[0] == '\\' && exp[1] == 'V')
+		return(exp);
+	if (!reg_magic && !(exp[0] == '\\' && exp[1] == 'v'))
 		return(exp);
 	for (p = exp, size = 0, range = FALSE, loop = 0; loop < 2;
 											p = exp, range = FALSE, loop++)

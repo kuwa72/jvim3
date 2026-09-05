@@ -453,6 +453,11 @@ run "smartcase uppercase"    ok ":set ic scs\r/Foo\rdd" 'foo\nFoo\nFOO\n' 'foo\n
 run "nosmartcase with ic"    ok ":set ic noscs\r/FOO\rdd" 'foo\nFoo\nFOO\n' 'foo\nFOO\n'
 run "smartcase with FOO"     ok ":set ic scs\r/FOO\rdd" 'foo\nFoo\nFOO\n' 'foo\nFoo\n'
 run "smartcase star cmd"     ok ":set ic scs\r*dd" 'Bar\nbar\nBar\n' 'Bar\nbar\n'
+run "regex \\v very magic"   ok ":%s/\\\\vfoo|bar/X/g\r" 'foo bar baz\n' 'X X baz\n'
+run "regex \\v with \\d+"    ok ":%s/\\\\v\\\\d+/NUM/g\r" 'a123b 456c\n' 'aNUMb NUMc\n'
+run "regex \\V very nomagic" ok ":%s/\\\\V\\d+/X/g\r" 'a\\d+b a123b\n' 'aXb a123b\n'
+run "regex \\w word char"    ok ":%s/\\\\w\\\\+/W/g\r" 'hello, world 123!\n' 'W, W W!\n'
+run "regex \\s whitespace"   ok ":%s/\\\\s\\\\+/ /g\r" 'a   b\tc\n' 'a b c\n'
 
 echo
 echo "the shell filter and wildcards, which use a temp file:"
