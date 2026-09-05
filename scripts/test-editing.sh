@@ -325,6 +325,11 @@ run "? then dd"             ok "G?b\rdd"   "$ABC"              'a\nc\nd\ne\n'
 run "n wraps round"         ok "/a\rndd"   'a\nx\na\ny\n'      'x\na\ny\n'
 run "search offset"         ok "/b/+1\rdd" 'a\nb\nc\n'         'a\nb\n'
 run ":s with \\\\<"          ok ":%s/\\\\<a\\\\>/X/g\r" 'a ab a\n' 'X ab X\n'
+run "smartcase lowercase"    ok ":set ic scs\r/foo\rdd" 'foo\nFoo\nFOO\n' 'foo\nFOO\n'
+run "smartcase uppercase"    ok ":set ic scs\r/Foo\rdd" 'foo\nFoo\nFOO\n' 'foo\nFOO\n'
+run "nosmartcase with ic"    ok ":set ic noscs\r/FOO\rdd" 'foo\nFoo\nFOO\n' 'foo\nFOO\n'
+run "smartcase with FOO"     ok ":set ic scs\r/FOO\rdd" 'foo\nFoo\nFOO\n' 'foo\nFoo\n'
+run "smartcase star cmd"     ok ":set ic scs\r*dd" 'Bar\nbar\nBar\n' 'Bar\nbar\n'
 
 echo
 echo "the shell filter and wildcards, which use a temp file:"

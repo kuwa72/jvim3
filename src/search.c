@@ -449,6 +449,40 @@ do_wrapnext(int dir)
 #endif
 
 /*
+ * Return TRUE if pattern contains an uppercase character.
+ */
+	int
+pattern_has_uppercase(char_u *pat)
+{
+	char_u *p;
+
+	if (pat == NULL)
+		return FALSE;
+	for (p = pat; *p; p++)
+	{
+		if (*p == '\\')
+		{
+			p++;
+			if (*p == NUL)
+				break;
+			continue;
+		}
+#ifdef KANJI
+		if (ISkanji(*p))
+		{
+			p++;
+			if (*p == NUL)
+				break;
+			continue;
+		}
+#endif
+		if (isasciiupper(*p))
+			return TRUE;
+	}
+	return FALSE;
+}
+
+/*
  * translate search pattern for regcomp()
  *
  * sub_cmd == 0: save pat in search_pattern (normal search command)
@@ -524,7 +558,7 @@ myregcomp(char_u *pat, int sub_cmd, int which_pat)
 	}
 
 	want_start = (*pat == '^');		/* looking for start of line? */
-	reg_ic = p_ic;					/* tell the regexec routine how to search */
+	reg_ic = (p_scs && pattern_has_uppercase(pat)) ? FALSE : p_ic;	/* tell the regexec routine how to search */
 #ifdef KANJI
 	reg_jic = p_jic;				/* tell the regexec routine how to search */
 #endif

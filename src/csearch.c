@@ -578,7 +578,7 @@ doglob(int type, linenr_t lp, linenr_t up, char_u *cmd)
 			*cmd++ = NUL;					/* replace it by a NUL */
 	}
 
-	reg_ic = p_ic;           /* set "ignore case" flag appropriately */
+	reg_ic = (p_scs && pattern_has_uppercase(pat)) ? FALSE : p_ic; /* set "ignore case" flag appropriately */
 
 	if ((prog = myregcomp(pat, 2, which_pat)) == NULL)
 	{
