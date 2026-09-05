@@ -284,6 +284,9 @@ run "Q lays out at tw"       ok ":set tw=10\rQj" 'one two\nthree four\n' \
 echo
 echo "registers, marks and undo:"
 run "named register"        ok '"ayy"ap'   'a\nb\n'            'a\na\nb\n'
+run "\"? lists and selects"  ok '"ayy"?ap'  'a\nb\n'            'a\na\nb\n'
+run "\"? uppercase append"   ok '"ayy"?Ayy"ap' 'a\nb\n'         'a\na\na\nb\n'
+run "\"? canceled by ESC"    ok '"ayy"?\033"ap' 'a\nb\n'        'a\na\nb\n'
 run "delete then put"       ok 'ddp'       'a\nb\n'            'b\na\n'
 run "mark and delete to it" ok "majjd'a"   "$ABC"              'd\ne\n'
 run "backtick mark"         ok 'wma0d`a'   'one two\n'         'two\n'

@@ -1599,6 +1599,12 @@ cursormark:
  */
 	  case '"':
 		CHECKCLEAROP;
+		if (nchar == '?')
+		{
+			nchar = showregisterlist();
+			if (nchar == ESC || nchar == Ctrl('C'))
+				break;
+		}
 		if (nchar != NUL && is_yank_buffer(nchar, FALSE))
 		{
 			yankbuffer = nchar;
