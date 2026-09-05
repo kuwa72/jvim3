@@ -13,6 +13,7 @@ void init_yank __PARMS((void));
 int doyank __PARMS((int deleting));
 void doput __PARMS((int dir, long count, int fix_indent));
 void dodis __PARMS((void));
+void domacros __PARMS((void));
 int showregisterlist __PARMS((void));
 void dis_msg __PARMS((unsigned char *p, int skip_esc));
 void dodojoin __PARMS((long count, int insert_space, int redraw));

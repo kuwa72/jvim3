@@ -2122,6 +2122,10 @@ doabbr:
 				dodis();		/* display buffer contents */
 				break;
 
+		case CMD_macros:
+				domacros();		/* display recorded macros */
+				break;
+
 		case CMD_help:
 				help();
 				break;

@@ -18,8 +18,9 @@ repository and would drift within three releases.
 - Command-line (: mode) completion enhancements for `:colorscheme`, `:highlight`, and `:syntax`.
 - Supported internal re-indentation for `=` operator (`==`, `=G`, etc.) when `equalprg` is empty, removing external `indent` dependency on Windows and Unix.
 - Bundled standalone lightweight C code formatter tool (`tools/cformat.c` / `cformat.exe`) in Windows packages.
-- Added tests in `scripts/test-editing.sh` for internal re-indentation.
-  269 cases now.
+- Added `:macros` command to display recorded keyboard macros only.
+- Added tests in `scripts/test-editing.sh` for `:macros` and internal re-indentation.
+  271 cases now.
 
 
 

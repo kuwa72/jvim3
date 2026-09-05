@@ -15,7 +15,7 @@
 
 ```sh
 ./scripts/build-unix.sh          # src/jvim3 をビルド
-./scripts/build-unix.sh test     # ビルドしてテスト 269 ケースを実行
+./scripts/build-unix.sh test     # ビルドしてテスト 271 ケースを実行
 ./scripts/build-unix.sh strict   # CI がエラー扱いする警告つきでビルド
 
 ./scripts/build-unix.sh asan     # AddressSanitizer つきでビルドしてテスト
@@ -209,7 +209,7 @@ Windows でも WoW64 で問題なく動きます。ポインタが `int`/`long` 
 ルールの内容を確認するスイートではありません。描画側を直接見る唯一のスイートです。`scripts/test-hostile.sh` は誰も意図して
 いない入力と終わり方を与えます — 1 行 2 MB、あらゆるバイト値、ファイル末尾で
 切れたマルチバイト列、再帰的なマッチャを使い切るほど入れ子にした正規表現、
-編集中にセッションが切れる。合わせて 269 ケースです。
+編集中にセッションが切れる。合わせて 271 ケースです。
 
 
 敵性入力スイートは、何もクラッシュしていないのにケースを失敗として報告できる

@@ -118,6 +118,7 @@ static struct
 	{(char_u *)"marks",			TRLBAR},
 	{(char_u *)"map",			BANG+EXTRA+TRLBAR+NOTRLCOM+USECTRLV},
 	{(char_u *)"make",			NEEDARG+EXTRA+TRLBAR+XFILE},
+	{(char_u *)"macros",		TRLBAR},
 	{(char_u *)"mkexrc",		BANG+FILE1+TRLBAR},
 	{(char_u *)"mkvimrc",		BANG+FILE1+TRLBAR},
 	{(char_u *)"mfstat",		TRLBAR},				/* for debugging */
