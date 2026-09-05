@@ -41,7 +41,7 @@ Licence          Public domain — see LICENSE, and uganda.txt for the
 | 256 tests | 51 encoding cases, 90 editing cases, 88 syntax colouring cases, 9 that read the escapes the terminal is actually sent, and 18 that hand it input nobody intended, or a hostile end — 2 MB on one line, every byte value there is, a multi-byte sequence cut in half by the end of the file, the session dropping mid-edit. All driven through a real pty. Every push runs them on five operating systems, and again under AddressSanitizer and UndefinedBehaviorSanitizer. |
 
 | Long standing bugs fixed | Fifteen of them, listed in [BUILDING-mingw.md](BUILDING-mingw.md#bugs-found-along-the-way) — `[あ]` in a regexp also matching `い`, a command line reading `buff[-1]`, encoding detection tipping a whole file over to Shift-JIS because of one emoji, terminal input mangling a character split across two reads. |
-| Colour schemes | `:colorscheme` and a Vim-compatible `:highlight`, eleven bundled themes, on the GUI and over a terminal's SGR alike. [USAGE.md](USAGE.md#colour-schemes) has the reference. |
+| Colour schemes | `:colorscheme` and a Vim-compatible `:highlight`, sixteen bundled themes, on the GUI and over a terminal's SGR alike. [USAGE.md](USAGE.md#colour-schemes) has the reference. |
 | Three features removed | BDF font rendering, editing inside LHA/ZIP/TAR archives, and MIME / uuencode / base64 decoding are gone, sources and all, because their terms made the tree awkward to redistribute. See [below](#licence). |
 
 ## Get it
@@ -126,6 +126,7 @@ This tree's own docs:
 | | |
 | --- | --- |
 | [USAGE.md](USAGE.md) / [USAGE.ja.md](USAGE.ja.md) | Running it, where settings live, the encoding model, IME, display, troubleshooting. **Start here.** |
+| [DIFFERENCES.md](DIFFERENCES.md) / [DIFFERENCES.ja.md](DIFFERENCES.ja.md) | Differences between JVim 3 and modern Vim / Neovim. What is kept and what was omitted. |
 | [BUILDING-unix.md](BUILDING-unix.md) | Building on Linux and the BSDs; what the script detects; what CI covers; what is verified and what is not. |
 | [BUILDING-mingw.md](BUILDING-mingw.md) | Building for Windows; and the long version of how UTF-8, the Unicode GUI, DPI awareness and the drawing of a row of text actually work. |
 | [BUILDING.ja.md](BUILDING.ja.md) | ビルド手順の日本語版 (both platforms). |

@@ -39,7 +39,7 @@ JVim 3.0-j2.1b (2002 Dec 24) 由来
 | 256 個のテスト | エンコーディング 51 ケース、編集 90 ケース、シンタックスカラー 88 ケース、端末に実際に送られるエスケープを見る 9 ケース、そして誰も意図していない入力や終わり方を与える 18 ケース（1 行 2 MB、あらゆるバイト値、ファイル末尾で切れたマルチバイト列、編集中にセッションが切れる）。いずれも本物の pty 越しです。push ごとに 5 つの OS で実行され、さらに AddressSanitizer と UndefinedBehaviorSanitizer の下でも走ります。 |
 
 | 長年のバグを修正 | 15 件。一覧は [BUILDING-mingw.md](BUILDING-mingw.md#bugs-found-along-the-way) にあります。正規表現の `[あ]` が `い` にもマッチする、コマンドラインが `buff[-1]` を読む、絵文字 1 個でファイル全体が Shift-JIS と誤判定される、端末入力で 2 回の読み込みにまたがった文字が化ける、など。 |
-| 配色テーマ | `:colorscheme` と Vim 互換の `:highlight`、同梱の 11 テーマ。GUI でも端末の SGR でも使えます。詳細は [USAGE.ja.md](USAGE.ja.md#配色テーマ)。 |
+| 配色テーマ | `:colorscheme` と Vim 互換の `:highlight`、同梱の 16 テーマ。GUI でも端末の SGR でも使えます。詳細は [USAGE.ja.md](USAGE.ja.md#配色テーマ)。 |
 | 削除した機能 3 つ | BDF フォント描画、書庫 (LHA/ZIP/TAR) 内のファイル編集、MIME / uuencode / base64 デコードをソースごと削除しました。再配布の条件が扱いにくかったためです。[後述](#ライセンス)。 |
 
 ## 入手する
@@ -125,6 +125,7 @@ MSYS2 の **MINGW32** シェルなら `pacman -S mingw-w64-i686-gcc make` を入
 | | |
 | --- | --- |
 | [USAGE.ja.md](USAGE.ja.md) / [USAGE.md](USAGE.md) | 起動方法、設定ファイルの場所、文字コードの扱い、IME、画面表示、トラブルシューティング。**まずここから。** |
+| [DIFFERENCES.ja.md](DIFFERENCES.ja.md) / [DIFFERENCES.md](DIFFERENCES.md) | 現行 Vim / Neovim との差分ガイド。残されている機能と削られている機能。 |
 | [BUILDING.ja.md](BUILDING.ja.md) | Unix / Windows 両方のビルド手順 (日本語)。 |
 | [BUILDING-unix.md](BUILDING-unix.md) | Linux・BSD でのビルド。スクリプトが何を検出するか、CI が何を見ているか、何が検証済みで何がそうでないか (英語)。 |
 | [BUILDING-mingw.md](BUILDING-mingw.md) | Windows 版のビルドと、UTF-8 化・Unicode GUI・DPI 対応・1 行の描画が実際にどう動いているかの詳しい話 (英語)。 |
