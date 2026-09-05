@@ -290,6 +290,13 @@ if [ -f "$root/tools/cformat.c" ]; then
 	"${CROSS}gcc" -O2 -s "$root/tools/cformat.c" -o "$dist/tools/cformat.exe" 2>/dev/null || true
 fi
 
+# Tutorial runner and lesson files
+cp_crlf "$root/scripts/jvimtutor.bat" "$dist/jvimtutor.bat"
+rm -rf "$dist/tutor"
+mkdir -p "$dist/tutor"
+cp -p "$root/tutor/tutor" "$dist/tutor/tutor"
+cp -p "$root/doc.j/tutor/tutor.j" "$dist/tutor/tutor.j"
+
 
 
 

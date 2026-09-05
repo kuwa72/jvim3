@@ -494,6 +494,13 @@ install: $(TARGET)
 # An rc to start from, for copying to ~/.jvimrc.
 	cp ../jvimrc.sample $(HELPLOC)/jvim3/jvimrc.sample
 	chmod $(HELPMOD) $(HELPLOC)/jvim3/jvimrc.sample
+# Tutorial runner and lessons
+	cp ../scripts/jvimtutor $(BINLOC)/jvimtutor
+	chmod $(BINMOD) $(BINLOC)/jvimtutor
+	-mkdir -p $(HELPLOC)/jvim3/tutor
+	cp ../tutor/tutor $(HELPLOC)/jvim3/tutor/tutor
+	cp ../doc.j/tutor/tutor.j $(HELPLOC)/jvim3/tutor/tutor.j
+	chmod $(HELPMOD) $(HELPLOC)/jvim3/tutor/*
 
 # Not cmdtab.h: it is generated, but it is also committed, and makefile.mingw
 # has no rule to make one -- so a "clean" here left the Windows cross build
