@@ -1,4 +1,5 @@
 /* search.c */
+int pattern_has_uppercase __PARMS((unsigned char *pat));
 struct regexp *myregcomp __PARMS((unsigned char *pat, int sub_cmd, int which_pat));
 int searchit __PARMS((struct fpos *pos, int dir, unsigned char *str, long count, int end, int message));
 int dosearch __PARMS((int dirc, unsigned char *str, int reverse, long count, int echo, int message));

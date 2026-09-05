@@ -162,6 +162,7 @@ EXTERN int	p_sc	INIT(= FALSE);		/* show command in status line */
 #else
 EXTERN int	p_sc	INIT(= TRUE);		/* show command in status line */
 #endif
+EXTERN int	p_scs	INIT(= FALSE);		/* smartcase */
 EXTERN int	p_sm	INIT(= FALSE);		/* showmatch */
 #if defined(COMPATIBLE)
 EXTERN int	p_smd	INIT(= FALSE);		/* show mode */

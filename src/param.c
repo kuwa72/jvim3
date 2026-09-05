@@ -245,6 +245,7 @@ static struct param params[] =
 		{"showmode",	"smd",	P_BOOL,				(char_u *)&p_smd},
 		{"sidescroll",	"ss",	P_NUM,				(char_u *)&p_ss},
 		{"slowopen",	"slow",	P_BOOL,				(char_u *)NULL},
+		{"smartcase",	"scs",	P_BOOL,				(char_u *)&p_scs},
 		{"smartindent", "si",	P_BOOL|P_IND,		(char_u *)PV_SI},
 		{"smarttab",	"sta",	P_BOOL,				(char_u *)&p_sta},
 #ifndef notdef	/* vim 5.X compatible */
