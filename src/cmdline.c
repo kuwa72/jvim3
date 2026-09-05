@@ -100,20 +100,34 @@ getcmdline(int firstc, char_u *buff)
 #else
 	char_u 				c;
 #endif
+#define HIST_CMD	0
+#define HIST_SEARCH	1
+#define HIST_COUNT	2
+
 			 int		cc;
 			 int		nextc = 0;
 			 int		i;
 			 int		retval;
 			 int		hiscnt;				/* current history line in use */
-	static	 char_u		**history = NULL;	/* history table */
+			 int		histype;
+	static	 char_u		**history[HIST_COUNT] = {NULL, NULL};	/* history tables */
 	static	 int		hislen = 0; 		/* actual lengt of history table */
 			 int		newlen;				/* new length of history table */
-	static	 int		hisidx = -1;		/* last entered entry */
+	static	 int		hisidx[HIST_COUNT] = {-1, -1};		/* last entered entry */
 			 char_u		**temp;
 			 char_u		*lookfor = NULL;	/* string to match */
 			 int		j = -1;
 			 int		gotesc = FALSE;		/* TRUE when last char typed was <ESC> */
 			 int		do_abbr;			/* when TRUE check for abbr. */
+			 int		ht;
+
+/*
+ * determine history table type based on firstc
+ */
+	if (firstc == '/' || firstc == '?')
+		histype = HIST_SEARCH;
+	else
+		histype = HIST_CMD;
 
 /*
  * set some variables for redrawcmd()
@@ -131,42 +145,46 @@ getcmdline(int firstc, char_u *buff)
 	newlen = (int)p_hi;
 	if (newlen != hislen)						/* history length changed */
 	{
-		if (newlen)
-			temp = (char_u **)lalloc((long_u)(newlen * sizeof(char_u *)), TRUE);
-		else
-			temp = NULL;
-		if (newlen == 0 || temp != NULL)
+		for (ht = 0; ht < HIST_COUNT; ++ht)
 		{
-			if (newlen > hislen)			/* array becomes bigger */
+			if (newlen)
+				temp = (char_u **)lalloc((long_u)(newlen * sizeof(char_u *)), TRUE);
+			else
+				temp = NULL;
+			if (newlen == 0 || temp != NULL)
 			{
-				for (i = 0; i <= hisidx; ++i)
-					temp[i] = history[i];
-				j = i;
-				for ( ; i <= newlen - (hislen - hisidx); ++i)
-					temp[i] = NULL;
-				for ( ; j < hislen; ++i, ++j)
-					temp[i] = history[j];
-			}
-			else							/* array becomes smaller */
-			{
-				j = hisidx;
-				for (i = newlen - 1; ; --i)
+				if (newlen > hislen)			/* array becomes bigger */
 				{
-					if (i >= 0)
-						temp[i] = history[j];	/* copy newest entries */
-					else
-						free(history[j]);		/* remove older entries */
-					if (--j < 0)
-						j = hislen - 1;
-					if (j == hisidx)
-						break;
+					for (i = 0; i <= hisidx[ht]; ++i)
+						temp[i] = history[ht][i];
+					j = i;
+					for ( ; i <= newlen - (hislen - hisidx[ht]); ++i)
+						temp[i] = NULL;
+					for ( ; j < hislen; ++i, ++j)
+						temp[i] = history[ht][j];
 				}
-				hisidx = newlen - 1;
+				else							/* array becomes smaller */
+				{
+					j = hisidx[ht];
+					for (i = newlen - 1; ; --i)
+					{
+						if (i >= 0)
+							temp[i] = history[ht][j];	/* copy newest entries */
+						else if (history[ht] != NULL)
+							free(history[ht][j]);		/* remove older entries */
+						if (--j < 0)
+							j = hislen - 1;
+						if (j == hisidx[ht])
+							break;
+					}
+					hisidx[ht] = newlen - 1;
+				}
+				if (history[ht] != NULL)
+					free(history[ht]);
+				history[ht] = temp;
 			}
-			free(history);
-			history = temp;
-			hislen = newlen;
 		}
+		hislen = newlen;
 	}
 	hiscnt = hislen;			/* set hiscnt to impossible history value */
 
@@ -476,17 +494,17 @@ do_esc:
 					if (c == K_UARROW || c == K_SUARROW || c == Ctrl('P'))
 					{
 						if (hiscnt == hislen)	/* first time */
-							hiscnt = hisidx;
-						else if (hiscnt == 0 && hisidx != hislen - 1)
+							hiscnt = hisidx[histype];
+						else if (hiscnt == 0 && hisidx[histype] != hislen - 1)
 							hiscnt = hislen - 1;
-						else if (hiscnt != hisidx + 1)
+						else if (hiscnt != hisidx[histype] + 1)
 							--hiscnt;
 						else					/* at top of list */
 							break;
 					}
 					else	/* one step forwards */
 					{
-						if (hiscnt == hisidx)	/* on last entry, clear the line */
+						if (hiscnt == hisidx[histype])	/* on last entry, clear the line */
 						{
 							hiscnt = hislen;
 							goto clearline;
@@ -498,19 +516,19 @@ do_esc:
 						else
 							++hiscnt;
 					}
-					if (hiscnt < 0 || history[hiscnt] == NULL)
+					if (hiscnt < 0 || history[histype][hiscnt] == NULL)
 					{
 						hiscnt = i;
 						break;
 					}
 					if ((c != K_SUARROW && c != K_SDARROW) || hiscnt == i ||
-							STRNCMP(history[hiscnt], lookfor, (size_t)j) == 0)
+							STRNCMP(history[histype][hiscnt], lookfor, (size_t)j) == 0)
 						break;
 				}
 
 				if (hiscnt != i)		/* jumped to other entry */
 				{
-					STRCPY(buff, history[hiscnt]);
+					STRCPY(buff, history[histype][hiscnt]);
 					cmdpos = cmdlen = STRLEN(buff);
 					redrawcmd();
 				}
@@ -612,27 +630,27 @@ returncmd:
 				cc = FALSE;
 				for (i = 0; i < hislen; i++)
 				{
-					if (history[i] == NULL)
+					if (history[histype][i] == NULL)
 						break;
-					if (strcmp(history[i], buff) == 0)
+					if (strcmp(history[histype][i], buff) == 0)
 					{
 						cc = TRUE;
-						free(history[i]);
+						free(history[histype][i]);
 						for (j = i; j < hislen - 1; j++)
-							history[j] = history[j + 1];
-						history[hislen - 1] = NULL;
-						for (j = hislen - 1; j > hisidx; j--)
-							history[j] = history[j - 1];
-						history[hisidx] = strsave(buff);
+							history[histype][j] = history[histype][j + 1];
+						history[histype][hislen - 1] = NULL;
+						for (j = hislen - 1; j > hisidx[histype]; j--)
+							history[histype][j] = history[histype][j - 1];
+						history[histype][hisidx[histype]] = strsave(buff);
 						break;
 					}
 				}
 				if (!cc)
 				{
-					if (++hisidx == hislen)
-						hisidx = 0;
-					free(history[hisidx]);
-					history[hisidx] = strsave(buff);
+					if (++hisidx[histype] == hislen)
+						hisidx[histype] = 0;
+					free(history[histype][hisidx[histype]]);
+					history[histype][hisidx[histype]] = strsave(buff);
 				}
 			}
 		}
@@ -640,10 +658,10 @@ returncmd:
 #endif
 		if (hislen != 0)
 		{
-			if (++hisidx == hislen)
-				hisidx = 0;
-			free(history[hisidx]);
-			history[hisidx] = strsave(buff);
+			if (++hisidx[histype] == hislen)
+				hisidx[histype] = 0;
+			free(history[histype][hisidx[histype]]);
+			history[histype][hisidx[histype]] = strsave(buff);
 		}
 		if (firstc == ':')
 		{

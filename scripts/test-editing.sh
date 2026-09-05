@@ -356,6 +356,9 @@ runtyped "typed cursor down"    ok '0\033OBdd'            "$ABC"      'a\nc\nd\n
 runtyped "typed cursor in insert" ok 'i\033OC\033'        'abc\n'     'abc\n'
 runtyped "typed shift-right"    ok '0\033Ovx'             'one two\n' 'one wo\n'
 runtyped "typed up on the : line" ok ':1d\r:\033OA\r'     "$ABC"      'c\nd\ne\n'
+runtyped "history: search does not leak into ex history" ok ':1d\r/c\r:\033OA\r' "$ABC" 'c\nd\ne\n'
+runtyped "history: ex does not leak into search history" ok ':1d\r/c\r/\033OA\rdd' "$ABC" 'b\nd\ne\n'
+
 runtyped "typed CTRL-@"         ok 'iabc\033i\000'        'X\n'       'ababccX\n'
 runtyped "command-line completion: :colorscheme" ok ':colo dra\t\r' "$ABC" "$ABC"
 runtyped "command-line completion: :syntax"      ok ':syn en\t\r'  "$ABC" "$ABC"
