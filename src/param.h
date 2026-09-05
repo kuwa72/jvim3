@@ -60,15 +60,15 @@ EXTERN char_u *p_ef	INIT(= (char_u *)"AztecC.Err");	/* name of errorfile */
 EXTERN char_u *p_ef	INIT(= (char_u *)"errors");			/* name of errorfile */
 #endif
 #ifdef AMIGA
-EXTERN char_u *p_efm	INIT(= (char_u *)"%f>%l:%c:%t:%n:%m");/* error format */
+EXTERN char_u *p_efm	INIT(= (char_u *)"%f>%l:%c:%t:%n:%m");/* error format (comma-separated list) */
 #else
 # ifdef ARCHIE
-EXTERN char_u *p_efm	INIT(= (char_u *)"%f:%l:%m");	/* error format */
+EXTERN char_u *p_efm	INIT(= (char_u *)"%f:%l:%m");	/* error format (comma-separated list) */
 # else
 #  if defined(NT) && defined(_MSC_VER)
 EXTERN char_u *p_efm	INIT(= (char_u *)"%f(%l) : %m %t%n:%m");
 #  else
-EXTERN char_u *p_efm	INIT(= (char_u *)"\"%f\",%*[^0123456789]%l: %m");	/* error format */
+EXTERN char_u *p_efm	INIT(= (char_u *)"\"%f\",%*[^0123456789]%l: %m");	/* error format (comma-separated list) */
 #  endif
 # endif
 #endif

@@ -1663,9 +1663,12 @@ Examples:
 "%f\ %l\ %t%*[^0123456789]%n:\ %m"	for SAS C
 "\"%f\",%*[^0123456789]%l:\ %m"		default for generic C compilers
 "%f:%l:%m"				for GCC
+"%f:%l:%c:%m,%f:%l:%m"			multiple formats separated by comma
 
 Note the backslash in front of a space and double quote. It is required for
-the :set command.
+the :set command. Multiple formats can be separated by commas (use "\," for
+a literal comma in a format). Each line is tested against each format in order
+until a match is found.
 
 The "%f" and "%m" conversions have to detect the end of the string. They
 should be followed by a character that cannot be in the string. Everything
