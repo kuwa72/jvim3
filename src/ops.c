@@ -1455,6 +1455,24 @@ dodis(void)
 }
 
 /*
+ * showregisterlist() - display registers and prompt for a register character.
+ * Returns the character typed, or ESC if canceled.
+ */
+	int
+showregisterlist(void)
+{
+	int		c;
+
+	dodis();
+	msg_outstr((char_u *)"\nRegister: ");
+	flushbuf();
+	c = vgetc();
+	gotocmdline(TRUE, NUL);
+	updateScreen(CLEAR);
+	return c;
+}
+
+/*
  * display a string for dodis()
  * truncate at end of screen line
  */
