@@ -30,6 +30,7 @@ static struct yankbuf
 	char_u		**y_array;		/* pointer to array of line pointers */
 	linenr_t 	y_size; 		/* number of lines in y_array */
 	char_u		y_type; 		/* MLINE, MCHAR or MBLOCK */
+	int			y_macro;		/* TRUE if recorded as a macro */
 } y_buf[36];					/* 0..9 = number buffers, 10..35 = char buffers */
 #ifdef NT
 static struct	yankbuf	y_clip;			/* clipboard buffer */
@@ -40,7 +41,7 @@ static int		yankappend;				/* TRUE when appending */
 static struct	yankbuf *y_previous = NULL; /* ptr to last written yank buffer */
 
 static void		get_yank_buffer __ARGS((int));
-static int		stuff_yank __ARGS((int, char_u *));
+static int		stuff_yank __ARGS((int, char_u *, int));
 static void		free_yank __ARGS((long));
 static void		free_yank_all __ARGS((void));
 static void		block_prep __ARGS((linenr_t, int));
@@ -237,7 +238,7 @@ dorecord(int c)
 		if (p == NULL)
 			retval = FAIL;
 		else
-			retval = (stuff_yank(bufname, p));
+			retval = (stuff_yank(bufname, p, TRUE));
 	}
 	return retval;
 }
@@ -249,7 +250,7 @@ dorecord(int c)
  * return FAIL for failure, OK otherwise
  */
 	static int
-stuff_yank(int bufname, char_u *p)
+stuff_yank(int bufname, char_u *p, int is_macro)
 {
 	char_u *lp;
 	char_u **pp;
@@ -273,6 +274,8 @@ stuff_yank(int bufname, char_u *p)
 		free(p);
 		free(*pp);
 		*pp = lp;
+		if (is_macro)
+			y_current->y_macro = TRUE;
 	}
 	else
 	{
@@ -285,6 +288,7 @@ stuff_yank(int bufname, char_u *p)
 		y_current->y_array[0] = p;
 		y_current->y_size = 1;
 		y_current->y_type = MCHAR;	/* used to be MLINE, why? */
+		y_current->y_macro = is_macro;
 	}
 	return OK;
 }
@@ -1347,10 +1351,10 @@ error:
 }
 
 /*
- * display the contents of the yank buffers
+ * display the contents of the yank buffers or recorded macros
  */
-	void
-dodis(void)
+	static void
+display_buffers(int macro_only)
 {
 	int						i, n;
 	long					j;
@@ -1359,7 +1363,7 @@ dodis(void)
 
 	gotocmdline(TRUE, NUL);
 
-	msg_outstr((char_u *)"--- Registers ---");
+	msg_outstr((char_u *)(macro_only ? "--- Macros ---" : "--- Registers ---"));
 #ifdef NT
 	for (i = -1; i < 37; ++i)
 #else
@@ -1368,6 +1372,8 @@ dodis(void)
 	{
 		if (i == -1)
 		{
+			if (macro_only)
+				continue;
 			if (y_previous != NULL)
 				yb = y_previous;
 			else
@@ -1376,13 +1382,15 @@ dodis(void)
 #ifdef NT
 		else if (i == 36)
 		{
+			if (macro_only)
+				continue;
 			get_clip();
 			yb = &y_clip;
 		}
 #endif
 		else
 			yb = &(y_buf[i]);
-		if (yb->y_array != NULL)
+		if (yb->y_array != NULL && (!macro_only || yb->y_macro))
 		{
 			msg_outchar('\n');
 			if (i == -1)
@@ -1424,34 +1432,49 @@ dodis(void)
 		}
 	}
 
-	/*
-	 * display last inserted text
-	 */
-	if ((p = get_last_insert()) != NULL)
+	if (!macro_only)
 	{
-		msg_outstr((char_u *)"\n\".   ");
-		dis_msg(p, TRUE);
-	}
+		/*
+		 * display last inserted text
+		 */
+		if ((p = get_last_insert()) != NULL)
+		{
+			msg_outstr((char_u *)"\n\".   ");
+			dis_msg(p, TRUE);
+		}
 
-	/*
-	 * display last command line
-	 */
-	if (last_cmdline != NULL)
-	{
-		msg_outstr((char_u *)"\n\":   ");
-		dis_msg(last_cmdline, FALSE);
-	}
+		/*
+		 * display last command line
+		 */
+		if (last_cmdline != NULL)
+		{
+			msg_outstr((char_u *)"\n\":   ");
+			dis_msg(last_cmdline, FALSE);
+		}
 
-	/*
-	 * display current file name
-	 */
-	if (curbuf->b_xfilename != NULL)
-	{
-		msg_outstr((char_u *)"\n\"%   ");
-		dis_msg(curbuf->b_xfilename, FALSE);
+		/*
+		 * display current file name
+		 */
+		if (curbuf->b_xfilename != NULL)
+		{
+			msg_outstr((char_u *)"\n\"%   ");
+			dis_msg(curbuf->b_xfilename, FALSE);
+		}
 	}
 
 	msg_end();
+}
+
+	void
+dodis(void)
+{
+	display_buffers(FALSE);
+}
+
+	void
+domacros(void)
+{
+	display_buffers(TRUE);
 }
 
 /*

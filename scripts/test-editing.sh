@@ -172,6 +172,33 @@ runhelp() {
 	fi
 }
 
+runscreen() {
+	counted && return
+	local name=$1 expect=$2 keys=$3 want=$4
+
+	keys=${keys//%/%%}
+	printf 'a\n' > "$tmp/in"
+	printf "$keys:q!\r" > "$tmp/keys"
+	rm -f "$tmp/screen"
+	pty "TERM=xterm $jvim -T xterm -s $tmp/keys $tmp/in" > "$tmp/screen" 2>&1
+
+	local got=bad
+	grep -qF -- "$want" "$tmp/screen" && got=ok
+
+	if [ "$expect" = ok ] && [ "$got" = ok ]; then
+		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
+	elif [ "$expect" = ok ]; then
+		printf '  FAIL        %s\n' "$name"
+		printf '                nothing matching %s on the screen\n' "$want"
+		fail=$((fail+1))
+	elif [ "$got" = bad ]; then
+		printf '  KNOWN-FAIL  %s\n' "$name"; xfail=$((xfail+1))
+	else
+		printf '  NOW PASSES  %s  <- update the expectation\n' "$name"
+		xpass=$((xpass+1))
+	fi
+}
+
 # runhelptyped <name> <expect> <keys after ":help"> <wanted on the screen> [times]
 #
 # runhelp with the keys typed rather than fed through "-s", for the same reason
@@ -297,6 +324,9 @@ run "u after dd"            ok "ddu"       "$ABC"              "$ABC"
 run "u after two dd"        ok "dddduu"    "$ABC"              "$ABC"
 run "U on a line"           ok "xxU"       'abc\n'             'abc\n'
 run "redo with ."           ok "dd."       "$ABC"              'c\nd\ne\n'
+runscreen ":macros shows recorded macro" ok 'qaix\033q:macros\r ' '"a   ix^[q'
+runscreen ":macros uppercase append"     ok 'qaix\033qqAiy\033q:macros\r ' '"a   ix^[qiy^[q'
+runscreen ":macros excludes normal yank" ok '"byy:macros\r ' '--- Macros ---'
 
 echo
 echo "ex ranges and commands:"
