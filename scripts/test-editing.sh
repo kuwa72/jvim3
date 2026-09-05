@@ -239,6 +239,44 @@ runtag() {
 	fi
 }
 
+runquickfix() {
+	counted && return
+	local name=$1 expect=$2 err_content=$3 keys=$4 want1=$5 want2=${6:-} want3=${7:-}
+
+	printf '%b' "$err_content" > "$tmp/err.txt"
+	printf 'foo 1\nfoo 2\nfoo 3\n' > "$tmp/foo.c"
+	printf 'bar 1\nbar 2\nbar 3\n' > "$tmp/bar.c"
+
+	keys=${keys//%/%%}
+	printf 'a\n' > "$tmp/in"
+	rm -f "$tmp/screen"
+	printf "$keys:q!\r:q!\r" > "$tmp/keys"
+	pty "TERM=xterm $jvim -T xterm -s $tmp/keys $tmp/in" > "$tmp/screen" 2>&1
+	rm -f "$tmp/err.txt" "$tmp/foo.c" "$tmp/bar.c"
+
+	local got=ok
+	grep -qF -- "$want1" "$tmp/screen" || got=bad
+	if [ -n "$want2" ]; then
+		grep -qF -- "$want2" "$tmp/screen" || got=bad
+	fi
+	if [ -n "$want3" ]; then
+		grep -qF -- "$want3" "$tmp/screen" || got=bad
+	fi
+
+	if [ "$expect" = ok ] && [ "$got" = ok ]; then
+		printf '  PASS        %s\n' "$name"; pass=$((pass+1))
+	elif [ "$expect" = ok ]; then
+		printf '  FAIL        %s\n' "$name"
+		printf '                nothing matching %s on the screen\n' "$want1"
+		fail=$((fail+1))
+	elif [ "$got" = bad ]; then
+		printf '  KNOWN-FAIL  %s\n' "$name"; xfail=$((xfail+1))
+	else
+		printf '  NOW PASSES  %s  <- update the expectation\n' "$name"
+		xpass=$((xpass+1))
+	fi
+}
+
 # runhelptyped <name> <expect> <keys after ":help"> <wanted on the screen> [times]
 #
 # runhelp with the keys typed rather than fed through "-s", for the same reason
@@ -530,6 +568,23 @@ if [ -z "$count_only" ]; then
 else
 	cases=$((cases+1))
 fi
+
+echo
+echo "quickfix errorformat:"
+runquickfix "quickfix: single format" ok \
+	"$tmp/foo.c:2: error: bad foo\n" \
+	":set efm=%f:%l:%m\r:cf $tmp/err.txt\r" \
+	'(1 of 1)' 'foo 2'
+
+runquickfix "quickfix: multiple formats comma separated" ok \
+	"$tmp/foo.c:2:10: error: bad foo\n$tmp/bar.c:3: warning: bad bar\n" \
+	":set efm=%f:%l:%c:%m,%f:%l:%m\r:cf $tmp/err.txt\r:cn\r" \
+	'(1 of 2)' '(2 of 2)' 'warning: bad bar'
+
+runquickfix "quickfix: multiple formats with escaped comma" ok \
+	"$tmp/foo.c:2: err, bad foo\n" \
+	":set efm=%f:%l:\ %m\\,detail,%f:%l:\ %m\r:cf $tmp/err.txt\r" \
+	'(1 of 1)' 'foo 2'
 
 if [ -n "$count_only" ]; then
 	printf 'cases %d\n' "$cases"

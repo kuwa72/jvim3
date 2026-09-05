@@ -46,6 +46,23 @@ static int	qf_index;			/* current index in the error list */
 static int	qf_nonevalid;		/* set to TRUE if not a single valid entry found */
 
 /*
+ * Structure for compiled errorformat
+ */
+struct qf_fmt
+{
+	char_u			*fmtstr;
+	int				adr_cnt;
+	int				spec_order[7];	/* maps argument index to specifier type */
+};
+
+#define QF_SPEC_F	1	/* %f: namebuf */
+#define QF_SPEC_M	2	/* %m: errmsg */
+#define QF_SPEC_C	3	/* %c: col */
+#define QF_SPEC_L	4	/* %l: lnum */
+#define QF_SPEC_N	5	/* %n: enr */
+#define QF_SPEC_T	6	/* %t: type */
+
+/*
  * Read the errorfile into memory, line by line, building the error list.
  * Return FAIL for error, OK for success.
  */
@@ -71,6 +88,10 @@ qf_init(void)
 	int				adr_cnt = 0;
 	int				maxlen;
 	int				i;
+	struct qf_fmt	*fmt_list = NULL;
+	int				fmt_count = 0;
+	int				fmt_idx;
+	char_u			*pcur;
 
 	if (p_ef == NULL || *p_ef == NUL)
 	{
@@ -88,85 +109,127 @@ qf_init(void)
 	}
 	qf_free();
 	qf_index = 0;
-	for (i = 0; i < 7; ++i)
-		adr[i] = NULL;
 
 /*
- * The format string is copied and modified from p_efm to fmtstr.
- * Only a few % characters are allowed.
+ * Count format strings in p_efm (comma-separated, backslash-comma escapes).
  */
-		/* get some space to modify the format string into */
-		/* must be able to do the largest expansion 7 times (7 x 3) */
-	maxlen = STRLEN(p_efm) + 25;
-	fmtstr = alloc(maxlen);
-	if (fmtstr == NULL)
-		goto error2;
-	for (pfmt = p_efm, i = 0; *pfmt; ++pfmt, ++i)
+	for (pcur = p_efm; *pcur; ++pcur)
 	{
-		if (pfmt[0] != '%')				/* copy normal character */
-			fmtstr[i] = pfmt[0];
-		else
-		{
-			fmtstr[i++] = '%';
-			switch (pfmt[1])
-			{
-			case 'f':		/* filename */
-					adr[adr_cnt++] = namebuf;
+		if (*pcur == '\\' && pcur[1] != NUL)
+			++pcur;
+		else if (*pcur == ',')
+			++fmt_count;
+	}
+	++fmt_count;
 
-			case 'm':		/* message */
-					if (pfmt[1] == 'm')
-						adr[adr_cnt++] = errmsg;
-					fmtstr[i++] = '[';
-					fmtstr[i++] = '^';
-					if (pfmt[2])
-						fmtstr[i++] = pfmt[2];
-					else
-#ifdef MSDOS
-						fmtstr[i++] = '\r';
-#else
-						fmtstr[i++] = '\n';
-#endif
-					fmtstr[i] = ']';
-					break;
-			case 'c':		/* column */
-					adr[adr_cnt++] = &col;
-					fmtstr[i] = 'd';
-					break;
-			case 'l':		/* line */
-					adr[adr_cnt++] = &lnum;
-					fmtstr[i++] = 'l';
-					fmtstr[i] = 'd';
-					break;
-			case 'n':		/* error number */
-					adr[adr_cnt++] = &enr;
-					fmtstr[i] = 'd';
-					break;
-			case 't':		/* error type */
-					adr[adr_cnt++] = &type;
-					fmtstr[i] = 'c';
-					break;
-			case '%':		/* %% */
-			case '*':		/* %*: no assignment */
-					fmtstr[i] = pfmt[1];
-					break;
-			default:
-					EMSG("invalid % in format string");
-					goto error2;
-			}
-			if (adr_cnt == 7)
+	fmt_list = (struct qf_fmt *)alloc((unsigned)(fmt_count * sizeof(struct qf_fmt)));
+	if (fmt_list == NULL)
+		goto error2;
+	for (i = 0; i < fmt_count; ++i)
+	{
+		fmt_list[i].fmtstr = NULL;
+		fmt_list[i].adr_cnt = 0;
+	}
+
+/*
+ * Compile each format string in p_efm.
+ */
+	pcur = p_efm;
+	for (fmt_idx = 0; fmt_idx < fmt_count; ++fmt_idx)
+	{
+		adr_cnt = 0;
+		maxlen = STRLEN(pcur) + 25;
+		fmtstr = alloc(maxlen);
+		if (fmtstr == NULL)
+			goto error2;
+
+		for (i = 0; *pcur && (*pcur != ',' || (pcur > p_efm && *(pcur - 1) == '\\')); ++pcur, ++i)
+		{
+			if (*pcur == '\\' && pcur[1] == ',')
 			{
-				EMSG("too many % in format string");
+				/* escaped comma: copy literal comma */
+				++pcur;
+				fmtstr[i] = *pcur;
+				continue;
+			}
+			if (*pcur != '%')				/* copy normal character */
+				fmtstr[i] = *pcur;
+			else
+			{
+				fmtstr[i++] = '%';
+				switch (pcur[1])
+				{
+				case 'f':		/* filename */
+						fmt_list[fmt_idx].spec_order[adr_cnt++] = QF_SPEC_F;
+						goto handle_str;
+
+				case 'm':		/* message */
+						fmt_list[fmt_idx].spec_order[adr_cnt++] = QF_SPEC_M;
+handle_str:
+						fmtstr[i++] = '[';
+						fmtstr[i++] = '^';
+						if (pcur[2] && (pcur[2] != ',' || (pcur > p_efm && *(pcur - 1) == '\\')))
+						{
+							if (pcur[2] == '\\' && pcur[3] == ',')
+								fmtstr[i++] = ',';
+							else
+								fmtstr[i++] = pcur[2];
+						}
+						else
+#ifdef MSDOS
+							fmtstr[i++] = '\r';
+#else
+							fmtstr[i++] = '\n';
+#endif
+						fmtstr[i] = ']';
+						break;
+				case 'c':		/* column */
+						fmt_list[fmt_idx].spec_order[adr_cnt++] = QF_SPEC_C;
+						fmtstr[i] = 'd';
+						break;
+				case 'l':		/* line */
+						fmt_list[fmt_idx].spec_order[adr_cnt++] = QF_SPEC_L;
+						fmtstr[i++] = 'l';
+						fmtstr[i] = 'd';
+						break;
+				case 'n':		/* error number */
+						fmt_list[fmt_idx].spec_order[adr_cnt++] = QF_SPEC_N;
+						fmtstr[i] = 'd';
+						break;
+				case 't':		/* error type */
+						fmt_list[fmt_idx].spec_order[adr_cnt++] = QF_SPEC_T;
+						fmtstr[i] = 'c';
+						break;
+				case '%':		/* %% */
+				case '*':		/* %*: no assignment */
+						fmtstr[i] = pcur[1];
+						break;
+				default:
+						EMSG("invalid % in format string");
+						free(fmtstr);
+						goto error2;
+				}
+				if (adr_cnt == 7)
+				{
+					EMSG("too many % in format string");
+					free(fmtstr);
+					goto error2;
+				}
+				++pcur;
+			}
+			if (i >= maxlen - 6)
+			{
+				EMSG("invalid format string");
+				free(fmtstr);
 				goto error2;
 			}
-			++pfmt;
 		}
-		if (i >= maxlen - 6)
-		{
-			EMSG("invalid format string");
-			goto error2;
-		}
+		fmtstr[i] = NUL;
+		fmt_list[fmt_idx].fmtstr = fmtstr;
+		fmt_list[fmt_idx].adr_cnt = adr_cnt;
+		if (*pcur == ',')
+			++pcur;
 	}
-	fmtstr[i] = NUL;
 
 	while (fgets((char *)IObuff, CMDBUFFSIZE, fd) != NULL && !got_int)
 	{
@@ -186,10 +249,35 @@ qf_init(void)
 		col = 0;
 		enr = -1;
 		type = 0;
-		valid = TRUE;
+		valid = FALSE;
 
-		if (sscanf((char *)IObuff, (char *)fmtstr, adr[0], adr[1], adr[2], adr[3],
-												adr[4], adr[5]) != adr_cnt)
+		for (fmt_idx = 0; fmt_idx < fmt_count; ++fmt_idx)
+		{
+			adr_cnt = fmt_list[fmt_idx].adr_cnt;
+			for (i = 0; i < 7; ++i)
+				adr[i] = NULL;
+			for (i = 0; i < adr_cnt; ++i)
+			{
+				switch (fmt_list[fmt_idx].spec_order[i])
+				{
+				case QF_SPEC_F:	adr[i] = namebuf;	break;
+				case QF_SPEC_M:	adr[i] = errmsg;	break;
+				case QF_SPEC_C:	adr[i] = &col;		break;
+				case QF_SPEC_L:	adr[i] = &lnum;		break;
+				case QF_SPEC_N:	adr[i] = &enr;		break;
+				case QF_SPEC_T:	adr[i] = &type;		break;
+				}
+			}
+
+			if (sscanf((char *)IObuff, (char *)fmt_list[fmt_idx].fmtstr,
+					adr[0], adr[1], adr[2], adr[3], adr[4], adr[5]) == adr_cnt)
+			{
+				valid = TRUE;
+				break;
+			}
+		}
+
+		if (!valid)
 		{
 #ifdef USE_OPT
 			if (p_opt & OPT_NO_ERR_DISP)
@@ -243,7 +331,15 @@ qf_init(void)
 		}
 		breakcheck();
 	}
-	free(fmtstr);
+
+	if (fmt_list != NULL)
+	{
+		for (i = 0; i < fmt_count; ++i)
+			free(fmt_list[i].fmtstr);
+		free(fmt_list);
+		fmt_list = NULL;
+	}
+
 	if (!ferror(fd))
 	{
 		if (qf_index == 0)		/* no valid entry found */
@@ -262,6 +358,12 @@ qf_init(void)
 error1:
 	free(qfp);
 error2:
+	if (fmt_list != NULL)
+	{
+		for (i = 0; i < fmt_count; ++i)
+			free(fmt_list[i].fmtstr);
+		free(fmt_list);
+	}
 	fclose(fd);
 	qf_free();
 	return FAIL;
