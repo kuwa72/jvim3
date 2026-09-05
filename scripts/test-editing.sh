@@ -287,6 +287,9 @@ run "named register"        ok '"ayy"ap'   'a\nb\n'            'a\na\nb\n'
 run "delete then put"       ok 'ddp'       'a\nb\n'            'b\na\n'
 run "mark and delete to it" ok "majjd'a"   "$ABC"              'd\ne\n'
 run "backtick mark"         ok 'wma0d`a'   'one two\n'         'two\n'
+run "'? jumps to mark"      ok "majjd'?a"  "$ABC"              'd\ne\n'
+run "\`? jumps to mark"      ok 'wma0d`?a'  'one two\n'         'two\n'
+run "'? canceled by ESC"    ok "majjd'?\033d'a" "$ABC"         'd\ne\n'
 run "u after dd"            ok "ddu"       "$ABC"              "$ABC"
 run "u after two dd"        ok "dddduu"    "$ABC"              "$ABC"
 run "U on a line"           ok "xxU"       'abc\n'             'abc\n'

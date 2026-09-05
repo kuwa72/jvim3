@@ -1542,6 +1542,15 @@ dooperator:
 		/* FALLTHROUGH */
 
 	  case '`':
+		if (nchar == '?')
+		{
+			nchar = showmarklist();
+			if (nchar == ESC || nchar == Ctrl('C'))
+			{
+				CLEAROP;
+				break;
+			}
+		}
 		pos = getmark(nchar, (operator == NOP));
 		if (pos == (FPOS *)-1)	/* jumped to other file */
 		{

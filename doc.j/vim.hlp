@@ -90,7 +90,8 @@ matches 1 or more of the preceding atom      \+           \+
    `<a-zA-Z>    <a-zA-Z> のマーク位置に移動する
    ``           最後に飛んだマーク位置に移動する
    `[ or `]     go to the start or end of the previously operated or put text
-   '<a-zA-Z[]'> マーク位置の空白でない行頭へ飛ぶ
+   `<a-zA-Z>`   `? でマーク一覧を表示し、選択したマーク位置に移動する
+   '<a-zA-Z[]'> マーク位置の空白でない行頭へ飛ぶ ('? で一覧表示)
 :marks          マーク位置の表示
 N  CTRL-O       過去に移動したジャンプ位置を遡る
 N  CTRL-I       過去に移動したジャンプ位置を進む
