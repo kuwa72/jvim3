@@ -1,9 +1,13 @@
 # Project Instructions for OpenCode
 
+詳細なGitHub運用は [GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md) を参照する。
+
 ## Issue 開発フロー
-- **TDD (テスト駆動開発) の徹底**: 実装に先立ち、まずは期待される動作を検証するテストケース（`scripts/test-*.sh`）を追加して失敗を確認（Red）し、その後実装を行ってテストをパス（Green）させる。
-- **PR・CI 検証・マージ**:
-  - 作業ブランチを作成してコミット。
-  - GitHub CLI (`gh pr create`) で PR を作成。
-  - GitHub Actions CI の完了・成功 (`gh pr checks`) を確認。
-  - CI 成功を確認した上でマージ (`gh pr merge`) まで完結させる。
+
+- TDDで、まず `scripts/test-*.sh` に失敗するテストを追加してRedを確認し、その後実装してGreenを確認する。
+- `test`、`strict`、必要に応じて `asan` / `ubsan` を実行する。
+- `master` ベースでPRを作成する。
+- GitHub Actionsの全CIが終了して成功するまで待つ。
+- CI成功後にマージし、関連Issueのクローズとマージコミットを確認する。
+
+PR作成やCI起動だけではIssue対応を完了しない。調査結果・設計判断はIssueコメントに残し、着手順・依存関係はTracking Issueで管理する。

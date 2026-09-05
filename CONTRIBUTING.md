@@ -47,6 +47,10 @@ You do not need a mingw toolchain to test the exact binary a release ships:
 crashes, `scripts/resolve-crash.sh` turns the report in
 `%LOCALAPPDATA%\jvim3\report.log` back into source lines.
 
+## GitHub workflow
+
+The project workflow for Issues, Tracking Issues, TDD, pull requests, CI and merging is documented in [GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md).
+
 ## Where things are
 
 | | |

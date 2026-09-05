@@ -46,6 +46,10 @@ CI は push と pull request のたびに、Linux、FreeBSD、NetBSD、OpenBSD�
 ダウンロードします。クラッシュしたら `scripts/resolve-crash.sh` が
 `%LOCALAPPDATA%\jvim3\report.log` のレポートをソース行に戻します。
 
+## GitHubの運用
+
+Issue、Tracking Issue、TDD、プルリクエスト、CI、マージの運用は [GITHUB_WORKFLOW.md](GITHUB_WORKFLOW.md) にまとめています。
+
 ## どこに何があるか
 
 | | |
