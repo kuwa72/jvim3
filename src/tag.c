@@ -531,6 +531,7 @@ findtagex(char_u *tag)
 		struct _t		*	next;
 		char_u			*	filename;
 		char_u			*	pattern;
+		char_u			*	tagname;
 		char_u			*	display;
 	} _tags;
 	_tags				*	top	= NULL;
@@ -798,6 +799,7 @@ findtagex(char_u *tag)
 					now->next		= NULL;
 					now->filename	= strsave(fname);
 					now->pattern	= strsave(pbuf);
+					now->tagname	= strsave(lbuf);
 					now->display	= strsave(p2);
 				}
 				if (p)
@@ -827,37 +829,52 @@ erret:
 	{
 		gotocmdline(TRUE, NUL);
 		msg_start();
-		msg_outstr((char_u *)"\n  #  file             type\n");
+		msg_outstr((char_u *)"\n  #  file             type         tag\n");
 		for (now = top, i = 0; i < count; i++)
 		{
-			if (0/* now->display[0] */)
+			char_u	kchar = NUL;
+			char_u	*tagdisp;
+
+			p2 = now->display;
+			while (*p2)
 			{
-				switch (now->display[0]) {
-				case 'c':	np = "classes";		break;
-				case 'd':	np = "macro";		break;
-				case 'e':	np = "enumerators";	break;
-				case 'f':	np = "function";	break;
-				case 'g':	np = "enum";		break;
-				case 'm':	np = "member";		break;
-				case 'n':	np = "namespaces";	break;
-				case 'p':	np = "prototype";	break;
-				case 's':	np = "structure";	break;
-				case 't':	np = "typedef";		break;
-				case 'u':	np = "union";		break;
-				case 'v':	np = "variable";	break;
-				case 'x':	np = "external";	break;
-				default:	np = "unknown";		break;
+				if (STRNCMP(p2, "kind:", 5) == 0 && p2[5] != NUL)
+				{
+					kchar = p2[5];
+					break;
 				}
-				p2 = &now->display[1];
-				skipspace(&p2);
-				sprintf((char *)IObuff, " %02d: %-16s %-12s %s",
-										i + 1, gettail(now->filename), np, p2);
+				p2++;
 			}
-			else
+			if (kchar == NUL && now->display[0] != NUL)
 			{
-				sprintf((char *)IObuff, " %02d: %-16s %s",
-								i + 1, gettail(now->filename), now->display);
+				if (isalpha(now->display[0]) && (now->display[1] == NUL || isspace(now->display[1])))
+					kchar = now->display[0];
 			}
+
+			switch (kchar) {
+			case 'c':	np = "classes";		break;
+			case 'd':	np = "macro";		break;
+			case 'e':	np = "enumerators";	break;
+			case 'f':	np = "function";	break;
+			case 'g':	np = "enum";		break;
+			case 'm':	np = "member";		break;
+			case 'n':	np = "namespaces";	break;
+			case 'p':	np = "prototype";	break;
+			case 's':	np = "structure";	break;
+			case 't':	np = "typedef";		break;
+			case 'u':	np = "union";		break;
+			case 'v':	np = "variable";	break;
+			case 'x':	np = "external";	break;
+			case NUL:
+			case '?':	np = "?";		break;
+			default:	np = "?";		break;
+			}
+
+			tagdisp = (now->tagname != NULL && now->tagname[0] != NUL) ? now->tagname : now->display;
+			sprintf((char *)IObuff, " %02d: %-16s %-12s %s",
+									i + 1, gettail(now->filename), np, tagdisp);
+			if (Columns > 0 && STRLEN(IObuff) >= Columns)
+				IObuff[Columns - 1] = NUL;
 			msg_outstr(IObuff);
 			msg_outchar('\n');
 			flushbuf();
@@ -936,6 +953,7 @@ clear:
 		top = now->next;
 		free(now->filename);
 		free(now->pattern);
+		free(now->tagname);
 		free(now->display);
 		free(now);
 		now = top;
