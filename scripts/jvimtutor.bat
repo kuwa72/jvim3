@@ -10,7 +10,10 @@ if "%TUTOR_TMP%"=="" set TUTOR_TMP=.
 set JVIM_DIR=%~dp0
 set BIN=%JVIM_DIR%jvim32w.exe
 if not exist "%BIN%" set BIN=%JVIM_DIR%jvim32.exe
+if not exist "%BIN%" set BIN=%JVIM_DIR%jvim64w.exe
+if not exist "%BIN%" set BIN=%JVIM_DIR%jvim64.exe
 if not exist "%BIN%" set BIN=jvim32.exe
+if not exist "%BIN%" set BIN=jvim64.exe
 
 set TUTOR_SRC=
 rem Check for Japanese tutor

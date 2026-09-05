@@ -205,6 +205,8 @@ if [ "$TARGET" = release ]; then
 		cp -pR "$root/dist/$arch/syntax" "$rel/$name/syntax"
 		cp -pR "$root/dist/$arch/colors" "$rel/$name/colors"
 		[ -d "$root/dist/$arch/tools" ] && cp -pR "$root/dist/$arch/tools" "$rel/$name/tools"
+		cp_crlf "$root/dist/$arch/jvimtutor.bat" "$rel/$name/jvimtutor.bat"
+		cp -pR "$root/dist/$arch/tutor" "$rel/$name/tutor"
 		# makefile.mingw calls its targets jvim32*.exe whatever the architecture
 		# is; the name in the package says which one it actually is.
 		cp -p "$root/dist/$arch/jvim32w.exe" "$rel/$name/jvim${bits}w.exe"
