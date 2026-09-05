@@ -307,6 +307,54 @@ domarks(void)
 }
 
 /*
+ * showmarklist() - display marks and prompt for a mark character.
+ * Returns the character typed, or ESC if canceled.
+ */
+	int
+showmarklist(void)
+{
+	int			i;
+	char_u		*name;
+	int			c;
+
+	gotocmdline(TRUE, NUL);
+	msg_outstr((char_u *)"\nmark line  file\n");
+	for (i = 0; i < NMARKS; ++i)
+	{
+		if (curbuf->b_namedm[i].lnum != 0)
+		{
+			sprintf((char *)IObuff, " %c %5ld\n", i + 'a',
+												curbuf->b_namedm[i].lnum);
+			msg_outstr(IObuff);
+		}
+		flushbuf();
+	}
+	for (i = 0; i < NMARKS; ++i)
+	{
+		if (namedfm[i].mark.lnum != 0)
+		{
+			name = fm_getname(&namedfm[i]);
+			if (name == NULL)		/* file name not available */
+				continue;
+
+			sprintf((char *)IObuff, " %c %5ld  %s\n",
+				i + 'A',
+				namedfm[i].mark.lnum,
+				name);
+			msg_outstr(IObuff);
+		}
+		flushbuf();				/* show one line at a time */
+	}
+
+	msg_outstr((char_u *)"Mark: ");
+	flushbuf();
+	c = vgetc();
+	gotocmdline(TRUE, NUL);
+	updateScreen(CLEAR);
+	return c;
+}
+
+/*
  * print the jumplist
  */
 	void
