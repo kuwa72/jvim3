@@ -531,6 +531,7 @@ full descriptions are in [doc.j/readme.doc](doc.j/readme.doc) §6 to §9.
 | `jreplace` (`jrep`) | Replace mode counts characters rather than columns: `R` with `あいう` over `123456` leaves `あいう456`, not `あいう`. On by default. |
 | `jtilde` (`jt`) | Let `~` work on Japanese too — `あ` to `ア`, `♂` to `♀`. Off by default. |
 | `jignorecase` (`jic`) | Loose searching: `a`, `A`, `ａ` and `Ａ` all match each other. Off by default. |
+| `smartcase` (`scs`) | Override `ignorecase` when the search pattern contains uppercase characters. Off by default. |
 | `jjoinspaces` (`jjs`) | Whether `J` puts a space between two Japanese lines. |
 | `window` (`win`) | GUI window size, `:set win=80,25`, usable from a modeline. |
 | `whichwrap` (`ww`) | The original bits 1–16, plus 32 and 64, which change where a word motion stops when Japanese, ASCII and spaces meet. |

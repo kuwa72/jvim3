@@ -9,7 +9,7 @@ welcome as English, in issues, pull requests and commit messages.
 
 Three things:
 
-1. `./scripts/build-unix.sh test` passes — 256 cases, and they run in about a
+1. `./scripts/build-unix.sh test` passes — 261 cases, and they run in about a
    minute and a half.
 
 2. `./scripts/build-unix.sh strict` passes. That is the same `-Werror=` set CI
