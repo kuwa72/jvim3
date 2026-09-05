@@ -2130,6 +2130,11 @@ doabbr:
 				help();
 				break;
 
+		case CMD_tutor:
+		case CMD_Tutor:
+				dotutor();
+				break;
+
 		case CMD_version:
 #ifndef KANJI
 				msg(longVersion);

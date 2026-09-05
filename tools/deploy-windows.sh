@@ -134,16 +134,18 @@ for arch in i686 x86_64; do
   gui_exe="$out/jvim${bits}w.exe"
   con_exe="$out/jvim${bits}.exe"
   hlp_file="$out/vim.hlp"
+  tutor_bat="$out/jvimtutor.bat"
   syntax_count=$(ls "$out"/syntax/*.jvsyn 2>/dev/null | wc -l)
 
-  printf '  %-14s gui=%s con=%s hlp=%s syntax=%d\n' \
+  printf '  %-14s gui=%s con=%s hlp=%s tutor=%s syntax=%d\n' \
     "$folder_name" \
     "$([ -f "$gui_exe" ] && echo yes || echo NO)" \
     "$([ -f "$con_exe" ] && echo yes || echo NO)" \
     "$([ -f "$hlp_file" ] && echo yes || echo NO)" \
+    "$([ -f "$tutor_bat" ] && echo yes || echo NO)" \
     "$syntax_count"
 
-  if [ ! -f "$gui_exe" ] || [ ! -f "$con_exe" ] || [ ! -f "$hlp_file" ] || [ "$syntax_count" -eq 0 ]; then
+  if [ ! -f "$gui_exe" ] || [ ! -f "$con_exe" ] || [ ! -f "$hlp_file" ] || [ ! -f "$tutor_bat" ] || [ "$syntax_count" -eq 0 ]; then
     echo "deploy: incomplete installation in $out" >&2
     exit 1
   fi

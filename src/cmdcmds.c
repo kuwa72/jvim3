@@ -14,6 +14,9 @@
 #include "globals.h"
 #include "proto.h"
 #include "param.h"
+#ifdef USE_LOCALE
+#include <locale.h>
+#endif
 #ifdef KANJI
 #include "kanji.h"
 #endif
@@ -577,4 +580,148 @@ error:
 	}
 	remove((char *)itmp);
 	remove((char *)otmp);
+}
+
+/*
+ * :Tutor / :tutor command
+ *
+ * Open a copy of the tutorial so the user can practice without modifying
+ * the installed master copy.
+ */
+	void
+dotutor(void)
+{
+	char_u		template[TMPNAMELEN];
+	char_u		dest[MAXPATHL];
+	char_u		srcpath[MAXPATHL];
+	char_u		cand[MAXPATHL];
+	char_u		*p;
+	char_u		*vimdir;
+	FILE		*srcfp = NULL;
+	FILE		*dstfp = NULL;
+	int			c;
+	int			is_ja = FALSE;
+	int			i;
+	static char *ja_cands[] = {
+		"$VIM/tutor/tutor.j",
+		"$VIM/doc.j/tutor/tutor.j",
+		"doc.j/tutor/tutor.j",
+		"tutor/tutor.j",
+		NULL
+	};
+	static char *en_cands[] = {
+		"$VIM/tutor/tutor",
+		"tutor/tutor",
+		NULL
+	};
+
+	/* Determine if Japanese tutorial is preferred */
+#ifdef USE_LOCALE
+	p = (char_u *)setlocale(LC_CTYPE, "");
+#else
+	p = NULL;
+#endif
+	if (p == NULL)
+		p = vimgetenv((char_u *)"LC_ALL");
+	if (p == NULL)
+		p = vimgetenv((char_u *)"LC_CTYPE");
+	if (p == NULL)
+		p = vimgetenv((char_u *)"LANG");
+	if (p != NULL)
+	{
+		if (strstr((char *)p, "ja") != NULL
+				|| strstr((char *)p, "JA") != NULL
+				|| strstr((char *)p, "jp") != NULL
+				|| strstr((char *)p, "JP") != NULL)
+			is_ja = TRUE;
+	}
+#ifdef KANJI
+	if (!is_ja && (JP_SYS == JP_SJIS || JP_SYS == JP_EUC || JP_SYS == JP_JIS))
+		is_ja = TRUE;
+#endif
+
+	srcpath[0] = NUL;
+
+	/* 1. Try Japanese tutor if preferred */
+	if (is_ja)
+	{
+		for (i = 0; ja_cands[i] != NULL; i++)
+		{
+			expand_env((char_u *)ja_cands[i], cand, MAXPATHL);
+			srcfp = fopen((char *)cand, READBIN);
+			if (srcfp != NULL)
+			{
+				STRCPY(srcpath, cand);
+				break;
+			}
+		}
+	}
+
+	/* 2. Try English tutor if Japanese not preferred or not found */
+	if (srcfp == NULL)
+	{
+		for (i = 0; en_cands[i] != NULL; i++)
+		{
+			expand_env((char_u *)en_cands[i], cand, MAXPATHL);
+			srcfp = fopen((char *)cand, READBIN);
+			if (srcfp != NULL)
+			{
+				STRCPY(srcpath, cand);
+				break;
+			}
+		}
+	}
+
+	/* 3. If still not found and not Japanese, try Japanese tutor as fallback */
+	if (srcfp == NULL && !is_ja)
+	{
+		for (i = 0; ja_cands[i] != NULL; i++)
+		{
+			expand_env((char_u *)ja_cands[i], cand, MAXPATHL);
+			srcfp = fopen((char *)cand, READBIN);
+			if (srcfp != NULL)
+			{
+				STRCPY(srcpath, cand);
+				break;
+			}
+		}
+	}
+
+	if (srcfp == NULL)
+	{
+		EMSG("Tutor file not found");
+		return;
+	}
+
+	/* Create temporary file for editing */
+	STRCPY(template, TMPNAME1);
+	if (vim_mktemp(template) == FAIL)
+	{
+		fclose(srcfp);
+		emsg(e_notmp);
+		return;
+	}
+	STRCPY(dest, template);
+
+	dstfp = fopen((char *)dest, WRITEBIN);
+	if (dstfp == NULL)
+	{
+		fclose(srcfp);
+		remove((char *)dest);
+		emsg2(e_notcreate, dest);
+		return;
+	}
+
+	while ((c = getc(srcfp)) != EOF)
+		putc(c, dstfp);
+
+	fclose(srcfp);
+	fclose(dstfp);
+
+	/* Open the copied file in current window / buffer */
+	if (doecmd(dest, NULL, NULL, p_hid, (linenr_t)1) == FAIL)
+	{
+		remove((char *)dest);
+		return;
+	}
 }

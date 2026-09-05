@@ -20,8 +20,9 @@ repository and would drift within three releases.
 - Bundled standalone lightweight C code formatter tool (`tools/cformat.c` / `cformat.exe`) in Windows packages.
 - Added `:macros` command to display recorded keyboard macros only.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
-- Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, and tag jump candidate selection.
-  275 cases now.
+- Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
+- Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
+  279 cases now.
 
 
 

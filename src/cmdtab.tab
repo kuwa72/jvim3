@@ -174,6 +174,8 @@ static struct
 	{(char_u *)"t",				RANGE+EXTRA+TRLBAR},
 	{(char_u *)"tag",			RANGE+NOTADR+COUNT+BANG+WORD1+TRLBAR+ZEROR},
 	{(char_u *)"tags",			TRLBAR},
+	{(char_u *)"tutor",			TRLBAR},
+	{(char_u *)"Tutor",			TRLBAR},
 	{(char_u *)"unabbreviate",	EXTRA+TRLBAR+USECTRLV},
 	{(char_u *)"undo",			TRLBAR},
 	{(char_u *)"unhide",		TRLBAR},

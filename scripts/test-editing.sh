@@ -509,6 +509,28 @@ runhelptyped "twice reaches the third and no further" ok '\033OB\033OB\r' \
 runhelptyped "the up arrow goes back a screen" ok '\033OB\033OB\033OA\r' \
 		'N  f<char>' 2
 
+echo
+echo ":Tutor command:"
+runscreen ":Tutor opens tutor buffer" ok ':Tutor\r' 'Lesson 1.0'
+runscreen ":tutor opens tutor buffer" ok ':tutor\r' 'Lesson 1.0'
+runscreen "Japanese locale opens tutor.j" ok ':set helplang=ja\r:Tutor\r' 'Lesson 1.0'
+
+# Test scripts/jvimtutor directly
+if [ -z "$count_only" ]; then
+	tmpkeys="$tmp/tutorkeys"
+	printf ':q!\r' > "$tmpkeys"
+	rm -f "$tmp/screen"
+	pty "TERM=xterm JVIM='$jvim' '$root/scripts/jvimtutor' -T xterm -s '$tmpkeys'" > "$tmp/screen" 2>&1
+	if grep -qF "Lesson 1.0" "$tmp/screen"; then
+		printf '  PASS        jvimtutor script opens tutorial\n'; pass=$((pass+1))
+	else
+		printf '  FAIL        jvimtutor script opens tutorial\n'; fail=$((fail+1))
+	fi
+	cases=$((cases+1))
+else
+	cases=$((cases+1))
+fi
+
 if [ -n "$count_only" ]; then
 	printf 'cases %d\n' "$cases"
 	exit 0
