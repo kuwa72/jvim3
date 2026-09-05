@@ -17,6 +17,7 @@ working editor.
 - [Display and fonts](#display-and-fonts)
 - [Colour schemes](#colour-schemes)
 - [What you get beyond vi](#what-you-get-beyond-vi)
+- [Differences between Ex commands and Vim commands](#differences-between-ex-commands-and-vim-commands)
 - [What JVim adds](#what-jvim-adds)
 - [What was removed](#what-was-removed)
 - [Where settings live](#where-settings-live)
@@ -411,10 +412,10 @@ scheme does the same thing from a command, and gives the result a name:
 | `:highlight ...` (`:hi`) | Vim's own syntax for setting one group, straight from the command line or a script — this is what a colour scheme file is built from. |
 | `set background=dark\|light` (`bg`) | Only switches anything while the active scheme is `default` or `default-light`: it toggles between those two. A named theme (`dracula`, `nord`, ...) is left as it is. |
 
-Eleven themes are bundled, in `colors/`, packaged and installed the same way
-as `syntax/`: `default` (dark), `default-light`, `dracula`, `nord`,
-`gruvbox`, `monokai`, `one-dark`, `desert`, `tokyonight`, `solarized-dark`,
-`solarized-light`.
+Sixteen themes are bundled, in `colors/`, packaged and installed the same way
+as `syntax/`: `default` (dark), `default-light`, `catppuccin-mocha`, `catppuccin-latte`,
+`dracula`, `everforest`, `gruvbox`, `kanagawa`, `monokai`, `nord`, `one-dark`,
+`rose-pine`, `desert`, `tokyonight`, `solarized-dark`, `solarized-light`.
 
 ```vim
 :colorscheme dracula
@@ -497,6 +498,28 @@ Vim 3.0 is vi plus this short list:
 The `Q` command (go to Ex mode) from vi is missing. That is the only thing from vi that is not here, and
 [doc/difference.doc](doc/difference.doc) is the full account of what changed in
 either direction.
+
+## Differences between Ex commands and Vim commands
+
+JVim 3 (and vi/Vim in general) divides actions into two primary interaction models: **normal mode Vim commands** and **line-oriented Ex commands** prefixed with `:`.
+
+| Category | Vim Commands (Normal mode) | Ex Commands (Command-line mode) |
+|---|---|---|
+| **Input method** | Direct keystrokes in normal mode (`dd`, `cw`, `gg`, `>>`, etc.) | Entered on the command-line after `:` (`:w`, `:s`, `:global`, etc.) |
+| **Target scope** | Cursor position, characters, words, text motions | Primarily line ranges (line numbers, `%`, `'a,'b`, etc.) |
+| **Primary purpose** | Immediate cursor navigation, focused in-place editing | File operations, global substitutions, settings, external pipes |
+| **Execution** | Executes immediately on keystroke without <kbd>Enter</kbd> | Requires pressing <kbd>Enter</kbd> to confirm and execute |
+
+### Key characteristics and guidelines
+
+1. **Range operations are much more expressive in Ex commands**
+   - In normal mode, deleting 5 lines requires `5dd`. In Ex mode, `:10,20d` deletes lines 10 through 20 directly, and `:%s/old/new/g` substitutes text across the entire buffer without moving the cursor manually across every line.
+2. **Operations present in both forms**
+   - Indenting: normal mode `>>` vs Ex command `:>` (e.g., `:10,20>`).
+   - Toggling case: normal mode `~` vs Ex command `:~`.
+3. **Rule of thumb**
+   - Use **Vim commands** (`ci"`, `dw`, `x`, `p`) for visual and tactile local editing around the cursor.
+   - Use **Ex commands** (`:w`, `:q`, `:%s`, `:set`, `:r`) for buffer lifecycle actions, bulk replacements, and editor configuration.
 
 ## What JVim adds
 
