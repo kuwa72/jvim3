@@ -20,7 +20,7 @@ repository and would drift within three releases.
 - Bundled standalone lightweight C code formatter tool (`tools/cformat.c` / `cformat.exe`) in Windows packages.
 - Added `:macros` command to display recorded keyboard macros only.
 - Added tests in `scripts/test-editing.sh` for `:macros` and internal re-indentation.
-  271 cases now.
+  272 cases now.
 
 
 
