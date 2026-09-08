@@ -224,6 +224,8 @@ jobs:
           else
             ./scripts/build-mingw.sh release
           fi
+      - name: Verify release packages are complete
+        run: ./scripts/test-release-package.sh
       - uses: actions/upload-artifact@v5
         with:
           name: windows
