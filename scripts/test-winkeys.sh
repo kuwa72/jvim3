@@ -334,6 +334,10 @@ run console "cursor keys in insert" 'i<R><U><L><D><ESC>' 'ABCDEFGH\n' 'ABCDEFGH\
 run console "cursor keys on : line" ':s/A/Z<L>x<CR>'      'ABC\n'     'xZBC\n'
 run console "up recalls a : line"   ':1d\r:<U><CR>'      'a\nb\nc\n'  'c\n'
 run console "page up searches back" ':1d\r:1<PGUP><CR>'  'a\nb\nc\n'  'c\n'
+# A console-side version of the case below is not here on purpose: feeding
+# CP932 bytes through WriteConsoleInput with a zero virtual key code makes
+# conhost regenerate the event forever, which is a harness artifact, not the
+# editor.
 
 echo
 echo "the GUI build, driven by window messages:"
@@ -344,6 +348,11 @@ run gui "up recalls a : line"       ':1d\r:<U><CR>'      'a\nb\nc\n'  'c\n'
 # a typed character whose UTF-8 ends in 0xa0, the byte K_ZERO uses: the key
 # codes may only be picked out where a character starts
 run gui "kanji input holding 0xa0"  'i<u30A0><u3042><ESC>' 'X\n' '\xe3\x82\xa0\xe3\x81\x82X\n'
+# a committed character right after ASCII lost its last UTF-8 byte, which then
+# landed at the end of the line (issue #94): "a" + U+5316 U+3057 U+3066 wrote
+# the bytes a,e5,8c,e3,81,97,e3,81,a6,96 -- 化's 0x96 moved behind て. The
+# <eNNNN> keys are posted in one burst, the way an IME commits a string.
+run gui "kanji committed after ascii" 'ia<e5316><e3057><e3066><ESC>' '\n' 'a\xe5\x8c\x96\xe3\x81\x97\xe3\x81\xa6\n'
 colours_a_file "the rules colour a file"
 draws_a_background "a rule draws on a colour"
 

@@ -304,6 +304,44 @@ typed "char across boundary"   ok "i$BOUNDARY\033"        "$BOUNDARY\n"
 typed "600 byte kana run"      ok "i$LONG\033"            "$LONG\n"
 typed "run with emoji"         ok "i$EM$LONG$EM\033"      "$EM$LONG$EM\n"
 
+# typedgap <name> <expect> <first keys> <rest of keys> <expected bytes> [opts]
+#
+# Same as typed(), but pauses between the two key batches for longer than
+# 'timeoutlen'. When a read() ends inside a UTF-8 character, inchar() parks the
+# fragment in its 'round' buffer and gives the next read 'timeoutlen' to fetch
+# the rest; if nothing arrived in that window the half-character used to be
+# returned raw, which is how an IME commit after ASCII -- "issue" + 化して --
+# wrote invalid UTF-8 into the buffer (issue #94). The fragment has to stay
+# pending until the rest of the character arrives.
+typedgap() {
+	counted && return
+	local name=$1 expect=$2 keys1=$3 keys2=$4 want=$5 opts=${6:--K TTTT -k t}
+
+	: > "$tmp/in"
+	printf "$want" > "$tmp/want"
+	rm -f "$tmp/out"
+	{	printf "$keys1"
+		sleep 2
+		printf "$keys2:w! %s/out\r:q!\r" "$tmp"
+	} | pty "TERM=xterm $jvim -T xterm $opts $tmp/in" >/dev/null 2>&1
+	verdict "$name" "$expect"
+}
+
+echo
+echo "a character split across a pause longer than 'timeoutlen':"
+# the user's case from issue #94: ASCII, then the first bytes of 化, a pause,
+# then the rest
+typedgap "char split after 2 bytes" ok \
+	"iissue\xe5\x8c" "\x96\xe3\x81\x97\xe3\x81\xa6\033" \
+	"issue\xe5\x8c\x96\xe3\x81\x97\xe3\x81\xa6\n"
+typedgap "char split after 1 byte"  ok \
+	"iissue\xe5" "\x8c\x96\xe3\x81\x97\xe3\x81\xa6\033" \
+	"issue\xe5\x8c\x96\xe3\x81\x97\xe3\x81\xa6\n"
+# a fragment whose next byte is not its continuation: the half character is
+# kept pending and converts to '?' once the ASCII byte joins it, not raw bytes
+typedgap "fragment then ascii"      ok \
+	"iissue\xe5\x8c" "X\033" "issue??X\n"
+
 echo
 echo "typed characters holding a byte that is also a key code:"
 # 0xa0 is K_ZERO and 0xfd is K_NUL, the two bytes inchar() has to keep out of
