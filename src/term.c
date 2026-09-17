@@ -807,14 +807,22 @@ retry:
 		int newlen;
 
 		memmove(buf, round, len = strlen(round));
-		round[0] = NUL;
 		newlen = GetChars(buf + len, maxlen - len, (int)p_tm);
 		len += newlen;
 		if (newlen == 0)
 		{
-			buf[len] = NUL;
-			return len;
+			/*
+			 * The rest of the character did not arrive in time. Leave
+			 * the fragment in 'round' and report no input: returning
+			 * the raw bytes here bypassed conversion and put an
+			 * incomplete character into the buffer (issue #94). The
+			 * bytes already copied to buf[] have to be erased again --
+			 * vgetorpeek() measures pending input with STRLEN().
+			 */
+			*buf = NUL;
+			return 0;
 		}
+		round[0] = NUL;
 	}
 	else
 	{

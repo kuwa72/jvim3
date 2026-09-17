@@ -250,6 +250,12 @@ int main(int argc, char **argv)
 									(WPARAM)strtol(nm + 1, NULL, 16), 1);
 						Sleep(15);
 					}
+					else if (nm[0] == 'e')
+					{	/* same, no sleep: an IME commits a whole string in a
+						 * burst, faster than the editor can read it */
+						PostMessageW(hwnd, WM_CHAR,
+									(WPARAM)strtol(nm + 1, NULL, 16), 1);
+					}
 					else if (!strcmp(nm, "CR")) text_key('\r');
 					else if (!strcmp(nm, "ESC")) spec_key(VK_ESCAPE);
 					else { fprintf(stderr, "unknown key <%s>\n", nm); return 2; }
