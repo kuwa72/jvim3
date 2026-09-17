@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  287 cases now.
+  290 cases now.
 
 
 
@@ -68,6 +68,14 @@ repository and would drift within three releases.
   others are the same defect and stop being a question of what a C runtime
   answers for a value it was never given.
 
+- **A multi-byte character split across two reads corrupted the buffer.**
+  `inchar()` in `src/term.c` parked a fragment in `round` while it waited
+  `timeoutlen` for the rest of the character; if nothing more arrived it
+  returned the raw bytes as ordinary input, which put an incomplete UTF-8
+  sequence into the file — an IME commit right after ASCII could scatter a
+  character's bytes down the line (#94). The fragment now stays pending until
+  the rest of the character arrives.
+
 ### 日本語
 
 - `:help` 画面をカーソルキーでめくれるようになりました。↓ が SPACE、↑ が `b`
@@ -110,6 +118,13 @@ repository and would drift within three releases.
   キーコードを変換する経路だけです。実害が出ていたのは `:help` でした。
   残りも欠陥としては同じで、C ランタイムが「渡されるはずのない値」に
   どう答えるか次第、という状態ではなくなりました。
+
+- **端末からの 2 回の読み込みにまたがったマルチバイト文字がバッファを壊して
+  いました。** `src/term.c` の `inchar()` は文字の途中で区切られた断片を
+  `round` に退避して `timeoutlen` の間だけ続きを待ちますが、間に合わないと
+  断片を変換せず生のまま返していました。ASCII の直後に届いた IME 確定文字が
+  未完の UTF-8 列としてファイルに書かれ、文字のバイトが行の後ろへずれる
+  ことがありました (#94)。断片は残りが届くまで保留するようになりました。
 
 ## 1.2.1 — 2026-09-01
 
