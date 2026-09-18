@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  351 cases now.
+  358 cases now.
 
 
 
@@ -208,6 +208,20 @@ repository and would drift within three releases.
   it, and `d`/`y` left a stray continuation byte in the file: invalid UTF-8
   (#105). The keyboard path in `src/normal.c` already asks `utf_lenat()`
   for the real width; the mouse path in `src/winjnt.c` now does the same.
+- **Track mode (`gx` then `h`/`j`/`k`/`l`) split a multi-byte character it
+  drew over.** `track_vcol()` in `src/track.c` stepped exactly two bytes
+  over a kanji — the Shift-JIS width — so the byte range it returned for
+  the character under the cursor's virtual column ended inside a
+  three-byte UTF-8 character: `track_ins()` deleted that many bytes and
+  the character's last byte stayed in the file as a stray continuation
+  byte, invalid UTF-8, and `w_cursor.col` could be set mid-character
+  (#106). The walk now steps `utf_lenat()` bytes and counts `utf_width()`
+  columns, so every position `track_vcol()` returns is on a character
+  boundary and the delete range is whole characters. The `ndel == 2`
+  quick hack — padding moved in front when `h` replaces a two-column
+  character with a one-column track — now asks whether the deleted range
+  is exactly one multi-byte character (`utf_lenat()`), which is what the
+  `2` always meant.
 
 ### 日本語
 
@@ -392,6 +406,19 @@ repository and would drift within three releases.
   として不正になっていました (#105)。`src/normal.c` のキーボード経路は
   既に `utf_lenat()` で実際の文字長を求めていたので、`src/winjnt.c` の
   マウス経路も同じようにしました。
+- **罫線モード (`gx` の後の `h`/`j`/`k`/`l`) が、描き替えるマルチバイト
+  文字を半分に切っていました。** `src/track.c` の `track_vcol()` は漢字を
+  ちょうど 2 バイト — Shift-JIS 時代の幅 — 進んでいたため、カーソルの
+  仮想桁にある文字として返すバイト範囲が UTF-8 の 3 バイト文字の途中で
+  終わっていました。`track_ins()` はそのバイト数だけ削除するので、文字の
+  末尾バイトが孤立バイトとしてファイルに残り UTF-8 として不正になり、
+  `w_cursor.col` も文字の途中に置かれることがありました (#106)。
+  進む幅を `utf_lenat()` バイト、桁数を `utf_width()` としたので、
+  `track_vcol()` が返す位置はすべて文字の先頭にあり、削除範囲は文字
+  単位です。`ndel == 2` の簡易対処 — `h` が 2 桁の文字を 1 桁の罫線に
+  置き換えるときパディングを前へ移す処理 — は、削除範囲がちょうど 1 つの
+  マルチバイト文字かを `utf_lenat()` で調べるようになりました。`2` が
+  意味していたのはそれです。
 
 ## 1.2.1 — 2026-09-01
 

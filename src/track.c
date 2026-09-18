@@ -151,8 +151,11 @@ track_vcol(char_u *line, int cvcol, int mode)
 #ifdef KANJI
 		if (ISkanji(*line))
 		{
-			vcol += 2;
-			line += 2;
+			/* a multi-byte character is 1-4 bytes and 0-4 columns; the old
+			 * two-byte step ended mid-character and every position derived
+			 * from this walk was off the character's head */
+			vcol += utf_width(line);
+			line += utf_lenat(line, 0);
 		}
 		else
 #endif
@@ -370,8 +373,11 @@ track_ins(int dir)
 	}
 
 #ifdef KANJI		/* quick hack */
-	if (fpad == 0 && bpad == 1 && dir == TK_L && ndel == 2
-								&& tracktab->vw == 1 && ISkanji(gchar_cursor()))
+	/* the deleted range is one whole multi-byte character: its byte count
+	 * is utf_lenat(), not the two bytes a Shift-JIS character always was */
+	if (fpad == 0 && bpad == 1 && dir == TK_L && tracktab->vw == 1
+			&& ISkanji(*prevp)
+			&& ndel == utf_lenat(line, (int)(prevp - line)))
 	{
 		fpad = 1;
 		bpad = 0;
