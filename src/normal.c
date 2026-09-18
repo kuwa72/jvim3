@@ -1006,7 +1006,7 @@ docsearch:
 			mincl = TRUE;
 		curwin->w_set_curswant = TRUE;
 #ifdef KANJI
-		if (!searchc(nchar, kchar, dir, type, Prenum1))
+		if (!searchc(nchar, nbytes, nlen, dir, type, Prenum1))
 #else
 		if (!searchc(nchar, dir, type, Prenum1))
 #endif

@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  337 cases now.
+  343 cases now.
 
 
 
@@ -173,6 +173,21 @@ repository and would drift within three releases.
   right for single-width multi-byte characters, not only double-width
   ones — and a block edge that lands inside a character is snapped to a
   boundary with `utf_prev()` instead of a trailing-byte test.
+- **`f`/`F`/`t`/`T` matched only the first two bytes of a multi-byte
+  character.** `searchc()` in `src/search.c` was still written on the
+  Shift-JIS width: it compared two bytes, so `fあ` (`e3 81 82`) matched any
+  character starting `e3 81` — `い`, `う`, `え`, `お` and the rest of the
+  hiragana — and the cursor landed on the first of them, not on the
+  character asked for. Everything built on the search inherited the wrong
+  position: `dfあ` deleted up to a different character, and `;`/`,`
+  repeated the same two-byte pattern because the repeat state kept only
+  `lastc`/`lastk`. The stepping was two bytes over a kanji too, which lands
+  inside a three-byte UTF-8 character (#110). `searchc()` now takes the
+  character as its whole byte sequence and compares it with `memcmp()`,
+  steps `utf_lenat()` bytes forward and `utf_prev()` back, and the `t`/`T`
+  landing column is found with `utf_prev()`/`utf_lenat()` as well. The
+  repeat state holds the whole sequence, so `;` repeats the character that
+  was actually searched for.
 
 ### 日本語
 
@@ -321,6 +336,21 @@ repository and would drift within three releases.
   半角のマルチバイト文字でも正しい計算です。文字の途中に来る
   ブロック端も、継続バイトの判定ではなく `utf_prev()` で文字の
   先頭へ合わせます。
+- **`f`/`F`/`t`/`T` がマルチバイト文字の先頭 2 バイトだけでマッチして
+  いました。** `src/search.c` の `searchc()` にも Shift-JIS 時代の幅が
+  残っており、2 バイトの比較だったため `fあ` (`e3 81 82`) は `e3 81`
+  で始まる文字すべて — `い`、`う`、`え`、`お` などの平仮名 — に
+  マッチし、カーソルは探した文字ではなくその最初のものへ止まって
+  いました。その上に組み立てられた操作も誤った位置を継承します。
+  `dfあ` は別の文字までを消し、`;`/`,` はリピート状態が `lastc`/
+  `lastk` の 2 バイトしか持たないため同じ 2 バイトのパターンを
+  繰り返していました。ステップも漢字を 2 バイトとして進むため、
+  UTF-8 の 3 バイト文字では文字の途中に落ちていました (#110)。
+  `searchc()` は文字をバイト列全体として受け取り `memcmp()` で
+  比較し、前進は `utf_lenat()` 分、後退は `utf_prev()` で進み、
+  `t`/`T` の着地位置も `utf_prev()`/`utf_lenat()` で求めます。
+  リピート状態はバイト列全体を持つので、`;` は実際に探した文字を
+  繰り返します。
 
 ## 1.2.1 — 2026-09-01
 

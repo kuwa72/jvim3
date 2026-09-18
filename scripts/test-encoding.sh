@@ -590,6 +590,31 @@ typed "block put inside a char"   ok \
 	"iab\rab\rx$AA\r$AA""x\0331G0\x16jy3G0p" "ab\nab\nxa$AA\n$AA""ax\n"
 
 echo
+echo "f/F/t/T search for a whole multi-byte character:"
+# The character searches compared only the first two bytes of a character --
+# the Shift-JIS width -- so fい matched あ: every hiragana starts e3 81 (issue
+# #110). The follow-up x shows which character the cursor actually landed on;
+# F works the line from the end, t and T stop next to the found character,
+# and ';' repeats whatever the last search stored.
+typed "f lands on the right char" ok \
+	"ix$AA$II""y\0330f${II}x"      "x$AA""y\n"
+typed "F lands on the right char" ok \
+	"ix$AA$II""y\033F${AA}x"       "x$II""y\n"
+typed "t lands before it"         ok \
+	"ix$AA$II""y\0330t${II}x"      "x$II""y\n"
+typed "T lands after it"          ok \
+	"ix$AA$II""y\033T${AA}x"       "x$AA""y\n"
+# ';' re-runs the stored search, so the repeat state has to hold the whole
+# character too: after fあ the next e3 81 character is い, which must not
+# match, while the second あ further along the line must
+typed "; repeats the whole char"  ok \
+	"ia${AA}b${II}c${AA}d\0330f${AA};x" "a$AA""b${II}cd\n"
+# an operator over f inherits the same search: dfあ has to reach past い to
+# the あ at the end, not stop at the first character sharing e3 81
+typed "df reaches the right char" ok \
+	"ix${II}$AA\0330df$AA"         "\n"
+
+echo
 echo "the help file, which is converted and not loaded:"
 # 日本語 ten times over, in one run of ISO-2022-JP: 67 bytes in the file, 91 in
 # the internal UTF-8. It has to be a run, because a short one shrinks -- the six
