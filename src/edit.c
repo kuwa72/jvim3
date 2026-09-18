@@ -767,10 +767,15 @@ dodel:
 						else  /* State != REPLACE */
 						{
 #ifdef KANJI
-							if (ISkanji(gchar_cursor()))
-								delchar(FALSE);
-#endif
+							{
+								int		n = utf_lenat(ml_get_cursor(), 0);
+
+								while (n-- > 0)
+									(void)delchar(FALSE);
+							}
+#else
 							(void)delchar(FALSE);
+#endif
 							if (p_ri && gchar_cursor() == NUL)
 								break;
 						}

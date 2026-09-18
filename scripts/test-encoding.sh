@@ -367,6 +367,20 @@ typed "insert cursor right over kanji" ok \
 	"i\xe3\x81\x82\xe3\x81\x84\0330i\033OCX\033" \
 	"\xe3\x81\x82X\xe3\x81\x84\n"
 
+# Backspace used to delete two bytes of a multi-byte character -- the old
+# Shift-JIS width -- leaving a three byte UTF-8 character's last byte in the
+# buffer. That is how committed IME text erased with backspace corrupted the
+# file: 置いて came out as \xae\x84\xa6, the three trailing bytes.
+typed "insert backspace over kanji" ok \
+	"i\xe3\x81\x82\x7f\033" \
+	"\n"
+typed "insert backspace over kanji run" ok \
+	"i\xe3\x81\x82\xe3\x81\x84\xe3\x81\x86\x7f\x7f\x7f\033" \
+	"\n"
+typed "insert backspace mixes kanji and ascii" ok \
+	"i\xe3\x81\x82a\xe3\x81\x84\x7f\x7f\x7f\033" \
+	"\n"
+
 echo
 echo "yank, put, replace, search, join:"
 edit "yl then p"              ok "ylp"  "$NIHON$GO\n"      "$NI$NI$HON$GO\n"
