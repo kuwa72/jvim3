@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  297 cases now.
+  306 cases now.
 
 
 
@@ -100,6 +100,19 @@ repository and would drift within three releases.
   whole character. The same path also read one byte before the start of the
   line — `jpcls()` was called with `ptr - 1` — whenever the word scan reached
   column 0; both walk-back loops stop there now.
+- **Insert-mode `CTRL-Y`, `CTRL-E`, `CTRL-K` and the `digraph` option inserted
+  the raw key, not the character they computed.** `cbuf`/`clen` are filled
+  from the key at the top of the insert-mode loop, and `insertchar(cbuf,
+  clen)` is what `normalchar` puts down — so a path that computed a new `c`
+  and fell through to `normalchar` inserted the key's own bytes: `CTRL-Y`
+  wrote `19` instead of the copied character, a `CTRL-K` digraph wrote `0b`,
+  and a `digraph`-option rewrite wrote the second of the two keys (#102).
+  Each of those paths now rebuilds `cbuf`/`clen` from the computed character —
+  `utf_encode()` for the character codes `getdigraph()`/`dodigraph()` return,
+  the source character's whole `utf_lenat()` bytes for `CTRL-Y`/`CTRL-E`,
+  whose column walk had also kept the Shift-JIS `ptr += 2`. A character left
+  pending in `nextc` by `CTRL-V nnn` skipped the fill at the top of the loop
+  the same way and inserted `16`; it fills `cbuf` like a freshly read key now.
 
 ### 日本語
 
@@ -172,6 +185,20 @@ repository and would drift within three releases.
   なりました。同じ経路で、単語をさかのぼる走査が行頭 (0 桁) に達したとき
   `jpcls()` に `ptr - 1` を渡して行の先頭より前を 1 バイト読む問題もあり、
   2 つのループとも行頭で止まるようになりました。
+- **挿入モードの `CTRL-Y`・`CTRL-E`・`CTRL-K`・`digraph` オプションが、
+  計算した文字ではなく押したキーそのものを挿入していました。**
+  `cbuf`/`clen` は挿入モードのループ先頭で読んだキーから作られ、
+  `normalchar` が書き込むのは `insertchar(cbuf, clen)` です。新しい `c`
+  を計算して `normalchar` へ落ちる経路はキーのバイトをそのまま書いて
+  いました。`CTRL-Y` はコピーした文字ではなく `19` を、`CTRL-K` の
+  ダイグラフは `0b` を、`digraph` オプションの書き換えは 2 キー目を
+  挿入していました (#102)。これらの経路は計算した文字から `cbuf`/`clen`
+  を作り直すようになりました。`getdigraph()`/`dodigraph()` の返す文字
+  コードは `utf_encode()` で、`CTRL-Y`/`CTRL-E` ではコピー元の文字の
+  `utf_lenat()` 分のバイト全体を使います — 桁を進めるループにも
+  Shift-JIS 時代の `ptr += 2` が残っていました。`CTRL-V nnn` が `nextc`
+  に残す保留文字もループ先頭の cbuf 補充を素通りして `16` を挿入して
+  いたので、読んだばかりのキーと同じく `cbuf` を作るようにしました。
 
 ## 1.2.1 — 2026-09-01
 
