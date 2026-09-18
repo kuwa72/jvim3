@@ -348,13 +348,11 @@ edit(long count)
 
 #ifdef KANJI
 			{
-				int			 k;
+				int			 len;
 				char_u		 lit[UTF8_MAXLEN];
 
-				c = get_literal(&nextc, &k);
-				lit[0] = c;
-				lit[1] = k;
-				insertchar(lit, ISkanji(c) ? 2 : 1);
+				c = get_literal(&nextc, lit, &len);
+				insertchar(lit, len);
 			}
 #else
 			c = get_literal(&nextc);
@@ -1396,10 +1394,13 @@ normalchar:
  * Next character is interpreted literally.
  * A one, two or three digit decimal number is interpreted as its byte value.
  * If one or two digits are entered, *nextc is set to the next character.
+ * The KANJI version also fills bytes[] with the whole character -- up to
+ * UTF8_MAXLEN bytes for the internal UTF-8 encoding -- and *len with its
+ * length, so a multi-byte literal can be put down in one piece.
  */
 	int
 #ifdef KANJI
-get_literal(int *nextc, int *kp)
+get_literal(int *nextc, char_u *bytes, int *len)
 #else
 get_literal(int *nextc)
 #endif
@@ -1408,10 +1409,16 @@ get_literal(int *nextc)
 	int			 nc;
 	int			 oldstate;
 	int			 i;
+#ifdef KANJI
+	int			 n;
+#endif
 
 	oldstate = State;
 	State = NOMAPPING;		/* next characters not mapped */
 
+#ifdef KANJI
+	*len = 1;
+#endif
 	if (got_int)
 	{
 		*nextc = NUL;
@@ -1424,7 +1431,17 @@ get_literal(int *nextc)
 #ifdef KANJI
 		if (ISkanji(nc))
 		{
-			*kp = vgetc();
+			/*
+			 * The internal encoding is UTF-8, where a character is up to
+			 * four bytes: take them all, or the tail is left in the input
+			 * queue as stray bytes. After a number the character is only
+			 * the next input and is dropped whole, as it was before.
+			 */
+			bytes[0] = nc;
+			for (n = 1; n < utf_len(nc); ++n)
+				bytes[n] = vgetc();
+			if (i == 0)
+				*len = n;
 			break;
 		}
 		if (nc == '#')
@@ -1433,7 +1450,8 @@ get_literal(int *nextc)
 			{
 				nc = vgetc();
 				if (ISkanji(nc))
-					*kp = vgetc();
+					for (n = 1; n < utf_len(nc); ++n)
+						(void)vgetc();
 				if (!isasciixdigit(nc))
 				{
 					cc = '#';
@@ -1447,9 +1465,11 @@ get_literal(int *nextc)
 			}
 			if (i >= 4)
 			{
-				nc  = (cc & 0xff00) >> 8;
-				*kp =  cc & 0x00ff;
-				i   = 0;
+				nc       = (cc & 0xff00) >> 8;
+				bytes[0] = nc;
+				bytes[1] =  cc & 0x00ff;
+				*len     = 2;
+				i        = 0;
 			}
 			break;
 		}
@@ -1471,24 +1491,29 @@ get_literal(int *nextc)
 		cc &= 0x7f;
 	else if (ISkanji(cc))
 	{
-		*kp = 0;
+		bytes[0] = cc;
+		bytes[1] = 0;
+		*len = 2;
 		for (i = 0; i < 3; ++i)
 		{
 			nc = vgetc();
 			if (ISkanji(nc))
 			{
-				*kp = vgetc();
+				for (n = 1; n < utf_len(nc); ++n)
+					(void)vgetc();
 				cc = '\n';
 				nc = 0;
+				*len = 1;
 				break;
 			}
 			if (!isasciidigit(nc))
 			{
 				cc = '\n';
 				nc = 0;
+				*len = 1;
 				break;
 			}
-			*kp = *kp * 10 + nc - '0';
+			bytes[1] = bytes[1] * 10 + nc - '0';
 			nc = 0;
 		}
 	}
@@ -1502,6 +1527,8 @@ get_literal(int *nextc)
 #ifdef KANJI
 	if (ISkanji(nc))
 		*nextc = 0;
+	if (*len == 1)
+		bytes[0] = cc;
 #endif
 	return cc;
 }

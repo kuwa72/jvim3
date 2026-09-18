@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  306 cases now.
+  312 cases now.
 
 
 
@@ -113,6 +113,19 @@ repository and would drift within three releases.
   whose column walk had also kept the Shift-JIS `ptr += 2`. A character left
   pending in `nextc` by `CTRL-V nnn` skipped the fill at the top of the loop
   the same way and inserted `16`; it fills `cbuf` like a freshly read key now.
+- **`CTRL-V` literal entry dropped the tail bytes of a multi-byte
+  character.** `get_literal()` in `src/edit.c` read a lead byte plus
+  exactly one more — the Shift-JIS width — so a three- or four-byte
+  UTF-8 character typed after `CTRL-V` was cut short everywhere it is
+  used: `r` replaced with a two-byte fragment, the command line put down
+  only the lead byte because `cbuf`/`clen` still described the `CTRL-V`
+  key itself, and in insert mode the unread tail bytes stayed in the
+  input queue and were inserted as characters of their own, which
+  `REPLACE` mode shows by overwriting one character too many (#101).
+  `get_literal()` now fills a caller buffer with the whole `utf_len()`
+  byte sequence and its length, and all three callers — insert and
+  replace mode, the `r` command, and the `:` line — put that sequence
+  down in one piece.
 
 ### 日本語
 
@@ -199,6 +212,18 @@ repository and would drift within three releases.
   Shift-JIS 時代の `ptr += 2` が残っていました。`CTRL-V nnn` が `nextc`
   に残す保留文字もループ先頭の cbuf 補充を素通りして `16` を挿入して
   いたので、読んだばかりのキーと同じく `cbuf` を作るようにしました。
+- **`CTRL-V` のリテラル入力がマルチバイト文字の末尾バイトを落として
+  いました。** `src/edit.c` の `get_literal()` は先行バイトともう
+  1 バイト（Shift-JIS 時代の幅）しか読んでいなかったため、`CTRL-V`
+  の後に打った UTF-8 の 3・4 バイト文字はどの経路でも途中で切れて
+  いました。`r` は 2 バイトの断片で置き換え、コマンドラインは
+  `cbuf`/`clen` が `CTRL-V` キー自体を指したままなので先行バイト
+  だけを挿入し、挿入モードでは読み残した末尾バイトが入力キューに
+  残って別の文字として挿入されていました — REPLACE モードでは
+  余分に 1 文字を上書きする形で現れます (#101)。`get_literal()` は
+  呼び出し側のバッファに `utf_len()` 分のバイト列全体とその長さを
+  返すようになり、3 つの呼び出し側（挿入・置換モード、`r` コマンド、
+  `:` 行）すべてがそのバイト列をひとかたまりで書き込みます。
 
 ## 1.2.1 — 2026-09-01
 

@@ -1233,10 +1233,9 @@ docsearch:
 		{
 			c = Ctrl('V');
 #ifdef KANJI
-			nchar = get_literal(&type, &kchar);
-			nbytes[0] = nchar;
-			nbytes[1] = kchar;
-			nlen = ISkanji(nchar) ? 2 : 1;
+			nchar = get_literal(&type, nbytes, &nlen);
+			if (nlen > 1)
+				kchar = nbytes[1];
 #else
 			nchar = get_literal(&type);
 #endif

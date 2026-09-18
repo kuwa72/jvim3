@@ -94,7 +94,9 @@ getcmdline(int firstc, char_u *buff)
 {
 #ifdef KANJI
 	unsigned int	 	c;
+# if defined(MSDOS) && defined(TERMCAP)
 			 int		k;
+# endif
 	char_u				cbuf[UTF8_MAXLEN + 1];	/* the character just typed */
 			 int		clen = 1;				/* its length in bytes */
 #else
@@ -216,7 +218,9 @@ getcmdline(int firstc, char_u *buff)
 				/* take the whole character, not just two bytes */
 				while (clen < want)
 					cbuf[clen++] = vgetc();
+# if defined(MSDOS) && defined(TERMCAP)
 				k = cbuf[1];
+# endif
 			}
 			cbuf[clen] = NUL;
 #endif
@@ -542,7 +546,8 @@ do_esc:
 		case Ctrl('V'):
 				putcmdline('^', buff);
 #ifdef KANJI
-				c = get_literal(&nextc, &k);
+				c = get_literal(&nextc, cbuf, &clen);
+				cbuf[clen] = NUL;
 #else
 				c = get_literal(&nextc);	/* get next (two) character(s) */
 #endif
