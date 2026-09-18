@@ -1064,6 +1064,8 @@ redraw:
 								temp --;
 							else
 								break;
+							if (temp < 0)
+								break;
 							scls = jpcls(utf_head(ptr, ptr + temp));
 							if (ocls != scls)
 								break;
@@ -1133,6 +1135,8 @@ redraw:
 								temp --;
 							else
 								break;
+							if (temp < 0)
+								break;
 							scls = jpcls(utf_head(ptr, ptr + temp));
 							if (ocls != scls)
 								break;
@@ -1176,7 +1180,10 @@ redraw:
 					if (complete_any_word)
 						ptr = ml_get_pos(&complete_pos);
 					else
-						ptr = ml_get_pos(&complete_pos) + 1;
+					{
+						ptr = ml_get_pos(&complete_pos);
+						ptr += utf_lenat(ptr, 0);
+					}
 					tmp_ptr = ptr;
 					temp = 1;
 #ifdef KANJI
@@ -1189,8 +1196,10 @@ redraw:
 							break;
 						if (ISkanji(*tmp_ptr))
 						{
-							temp += 2;
-							tmp_ptr += 2;
+							int		n = utf_lenat(tmp_ptr, 0);
+
+							temp += n;
+							tmp_ptr += n;
 						}
 						else if (isidchar(*tmp_ptr))
 						{
@@ -1221,8 +1230,10 @@ redraw:
 							break;
 						if (ISkanji(*ptr))
 						{
-							*(tmp_ptr++) = *(ptr++);
-							*(tmp_ptr++) = *(ptr++);
+							int		n = utf_lenat(ptr, 0);
+
+							while (n-- > 0)
+								*(tmp_ptr++) = *(ptr++);
 						}
 						else if (isidchar(*ptr))
 							*(tmp_ptr++) = *(ptr++);

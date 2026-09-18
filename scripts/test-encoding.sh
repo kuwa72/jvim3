@@ -401,6 +401,19 @@ UU='\xe3\x81\x86'								# う
 NN='\xe3\x82\x93'								# ん
 
 echo
+echo "insert-mode keyword completion over multi-byte characters:"
+# CTRL-N/CTRL-P counted and copied two bytes for each kanji character -- the
+# Shift-JIS width -- so a three byte UTF-8 character in the found word was cut
+# to its first two bytes and insstr() wrote those into the buffer: い came out
+# as e3 81, an invalid byte sequence (issue #100). \x0e is CTRL-N, \x10 CTRL-P.
+typed "insert ctrl-n completes kanji" ok \
+	"i$AA$II$UU\033o$AA\x0e\033"      "$AA$II$UU\n$AA$II$UU\n"
+typed "insert ctrl-p completes kanji" ok \
+	"i$AA$II$UU\033o$AA\x10\033"      "$AA$II$UU\n$AA$II$UU\n"
+typed "insert ctrl-n, two char prefix" ok \
+	"i$AA$II$UU\033o$AA$II\x0e\033"   "$AA$II$UU\n$AA$II$UU\n"
+
+echo
 echo "file names, which are three bytes a character here too:"
 # The Windows suite has these as well, where they are about the manifest making
 # the ...A file APIs take UTF-8. This is the part of it that is not Windows:

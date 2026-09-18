@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  294 cases now.
+  297 cases now.
 
 
 
@@ -90,6 +90,16 @@ repository and would drift within three releases.
   and the file stopped being valid UTF-8 (#94, #98). `CTRL-W` and `CTRL-U`,
   which run through the same loop, cut characters the same way. Backspace
   now deletes the character's actual byte length.
+- **Insert-mode `CTRL-N`/`CTRL-P` keyword completion cut a multi-byte
+  character down to two bytes.** The count and copy loops in `src/edit.c`
+  stepped two bytes per kanji character — the Shift-JIS width — so a
+  three-byte UTF-8 character in the found word went into the buffer as its
+  first two bytes: completing `あ` against `あいう` inserted `e3 81`, an
+  invalid UTF-8 sequence (#100). Both loops now advance by `utf_lenat()`, the
+  character's real byte length, and the step past the found match crosses a
+  whole character. The same path also read one byte before the start of the
+  line — `jpcls()` was called with `ptr - 1` — whenever the word scan reached
+  column 0; both walk-back loops stop there now.
 
 ### 日本語
 
@@ -152,6 +162,16 @@ repository and would drift within three releases.
   して残ります。`置いて` を消すと `ae 84 a6` が残り、ファイルが UTF-8
   として壊れていました (#94, #98)。同じループを通る `CTRL-W`・`CTRL-U`
   でも同じ切れ方をしていました。実際の文字長だけ消すようになりました。
+- **挿入モードの `CTRL-N`/`CTRL-P` キーワード補完がマルチバイト文字を
+  2 バイトに切り詰めていました。** `src/edit.c` のカウントとコピーの
+  ループが漢字 1 文字を 2 バイト（Shift-JIS 時代の幅）として進んでいたため、
+  見つかった単語中の UTF-8 3 バイト文字は先頭 2 バイトだけがバッファへ
+  書かれていました。`あ` を `あいう` に補完すると `e3 81` という不正な
+  UTF-8 列が挿入されていました (#100)。両ループとも `utf_lenat()` による
+  実際の文字長だけ進むようになり、マッチを越えるステップも文字単位に
+  なりました。同じ経路で、単語をさかのぼる走査が行頭 (0 桁) に達したとき
+  `jpcls()` に `ptr - 1` を渡して行の先頭より前を 1 バイト読む問題もあり、
+  2 つのループとも行頭で止まるようになりました。
 
 ## 1.2.1 — 2026-09-01
 
