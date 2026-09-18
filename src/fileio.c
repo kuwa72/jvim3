@@ -1802,7 +1802,13 @@ opt_delet(char_u *buf, int readwrite, int expand, int entab, int delete, int rep
 			if (replace && ISkanji(buf[col]) && buf[col + 1]
 										&& isjpspace(buf + col))
 			{
+				int		len = utf_lenat(buf + col, 0);
+
+				/* one ideographic space becomes two halfwidth ones */
 				buf[col] = buf[col+1] = ' ';
+				if (len > 2)	/* the rest of the character goes away */
+					memmove(&buf[col + 2], &buf[col + len],
+										strlen(&buf[col + len]) + 1);
 				col += 2;
 			}
 			else if (gaiji && readwrite == 'R' && buf[col] == '#')
@@ -1868,7 +1874,7 @@ opt_delet(char_u *buf, int readwrite, int expand, int entab, int delete, int rep
 				}
 			}
 			else if (ISkanji(buf[col]) && buf[col + 1])
-				col += 2;
+				col += utf_lenat(buf + col, 0);
 			else
 				col++;
 		}
@@ -1881,7 +1887,7 @@ opt_delet(char_u *buf, int readwrite, int expand, int entab, int delete, int rep
 		{
 # ifdef KANJI
 			if (ISkanji(buf[col]) && buf[col + 1])
-				col += 2;
+				col += utf_lenat(buf + col, 0);
 			else
 # endif
 			{
@@ -1920,8 +1926,8 @@ opt_delet(char_u *buf, int readwrite, int expand, int entab, int delete, int rep
 # ifdef KANJI
 			if (ISkanji(buf[col]) && buf[col + 1] && isjpspace(buf + col))
 			{
-				vcol += 2;
-				col += 2;
+				vcol += utf_width(buf + col);
+				col += utf_lenat(buf + col, 0);
 				continue;
 			}
 # endif
@@ -1936,13 +1942,15 @@ opt_delet(char_u *buf, int readwrite, int expand, int entab, int delete, int rep
 # ifdef KANJI
 		if (ISkanji(buf[col]) && buf[col + 1])
 		{
+			int		len = utf_lenat(buf + col, 0);
+
 			if (isjpspace(buf + col))
 				space = (space != (-1)) ? space : n;
 			else
 				space = (-1);
-			cp[n++] = buf[col++];
-			cp[n++] = buf[col++];
-			vcol += 2;
+			vcol += utf_width(buf + col);
+			while (len-- > 0)
+				cp[n++] = buf[col++];
 		}
 		else
 # endif
