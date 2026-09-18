@@ -180,7 +180,7 @@
 
 static int ismult __ARGS((int));
 #ifdef KANJI
-static void regjp __ARGS((int, char_u));
+static void regjp __ARGS((char_u *));
 static char * strjpchr __ARGS((char_u *, char_u, char_u));
 static char * mstrjpchr __ARGS((char_u *, char_u *));
 #endif
@@ -262,6 +262,11 @@ static int		getchr __ARGS((void));
 static int		peekchr __ARGS((void));
 #define PeekChr() curchr	/* shortcut only when last action was peekchr() */
 static int 		curchr;
+static int		prevchr;
+static int		nextchr;	/* used for ungetchr() */
+#ifdef KANJI
+static char_u    *regparse_base;	/* start of the pattern, for utf_head() */
+#endif
 static void		skipchr __ARGS((void));
 static void		ungetchr __ARGS((void));
 static char_u    *reg __ARGS((int, int *));
@@ -271,7 +276,7 @@ static char_u    *regatom __ARGS((int *));
 static char_u    *regnode __ARGS((int));
 static char_u    *regnext __ARGS((char_u *));
 static void 	regc __ARGS((int));
-static void 	unregc __ARGS((void));
+static void 	unregc __ARGS((int));
 static void 	reginsert __ARGS((int, char_u *));
 static void 	regtail __ARGS((char_u *, char_u *));
 static void 	regoptail __ARGS((char_u *, char_u *));
@@ -299,7 +304,7 @@ skip_regexp(char_u *p, int dirc)
 #ifdef KANJI
 		if (ISkanji(p[0]))
 		{
-			++p;
+			p += utf_lenat(p, 0) - 1;
 			continue;
 		}
 #endif
@@ -835,7 +840,7 @@ regatom(int *flagp)
 			{
 #ifdef KANJI
 				if (ISkanji(chr))
-					regjp(chr, regparse[1]);
+					regjp(regparse);
 				else
 #endif
 				regc(chr);
@@ -853,11 +858,13 @@ regatom(int *flagp)
 			if (len > 1 && ismult(chr))
 			{
 #ifdef KANJI
-				if (ISkanji(chr))
-					regjp(chr, regparse[1]);
+				if (ISkanji(prevchr))
+					/* Back off of *+= operand: the bytes emitted */
+					unregc((int)(regparse -
+								 utf_head(regparse_base, regparse - 1)));
 				else
 #endif
-				unregc();			/* Back off of *+= operand */
+				unregc(1);			/* Back off of *+= operand */
 				ungetchr();			/* and put it back for next time */
 				--len;
 			}
@@ -909,38 +916,28 @@ regc(int b)
 
 #ifdef KANJI
 /*
- - regjp - emit (if appropriate) a word of code
+ - regjp - emit (if appropriate) the multi-byte character at p
  */
 static void
-regjp(int b, char_u k)
+regjp(char_u *p)
 {
-	if (regcode != &regdummy)
-	{
-		*(char_u *)regcode++ = b;
-		*(char_u *)regcode++ = k;
-	}
-	else
-		regsize += 2;
+	int		n = utf_lenat(p, 0);
+
+	while (n-- > 0)
+		regc(*p++);
 }
 #endif
 
 /*
- - unregc - take back (if appropriate) a byte of code
+ - unregc - take back (if appropriate) n bytes of code
  */
 static void
-unregc(void)
+unregc(int n)
 {
 	if (regcode != &regdummy)
-#ifdef KANJI
-	{
-		if (ISkanji(* --regcode))
-			regcode--;
-	}
-#else
-		regcode--;
-#endif
+		regcode -= n;
 	else
-		regsize--;
+		regsize -= n;
 }
 
 /*
@@ -1018,10 +1015,6 @@ regoptail(char_u *p, char_u *val)
  * magic and such, so therefore we need a lexical analyzer.
  */
 
-/* static int		curchr; */
-static int		prevchr;
-static int		nextchr;	/* used for ungetchr() */
-
 static void
 initchr(char_u *str)
 {
@@ -1035,6 +1028,9 @@ initchr(char_u *str)
 		str += 2;
 	}
 	regparse = str;
+#ifdef KANJI
+	regparse_base = str;
+#endif
 	curchr = prevchr = nextchr = -1;
 }
 
@@ -1154,7 +1150,7 @@ skipchr(void)
 {
 #ifdef KANJI
 	if (ISkanji(*regparse))
-		regparse += 2;
+		regparse += utf_lenat(regparse, 0);
 	else
 #endif
 	regparse++;
@@ -1190,7 +1186,7 @@ ungetchr(void)
 	if (ISkanji(curchr))
 	{
 		nextchr = -1;
-		regparse-= 2;
+		regparse = utf_head(regparse_base, regparse - 1);
 	}
 	else
 #endif
@@ -1256,7 +1252,7 @@ regexec(regexp *prog, char_u *string, int at_bol)
 				break;			/* Found it. */
 #ifdef KANJI
 			if (ISkanji(*s))
-				s += 2;
+				s += utf_lenat(s, 0);
 			else
 #endif
 			s++;
@@ -1291,7 +1287,7 @@ regexec(regexp *prog, char_u *string, int at_bol)
 				return 1;
 #ifdef KANJI
 			if (ISkanji(*s))
-				s += 2;
+				s += utf_lenat(s, 0);
 			else
 #endif
 			s++;
@@ -1303,7 +1299,7 @@ regexec(regexp *prog, char_u *string, int at_bol)
 				return 1;
 #ifdef KANJI
 			if (ISkanji(*s))		/* happen ?? */
-				s++;
+				s += utf_lenat(s, 0) - 1;
 #endif
 		} while (*s++ != '\0');
 
@@ -1454,7 +1450,7 @@ regmatch(char_u *prog)
 				return 0;
 #ifdef KANJI
 			if (ISkanji(*reginput))
-				reginput += 2;
+				reginput += utf_lenat(reginput, 0);
 			else
 #endif
 			reginput++;
@@ -1662,11 +1658,8 @@ regmatch(char_u *prog)
 					no--;
 					reginput = save + no;
 #ifdef KANJI
-					if (ISkanjiPointer(save, reginput) == 2)
-					{
-						no --;
-						reginput --;
-					}
+					reginput = utf_head(save, reginput);
+					no = (int)(reginput - save);
 #endif
 				}
 				return 0;
@@ -1712,10 +1705,15 @@ regrepeat(char_u *p)
 	  case EXACTLY:
 #ifdef KANJI
 		if (ISkanji(*opnd))
-			while (*opnd == *scan && *(opnd + 1) == *(scan + 1)) {
-				count+=2;
-				scan +=2;
+		{
+			int		n = utf_lenat(opnd, 0);
+
+			while (STRNCMP(opnd, scan, (size_t)n) == 0)
+			{
+				count += n;
+				scan += n;
 			}
+		}
 		else
 #endif
 		while (*opnd == *scan || (reg_ic && TO_UPPER(*opnd) == TO_UPPER(*scan)))
@@ -2034,10 +2032,11 @@ strjpchr(char_u *s, char_u c, char_u k)
 {
 	if (reg_jic)
 	{
-		char_u		work[2];
+		char_u		work[UTF8_MAXLEN + 1];
 
 		work[0] = c;
 		work[1] = k;
+		work[2] = NUL;
 		while (*s)
 		{
 			if (ISkanji(*s))
@@ -2183,12 +2182,12 @@ regstrext(char_u *exp)
 # ifdef KANJI
 			if (ISkanji(*p))
 			{
+				int		i, n = utf_lenat(p, 0);
+
 				if (loop)
-				{
-					*w++ = p[0];
-					*w++ = p[1];
-				}
-				p += 2;
+					for (i = 0; i < n; i++)
+						*w++ = p[i];
+				p += n;
 			}
 			else
 # endif
@@ -2197,13 +2196,12 @@ regstrext(char_u *exp)
 # ifdef KANJI
 				if (ISkanji(p[1]))
 				{
+					int		i, n = 1 + utf_lenat(p, 1);
+
 					if (loop)
-					{
-						*w++ = p[0];
-						*w++ = p[1];
-						*w++ = p[2];
-					}
-					p += 3;
+						for (i = 0; i < n; i++)
+							*w++ = p[i];
+					p += n;
 				}
 				else
 # endif
