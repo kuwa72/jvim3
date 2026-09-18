@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  366 cases now.
+  379 cases now.
 
 
 
@@ -235,6 +235,44 @@ repository and would drift within three releases.
   than its stop. Every step is `utf_lenat()` bytes and every column count
   `utf_width()` now; 'replace' still writes its two halfwidth spaces and
   removes the rest of the character.
+- **The places still measuring a character as two bytes — the rest of the
+  Shift-JIS sweep (#111).** Wherever `ptr[i++]`, `++ptr`, `len - 2` or a
+  bare `+2`/`-2` stood for "one kanji", a three-byte UTF-8 character was
+  read as a character and a half, and a four-byte one as two: `put` left
+  the cursor inside the last character it had just written
+  (`src/ops.c`); redo stored two bytes of a three- or four-byte character
+  so `.` replayed garbage (`src/normal.c`, `prep_redo()` now carries the
+  whole sequence); `check_abbr()` looked two bytes back for the character
+  before the cursor, so a UTF-8 continuation byte could open or close an
+  abbreviation boundary (`src/getchar.c`); the command line, tag prompt
+  and control-key paths scanned two bytes at a time (`src/cmdline.c`,
+  `src/tag.c`, `src/winjnt.c`); backward search and the `%`/`{`/`}` scans
+  landed inside characters (`src/search.c`); the `/J` grep join and
+  smartindent's whitespace skip stepped two bytes over U+3000 and friends
+  (`src/search.c`, `src/misccmds.c`); and the display paths printed,
+  sized or backtracked by two bytes — `dis_msg()`, `fileinfo()`'s column
+  count, the `:` line's cursor column and the screen's own column walk
+  (`src/ops.c`, `src/buffer.c`, `src/getchar.c`, `src/screen.c`). Every
+  one now steps `utf_lenat()` bytes, finds the previous character with
+  `utf_prev()`, and snaps columns to character heads with `utf_head()`
+  or `utf_headoff()`. On the FEP side, `src/feponew.c`
+  reads a whole UTF-8 character and hands ONEW the EUC bytes it expects,
+  buffering the tail when one character converts to more than the one
+  byte the interface returns per call.
+- **The `jp`, `bj` and `hj` track tables were still Shift-JIS.** The
+  `tracktab[]` entries in `src/jptab.h` that `track.c` consults for
+  `fepmode`'s `jp`/`bj`/`hj` keys held raw Shift-JIS byte pairs, so
+  drawing `→` or `│` against a UTF-8 buffer either matched nothing or
+  matched the wrong bytes; every entry is now the character's UTF-8
+  sequence, and `track.c` walks them by `utf_lenat()` instead of
+  trusting `tracktab->vw` for a byte count.
+- **`fopt=0x80` read a UTF-8 lead byte as a Shift-JIS gaiji marker.** On
+  write, `src/fileio.c` tested `c >= 0xf0` on the raw byte — which is
+  every four-byte UTF-8 character, emoji included — and on read it
+  emitted `#XXXX#` expansions without converting the Shift-JIS code they
+  name. Now a code point is only a gaiji if `cp2sjis()` puts it in the
+  F0–F9 range, `#XXXX#` on input is converted through `sjis2cp()` into
+  UTF-8, and an emoji round-trips as itself instead of `#F0XX#`.
 
 ### 日本語
 
@@ -445,6 +483,41 @@ repository and would drift within three releases.
   すべてのステップを `utf_lenat()` バイト、桁数を `utf_width()` としました。
   'replace' が半角空白 2 つを書くのは従来どおりで、文字の残りのバイトは
   取り除きます。
+- **「漢字 1 文字 = 2 バイト」の前提が残っていた箇所を一掃しました (#111)。**
+  `ptr[i++]`、`++ptr`、`len - 2`、生の `+2`/`-2` が「漢字 1 文字」を
+  意味していた場所では、UTF-8 の 3 バイト文字は 1.5 文字、4 バイト文字は
+  2 文字として読まれていました。`put` が書き終えた直後の最後の文字の
+  途中にカーソルを置いていた (`src/ops.c`)、redo が 3・4 バイト文字の
+  2 バイトしか保存せず `.` が壊れた列を再生していた (`src/normal.c`、
+  `prep_redo()` が列全体を保持するようになりました)、`check_abbr()` が
+  カーソル前の文字を無条件に 2 バイト前から見ていたため UTF-8 の
+  継続バイトがアブリビエーションの境界を誤判定していた (`src/getchar.c`)、
+  コマンドライン・タグプロンプト・制御キーの経路が 2 バイトずつ走査して
+  いた (`src/cmdline.c`、`src/tag.c`、`src/winjnt.c`)、後方検索と
+  `%`/`{`/`}` の走査が文字の途中に着地していた (`src/search.c`)、
+  `/J` の grep 行結合と smartindent の空白スキップが U+3000 などを
+  2 バイトで進んでいた (`src/search.c`、`src/misccmds.c`)、表示系も
+  `dis_msg()`・`fileinfo()` の桁数・`:` 行のカーソル桁・画面の桁走査が
+  2 バイト単位でした (`src/ops.c`、`src/buffer.c`、`src/getchar.c`、
+  `src/screen.c`)。いずれも `utf_lenat()` バイトで進み、`utf_prev()` で
+  前の文字を求め、`utf_head()`/`utf_headoff()` で桁を文字の先頭に
+  合わせます。FEP 側の `src/feponew.c` は UTF-8 の文字全体を読み、
+  ONEW が期待する EUC のバイト列へ変換して渡します。1 文字が複数バイトに
+  変換される場合は、インタフェースが 1 回に返す 1 バイトを超えた分を
+  バッファに保持します。
+- **`jp`・`bj`・`hj` の罫線テーブルがまだ Shift-JIS でした。** `track.c`
+  が `fepmode` の `jp`/`bj`/`hj` キーで引く `src/jptab.h` の `tracktab[]`
+  エントリは生の Shift-JIS の 2 バイト列のままで、UTF-8 のバッファに
+  `→` や `│` を引くと一致しないか誤ったバイトに一致していました。
+  全エントリを文字の UTF-8 列に変換し、`track.c` は `tracktab->vw` を
+  バイト数として信用せず `utf_lenat()` でテーブルを走査します。
+- **`fopt=0x80` が UTF-8 の先頭バイトを Shift-JIS の外字マーカーと
+  誤読していました。** 書き出し側の `src/fileio.c` は生バイトに
+  `c >= 0xf0` を試していましたが、これは絵文字を含む UTF-8 の 4 バイト
+  文字すべてに一致します。読み込み側も `#XXXX#` が指す Shift-JIS コードを
+  変換せずに展開していました。コードポイントが `cp2sjis()` で F0–F9 範囲に
+  なる場合だけ外字とし、入力の `#XXXX#` は `sjis2cp()` で UTF-8 に変換
+  します。絵文字は `#F0XX#` ではなくそのまま往復します。
 
 ## 1.2.1 — 2026-09-01
 

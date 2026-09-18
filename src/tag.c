@@ -887,7 +887,12 @@ erret:
 			c = vgetc();
 #ifdef KANJI
 			if (ISkanji(c))
-				vgetc();
+			{
+				int		n;	/* swallow the whole character, not just 2 bytes */
+
+				for (n = utf_len(c) - 1; n > 0; --n)
+					(void)vgetc();
+			}
 			else if (c > 0xff)
 				;
 #endif

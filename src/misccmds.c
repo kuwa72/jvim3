@@ -238,11 +238,17 @@ Opencmd(int dir, int redraw, int delspaces)
 							p--;
 							break;
 						case 2:
-							p -= 2;
+							/* mid-character: snap to the character's head,
+							 * however many bytes it has */
+							p = utf_head(ptr, p);
 							break;
-						/* ??? */
 						case 1:
-							p--;
+							/* an ideographic space is whitespace; any
+							 * other multi-byte character ends the scan */
+							if (isjpspace(p))
+								p--;
+							else
+								goto end_while;
 							break;
 					}
 				}

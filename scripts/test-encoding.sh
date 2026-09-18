@@ -698,6 +698,54 @@ printf 'x\xe3\x80\x80y\n' > "$tmp/optin"
 edit "fopt=2 replace on :r"        ok ":set fopt=2\r:r $tmp/optin\r" "" "\nx  y\n"
 
 echo
+echo "smaller two-byte leftovers (issue #111):"
+# 'p' left the cursor on the last BYTE of the put text: for a three byte
+# character that is inside it, and the next command split the character.
+# ylp duplicates あ, then x must remove the duplicate whole again.
+edit "p cursor on char head"       ok "ylpx"   "$AA\n"          "$AA\n"
+edit "P cursor on char head"       ok "ylPx"   "x$AA\n"         "x$AA\n"
+# '.' replays what prep_redo() stored. It wrote only two bytes of the
+# target character, so the 'f' in the replayed "dfあ" read two bytes too
+# many from the redo stream and lost sync with it.
+edit "df kanji then ."             ok "df${AA}." "x${AA}y${AA}z\n" "z\n"
+# cf repeats the motion alone, like cfxZ. does for ASCII -- the point is the
+# replayed 'f' reads all three bytes of あ instead of two bytes plus 'Z'.
+edit "cf kanji then ."             ok "cf${AA}Z\033." "x${AA}y${AA}z\n" "Zz\n"
+# check_abbr() asked about the byte before the last byte of the character
+# under the cursor, which is inside a three byte character: it read あ's
+# middle byte, which is an abbrev char, so the candidate scan stopped at
+# the non-graphic \x01 and "あ" wrongly expanded. The right question is
+# about the character before あ: \x01 is not an abbrev char, the scan runs
+# past it, and the candidate becomes "\x01あ" -- no match.
+edit "abbrev after ctrl byte"      ok ":ab ${AA} ZZZ\ria\x16\x01${AA} \033" \
+	"z\n" "a\x01${AA} z\n"
+# the 'si' trailing-character scan stepped two bytes over a kanji and kept
+# going, so "{ あ" looked like a line ending in '{'; the new line must not
+# be indented.
+edit "smartindent sees kanji end"  ok ":set si\ri{ ${AA}\rX\033" "" \
+	"{ ${AA}\nX\n"
+# the multi-line 'J' search flag joins lines for the match (it needs a flag
+# ahead of it, 'l' here, to be read at all); the join skipped two bytes of a
+# U+3000 ideographic space and left its third byte in the joined string, so
+# the match failed and the cursor stayed on the first line.
+edit "search /J over jpspace"      ok "/ax by/lJ\rj\$x" \
+	"zz\nax\n${JSP}by\n" "zz\nax\n${JSP}b\n"
+# the jp/bj/hj track tables held Shift-JIS bytes and 'gx' wrote them into
+# the UTF-8 buffer raw. 'l' draws the pointing-back arrow, index TK_R.
+edit "trackset jp gx l"            ok ":set trs=jp\rgxl" "$AA\n" "\xe2\x86\x90X\n"
+edit "trackset jp gx h"            ok ":set trs=jp\rgxh" "$AA\n" "\xe2\x86\x92\n"
+edit "trackset bj gx l"            ok ":set trs=bj\rgxl" "$AA\n" "\xe2\x86\x90X\n"
+# 'fopt' gaiji (0x80): on write a character whose Shift-JIS form is in the
+# gaiji range F0-F9 becomes #XXXX#; a four byte UTF-8 character merely
+# starts with a byte in that range and must pass through unmangled.
+GAIJI='\xee\x80\x80'								# U+E000, gaiji F040
+edit "fopt=128 gaiji on write"     ok "i${GAIJI}\033:set fopt=128\r" "" "#F040#\n"
+edit "fopt=128 keeps 4 byte char"  ok "i${EM}\033:set fopt=128\r" "" "$EM\n"
+printf 'x#F040#y\n' > "$tmp/gaijin"
+edit "fopt=128 gaiji on :r"        ok \
+	":set fopt=128\r:r $tmp/gaijin\r:set fopt=0\r" "" "\nx${GAIJI}y\n"
+
+echo
 echo "the help file, which is converted and not loaded:"
 # 日本語 ten times over, in one run of ISO-2022-JP: 67 bytes in the file, 91 in
 # the internal UTF-8. It has to be a run, because a short one shrinks -- the six

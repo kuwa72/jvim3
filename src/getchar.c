@@ -1049,10 +1049,13 @@ vgetorpeek(int advance)
 							else
 #ifdef KANJI
 							{
-								--curwin->w_col;
-								if (ISkanjiCol(curwin->w_cursor.lnum,
-														curwin->w_col) == 2)
-									--curwin->w_col;
+								char_u	*lp = ml_get(curwin->w_cursor.lnum);
+								int		h  = utf_headoff(lp,
+														(int)curwin->w_cursor.col - 1);
+
+								/* back over the whole display width of the
+								 * character to the left */
+								curwin->w_col -= utf_width(lp + h);
 							}
 #else
 								--curwin->w_col;
@@ -1228,12 +1231,22 @@ domap(int maptype, char_u *keys, int mode)
 				return 1;
 			for (n = 0; n < len - 2; ++n)
 #ifdef KANJI
-				if (ISkanjiPointer(keys, keys + n) || ISkanjiPointer(keys, keys + len - 2))
+			{
+				/* compare against the character before the last one:
+				 * keys + len - 2 is mid-character when that last
+				 * character is longer than two bytes */
+				int		h = utf_headoff(keys, len - 1);
+
+				if (ISkanjiPointer(keys, keys + n) || h == 0
+								|| ISkanjiPointer(keys, keys + h - 1))
 					;
-				else
-#endif
+				else if (isidchar(*(keys + n)) != isidchar(*(keys + h - 1)))
+					return 1;
+			}
+#else
 				if (isidchar(*(keys + n)) != isidchar(*(keys + len - 2)))
 					return 1;
+#endif
 		}
 	}
 
@@ -1439,7 +1452,14 @@ check_abbr(int c, char_u *ptr, int col, int mincol)
 
 #ifdef KANJI
 	if (col > 1)
-		is_id = isidchar(ptr[col - 2]);
+	{
+		/* the character before the cursor may be multi-byte; the one before
+		 * it starts at the head of that character, not one byte back */
+		int		h = utf_headoff(ptr, col - 1);
+
+		if (h > 0)
+			is_id = isidchar(ptr[h - 1]);
+	}
 	for (len = col - 1; len > 0; --len)
 		if (ISkanjiPointer(ptr, &ptr[len - 1]))
 			;

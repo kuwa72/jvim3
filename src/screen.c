@@ -2125,17 +2125,19 @@ curs_columns(int scroll)
 			{
 				if (ISkanji(*p))
 				{
-					p += 2;
-					if (col == (Columns - 1))
+					int		w = utf_width(p);
+
+					p += utf_lenat(p, 0);
+					if (w > 1 && col == (Columns - 1))
 					{
-						col = 2;
+						col = w;
 						curwin->w_row++;
 						curwin->w_col -= (Columns - 1);
 						if (curwin->w_col < Columns)
 							break;
 					}
 					else
-						col += 2;
+						col += w;
 				}
 				else
 				{

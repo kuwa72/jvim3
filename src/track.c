@@ -195,7 +195,6 @@ track_has_arc(char *ptr, char *tc[], int dir)
 	static int
 track_code(int move, int vstart, int vend)
 {
-	int		len;
 	long	i;
 	char_u	*line, *ptr;
 	char	**tc;
@@ -203,17 +202,18 @@ track_code(int move, int vstart, int vend)
 
 	line = ml_get(curwin->w_cursor.lnum);
 	tc   = tracktab->ch;
-	len  = tracktab->vw;
 	code = move;
 
 	/* left char. */
 	if (!(code & TK_L) && ((ptr = track_vcol(line, vstart, TV_PREV)) != NULL))
 	{
 		if (curbuf->b_p_tt)
-			while(ptr - line >= len && STRCHR(" \t", *(ptr - 1)))
+			while(ptr > line && STRCHR(" \t", *(ptr - 1)))
 				ptr --;
 
-		if (ptr - line >= len && track_has_arc(ptr - len, tc, TK_R))
+		/* the character before ptr is utf_prev() away, not vw bytes:
+		 * a track character is two columns but three bytes of UTF-8 */
+		if (ptr > line && track_has_arc((char *)utf_prev(line, ptr), tc, TK_R))
 			code |= TK_L;
 	}
 
