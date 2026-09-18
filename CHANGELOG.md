@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  322 cases now.
+  331 cases now.
 
 
 
@@ -145,6 +145,22 @@ repository and would drift within three releases.
   byte of the old character instead of replacing it whole, which left
   stray tail bytes even before the backspace; the extraspace restore
   keys on that space, so it drops the whole old character now.
+- **The regular expression engine treated a multi-byte character as two
+  bytes.** `src/regexp.c` was still written on the Shift-JIS width. `.`
+  matched exactly two bytes, so `:s/.$//` on a line ending in a three-byte
+  UTF-8 character left the last byte in the buffer as a stray continuation
+  byte — invalid UTF-8 — and `\(.\)` captured those two bytes so `\1`
+  wrote the fragment into the replacement. A literal `あ` was parsed as a
+  two-byte unit plus a stray byte, so `あ*` compiled to `(e3 81)` +
+  `(82)*` with the star bound to the character's last byte and `あ\=`
+  could never match the empty string; and the unanchored scan stepped two
+  bytes, so a match could start on a continuation byte — `[^あ]` on
+  `あx` "matched" the third byte of `あ` and deleted it (#109). The
+  parser and the matcher now work on whole characters:
+  `skipchr()`/`ungetchr()`/`regjp()` step and emit `utf_lenat()` bytes,
+  `ANY` advances by the character's length, the `*`/`\+` back-off snaps
+  to the character's head with `utf_head()`, and the start-position
+  scans step by characters so a match never begins mid-character.
 
 ### 日本語
 
@@ -261,6 +277,25 @@ repository and would drift within three releases.
   文字の先頭バイトへ上書きして末尾バイトを残していたのを、文字
   全体を置き換える形に直しました — extraspace の復元はその空白を
   手がかりにします。
+- **正規表現エンジンがマルチバイト文字を 2 バイトとして扱って
+  いました。** `src/regexp.c` には Shift-JIS 時代の幅が残って
+  いました。`.` はちょうど 2 バイトにマッチするため、UTF-8 の
+  3 バイト文字で終わる行への `:s/.$//` は末尾 1 バイトを孤立
+  バイトとしてバッファに残し、UTF-8 として壊れていました。
+  `\(.\)` もその 2 バイトを取り込むため、`\1` が断片を置換へ
+  書き込んでいました。リテラルの `あ` は 2 バイトの単位と孤立
+  バイトに分かれて読まれるので、`あ*` は `(e3 81)` + `(82)*`
+  にコンパイルされ、`*` が文字の最後のバイトに結び付き、`あ\=`
+  は空文字列にマッチできませんでした。アンカーなしの走査も
+  2 バイトずつ進むため、マッチが継続バイトの途中から始まる
+  ことがあり、`あx` への `[^あ]` が `あ` の 3 バイト目に
+  「マッチ」してそれを消していました (#109)。パーサと
+  マッチャは文字単位で動くようになりました。
+  `skipchr()`/`ungetchr()`/`regjp()` は `utf_lenat()` 分の
+  バイトを進め・出力し、`ANY` は文字の長さだけ進み、`*`/`\+`
+  の戻りは `utf_head()` で文字の先頭に合わせます。開始位置の
+  走査も文字単位なので、マッチが文字の途中から始まることは
+  ありません。
 
 ## 1.2.1 — 2026-09-01
 

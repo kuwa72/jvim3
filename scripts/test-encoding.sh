@@ -533,6 +533,34 @@ edit "[a-c] leaves kana"       ok ":s/[a-c]//g\r"       "$AA""abc$II\n"    "$AA$
 edit "search a not i"          ok "/$AA\rx"             "$II$AA$UU\n"      "$II$UU\n"
 
 echo
+echo "the regexp engine on whole multi-byte characters:"
+# "." used to match exactly two bytes -- the Shift-JIS width -- so a match
+# ending after it cut a three byte character in two. :s/.$// removing the
+# last character of a line that ends in kanji left the third byte in the
+# buffer as a stray continuation byte, which is invalid UTF-8 (issue #109).
+edit ":s/.\$// on kanji"      ok ":s/.\$//\r"          "$AA\n"            "\n"
+edit ":s/.\$// after kanji"   ok ":s/.\$//\r"          "x$AA\n"           "x\n"
+# A literal multi-byte character was parsed as two bytes plus a stray byte,
+# so あ* compiled as (e3 81) + (82)* with the star bound to the last byte.
+# The star has to belong to the whole character: on ああ it eats both, and
+# on a line without あ it still matches the empty string at the start.
+edit ":s/あ*/x/"              ok ":s/$AA*/x/\r"        "$AA$AA\n"         "x\n"
+edit ":s/あ*/x/ no kanji"     ok ":s/$AA*/x/\r"        "abc\n"            "xabc\n"
+# \= (optional) has to be able to match the empty string
+edit ":s/あ\=/x/ empty"       ok ":s/$AA\\\\=/x/\r"    "abc\n"            "xabc\n"
+edit ":s/あ\=/x/ present"     ok ":s/$AA\\\\=/x/\r"    "$AA""bc\n"        "xbc\n"
+# \(.\) captured two bytes -- the first two of a three byte character -- and
+# \1 wrote that broken fragment into the replacement
+edit "\\(.\\) whole char"     ok ":s/\\\\(.\\\\)\\\\(.\\\\)/[\\\\1][\\\\2]/\r" \
+							"$AA""x\n"          "[$AA][x]\n"
+# The unanchored scan stepped two bytes over a kanji, so a match could start
+# on a continuation byte: [^あ] "matched" the third byte of あ and deleted
+# it, leaving an invalid sequence behind.
+edit "[^a] no mid-char start" ok ":s/[^$AA]//g\r"      "$AA""x\n"         "$AA\n"
+# \+ binds to the whole character the same way * does
+edit ":s/あ\+/x/"             ok ":s/$AA\\\\+/x/\r"    "$AA$AA\n"         "x\n"
+
+echo
 echo "the help file, which is converted and not loaded:"
 # 日本語 ten times over, in one run of ISO-2022-JP: 67 bytes in the file, 91 in
 # the internal UTF-8. It has to be a run, because a short one shrinks -- the six
