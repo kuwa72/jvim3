@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  343 cases now.
+  351 cases now.
 
 
 
@@ -188,6 +188,19 @@ repository and would drift within three releases.
   landing column is found with `utf_prev()`/`utf_lenat()` as well. The
   repeat state holds the whole sequence, so `;` repeats the character that
   was actually searched for.
+- **`~` under `'jtilde'` wrote two Shift-JIS bytes into a UTF-8 character.**
+  `swapchar()` in `src/ops.c` fed the first two bytes of the character to
+  `jptocase()` — the Shift-JIS machinery — and put the two bytes it returned
+  back with `pchar`, leaving a three-byte character's last byte in the file
+  as a stray continuation byte: invalid UTF-8, and nothing like the hiragana
+  to katakana flip `jtilde` is for (#103). The case pair now comes from the
+  same `jptab` table but is asked about the whole character: `jptocasecp()`
+  in `src/kanji.c` takes the decoded code point round trip through Shift-JIS
+  so the table answers what it always answered — hiragana ⇔ katakana,
+  voiced kana, the fullwidth letters and the paired symbols — and the
+  re-encoded character replaces all of the old one's bytes. A character
+  with no Shift-JIS form, or no case pair, is left alone, so the buffer
+  stays valid UTF-8 either way.
 
 ### 日本語
 
@@ -351,6 +364,19 @@ repository and would drift within three releases.
   `t`/`T` の着地位置も `utf_prev()`/`utf_lenat()` で求めます。
   リピート状態はバイト列全体を持つので、`;` は実際に探した文字を
   繰り返します。
+- **`'jtilde'` 時の `~` が UTF-8 文字に Shift-JIS の 2 バイトを書き込んで
+  いました。** `src/ops.c` の `swapchar()` は文字の先頭 2 バイトを
+  `jptocase()` — Shift-JIS 時代の仕組み — に渡し、返ってきた 2 バイトを
+  `pchar` で書き戻すため、3 バイト文字の末尾バイトが継続バイトの孤立
+  バイトとしてファイルに残り、UTF-8 として不正になっていました。
+  `jtilde` 本来の平仮名⇔片仮名の変換にもなっていません (#103)。
+  変換は同じ `jptab` テーブルのまま、文字全体について問い合わせる形に
+  なりました。`src/kanji.c` の `jptocasecp()` がデコードしたコード
+  ポイントを Shift-JIS 経由で往復させるので、テーブルは従来どおりの
+  答え — 平仮名⇔片仮名、濁音仮名、全角英字、対になる記号 — を返し、
+  再エンコードした文字が元の文字の全バイトを置き換えます。Shift-JIS
+  表現を持たない文字や対のない文字はそのままなので、どちらの場合も
+  バッファは正しい UTF-8 のままです。
 
 ## 1.2.1 — 2026-09-01
 

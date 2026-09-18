@@ -1271,6 +1271,27 @@ jptocase(char_u *cp, char_u *kp, int tocase)
 }
 
 /*
+ *	jptocasecp(cp, tocase)
+ *		jptocase() on a Unicode code point rather than a pair of Shift-JIS
+ *		bytes: the code point round trips through Shift-JIS so the same
+ *		jptab table answers. A character that has no Shift-JIS form -- an
+ *		emoji, say -- has no jptab entry either and comes back unchanged,
+ *		like a character whose entry pairs it with itself.
+ */
+	int
+jptocasecp(int cp, int tocase)
+{
+	char_u	sjis[2];
+	int		ncp;
+
+	if (cp2sjis(cp, sjis) != 2)
+		return cp;
+	jptocase(&sjis[0], &sjis[1], tocase);
+	ncp = sjis2cp(sjis, 2);
+	return ncp == UTF8_ERROR ? cp : ncp;
+}
+
+/*
  *	isspace(c, k) returns whether a kanji character ck space
  */
 	int

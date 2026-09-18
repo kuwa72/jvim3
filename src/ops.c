@@ -676,22 +676,30 @@ swapchar(FPOS *pos)
 #ifdef KANJI
 	if (p_jt && ISkanji(c))
 	{
-		FPOS	pos2;
-		char_u	k;
-		char_u	c1, c2;
+		/*
+		 * 'jtilde' case pairs are decided by the jptab table, which is
+		 * indexed on the character, not on bytes: decode the whole UTF-8
+		 * character, flip its case as a code point and re-encode it. The
+		 * pairs the table knows -- kana, fullwidth letters, the paired
+		 * symbols -- are all in the BMP, so a character that changes is
+		 * three bytes before and after; anything else is left alone.
+		 */
+		char_u	*line = ml_get_buf(curbuf, pos->lnum, TRUE);
+		int		len = utf_lenat(line, (int)pos->col);
+		int		cp = utf_decode(line + pos->col, NULL);
+		char_u	buf[UTF8_MAXLEN];
+		int		i;
 
-		pos2.lnum = pos->lnum;
-		pos2.col  = pos->col + 1;
-
-		c1 = c;
-		c2 = k = gchar(&pos2);
-
-		jptocase(&c1, &c2, operator);
-		if (c1 != c || c2 != k)
+		if (cp != UTF8_ERROR)
 		{
-			pchar(*pos, c1);
-			pchar(pos2, c2);
-			CHANGED;
+			int		ncp = jptocasecp(cp, operator);
+
+			if (ncp != cp && utf_encode(ncp, buf) == len)
+			{
+				for (i = 0; i < len; ++i)
+					line[pos->col + i] = buf[i];
+				CHANGED;
+			}
 		}
 	}
 	else if (ISkanji(c))

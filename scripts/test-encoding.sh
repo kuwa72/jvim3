@@ -615,6 +615,38 @@ typed "df reaches the right char" ok \
 	"ix${II}$AA\0330df$AA"         "\n"
 
 echo
+echo "'~' under 'jtilde' converts a whole multi-byte character:"
+# 'jtilde' gives ~ a Japanese meaning: hiragana <-> katakana, and the case
+# pairs of the fullwidth letters. It used to run the two-byte Shift-JIS
+# conversion on the first two bytes of a three byte UTF-8 character and put
+# those two bytes back, which left the character's last byte in the file as
+# a stray continuation byte -- invalid UTF-8 (issue #103).
+KATA_A='\xe3\x82\xa2'						# ア
+GA='\xe3\x81\x8c'							# が
+KATA_GA='\xe3\x82\xac'						# ガ
+FW_a='\xef\xbd\x81'							# ａ fullwidth
+FW_A='\xef\xbc\xa1'							# Ａ fullwidth
+typed "~ hira to kata, jtilde"   ok \
+	":set jtilde\ri$AA\0330~"        "$KATA_A\n"
+typed "~ kata to hira, jtilde"   ok \
+	":set jtilde\ri$KATA_A\0330~"    "$AA\n"
+typed "~ voiced kana, jtilde"    ok \
+	":set jtilde\ri$GA\0330~"        "$KATA_GA\n"
+typed "~ fullwidth alpha, jtilde" ok \
+	":set jtilde\ri$FW_a\0330~"      "$FW_A\n"
+typed "~ ascii, jtilde"          ok \
+	":set jtilde\riab\0330~"         "Ab\n"
+# a character with no case pair is left alone, byte for byte, so the file
+# stays valid UTF-8
+typed "~ kanji, jtilde"          ok \
+	":set jtilde\ri$GO\0330~"        "$GO\n"
+typed "~ emoji, jtilde"          ok \
+	":set jtilde\ri$EM\0330~"        "$EM\n"
+# and without the option ~ skips multi-byte characters, as it always did
+typed "~ hira, no jtilde"        ok \
+	"i$AA\0330~"                     "$AA\n"
+
+echo
 echo "the help file, which is converted and not loaded:"
 # 日本語 ten times over, in one run of ISO-2022-JP: 67 bytes in the file, 91 in
 # the internal UTF-8. It has to be a run, because a short one shrinks -- the six
