@@ -1237,10 +1237,13 @@ doput(int dir, long count, int fix_indent)
 				}
 				memmove((char *)ptr, (char *)old + col, STRLEN(old + col) + 1);
 				ml_replace(lnum, new, FALSE);
-				curwin->w_cursor.col += (colnr_t)(totlen - 1);	/* put cursor on last putted char */
 #ifdef KANJI
-				if (ISkanji(*(ptr - 1)))
-					curwin->w_cursor.col --;
+				/* put the cursor on the head of the last putted char:
+				 * *(ptr - 1) is its last byte, which is mid-character
+				 * for a multi-byte UTF-8 character */
+				curwin->w_cursor.col = (colnr_t)(utf_prev(new, ptr) - new);
+#else
+				curwin->w_cursor.col += (colnr_t)(totlen - 1);	/* put cursor on last putted char */
 #endif
 			}
 			curbuf->b_endop = curwin->w_cursor;
@@ -1519,8 +1522,10 @@ dis_msg(char_u *p, int skip_esc)
 						(n -= charsize(p)) >= 0)
 		if (ISkanji(*p))
 		{
-			msg_outtrans(p, 2);
-			p += 2;
+			int		len = utf_lenat(p, 0);	/* the whole character */
+
+			msg_outtrans(p, len);
+			p += len;
 		}
 		else
 			msg_outtrans(p++, 1);

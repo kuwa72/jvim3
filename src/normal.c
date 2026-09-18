@@ -43,7 +43,7 @@ static linenr_t	Prenum; 		/* The (optional) number before a command. */
 int				redo_Visual_busy = FALSE;	/* TRUE when redo-ing a visual */
 
 #ifdef KANJI
-static void		prep_redo __ARGS((long, int, int, int, int));
+static void		prep_redo __ARGS((long, int, int, int, char_u *, int));
 #else
 static void		prep_redo __ARGS((long, int, int, int));
 #endif
@@ -90,7 +90,6 @@ normal(void)
 	int 			dir = FORWARD;			/* search direction */
 	int				nchar = NUL;
 #ifdef KANJI
-	int				kchar = NUL;
 	char_u			nbytes[UTF8_MAXLEN];	/* nchar as its full byte sequence */
 	int				nlen = 1;
 #endif
@@ -260,7 +259,6 @@ retry_input:
 			/* the internal encoding is UTF-8, so take the whole character */
 			while (nlen < want)
 				nbytes[nlen++] = vgetc();
-			kchar = nbytes[1];
 		}
 #else	/* KANJI */
 		State = NOMAPPING;
@@ -1218,7 +1216,7 @@ docsearch:
 		if (nchar == '\r' || nchar == '\n' || nchar == '\t')
 		{
 #ifdef KANJI
-			prep_redo(Prenum1, 'r', nchar, NUL, NUL);
+			prep_redo(Prenum1, 'r', nchar, NUL, NULL, 0);
 #else
 			prep_redo(Prenum1, 'r', nchar, NUL);
 #endif
@@ -1234,8 +1232,6 @@ docsearch:
 			c = Ctrl('V');
 #ifdef KANJI
 			nchar = get_literal(&type, nbytes, &nlen);
-			if (nlen > 1)
-				kchar = nbytes[1];
 #else
 			nchar = get_literal(&type);
 #endif
@@ -1245,13 +1241,7 @@ docsearch:
 		else
 			c = NUL;
 #ifdef KANJI
-		prep_redo(Prenum1, 'r', c, nchar, kchar);
-		{							/* prep_redo only knows about two bytes */
-			int		n;
-
-			for (n = 2; n < nlen; n++)
-				AppendCharToRedobuff(nbytes[n]);
-		}
+		prep_redo(Prenum1, 'r', c, nchar, nbytes, nlen);
 #else
 		prep_redo(Prenum1, 'r', c, nchar);
 #endif
@@ -1307,7 +1297,7 @@ docsearch:
 		}
 
 #ifdef KANJI
-		prep_redo(Prenum, 'J', NUL, NUL, NUL);
+		prep_redo(Prenum, 'J', NUL, NUL, NULL, 0);
 #else
 		prep_redo(Prenum, 'J', NUL, NUL);
 #endif
@@ -1322,7 +1312,7 @@ docsearch:
 	  case 'p':
 		CHECKCLEAROPQ;
 #ifdef KANJI
-		prep_redo(Prenum, c, NUL, NUL, NUL);
+		prep_redo(Prenum, c, NUL, NUL, NULL, 0);
 #else
 		prep_redo(Prenum, c, NUL, NUL);
 #endif
@@ -1335,7 +1325,7 @@ docsearch:
 		CHECKCLEAROPQ;
 		if (doaddsub((int)c, Prenum1) == OK)
 #ifdef KANJI
-			prep_redo(Prenum1, c, NUL, NUL, NUL);
+			prep_redo(Prenum1, c, NUL, NUL, NULL, 0);
 #else
 			prep_redo(Prenum1, c, NUL, NUL);
 #endif
@@ -1446,7 +1436,7 @@ docsearch:
 				break;
 			}
 #ifdef KANJI
-			prep_redo(Prenum, '~', NUL, NUL, NUL);
+			prep_redo(Prenum, '~', NUL, NUL, NULL, 0);
 #else
 			prep_redo(Prenum, '~', NUL, NUL);
 #endif
@@ -2199,7 +2189,7 @@ error:
 		if (operator != YANK && !VIsual.lnum)		/* can't redo yank */
 		{
 #ifdef KANJI
-			prep_redo(Prenum, opchars[operator - 1], c, nchar, kchar);
+			prep_redo(Prenum, opchars[operator - 1], c, nchar, nbytes, nlen);
 #else
 			prep_redo(Prenum, opchars[operator - 1], c, nchar);
 #endif
@@ -2313,7 +2303,7 @@ error:
 			if (operator != YANK && operator != COLON)	/* can't redo yank and : */
 			{
 #ifdef KANJI
-				prep_redo(0L, 'v', opchars[operator - 1], NUL, NUL);
+				prep_redo(0L, 'v', opchars[operator - 1], NUL, NULL, 0);
 #else
 				prep_redo(0L, 'v', opchars[operator - 1], NUL);
 #endif
@@ -2516,7 +2506,7 @@ normal_end:
 
 	static void
 #ifdef KANJI
-prep_redo(long num, int cmd, int c, int nchar, int kchar)
+prep_redo(long num, int cmd, int c, int nchar, char_u *nbytes, int nlen)
 #else
 prep_redo(long num, int cmd, int c, int nchar)
 #endif
@@ -2535,9 +2525,17 @@ prep_redo(long num, int cmd, int c, int nchar)
 	if (nchar != NUL)
 #ifdef KANJI
 	{
-		AppendCharToRedobuff(nchar);
-		if (ISkanji(nchar))
-			AppendCharToRedobuff(kchar);
+		int		i;
+
+		/* nbytes[] holds nchar's whole byte sequence; a multi-byte
+		 * character is up to UTF8_MAXLEN bytes, not the two a Shift-JIS
+		 * character always was. When the two disagree nchar was reassigned
+		 * after the bytes were read, so fall back to the single byte. */
+		if (nbytes != NULL && nbytes[0] == nchar)
+			for (i = 0; i < nlen; ++i)
+				AppendCharToRedobuff(nbytes[i]);
+		else
+			AppendCharToRedobuff(nchar);
 	}
 #else
 		AppendCharToRedobuff(nchar);

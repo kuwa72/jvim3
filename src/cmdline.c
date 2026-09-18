@@ -4537,7 +4537,7 @@ set_one_cmd_context(int firstc, char_u *buff)
 			{
 #ifdef KANJI
 				if (ISkanji(*p))
-					p += 2;
+					p += utf_lenat(p, 0) - 1;
 				else
 #endif
 				if (*p == '\\' && p[1])
@@ -4556,9 +4556,9 @@ set_one_cmd_context(int firstc, char_u *buff)
 			{
 #ifdef KANJI
 				if (ISkanji(arg[0]))
-					++arg;
+					arg += utf_lenat(arg, 0) - 1;
 				else if (arg[0] == '\\' && arg[1] != NUL && ISkanji(arg[1]))
-					arg += 2;
+					arg += utf_lenat(arg, 1);
 				else
 #endif
 				if (arg[0] == '\\' && arg[1] != NUL)
@@ -4578,9 +4578,9 @@ set_one_cmd_context(int firstc, char_u *buff)
 				{
 #ifdef KANJI
 					if (ISkanji(arg[0]))
-						++arg;
+						arg += utf_lenat(arg, 0) - 1;
 					else if (arg[0] == '\\' && arg[1] != NUL && ISkanji(arg[1]))
-						arg += 2;
+						arg += utf_lenat(arg, 1);
 					else
 #endif
 					if (arg[0] == '\\' && arg[1] != NUL)

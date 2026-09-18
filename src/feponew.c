@@ -88,28 +88,51 @@ int		*	timeout;
 int
 ONEW_GETCHAR()
 {
-	static char_u	kanji = K_NUL;
+	/* pending EUC bytes of the last converted character; the FEP speaks
+	 * EUC, the input stream is UTF-8 */
+	static char_u	kanji[8];
+	static int		kanji_len = 0;
+	static int		kanji_i   = 0;
 	char_u			k1;
 	int				c;
 
-	if (kanji != K_NUL)
-	{
-		c = kanji;
-		c &= 0xff;
-		kanji = K_NUL;
-		return(c);
-	}
+	if (kanji_i < kanji_len)
+		return(kanji[kanji_i++]);
+	kanji_i = kanji_len = 0;
+
 	k1 = vgetc() & 0xff;
 	if (k1 == K_SPECIAL)
 		return(0xffffff80);
 	if (ISkanji(k1))
 	{
-		kanji = vgetc() & 0xff;
-		kanjito(&k1, &kanji, JP_EUC);
+		char_u		ub[UTF8_MAXLEN + 1];
+		char_u		*euc;
+		int			i, n = utf_len(k1);
+
+		/* take the whole character -- 1-4 bytes, not two -- and convert it
+		 * to the EUC bytes the FEP expects */
+		ub[0] = k1;
+		for (i = 1; i < n; i++)
+			ub[i] = vgetc() & 0xff;
+		ub[n] = NUL;
+		if ((euc = kanjiconvsto(ub, JP_EUC, TRUE)) != NULL && euc[0] != NUL)
+		{
+			k1 = euc[0];
+			for (i = 1; euc[i] != NUL
+							&& kanji_len < (int)sizeof(kanji); i++)
+				kanji[kanji_len++] = euc[i];
+			free(euc);
+		}
+		else
+			k1 = '?';
 	}
 	else if (ISkana(k1))
 	{
-		kanato(&k1, &kanji, JP_EUC);
+		char_u	kanji2 = NUL;
+
+		kanato(&k1, &kanji2, JP_EUC);
+		if (kanji2 != NUL)
+			kanji[kanji_len++] = kanji2;
 	}
 	c = k1;
 	c &= 0xff;

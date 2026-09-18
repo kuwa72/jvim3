@@ -48,8 +48,8 @@ static char_u  *sjis_convsto __ARGS((char_u *, int, int));
 static int		sjis_islead __ARGS((int));
 static int		sjis_iskana __ARGS((int));
 static int		sjis_isdisp __ARGS((int));
-static int		sjis2cp __ARGS((char_u *, int));
-static int		cp2sjis __ARGS((int, char_u *));
+int		sjis2cp __ARGS((char_u *, int));
+int		cp2sjis __ARGS((int, char_u *));
 static int		sjis2utf8_n __ARGS((char_u *, int, char_u *, int));
 static char_u  *utf82sjis __ARGS((char_u *));
 static char_u  *utf82ucs2 __ARGS((char_u *, int));
@@ -1880,7 +1880,7 @@ sjis_valid(int c1, int c2, int len)
 	return ((c2 >= 0x40 && c2 <= 0x7e) || (c2 >= 0x80 && c2 <= 0xfc));
 }
 
-	static int
+	int
 sjis2cp(char_u *src, int len)
 {
 	char_u	buf[2];
@@ -1901,7 +1901,7 @@ sjis2cp(char_u *src, int len)
  * Code point -> Shift-JIS bytes in buf (needs 2). Returns the length, or 0 when
  * the character has no Shift-JIS form.
  */
-	static int
+	int
 cp2sjis(int cp, char_u *buf)
 {
 	char_u	w[2];

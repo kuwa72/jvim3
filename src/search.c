@@ -295,7 +295,7 @@ grepsub(GREP *gp, char_u *string, int at_bol, linenr_t lnum, int *look, char_u *
 				else if (ISkanji(*cp))
 				{
 					if (isjpspace(cp))
-						cp += 2;
+						cp += utf_lenat(cp, 0);
 					else
 						break;
 				}
@@ -324,7 +324,7 @@ grepsub(GREP *gp, char_u *string, int at_bol, linenr_t lnum, int *look, char_u *
 				{
 					if (ep == NULL)
 						ep = cp;
-					cp++;
+					cp += utf_lenat(cp, 0) - 1;
 				}
 				else
 				{
@@ -332,7 +332,7 @@ grepsub(GREP *gp, char_u *string, int at_bol, linenr_t lnum, int *look, char_u *
 					if (ISkanji(*cp))
 					{
 						kanji = TRUE;
-						cp++;
+						cp += utf_lenat(cp, 0) - 1;
 					}
 					else
 						kanji = FALSE;
@@ -633,8 +633,8 @@ retry:
 			i --;
 			if (i < 0)
 				-- lnum;
-			else if (ISkanjiCol(lnum, i) == 2)
-				i --;
+			else	/* back onto the head of the character, not its middle */
+				i = utf_headoff(ml_get(lnum), i);
 		}
 #else
 		i = pos->col + dir; 	/* search starts one postition away */
@@ -1242,7 +1242,7 @@ showmatch(int initc)
 #ifdef KANJI
 				if (ISkanji(initc))
 				{
-					pos.col += 2;
+					pos.col += utf_lenat(linep, pos.col);
 					continue;
 				}
 #endif

@@ -9175,12 +9175,23 @@ chk_ctlkey(int *c, int *k)
 				beep();
 #ifdef KANJI
 				if (ISkanji(w))
-					vgetc();
+				{
+					int		n;	/* swallow the whole character */
+
+					for (n = utf_len(w) - 1; n > 0; --n)
+						(void)vgetc();
+				}
 #endif
 				*c = vgetc();
 #ifdef KANJI
 				if (ISkanji(*c))
+				{
+					int		n;
+
 					*k = vgetc();
+					for (n = utf_len(*c) - 2; n > 0; --n)
+						(void)vgetc();
+				}
 #endif
 				continue;
 			}

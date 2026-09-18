@@ -1834,44 +1834,71 @@ opt_delet(char_u *buf, int readwrite, int expand, int entab, int delete, int rep
 						col++;
 					else
 					{
-						buf[col + 0]  = (cc & 0xff00) >> 8;
-						buf[col + 1]  =  cc & 0x00ff;
-						memmove(&buf[col + 2], &buf[col + 6],
+						char_u	sjis[2];
+						char_u	ub[UTF8_MAXLEN];
+						int		ucp, ulen;
+
+						sjis[0] = (cc & 0xff00) >> 8;
+						sjis[1] =  cc & 0x00ff;
+						/* the '#XXXX#' holds a Shift-JIS code; the buffer
+						 * is UTF-8, so convert rather than dropping the two
+						 * raw bytes in */
+						ucp = sjis2cp(sjis, 2);
+						if (ucp == UTF8_ERROR)
+							col++;		/* not a character: leave it alone */
+						else
+						{
+							ulen = utf_encode(ucp, ub);
+							memcpy(&buf[col], ub, ulen);
+							memmove(&buf[col + ulen], &buf[col + 6],
 												strlen(&buf[col + 6]) + 1);
-						col += 2;
+							col += ulen;
+						}
 					}
 				}
 				else
 					col++;
 			}
-			else if (gaiji && readwrite == 'W' && buf[col + 1]
-									&& 0xf0 <= buf[col] && buf[col] <= 0xf9)
+			else if (gaiji && readwrite == 'W' && ISkanji(buf[col]))
 			{
-				char_u		*	p;
-				int			 	i;
-				int				c;
+				char_u		sjis[2];
+				int			ucp, len;
 
-				if ((p = alloc(strlen(buf) + 4 + 1)) == NULL)
-					gaiji = NUL;
-				else
+				ucp = utf_decode(buf + col, NULL);
+				len = utf_lenat(buf + col, 0);
+				/* a gaiji is a code point whose Shift-JIS form is in the
+				 * user-defined range; the UTF-8 lead byte says nothing */
+				if (ucp != UTF8_ERROR && cp2sjis(ucp, sjis) == 2
+									&& 0xf0 <= sjis[0] && sjis[0] <= 0xf9)
 				{
-					memcpy(p, buf, col);
-					p[col + 0] = '#';
-					for (i = 1; i < 5; i++)
+					char_u		*	p;
+					int			 	i;
+					int				c;
+
+					if ((p = alloc(strlen(buf) + 6 + 1)) == NULL)
+						gaiji = NUL;
+					else
 					{
-						if (i & 1)
-							c = (buf[col + (i - 1) / 2] & 0xf0) >> 4;
-						else
-							c = (buf[col + (i - 1) / 2] & 0x0f);
-						p[col + i] = c > 9 ? 'A' + c - 10 : '0' + c;
+						memcpy(p, buf, col);
+						p[col + 0] = '#';
+						for (i = 1; i < 5; i++)
+						{
+							if (i & 1)
+								c = (sjis[(i - 1) / 2] & 0xf0) >> 4;
+							else
+								c = (sjis[(i - 1) / 2] & 0x0f);
+							p[col + i] = c > 9 ? 'A' + c - 10 : '0' + c;
+						}
+						p[col + 5] = '#';
+						memcpy(&p[col + 6], &buf[col + len],
+												strlen(&buf[col + len]) + 1);
+						col += 6;
+						free(buf);
+						cp = buf = p;
 					}
-					p[col + 5] = '#';
-					memcpy(&p[col + 6], &buf[col + 2],
-											strlen(&buf[col + 2]) + 1);
-					col += 6;
-					free(buf);
-					cp = buf = p;
 				}
+				else
+					col += len;
 			}
 			else if (ISkanji(buf[col]) && buf[col + 1])
 				col += utf_lenat(buf + col, 0);

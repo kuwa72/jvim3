@@ -934,11 +934,11 @@ fileinfo(int fullname)
 		lastcol   = getvcol(curwin, &last, 3);
 		if (ISkanjiCur() == 1)
 		{
-			k1 = code;
-			k2 = p[curwin->w_cursor.col+1];
-			kanjito(&k1, &k2, toupper(*curbuf->b_p_jc));
-			code = (k1 << 8) | k2;
-			--pcol;
+			/* the buffer is UTF-8: show the code point, and let a wide
+			 * character's second column keep the column count honest */
+			code = utf_decode(p + curwin->w_cursor.col, NULL);
+			if (utf_width(p + curwin->w_cursor.col) > 1)
+				--pcol;
 		}
 # ifdef UCODE
 		else if (toupper(*curbuf->b_p_jc) == JP_WIDE)	/* UNICODE */
