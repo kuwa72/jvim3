@@ -23,6 +23,7 @@ int		isjppunc		__ARGS((char_u *, int));
 int		isaspunc		__ARGS((char_u, int));
 int		isjsend			__ARGS((char_u *));
 void	jptocase		__ARGS((char_u *, char_u *, int));
+int		jptocasecp		__ARGS((int, int));
 int		isjpspace		__ARGS((char_u *));
 int		judge_jcode		__ARGS((char_u *, int *, char_u *, long));
 int		kanjiconvsfrom	__ARGS((char_u*, int, char_u*, int, char*, char, int*));

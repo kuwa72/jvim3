@@ -536,7 +536,7 @@ make jvim3
 cd .. && ./scripts/test-encoding.sh
 ```
 
-All 107 cases pass. Run it against an AddressSanitizer build to check for memory
+All 115 cases pass. Run it against an AddressSanitizer build to check for memory
 errors at the same time:
 
 ```sh
