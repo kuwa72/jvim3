@@ -625,6 +625,8 @@ dodel:
 								if (extraspace)
 								{
 									char *s, *p;		 /* 1 for extraspace */
+									int   n;
+
 									p = ml_get(curwin->w_cursor.lnum) + 1;
 									s = (char *)saved_line;
 									while(*p && *s)
@@ -632,12 +634,11 @@ dodel:
 										p += utf_len(*p);
 										s += utf_len(*s);
 									}
-
 									if (*p)
 									{
-										if (ISkanji(gchar_cursor()))
+										n = utf_lenat(ml_get_cursor(), 0);
+										while (n-- > 0)
 											delchar(FALSE);
-										delchar(FALSE);
 									}
 									else
 									{
@@ -645,9 +646,9 @@ dodel:
 										delchar(FALSE);
 										extraspace = FALSE;
 
-										if (ISkanji(gchar_cursor()))
+										n = utf_lenat(ml_get_cursor(), 0);
+										while (n-- > 0)
 											delchar(FALSE);
-										delchar(FALSE);
 										State = INSERT;
 										inschar(saved_line,
 													utf_lenat(saved_line, 0));
@@ -657,6 +658,7 @@ dodel:
 								else if (p_jrep)
 								{
 									char *p, *c, *s;
+									int   n;
 
 									p = ml_get(curwin->w_cursor.lnum);
 									c = p + curwin->w_cursor.col;
@@ -669,9 +671,9 @@ dodel:
 
 									if (*s)
 									{
-										if (ISkanji(*p))
+										n = utf_lenat(ml_get_cursor(), 0);
+										while (n-- > 0)
 											delchar(FALSE);
-										delchar(FALSE);
 										State = INSERT;
 										inschar(s, utf_lenat(s, 0));
 										State = REPLACE;
@@ -680,88 +682,77 @@ dodel:
 									}
 									else if (!p_ri)
 									{
-										if (ISkanji(gchar_cursor()))
+										n = utf_lenat(ml_get_cursor(), 0);
+										while (n-- > 0)
 											delchar(FALSE);
-										delchar(FALSE);
 									}
 								}
 								else /* !p_jrep */
 								{
-									char *p, *o, *s;
-									int  i;
+									char_u	*line;
+									char_u	*s;
+									int		 start;
+									int		 lx, ly, pad;
 
-									p = ml_get(curwin->w_cursor.lnum);
-									o = p + curwin->w_cursor.col;
-									s = (char *)saved_line;
-									for (i = 0; i <= curwin->w_cursor.col; i++)
+									/*
+									 * 'nojreplace' holds the columns: a typed
+									 * character narrower than the one it
+									 * replaced is followed by pad spaces, so
+									 * what was typed stands in for exactly
+									 * one saved character. Walk both lines in
+									 * those steps to find which saved
+									 * character the cursor is on.
+									 */
+									line = ml_get(curwin->w_cursor.lnum);
+									s = saved_line;
+									start = 0;
+									for (;;)
 									{
-										s = &saved_line[i];
-										if (*s == NUL)
+										if (*s == NUL || start >=
+												(int)curwin->w_cursor.col)
 											break;
+										lx = utf_lenat(line, start);
+										ly = utf_lenat(s, 0);
+										pad = utf_width(s) -
+													utf_width(line + start);
+										if (pad < 0)
+											pad = 0;
+										if ((int)curwin->w_cursor.col <
+															start + lx + pad)
+											break;
+										start += lx + pad;
+										s += ly;
 									}
 
 									if (*s)
 									{
-										switch (ISkanjiPointer(saved_line, s)){
-										case 1:		/* kanji 1st byte */
+										/* delete the typed character and its
+										 * padding, and put the saved
+										 * character back */
+										int		n;
+
+										curwin->w_cursor.col = (colnr_t)start;
+										lx = utf_lenat(line, start);
+										pad = utf_width(s) -
+													utf_width(line + start);
+										if (pad < 0)
+											pad = 0;
+										n = lx + pad;
+										while (n-- > 0)
 											delchar(FALSE);
-											delchar(FALSE);
-											State = INSERT;
-											inschar(s, utf_lenat(s, 0));
-											State = REPLACE;
-											break;
-										case 2:		/* kanji 2nd byte */
-											switch (ISkanjiPointer(p, o)) {
-											case 1:		/* input 2byte char */
-												delchar(FALSE);
-												delchar(FALSE);
-												State = INSERT;
-												if (ISkanji(*(s+1)))
-													delchar(FALSE);
-												inschar1(' ');
-												inschar(s + 1, utf_lenat(s + 1, 0));
-												dec_cursor();
-												State = REPLACE;
-												break;
-											case 2:
-											case 0:
-											default:
-												delchar(FALSE);
-												State = INSERT;
-												inschar1(' ');
-												State = REPLACE;
-												break;
-											}
-											break;
-										case 0:		/* not kanji */
-										default:
-											i = FALSE;
-											if (ISkanjiPointer(p, o))
-											{
-												delchar(FALSE);
-												if (ISkanjiPointer(saved_line, s+1))
-													delchar(FALSE);
-												i = TRUE;
-											}
-											delchar(FALSE);
-											State = INSERT;
-											inschar(s, utf_lenat(s, 0));
-											if (i == TRUE)
-											{
-												inschar(s + 1, utf_lenat(s + 1, 0));
-												dec_cursor();
-											}
-											State = REPLACE;
-											break;
-										}
+										State = INSERT;
+										inschar(s, utf_lenat(s, 0));
+										State = REPLACE;
 										if (!p_ri)
 											dec_cursor();
 									}
 									else if (!p_ri)
 									{
-										if (ISkanji(gchar_cursor()))
+										int		n = utf_lenat(
+													ml_get_cursor(), 0);
+
+										while (n-- > 0)
 											delchar(FALSE);
-										delchar(FALSE);
 									}
 								}
 #else
