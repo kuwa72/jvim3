@@ -647,6 +647,26 @@ typed "~ hira, no jtilde"        ok \
 	"i$AA\0330~"                     "$AA\n"
 
 echo
+echo "track mode (gx then a motion) over multi-byte characters:"
+# 'gx' turns on track mode, after which h/j/k/l call
+# track_left/down/up/right before moving: the character under the cursor's
+# virtual column is deleted and a line-drawing character put in its place.
+# track_vcol() stepped exactly two bytes over a kanji -- the Shift-JIS
+# width -- so the byte range it computed ended inside a three byte UTF-8
+# character: delchar() removed the first two bytes and left the last one in
+# the file as a stray continuation byte, which is invalid UTF-8 (issue #106).
+# moving right off the end of the line adds the track's end marker 'X'
+edit "gx then l over 3 byte char" ok "gxl"  "$AA\n"      "< X\n"
+edit "gx then h over 3 byte char" ok "gxh"  "$AA\n"      " >\n"
+edit "gx then h after l"          ok "lgxh" "x$AA\n"     "x >\n"
+edit "gx then j over 3 byte char" ok "gxj"  "$AA\nx\n"   "A \nx\n"
+edit "gx then k over 3 byte char" ok "Ggxk" "x\n$AA\n"   "x\nV \n"
+# a four byte character loses two bytes to the same walk
+edit "gx then l over 4 byte char" ok "gxl"  "$EM\n"      "< X\n"
+# ASCII is one byte a column and was never split
+edit "gx then l over ascii"       ok "gxl"  "ab\n"       "<b\n"
+
+echo
 echo "the help file, which is converted and not loaded:"
 # 日本語 ten times over, in one run of ISO-2022-JP: 67 bytes in the file, 91 in
 # the internal UTF-8. It has to be a run, because a short one shrinks -- the six
