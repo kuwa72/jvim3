@@ -451,6 +451,31 @@ typed "ctrl-v number pending char" ok \
 	"i\x1665a\033"                  "Aa\n"
 
 echo
+echo "CTRL-V literal entry of a multi-byte character:"
+# get_literal() read a lead byte plus exactly one more -- the Shift-JIS
+# width -- so a three or four byte character typed after CTRL-V was cut:
+# what went into the buffer was an invalid sequence, and the unread tail
+# bytes stayed in the input queue as strays (issue #101). On the command
+# line it was worse: cbuf/clen still described the CTRL-V key itself, so
+# only the lead byte went in.
+typed "insert ctrl-v kanji"       ok \
+	"i\x16$AA\033"                  "$AA\n"
+typed "insert ctrl-v 4 byte char" ok \
+	"i\x16$EM\033"                  "$EM\n"
+typed "insert ctrl-v 2 byte char" ok \
+	"i\x16\xc3\xa9\033"             "\xc3\xa9\n"
+# In plain insert the unread tail byte is inserted as a character of its
+# own, so the file above looks right either way. REPLACE shows the bad
+# grouping: the two-byte fragment and the stray byte each overwrite a
+# character of the text, and one character of it is lost.
+typed "R ctrl-v kanji"            ok \
+	"iXYZ\0330R\x16$AA\033"         "$AA""YZ\n"
+typed "r ctrl-v kanji"            ok \
+	"ix\0330r\x16$AA"               "$AA\n"
+typed ":s with ctrl-v kanji"      ok \
+	"ix\033:s/x/\x16$AA/\r"         "$AA\n"
+
+echo
 echo "file names, which are three bytes a character here too:"
 # The Windows suite has these as well, where they are about the manifest making
 # the ...A file APIs take UTF-8. This is the part of it that is not Windows:

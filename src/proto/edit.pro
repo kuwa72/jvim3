@@ -1,7 +1,7 @@
 /* edit.c */
 void edit __PARMS((long count));
 #ifdef KANJI
-int get_literal __PARMS((int *nextc, int *kp));
+int get_literal __PARMS((int *nextc, char_u *bytes, int *len));
 void insertchar __PARMS((unsigned char *bytes, int nbytes));
 #else
 int get_literal __PARMS((int *nextc));
