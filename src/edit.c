@@ -208,6 +208,21 @@ edit(long count)
 		{
 			c = nextc;
 			nextc = 0;
+#ifdef KANJI
+			/*
+			 * The pending character goes into cbuf like a freshly read one,
+			 * or insertchar() below would put down whatever cbuf still held.
+			 */
+			cbuf[0] = c;
+			clen = 1;
+			if (ISkanji(c))
+			{
+				int		want = utf_len(c);
+
+				while (clen < want)
+					cbuf[clen++] = vgetc();
+			}
+#endif
 		}
 		else
 		{
@@ -305,7 +320,14 @@ edit(long count)
 		}
 
 #ifdef DIGRAPHS
+		cc = c;
 		c = dodigraph(c);
+#ifdef KANJI
+		if (c != cc)
+			/* 'digraph' rewrote the character: c is a character code now,
+			 * so rebuild the bytes insertchar() is going to put down. */
+			clen = utf_encode(c, cbuf);
+#endif
 #endif /* DIGRAPHS */
 
 #ifdef NT
@@ -1018,6 +1040,12 @@ redraw:
 					{
 						AppendToRedobuff((char_u *)"\026");	/* CTRL-V */
 						c = getdigraph(c, cc, TRUE);
+#ifdef KANJI
+						/* the digraph is a character code, not the key that
+						 * was read: encode it so insertchar() puts down the
+						 * digraph and not CTRL-K itself */
+						clen = utf_encode(c, cbuf);
+#endif
 						goto normalchar;
 					}
 				}
@@ -1295,8 +1323,8 @@ copychar:
 #ifdef KANJI
 					if (ISkanji(*ptr))
 					{
-						temp += 2;
-						ptr += 2;
+						temp += utf_width(ptr);
+						ptr += utf_lenat(ptr, 0);
 					}
 					else
 #endif
@@ -1304,11 +1332,7 @@ copychar:
 
 				if (temp > curwin->w_virtcol)
 #ifdef KANJI
-				{
-					--ptr;
-					if (ISkanjiPointer(ml_get(lnum), ptr) == 2)
-						--ptr;
-				}
+					ptr = utf_prev(ml_get(lnum), ptr);
 #else
 						--ptr;
 #endif
@@ -1317,6 +1341,13 @@ copychar:
 					beep();
 					break;
 				}
+#ifdef KANJI
+				/* insertchar() puts down cbuf: copy the whole character that
+				 * was found, not just the CTRL-Y / CTRL-E key nor the lead
+				 * byte alone */
+				clen = utf_lenat(ptr, 0);
+				memmove((char *)cbuf, (char *)ptr, clen);
+#endif
 
 				/*FALLTHROUGH*/
 			  default:

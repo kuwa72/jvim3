@@ -414,6 +414,43 @@ typed "insert ctrl-n, two char prefix" ok \
 	"i$AA$II$UU\033o$AA$II\x0e\033"   "$AA$II$UU\n$AA$II$UU\n"
 
 echo
+echo "insert-mode keys that insert a computed character:"
+# cbuf/clen are filled from the raw key at the top of the insert-mode loop.
+# A path that computes a *new* character into 'c' -- CTRL-Y/CTRL-E copying a
+# line, CTRL-K resolving a digraph, the 'digraph' option rewriting a BS
+# sequence, a character left pending by CTRL-V -- used to reach
+# insertchar(cbuf, clen) with the key's own bytes still in cbuf, so the file
+# got 0x19, 0x05 or 0x0b instead of the character (issue #102).
+typed "ctrl-y copies kanji"        ok \
+	"i$AA""x\r\x19\033"             "$AA""x\n$AA\n"
+typed "ctrl-y walks the line"      ok \
+	"i$AA""x\r\x19\x19\033"         "$AA""x\n$AA""x\n"
+typed "ctrl-y copies ascii"        ok \
+	"iab\rc\x19\033"                "ab\ncb\n"
+typed "ctrl-e copies kanji"        ok \
+	"i$AA""x\ry\rZ\033ki\x05\033"   "$AA""x\nZy\nZ\n"
+# A multi-byte source character copies its whole utf_lenat() bytes; before the
+# fix only the key byte was inserted, and even a fixed cbuf would have held
+# just the lead byte.
+typed "ctrl-y on a 4 byte char"    ok \
+	"i$EM""x\r\x19\033"             "$EM""x\n$EM\n"
+# CTRL-K reads a digraph: e' is é (code 233), which utf_encode() turns into
+# c3 a9 -- a bare byte >= 0x80 is not a character here. A pair with no
+# digraph types its second character.
+typed "ctrl-k digraph e acute"     ok \
+	"i\x0be'\033"                   "\xc3\xa9\n"
+typed "ctrl-k unknown pair"        ok \
+	"i\x0bzz\033"                   "z\n"
+# 'digraph' option: a<BS>' is digraph a' = á. dodigraph() returns the
+# computed character while cbuf still holds the second key.
+typed "digraph option rewrites bs" ok \
+	":set digraph\ria\x08'\033"     "\xc3\xa1\n"
+# CTRL-V 65 is 'A'; the 'a' past the digits stays pending in nextc. That
+# pending character skipped the cbuf fill and used to insert 0x16.
+typed "ctrl-v number pending char" ok \
+	"i\x1665a\033"                  "Aa\n"
+
+echo
 echo "file names, which are three bytes a character here too:"
 # The Windows suite has these as well, where they are about the manifest making
 # the ...A file APIs take UTF-8. This is the part of it that is not Windows:
