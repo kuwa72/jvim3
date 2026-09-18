@@ -153,15 +153,19 @@ void	canna_msg(msg, row, col)
 		{
 			if (ISkanji(*msg))
 			{
-				if (*col == Columns - 1)
+				/* a character is utf_lenat() bytes and utf_width()
+				 * columns, not always two of each */
+				int		w = utf_width(msg);
+
+				if (w > 1 && *col + w > Columns)
 				{
 					screen_msg("\\", *row, *col);
 					*row += 1;
 					*col  = 0;
 					break;
 				}
-				*col += 1;
-				++msg;
+				*col += w - 1;
+				msg += utf_lenat(msg, 0) - 1;
 			}
 			*col += 1;
 			++msg;
@@ -459,7 +463,12 @@ void	canna_inject(c)
 {
 	int	ilen;
 	int cc = c;
-	static char_u	kanji = 0;
+	/* the bytes of a multi-byte character arrive one per call; collect
+	 * the whole character -- up to UTF8_MAXLEN bytes, not the two a
+	 * Shift-JIS character always was -- before echoing it to outbuf */
+	static char_u	kanji[UTF8_MAXLEN];
+	static int		kanji_need = 0;
+	static int		kanji_have = 0;
 
 	if (!ready)
 		return;
@@ -467,16 +476,24 @@ void	canna_inject(c)
 	errorkey = FALSE;
 	if (canna_mode)
 	{
-		if (kanji)
+		if (kanji_have)
 		{
-			outbuf[otail++] = kanji;
-			outbuf[otail++] = c;
-			kanji = 0;
+			kanji[kanji_have++] = c;
+			if (kanji_have == kanji_need)
+			{
+				int		i;
+
+				for (i = 0; i < kanji_need; i++)
+					outbuf[otail++] = kanji[i];
+				kanji_have = 0;
+			}
 			return;
 		}
 		else if (ISkanji(c))
 		{
-			kanji = c;
+			kanji[0] = c;
+			kanji_need = utf_len(c);
+			kanji_have = 1;
 			return;
 		}
 		else if (ISkana(c))

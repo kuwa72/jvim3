@@ -258,7 +258,9 @@ repository and would drift within three releases.
   or `utf_headoff()`. On the FEP side, `src/feponew.c`
   reads a whole UTF-8 character and hands ONEW the EUC bytes it expects,
   buffering the tail when one character converts to more than the one
-  byte the interface returns per call.
+  byte the interface returns per call, and `src/fepcanna.c` collects a
+  whole character in `canna_inject()` before echoing it and walks
+  `canna_msg()`'s message text by `utf_lenat()`/`utf_width()`.
 - **The `jp`, `bj` and `hj` track tables were still Shift-JIS.** The
   `tracktab[]` entries in `src/jptab.h` that `track.c` consults for
   `fepmode`'s `jp`/`bj`/`hj` keys held raw Shift-JIS byte pairs, so
@@ -504,7 +506,9 @@ repository and would drift within three releases.
   合わせます。FEP 側の `src/feponew.c` は UTF-8 の文字全体を読み、
   ONEW が期待する EUC のバイト列へ変換して渡します。1 文字が複数バイトに
   変換される場合は、インタフェースが 1 回に返す 1 バイトを超えた分を
-  バッファに保持します。
+  バッファに保持します。`src/fepcanna.c` も `canna_inject()` で文字全体を
+  集めてから outbuf へ書き、`canna_msg()` の表示走査を
+  `utf_lenat()`/`utf_width()` 単位にしました。
 - **`jp`・`bj`・`hj` の罫線テーブルがまだ Shift-JIS でした。** `track.c`
   が `fepmode` の `jp`/`bj`/`hj` キーで引く `src/jptab.h` の `tracktab[]`
   エントリは生の Shift-JIS の 2 バイト列のままで、UTF-8 のバッファに
