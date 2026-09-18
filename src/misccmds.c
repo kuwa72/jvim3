@@ -544,20 +544,29 @@ inschar(int c)
 	}
 	else
 	{
-		extra = nbytes;
+		int		on = rir0 ? utf_lenat(old, (int)col) : 0;
+
+		/* rir0 keeps a space in front of the new character and drops the
+		 * whole character it lands on, not just its first byte */
+		extra = rir0 ? nbytes + 1 - on : nbytes;
 		new = alloc((unsigned)(oldlen + extra));
 		if (new == NULL)
 			return;
 		memmove((char *)new, (char *)old, (size_t)col);
 		p = new + col;
-		memmove((char *)p + extra, (char *)old + col, (size_t)(oldlen - col));
-		memmove((char *)p, (char *)bytes, (size_t)nbytes);
 		if (rir0)
 		{
-			/* reverse replace in column 0: the old first character moves right
-			 * and a space takes its place */
-			p[nbytes] = ' ';
+			*p++ = ' ';
+			memmove((char *)p, (char *)bytes, (size_t)nbytes);
+			memmove((char *)p + nbytes, (char *)old + col + on,
+									(size_t)(oldlen - col - on));
 			extraspace = TRUE;
+		}
+		else
+		{
+			memmove((char *)p + extra, (char *)old + col,
+									(size_t)(oldlen - col));
+			memmove((char *)p, (char *)bytes, (size_t)nbytes);
 		}
 	}
 #else

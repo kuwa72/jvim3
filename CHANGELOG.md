@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  312 cases now.
+  322 cases now.
 
 
 
@@ -126,6 +126,25 @@ repository and would drift within three releases.
   byte sequence and its length, and all three callers — insert and
   replace mode, the `r` command, and the `:` line — put that sequence
   down in one piece.
+- **Backspace in REPLACE mode left a multi-byte character's last bytes in
+  the buffer.** The code in `src/edit.c` that puts the original text back
+  deleted two bytes of the character under the cursor — the Shift-JIS
+  width — so backing over a three-byte UTF-8 character dropped its first
+  two bytes and kept the last one as a stray continuation byte: `R` +
+  `う` over `あ` + BS wrote `あ` back with `86` beside it, and the file
+  stopped being valid UTF-8 (#108). The `'nojreplace'` switch was written
+  on `ISkanjiPointer()`'s 0/1/2 model of a two-byte character and read
+  `saved_line` byte-wise with `s + 1`, which lands inside a three-byte
+  character, so restoring a pad space inserted a truncated character.
+  The restore now works on whole characters: `utf_lenat()` bytes come
+  off under `'jreplace'` and `'revins'`, and under `'nojreplace'` the
+  typed character and its column padding are walked as one slot so the
+  pad goes with the character it belongs to — one backspace puts the
+  whole saved character back instead of a byte at a time. `inschar()`'s
+  reverse-replace-in-column-0 path also wrote its space over the first
+  byte of the old character instead of replacing it whole, which left
+  stray tail bytes even before the backspace; the extraspace restore
+  keys on that space, so it drops the whole old character now.
 
 ### 日本語
 
@@ -224,6 +243,24 @@ repository and would drift within three releases.
   呼び出し側のバッファに `utf_len()` 分のバイト列全体とその長さを
   返すようになり、3 つの呼び出し側（挿入・置換モード、`r` コマンド、
   `:` 行）すべてがそのバイト列をひとかたまりで書き込みます。
+- **REPLACE モードのバックスペースがマルチバイト文字の末尾バイトを
+  残していました。** `src/edit.c` で元の文字列を書き戻す処理が、
+  カーソル下の文字を 2 バイト（Shift-JIS 時代の幅）だけ消していた
+  ため、UTF-8 の 3 バイト文字へ戻ると先頭 2 バイトが消えて末尾
+  1 バイトが孤立バイトとして残ります。`あ` の上で `R` + `う` + BS
+  とすると `あ` の隣に `86` が残り、ファイルが UTF-8 として壊れて
+  いました (#108)。`'nojreplace'` の分岐は `ISkanjiPointer()` の
+  0/1/2 という 2 バイト文字のモデルで書かれ、`saved_line` を
+  `s + 1` のバイト位置で読んでいたため 3 バイト文字の途中を指し、
+  空白の復元で途切れた文字を挿入していました。書き戻しは文字単位に
+  なりました。`'jreplace'` と `'revins'` では `utf_lenat()` 分の
+  バイトを消し、`'nojreplace'` では打った文字と桁合わせの空白を
+  ひとまとまりとして進めるので、パディングはそれが属する文字と
+  一緒に消え、1 回のバックスペースで保存した文字がまるごと戻り
+  ます。列 0 での逆方向置換をする `inschar()` 側も、空白を古い
+  文字の先頭バイトへ上書きして末尾バイトを残していたのを、文字
+  全体を置き換える形に直しました — extraspace の復元はその空白を
+  手がかりにします。
 
 ## 1.2.1 — 2026-09-01
 

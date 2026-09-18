@@ -401,6 +401,39 @@ UU='\xe3\x81\x86'								# う
 NN='\xe3\x82\x93'								# ん
 
 echo
+echo "replace-mode backspace restores the original characters:"
+# BS in REPLACE mode puts back what was there. The restore deleted two bytes
+# of the character under the cursor -- the Shift-JIS width -- so a three byte
+# UTF-8 character lost only its first two and the last one stayed in the file
+# as a stray continuation byte (issue #108). Each BS has to remove the whole
+# typed character, plus any 'nojreplace' padding, and put the whole saved
+# character back.
+typed "R bs, 3 byte char over 3 byte char" ok \
+	"i$AA$II\0330R$UU\x7f\033"      "$AA$II\n"
+typed "R bs, 4 byte char over 3 byte char" ok \
+	"i$AA$II\0330R$EM\x7f\033"      "$AA$II\n"
+typed "R bs, char typed past line end"     ok \
+	"i$AA\0330R$UU$UU\x7f\033"      "$UU\n"
+typed "R bs, run back over kanji"          ok \
+	"i$AA$II\0330R$UU$UU\x7f\x7f\033" "$AA$II\n"
+typed "R bs, revins past column 0"         ok \
+	"i$AA$II\033:set revins\r0lR$UU\x7f\033" "$AA$II\n"
+# 'nojreplace' pads a narrow replacement with spaces to hold the columns;
+# the pad belongs to the typed character and goes with it
+typed "R bs, nojrep ascii over kanji"      ok \
+	":set nojrep\ri$AA$II\0330Rx\x7f\033"   "$AA$II\n"
+typed "R bs, nojrep 3 byte over 3 byte"    ok \
+	":set nojrep\ri$AA$II\0330R$UU\x7f\033" "$AA$II\n"
+typed "R bs, nojrep kanji over ascii"      ok \
+	":set nojrep\riab\0330R$UU\x7f\033"     "ab\n"
+# 'revins' typing in column 0 parks a space before the line (extraspace);
+# backing over it restores the first saved character
+typed "R bs, revins column 0 extraspace"   ok \
+	"i$AA$II\033:set revins\r0R$UU\x7f\033" "$AA$II\n"
+typed "R bs, revins extraspace two deep"   ok \
+	"iab\033:set revins\r0Rxy\x7f\x7f\033"  "ab\n"
+
+echo
 echo "insert-mode keyword completion over multi-byte characters:"
 # CTRL-N/CTRL-P counted and copied two bytes for each kanji character -- the
 # Shift-JIS width -- so a three byte UTF-8 character in the found word was cut
