@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  290 cases now.
+  291 cases now.
 
 
 
@@ -75,6 +75,14 @@ repository and would drift within three releases.
   sequence into the file — an IME commit right after ASCII could scatter a
   character's bytes down the line (#94). The fragment now stays pending until
   the rest of the character arrives.
+- **The right arrow in insert mode stopped inside a multi-byte character.**
+  Moving right over a UTF-8 character advanced the cursor by two bytes, the
+  Shift-JIS width, so a three-byte character needed two presses to cross and
+  the next typed character landed inside it, corrupting the character. The
+  same two-byte assumption was in two more cursor moves in `src/edit.c` —
+  returning from `CTRL-O` to the end of a line ending in a multi-byte
+  character, and the join after ENTER in insert mode. All three now advance
+  by the character's actual length.
 
 ### 日本語
 
@@ -125,6 +133,12 @@ repository and would drift within three releases.
   断片を変換せず生のまま返していました。ASCII の直後に届いた IME 確定文字が
   未完の UTF-8 列としてファイルに書かれ、文字のバイトが行の後ろへずれる
   ことがありました (#94)。断片は残りが届くまで保留するようになりました。
+- **挿入モードの → がマルチバイト文字の途中で止まっていました。** UTF-8 の
+  文字を右へ越えるときカーソルが 2 バイト（Shift-JIS 時代の幅）しか進まず、
+  3 バイト文字を越えるのに 2 回押しが必要で、次に打った文字が文字の途中へ
+  挿入されて文字を壊していました。`src/edit.c` には同じ 2 バイト仮定が
+  あと 2 箇所（マルチバイト文字で終わる行への `CTRL-O` 復帰と、挿入モードの
+  ENTER 後の join）にもあり、3 箇所とも実際の文字長だけ進むようになりました。
 
 ## 1.2.1 — 2026-09-01
 

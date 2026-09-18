@@ -357,6 +357,17 @@ typed "Shift-JIS kanji run"    ok "i\x93\xfa\x96\x7b\x8c\xea\033" \
 															"-K SSST -k t"
 
 echo
+echo "cursor keys in insert mode:"
+# A multi-byte character is one position wide for the cursor, but moving right
+# in insert mode used to advance the cursor by two bytes -- the old Shift-JIS
+# width -- and land inside a three byte UTF-8 character, so one keypress never
+# got past it and the next character typed split it. typed() is needed rather
+# than edit(): a cursor key is a termcap string and has to arrive as input.
+typed "insert cursor right over kanji" ok \
+	"i\xe3\x81\x82\xe3\x81\x84\0330i\033OCX\033" \
+	"\xe3\x81\x82X\xe3\x81\x84\n"
+
+echo
 echo "yank, put, replace, search, join:"
 edit "yl then p"              ok "ylp"  "$NIHON$GO\n"      "$NI$NI$HON$GO\n"
 edit "yl then P"              ok "ylP"  "$NIHON$GO\n"      "$NI$NI$HON$GO\n"
