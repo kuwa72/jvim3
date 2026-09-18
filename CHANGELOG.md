@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  291 cases now.
+  294 cases now.
 
 
 
@@ -83,6 +83,13 @@ repository and would drift within three releases.
   returning from `CTRL-O` to the end of a line ending in a multi-byte
   character, and the join after ENTER in insert mode. All three now advance
   by the character's actual length.
+- **Backspace in insert mode left a multi-byte character's last byte in the
+  buffer.** It deleted two bytes — the Shift-JIS width — so erasing a
+  three-byte UTF-8 character dropped the first two bytes and kept the last
+  as a stray continuation byte: `置いて` rubbed out came back as `ae 84 a6`,
+  and the file stopped being valid UTF-8 (#94, #98). `CTRL-W` and `CTRL-U`,
+  which run through the same loop, cut characters the same way. Backspace
+  now deletes the character's actual byte length.
 
 ### 日本語
 
@@ -139,6 +146,12 @@ repository and would drift within three releases.
   挿入されて文字を壊していました。`src/edit.c` には同じ 2 バイト仮定が
   あと 2 箇所（マルチバイト文字で終わる行への `CTRL-O` 復帰と、挿入モードの
   ENTER 後の join）にもあり、3 箇所とも実際の文字長だけ進むようになりました。
+- **挿入モードのバックスペースがマルチバイト文字の末尾バイトを残して
+  いました。** 削除するのは 2 バイト（Shift-JIS 時代の幅）だけで、UTF-8 の
+  3 バイト文字を消すと先頭 2 バイトが消えて末尾 1 バイトが孤立バイトと
+  して残ります。`置いて` を消すと `ae 84 a6` が残り、ファイルが UTF-8
+  として壊れていました (#94, #98)。同じループを通る `CTRL-W`・`CTRL-U`
+  でも同じ切れ方をしていました。実際の文字長だけ消すようになりました。
 
 ## 1.2.1 — 2026-09-01
 
