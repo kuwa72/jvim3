@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  331 cases now.
+  337 cases now.
 
 
 
@@ -161,6 +161,18 @@ repository and would drift within three releases.
   `ANY` advances by the character's length, the `*`/`\+` back-off snaps
   to the character's head with `utf_head()`, and the start-position
   scans step by characters so a match never begins mid-character.
+- **Visual block operations split multi-byte characters.** `block_prep()`
+  and the blockwise half of `doput()` in `src/ops.c` stepped exactly two
+  bytes over a kanji — the Shift-JIS width — so a block edge on a
+  three-byte UTF-8 character cut through its middle: `d`/`x`/`c` left the
+  character's last byte in the file as a stray continuation byte, a block
+  yank copied only the first two bytes and `p` wrote that fragment back,
+  and a blockwise put whose column landed inside a character spliced the
+  inserted block in between its halves (#104). Both walks now step
+  `utf_lenat()` bytes and count `utf_width()` columns — which is also
+  right for single-width multi-byte characters, not only double-width
+  ones — and a block edge that lands inside a character is snapped to a
+  boundary with `utf_prev()` instead of a trailing-byte test.
 
 ### 日本語
 
@@ -296,6 +308,19 @@ repository and would drift within three releases.
   の戻りは `utf_head()` で文字の先頭に合わせます。開始位置の
   走査も文字単位なので、マッチが文字の途中から始まることは
   ありません。
+- **ビジュアルブロック (CTRL-V) の操作がマルチバイト文字を途中で
+  切っていました。** `src/ops.c` の `block_prep()` と `doput()` の
+  ブロック処理が、漢字 1 文字を 2 バイト（Shift-JIS 時代の幅）と
+  して進んでいたため、UTF-8 の 3 バイト文字にかかったブロック端は
+  文字の途中を切っていました。`d`/`x`/`c` は末尾バイトを孤立
+  バイトとしてファイルに残し、ブロックヤンクは先頭 2 バイトだけを
+  コピーして `p` がその断片を書き戻し、桁が文字の途中に来る
+  ブロック `p` は挿入するブロックを文字のバイトの間へ割り込ませて
+  いました (#104)。両方の走査とも `utf_lenat()` 分のバイトを進み、
+  桁は `utf_width()` で数えるようになりました — 全角だけでなく
+  半角のマルチバイト文字でも正しい計算です。文字の途中に来る
+  ブロック端も、継続バイトの判定ではなく `utf_prev()` で文字の
+  先頭へ合わせます。
 
 ## 1.2.1 — 2026-09-01
 

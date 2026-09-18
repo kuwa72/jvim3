@@ -1105,9 +1105,10 @@ doput(int dir, long count, int fix_indent)
 #ifdef KANJI
 				if (ISkanji(*ptr))
 				{
-					incr = 2;
-					ptr ++;
-					textcol ++;
+					/* step over the whole character */
+					incr = utf_width(ptr);
+					textcol += utf_lenat(ptr, 0) - 1;
+					ptr += utf_lenat(ptr, 0) - 1;
 				}
 				else
 #endif
@@ -1124,7 +1125,7 @@ doput(int dir, long count, int fix_indent)
 				endspaces = vcol - col;
 				startspaces = incr - endspaces;
 #ifdef KANJI
-				if (ISkanjiPointer(old, ptr - 1) == 2)
+				if (utf_prev(old, ptr) < ptr - 1)
 				{
 					/*	leave text */
 					endspaces = startspaces = 0;
@@ -1865,12 +1866,12 @@ block_prep(linenr_t lnum, int delete)
 #ifdef KANJI
 		if (ISkanji(*textstart))
 		{
-			incr = 2;
+			incr = utf_width(textstart);
 			vcol += incr;
 			if (vcol > startvcol)
 				break;
-			textstart += incr;
-			textcol   += incr;
+			textcol   += utf_lenat(textstart, 0);
+			textstart += utf_lenat(textstart, 0);
 			continue;
 		}
 #endif
@@ -1917,9 +1918,9 @@ block_prep(linenr_t lnum, int delete)
 #ifdef KANJI
 				if (ISkanji(*pend))
 				{
-					incr = 2;
+					incr = utf_width(pend);
 					vcol += incr;
-					pend += incr;
+					pend += utf_lenat(pend, 0);
 					continue;
 				}
 #endif
@@ -1937,7 +1938,8 @@ block_prep(linenr_t lnum, int delete)
 				if (!delete && pend != textstart && endspaces)
 				{
 #ifdef KANJI
-					if (ISkanjiPointer(textstart, pend - 1) == 2)
+					/* a multi-byte char the edge cuts is kept whole */
+					if (utf_prev(textstart, pend) < pend - 1)
 						endspaces--;
 					else
 #endif
