@@ -138,8 +138,9 @@ edit(long count)
 		if (o_eol && curwin->w_cursor.lnum == o_lnum &&
 				*((ptr = ml_get(curwin->w_cursor.lnum)) + curwin->w_cursor.col) != NUL &&
 				ISkanji(*(ptr + curwin->w_cursor.col)) &&
-				*(ptr + curwin->w_cursor.col + 2) == NUL)
-			curwin->w_cursor.col += 2;
+				*(ptr + curwin->w_cursor.col +
+						utf_lenat(ptr, curwin->w_cursor.col)) == NUL)
+			curwin->w_cursor.col += utf_lenat(ptr, curwin->w_cursor.col);
 		else
 #endif
 		if (o_eol && curwin->w_cursor.lnum == o_lnum &&
@@ -535,7 +536,7 @@ dodel:
 						{
 #ifdef KANJI
 							if (ISkanji(gchar_cursor()))
-								curwin->w_cursor.col += 2;
+								curwin->w_cursor.col += utf_lenat(ml_get_cursor(), 0);
 							else
 #endif
 							++curwin->w_cursor.col;
@@ -845,7 +846,7 @@ redraw:
 					start_arrow();
 #ifdef KANJI
 					if (ISkanji(gchar_cursor()))
-						curwin->w_cursor.col += 2;
+						curwin->w_cursor.col += utf_lenat(ml_get_cursor(), 0);
 					else
 #endif
 					++curwin->w_cursor.col;
