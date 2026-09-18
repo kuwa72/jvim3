@@ -1016,37 +1016,58 @@ end_dosearch:
  * Search for character 'c', in direction 'dir'. If 'type' is 0, move to the
  * position of the character, otherwise move to just before the char.
  * Repeat this 'count' times.
+ *
+ * In the KANJI build 'bytes'/'len' give the character as its whole UTF-8
+ * sequence, because a character is one to four bytes here. 'c' is still the
+ * first byte: NUL means repeat the previous search, and a special key code
+ * (>= 0x100) can match no character at all.
  */
 	int
 #ifndef KANJI
 searchc(int c, int dir, int type, long count)
 #else
-searchc(int c, int k, int dir, int type, long count)
+searchc(int c, char_u *bytes, int len, int dir, int type, long count)
 #endif
 {
+#ifndef KANJI
 	static int	 	lastc = NUL;	/* last character searched for */
-#ifdef KANJI
-	static int		lastk = NUL;
+#else
+	static char_u	lastbytes[UTF8_MAXLEN];	/* last character searched for */
+	static int		lastlen = 0;	/* its length; 0 = nothing to repeat */
 #endif
 	static int		lastcdir;		/* last direction of character search */
 	static int		lastctype;		/* last type of search ("find" or "to") */
 	int				col;
 	char_u			*p;
-	int 			len;
+	int 			llen;
 
 	if (c != NUL)       /* normal search: remember args for repeat */
 	{
+#ifndef KANJI
 		lastc = c;
-#ifdef KANJI
-		lastk = k;
+#else
+		if (c < 0x100 && len > 0 && len <= UTF8_MAXLEN)
+		{
+			memcpy(lastbytes, bytes, (size_t)len);
+			lastlen = len;
+		}
+		else
+			lastlen = 0;	/* a key code is not a character */
+		if (lastlen == 0)
+			return FALSE;
 #endif
 		lastcdir = dir;
 		lastctype = type;
 	}
 	else				/* repeat previous search */
 	{
+#ifndef KANJI
 		if (lastc == NUL)
 			return FALSE;
+#else
+		if (lastlen == 0)
+			return FALSE;
+#endif
 		if (dir)        /* repeat in opposite direction */
 			dir = -lastcdir;
 		else
@@ -1055,7 +1076,7 @@ searchc(int c, int k, int dir, int type, long count)
 
 	p = ml_get(curwin->w_cursor.lnum);
 	col = curwin->w_cursor.col;
-	len = STRLEN(p);
+	llen = STRLEN(p);
 
 	/*
 	 * On 'to' searches, skip one to start with so we can repeat searches in
@@ -1070,22 +1091,29 @@ searchc(int c, int k, int dir, int type, long count)
 			for (;;)
 			{
 #ifdef KANJI
-				if (dir > 0 && ISkanji(p[col])) col ++;
-				col += dir;
-				if (dir < 0 && ISkanjiPosition(p, col + 1) == 2) col --;
-
-				if (col < 0 || col >= len)
+				/*
+				 * Step over the whole character under the cursor, forward
+				 * and backward alike. The bytes of a UTF-8 sequence can
+				 * never start inside another character -- a continuation
+				 * byte is neither a lead byte nor ASCII -- so comparing the
+				 * whole sequence at each character start is the match test.
+				 */
+				if (dir > 0)
+					col += utf_lenat(p, col);
+				else
+				{
+					if (col <= 0)
+						return FALSE;
+					col = (int)(utf_prev(p, p + col) - p);
+				}
+				if (col >= llen)
 					return FALSE;
 
-				if (ISkanji(p[col]))
-				{
-					if (p[col] == lastc && p[col + 1] == lastk)
-						break;
-				}
-				else if (p[col] == lastc)
+				if (col + lastlen <= llen
+						&& memcmp(p + col, lastbytes, (size_t)lastlen) == 0)
 					break;
 #else
-				if ((col += dir) < 0 || col >= len)
+				if ((col += dir) < 0 || col >= llen)
 					return FALSE;
 				if (p[col] == lastc)
 						break;
@@ -1095,11 +1123,11 @@ searchc(int c, int k, int dir, int type, long count)
 	if (lastctype)
 #ifdef KANJI
 	{
-		if (dir < 0 && ISkanji(p[col]))
-			col ++;
-		col -= dir;
-		if (dir > 0 && ISkanjiPosition(p, col + 1) == 2)
-			col --;
+		/* 'to': land on the character next to the one found */
+		if (dir > 0)
+			col = (int)(utf_prev(p, p + col) - p);
+		else
+			col += utf_lenat(p, col);
     }
 #else
 		col -= dir;

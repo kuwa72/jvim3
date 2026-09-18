@@ -6,7 +6,7 @@ int dosearch __PARMS((int dirc, unsigned char *str, int reverse, long count, int
 #ifndef KANJI
 int searchc __PARMS((int c, int dir, int type, long count));
 #else
-int searchc __PARMS((int c, int k, int dir, int type, long count));
+int searchc __PARMS((int c, char_u *bytes, int len, int dir, int type, long count));
 #endif
 struct fpos *showmatch __PARMS((int initc));
 int findfunc __PARMS((int dir, int what, long count));
