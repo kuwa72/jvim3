@@ -561,6 +561,35 @@ edit "[^a] no mid-char start" ok ":s/[^$AA]//g\r"      "$AA""x\n"         "$AA\n
 edit ":s/あ\+/x/"             ok ":s/$AA\\\\+/x/\r"    "$AA$AA\n"         "x\n"
 
 echo
+echo "visual block (CTRL-V) operations over multi-byte characters:"
+# block_prep() and the blockwise half of doput() stepped exactly two bytes
+# over a kanji -- the Shift-JIS width -- so a block edge on a three byte
+# UTF-8 character cut through its middle: d/x left the character's last
+# byte in the file, a yank copied only the first two, and a put spliced
+# the block in between the halves (issue #104). \x16 is CTRL-V, which
+# starts the block.
+typed "block d over kanji"        ok \
+	"ix$AA""y\rx$AA""y\033k0l\x16jd"     "xy\nxy\n"
+typed "block x over kanji"        ok \
+	"ix$AA""y\rx$AA""y\033k0l\x16jx"     "xy\nxy\n"
+typed "block c over kanji"        ok \
+	"ix$AA""y\rx$AA""y\033k0l\x16jcZ\033" "xZy\nxy\n"
+# the block edge sits inside a character when another line of the block is
+# wider: columns 1-3 is all of あ on line 2 but cuts both あ on line 1 in
+# half; the delete has to take whole characters either way
+typed "block d, edge inside char" ok \
+	"i$AA$AA\rx$AA""y\033k0l\x16jd"      "\nx\n"
+# a yank copies the block's byte range into a register, so a cut there
+# writes the broken fragment back on the next put
+typed "block yank then put"       ok \
+	"ix$AA""y\rx$AA""y\033k0l\x16jy\$p"  "x$AA""y$AA\nx$AA""y$AA\n"
+# doput() walks to the put column the same way; on a line where that
+# column lands inside a character the old walk stopped between its bytes
+# and memmove() split it around the inserted text
+typed "block put inside a char"   ok \
+	"iab\rab\rx$AA\r$AA""x\0331G0\x16jy3G0p" "ab\nab\nxa$AA\n$AA""ax\n"
+
+echo
 echo "the help file, which is converted and not loaded:"
 # 日本語 ten times over, in one run of ISO-2022-JP: 67 bytes in the file, 91 in
 # the internal UTF-8. It has to be a run, because a short one shrinks -- the six
