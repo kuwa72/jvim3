@@ -4082,7 +4082,9 @@ SetColor:
 										&& ISkanji(gchar(&curbuf->b_endop)))
 				{
 					mincl = FALSE;
-					curbuf->b_endop.col += 2;
+					curbuf->b_endop.col += utf_lenat(
+									ml_get_buf(curbuf, curbuf->b_endop.lnum, FALSE),
+									(int)curbuf->b_endop.col);
 				}
 #endif
 				if (mtype == MCHAR && mincl == FALSE && curbuf->b_endop.col == 0 && nlines > 1)

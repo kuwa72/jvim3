@@ -201,6 +201,13 @@ repository and would drift within three releases.
   re-encoded character replaces all of the old one's bytes. A character
   with no Shift-JIS form, or no case pair, is left alone, so the buffer
   stays valid UTF-8 either way.
+- **A GUI mouse visual selection ending on a multi-byte character cut the
+  character in half.** In `jvim*w.exe`, a character-wise visual selection
+  dragged with the mouse extended `b_endop.col` by two bytes — the Shift-JIS
+  width — so a selection ending on a three-byte UTF-8 character ended inside
+  it, and `d`/`y` left a stray continuation byte in the file: invalid UTF-8
+  (#105). The keyboard path in `src/normal.c` already asks `utf_lenat()`
+  for the real width; the mouse path in `src/winjnt.c` now does the same.
 
 ### 日本語
 
@@ -377,6 +384,14 @@ repository and would drift within three releases.
   再エンコードした文字が元の文字の全バイトを置き換えます。Shift-JIS
   表現を持たない文字や対のない文字はそのままなので、どちらの場合も
   バッファは正しい UTF-8 のままです。
+- **GUI のマウスによるビジュアル選択が、選択終端のマルチバイト文字を
+  半分に切っていました。** `jvim*w.exe` でマウスをドラッグした文字単位の
+  ビジュアル選択は `b_endop.col` を 2 バイト — Shift-JIS 時代の幅 —
+  しか伸ばさないため、UTF-8 の 3 バイト文字で終わる選択が文字の途中で
+  終わり、`d`/`y` が末尾バイトを孤立バイトとしてファイルに残し、UTF-8
+  として不正になっていました (#105)。`src/normal.c` のキーボード経路は
+  既に `utf_lenat()` で実際の文字長を求めていたので、`src/winjnt.c` の
+  マウス経路も同じようにしました。
 
 ## 1.2.1 — 2026-09-01
 
