@@ -22,7 +22,7 @@ repository and would drift within three releases.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
 - Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
 - Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
-  358 cases now.
+  366 cases now.
 
 
 
@@ -222,6 +222,19 @@ repository and would drift within three releases.
   character with a one-column track — now asks whether the deleted range
   is exactly one multi-byte character (`utf_lenat()`), which is what the
   `2` always meant.
+- **The `fopt` file read/write transforms mangled a multi-byte space.**
+  `opt_delet()` in `src/fileio.c` stepped exactly two bytes over a kanji —
+  the Shift-JIS width — while `isjpspace()` already matched all three bytes
+  of U+3000 in UTF-8. `fopt=2` ('replace': a kanji space becomes two ASCII
+  spaces on `:r` and `:w`) overwrote the first two of them and left the
+  third in the file as a stray continuation byte, and `fopt=8` ('entab')
+  counted the space as two columns but stepped two bytes, so the third byte
+  went out on its own — either way the file held invalid UTF-8 (#107). The
+  same `vcol += 2` also miscounted a three- or four-byte character's columns
+  for `fopt=4` ('expandtab'), giving a tab after a kanji one space fewer
+  than its stop. Every step is `utf_lenat()` bytes and every column count
+  `utf_width()` now; 'replace' still writes its two halfwidth spaces and
+  removes the rest of the character.
 
 ### 日本語
 
@@ -419,6 +432,19 @@ repository and would drift within three releases.
   置き換えるときパディングを前へ移す処理 — は、削除範囲がちょうど 1 つの
   マルチバイト文字かを `utf_lenat()` で調べるようになりました。`2` が
   意味していたのはそれです。
+- **`fopt` のファイル読み書き変換が、マルチバイトの空白を壊していました。**
+  `src/fileio.c` の `opt_delet()` は漢字をちょうど 2 バイト — Shift-JIS
+  時代の幅 — 進んでいましたが、`isjpspace()` は UTF-8 の U+3000 の
+  3 バイト全体に既に一致していました。`fopt=2`（replace: `:r`/`:w` で
+  全角空白を半角空白 2 つに置き換える）は先頭 2 バイトだけを上書きして
+  末尾バイトを孤立バイトとしてファイルに残し、`fopt=8`（entab）は
+  2 桁と数えながら 2 バイトしか進まず末尾バイトをそのまま出力しました。
+  どちらも書き出すファイルが不正な UTF-8 になっていました (#107)。
+  同じ `vcol += 2` が `fopt=4`（expandtab）でも 3・4 バイト文字の桁数を
+  数え違え、漢字の後のタブがストップより 1 つ少ない空白になっていました。
+  すべてのステップを `utf_lenat()` バイト、桁数を `utf_width()` としました。
+  'replace' が半角空白 2 つを書くのは従来どおりで、文字の残りのバイトは
+  取り除きます。
 
 ## 1.2.1 — 2026-09-01
 

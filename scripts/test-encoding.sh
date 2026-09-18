@@ -666,6 +666,37 @@ edit "gx then l over 4 byte char" ok "gxl"  "$EM\n"      "< X\n"
 # ASCII is one byte a column and was never split
 edit "gx then l over ascii"       ok "gxl"  "ab\n"       "<b\n"
 
+JSP='\xe3\x80\x80'								# 　 U+3000 ideographic space
+
+echo
+echo "'fopt' file transforms over a multi-byte space:"
+# opt_delet() in src/fileio.c walked a kanji as exactly two bytes -- the
+# Shift-JIS width -- while isjpspace() already matched all three bytes of the
+# UTF-8 U+3000. The 'replace' bit (fopt=2: a kanji space becomes two ASCII
+# spaces on read and write) overwrote only the first two of them, and 'entab'
+# (fopt=8: leading whitespace becomes tabs) counted the space as two columns
+# but stepped two bytes -- either way the third byte, 0x80, was written to
+# the file as a stray continuation byte, which is invalid UTF-8 (issue #107).
+# ":set fopt" after the file loads exercises the write side.
+edit "fopt=2 replace on write"     ok ":set fopt=2\r"  "x${JSP}y\n"  "x  y\n"
+edit "fopt=8 entab, jpspace top"   ok ":set fopt=8\r"  "${JSP}x\n"   "  x\n"
+# an ideographic space plus six ASCII spaces is eight columns of leading
+# whitespace, which entab writes as one tab
+edit "fopt=8 entab, jpspace + pad" ok ":set fopt=8\r"  "${JSP}      x\n" "\tx\n"
+edit "fopt=8 entab, spaces to tab" ok ":set fopt=8\r"  "        x\n" "\tx\n"
+# 'expandtab' (fopt=4) writes a tab as spaces: after a two column character
+# that is 8 - 2 = 6 of them, which a two byte walk miscounts
+edit "fopt=4 expand after kanji"   ok ":set fopt=4\r"  "${AA}\tx\n"  "${AA}      x\n"
+edit "fopt=4 expand, 4 byte char"  ok ":set fopt=4\r"  "${EM}\tx\n"  "${EM}      x\n"
+# 'delete' (fopt=1) drops trailing whitespace; a trailing ideographic space is
+# whitespace too and has to go whole
+edit "fopt=1 delete jpspace at eol" ok ":set fopt=1\r" "x${JSP} \n"  "x\n"
+# the read side of the same transform, through ':r': the stray byte landed in
+# the buffer instead of the file, but it is the same overwrite. ':r' on an
+# empty buffer keeps the empty first line, hence the leading \n.
+printf 'x\xe3\x80\x80y\n' > "$tmp/optin"
+edit "fopt=2 replace on :r"        ok ":set fopt=2\r:r $tmp/optin\r" "" "\nx  y\n"
+
 echo
 echo "the help file, which is converted and not loaded:"
 # 日本語 ten times over, in one run of ISO-2022-JP: 67 bytes in the file, 91 in

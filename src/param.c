@@ -847,7 +847,7 @@ doset(char_u *arg)
 								|| (varp == (char_u *)&curbuf->b_p_opt))
 					{
 						char_u	*	p = arg + len + 1;
-						long		val = *(long *)(varp);
+						int			val = *(int *)(varp);
 
 						switch (*p) {
 						case '+':
@@ -860,7 +860,7 @@ doset(char_u *arg)
 							val = atol(p);
 							break;
 						}
-						*(long *)(varp) = val;
+						*(int *)(varp) = val;
 					}
 					else
 #endif
