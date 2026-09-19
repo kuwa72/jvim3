@@ -353,6 +353,14 @@ run gui "kanji input holding 0xa0"  'i<u30A0><u3042><ESC>' 'X\n' '\xe3\x82\xa0\x
 # the bytes a,e5,8c,e3,81,97,e3,81,a6,96 -- 化's 0x96 moved behind て. The
 # <eNNNN> keys are posted in one burst, the way an IME commits a string.
 run gui "kanji committed after ascii" 'ia<e5316><e3057><e3066><ESC>' '\n' 'a\xe5\x8c\x96\xe3\x81\x97\xe3\x81\xa6\n'
+# a Unicode WM_CHAR is checked against the control codes by its low byte, so a
+# committed character whose low byte is Ctrl-@ (0x00) or Ctrl-^ (0x1e) is
+# swallowed as "already processed on WM_KEYDOWN" (issue #125): U+3000, the
+# ideographic space the IME produces for the space bar, never reaches the
+# buffer. U+FF00 shares the 0x00 low byte; U+301E the 0x1e one.
+run gui "ideographic space inserts" 'i<u3000><ESC>' 'X\n' '\xe3\x80\x80X\n'
+run gui "kanji with a 0x00 low byte" 'i<uFF00><ESC>' 'X\n' '\xef\xbc\x80X\n'
+run gui "kanji with a 0x1e low byte" 'i<u301E><ESC>' 'X\n' '\xe3\x80\x9eX\n'
 colours_a_file "the rules colour a file"
 draws_a_background "a rule draws on a colour"
 

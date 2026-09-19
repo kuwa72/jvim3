@@ -21,7 +21,7 @@ JVim 3.0-j2.1b (2002 Dec 24) 由来
 対応環境       Windows 10/11 (Win32 GUI + コンソール)、Linux、
                FreeBSD、NetBSD、OpenBSD、DragonFly
 テスト         379 ケース。上記すべてで CI が実行。Windows のキー入力は
-               scripts/test-winkeys.sh の 17 ケース (WSL から実機で実行)。
+               scripts/test-winkeys.sh の 20 ケース (WSL から実機で実行)。
                Windows 版の実行そのものは CI で 6 ケース
 ライセンス     パブリックドメイン — LICENSE を参照。付随する寄付のお願いは
                uganda.txt にあります
