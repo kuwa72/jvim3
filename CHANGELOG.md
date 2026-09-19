@@ -10,6 +10,8 @@ repository and would drift within three releases.
 
 ## Unreleased
 
+## 1.3.0 — 2026-09-19
+
 ### Added
 
 - The cursor keys page the `:help` screen: down is SPACE, up is `b`. Only the
@@ -20,8 +22,17 @@ repository and would drift within three releases.
 - Bundled standalone lightweight C code formatter tool (`tools/cformat.c` / `cformat.exe`) in Windows packages.
 - Added `:macros` command to display recorded keyboard macros only.
 - Enhanced tag jump candidate list with filename, kind/type, and tag name display, clipping lines to screen width.
-- Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales.
-- Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, and `jvimtutor` / `:Tutor`.
+- Added `jvimtutor` / `jvimtutor.bat` runner and `:tutor` / `:Tutor` commands to practice Vim using a safe temporary copy of the tutorial, prioritizing Japanese (`tutor.j`) on Japanese locales. The Windows release packages now include `jvimtutor.bat` and the `tutor/` files.
+- Syntax highlighting definitions for TypeScript, Zig, Julia, Dart, Elixir, Erlang, GraphQL, Nix, and SCSS, with `syntax/filetype.jvsyn` updated to recognise them.
+- `smartindent` beyond C: `cinwords` is honoured, a line ending in `:` indents the next, and a `#` comment keeps the indent of the line before it.
+- Five new color schemes: `catppuccin-latte`, `catppuccin-mocha`, `everforest`, `kanagawa`, and `rose-pine`.
+- The `smartcase` (`scs`) option: with `ignorecase` set, a pattern in all lowercase ignores case and one containing an uppercase letter does not.
+- Separate histories for search and Ex commands: `↑` on the `:` line recalls only commands, and on the `/` or `?` prompt only search patterns.
+- `'?` and `` `? `` list the marks that are set, with line, column and a text preview; the mark typed next is jumped to, and `Esc` cancels.
+- `"?` lists the registers with a preview of their contents; the register typed next is used by the command that follows, and `Esc` cancels.
+- `errorformat` accepts several comma-separated formats, so `:cf` and `:make` read MSVC-, GCC- and Clang-style diagnostics in one run.
+- The regular expressions understand `\v` (very magic) and `\V` (very nomagic), and the character classes `\d` `\D` `\w` `\W` `\s` `\S`.
+- Added tests in `scripts/test-editing.sh` for `:macros`, internal re-indentation, tag jump candidates, `jvimtutor` / `:Tutor`, mark and register candidate lists, history separation, `smartcase`, the new regular expression syntax, and comma-separated `errorformat`.
   379 cases now.
 
 
@@ -275,12 +286,55 @@ repository and would drift within three releases.
   name. Now a code point is only a gaiji if `cp2sjis()` puts it in the
   F0–F9 range, `#XXXX#` on input is converted through `sjis2cp()` into
   UTF-8, and an emoji round-trips as itself instead of `#F0XX#`.
+- **The GUI swallowed the ideographic space the IME sent.** On a Unicode
+  window `WM_CHAR` carries a whole UTF-16 code point, but the handler in
+  `src/winjnt.c` still compared only `LOBYTE(wParam)` with the control
+  codes, so U+3000 — low byte `0x00` — matched `Ctrl('@')` and was dropped
+  as a control echo that `WM_KEYDOWN` had already queued; pressing the
+  space bar with the IME on inserted nothing. Every BMP character whose
+  low byte is `0x00` or `0x1e` was affected the same way, and the `Ctrl-C`,
+  cursor and `FEPCTRL` key tests beside it shared the assumption. Each now
+  looks at all of `wParam`, so a real control key is still swallowed and a
+  character that merely shares its low byte reaches the buffer (#125).
 
 ### 日本語
 
 - `:help` 画面をカーソルキーでめくれるようになりました。↓ が SPACE、↑ が `b`
   と同じ動きです。これまで反応したのは *Shift* 付きの矢印だけで、普通の矢印は
   下の不具合の入口になっていました。
+- `:` 行のコマンドライン補完を強化しました。`:colorscheme`、`:highlight`、
+  `:syntax` で補完が効きます。
+- `equalprg` が空のとき `=` オペレータ（`==`、`=G` など）を内部の再インデントで
+  処理するようになり、Windows・Unix とも外部 `indent` への依存をなくしました。
+- 単体で使える軽量な C コードフォーマッタ（`tools/cformat.c` / `cformat.exe`）を
+  Windows パッケージに同梱しました。
+- 記録したキーボードマクロだけを表示する `:macros` コマンドを追加しました。
+- タグジャンプの候補一覧にファイル名・種別（kind）・タグ名を表示するように
+  しました。画面幅に収まらない行は切り詰めます。
+- Vim 練習用の `jvimtutor` / `jvimtutor.bat` と `:tutor` / `:Tutor` コマンドを
+  追加しました。チュートリアルの一時コピーで練習でき、日本語ロケールでは
+  日本語版（`tutor.j`）を優先します。Windows のリリースパッケージにも
+  `jvimtutor.bat` と `tutor/` を同梱しました。
+- TypeScript、Zig、Julia、Dart、Elixir、Erlang、GraphQL、Nix、SCSS の
+  シンタックスハイライト定義を追加し、`syntax/filetype.jvsyn` の
+  ファイル種別対応も更新しました。
+- `smartindent` が C 以外でも効くようになりました。`cinwords` を解釈し、
+  `:` で終わる行の次を字下げし、`#` コメントは直前の字下げを引き継ぎます。
+- カラースキームに `catppuccin-latte`、`catppuccin-mocha`、`everforest`、
+  `kanagawa`、`rose-pine` の 5 つを追加しました。
+- `smartcase`（`scs`）オプションを追加しました。`ignorecase` と併用すると、
+  すべて小文字のパターンは大小文字を無視し、大文字を含むパターンは区別して
+  検索します。
+- 検索履歴と Ex コマンド履歴を分けました。`:` 行で `↑` を押すとコマンドだけ、
+  `/`・`?` のプロンプトでは検索パターンだけが呼び出されます。
+- `'?` と `` `? `` で設定済みマークの一覧（行・桁・本文プレビュー）を表示します。
+  続けて押したマークへジャンプし、`Esc` でキャンセルできます。
+- `"?` でレジスタ一覧と内容のプレビューを表示します。続けて押したレジスタが
+  次の操作に使われ、`Esc` でキャンセルできます。
+- `errorformat` がカンマ区切りの複数形式を受け付けるようになり、`:cf` / `:make`
+  で MSVC・GCC・Clang 形式の診断をまとめて読めます。
+- 正規表現が `\v`（very magic）と `\V`（very nomagic）、および文字クラス
+  `\d` `\D` `\w` `\W` `\s` `\S` を解釈するようになりました。
 - **`Q` でエディタが落ちていました。** `Qj`、`Q}`、`Q` に何かモーションを
   続けた場合すべてで、整形を始める前に NULL 参照で落ちます。プラットフォームを
   問いません。`src/ops.c` の `doformat()` は挿入する文字を持たないまま
@@ -522,6 +576,17 @@ repository and would drift within three releases.
   変換せずに展開していました。コードポイントが `cp2sjis()` で F0–F9 範囲に
   なる場合だけ外字とし、入力の `#XXXX#` は `sjis2cp()` で UTF-8 に変換
   します。絵文字は `#F0XX#` ではなくそのまま往復します。
+- **GUI 版で IME の全角スペースが吞まれていました。** Unicode ウィンドウ
+  では `WM_CHAR` の `wParam` が UTF-16 のコードポイント全体を持ちますが、
+  `src/winjnt.c` のハンドラは `LOBYTE(wParam)` だけを制御コードと比較して
+  いたため、下位バイトが `0x00` の U+3000 が `Ctrl('@')` に一致し、
+  `WM_KEYDOWN` で処理済みの制御エコーとして捨てられていました。IME を
+  オンにしてスペースキーを押しても何も挿入されない原因はこれです。
+  下位バイトが `0x00` または `0x1e` の BMP 文字すべてに同じ影響があり、
+  隣接する `Ctrl-C`・カーソル・`FEPCTRL` の判定も同じ前提を共有してい
+  ました。いずれも `wParam` 全体を見るようにし、本物の制御キーだけを
+  吞み、下位バイトが偶然一致する文字はバッファへ届くようにしました
+  (#125)。
 
 ## 1.2.1 — 2026-09-01
 
