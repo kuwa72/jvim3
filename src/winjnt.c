@@ -2735,7 +2735,7 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		}
 		if (cmode)
 		{
-			if (LOBYTE(wParam) == Ctrl('C'))
+			if (wParam == Ctrl('C'))
 				yank_cmode(hWnd, TRUE);
 			clear_cmode(hWnd);
 #if defined(KANJI) && defined(SYNTAX)
@@ -2743,34 +2743,43 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 				updateScreen(CLEAR);
 #endif
 			cmode = FALSE;
-			if (LOBYTE(wParam) == Ctrl('C'))
+			if (wParam == Ctrl('C'))
 			{
 				ctrlc_pressed = FALSE;
 				return(0);
 			}
 		}
 		if (s_cursor && config_mouse
-			&& (((State & NORMAL) && strchr("aAiIoOR", LOBYTE(wParam)) != NULL)
-								|| ((State & INSERT) && LOBYTE(wParam) != ESC)))
+			&& (((State & NORMAL) && wParam <= 0xff
+						&& strchr("aAiIoOR", LOBYTE(wParam)) != NULL)
+								|| ((State & INSERT) && wParam != ESC)))
 		{
 			s_cursor = FALSE;
 			ShowCursor(FALSE);
 		}
-		else if (!s_cursor && (State & INSERT) && LOBYTE(wParam) == ESC)
+		else if (!s_cursor && (State & INSERT) && wParam == ESC)
 		{
 			s_cursor = TRUE;
 			ShowCursor(TRUE);
 		}
 		if (!keybuf_chk(UTF8_MAXLEN + 1))
 			return(0);
+		/*
+		 * A Unicode WM_CHAR carries a UTF-16 code point, so key and
+		 * control code tests must look at all of wParam: U+3000, the
+		 * ideographic space, has the same low byte as Ctrl('@') and is
+		 * not a control echo to swallow.
+		 */
 		switch (LOBYTE(wParam)) {
 		case Ctrl('^'):
 		case Ctrl('@'):
 			/* already processed on WM_KEYDOWN */
-			break;
+			if (wParam <= 0xff)
+				break;
+			/* no break */
 		default:
 #ifdef FEPCTRL
-			if (!(State & NORMAL)
+			if (!(State & NORMAL) && wParam <= 0xff
 					&& (curbuf->b_p_fc && (p_fk != NULL && STRRCHR(p_fk, ESC+'@') != NULL)))
 			/* shift + space key special routine */
 			{
