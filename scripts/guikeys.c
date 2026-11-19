@@ -7,7 +7,8 @@
  * special keys and WM_CHAR for text, which is how the real keyboard reaches
  * the same handlers (see WM_KEYDOWN / WM_CHAR in winjnt.c).  The key spec is
  * the one feedkeys.exe reads, except that <uNNNN> sends one UTF-16 unit, which
- * is what the Unicode window gets from the IME.
+ * is what the Unicode window gets from the IME, and <mNNNN> sends the same unit
+ * as WM_IME_CHAR, which is the message an IME commit really delivers.
  *
  * With "-shot <file.bmp>" the window's client area is saved as a bitmap once the
  * keys have gone in and the editor is then left alone. That is the only way to
@@ -254,6 +255,11 @@ int main(int argc, char **argv)
 					{	/* same, no sleep: an IME commits a whole string in a
 						 * burst, faster than the editor can read it */
 						PostMessageW(hwnd, WM_CHAR,
+									(WPARAM)strtol(nm + 1, NULL, 16), 1);
+					}
+					else if (nm[0] == 'm')
+					{	/* the message a commit really arrives as, no sleep */
+						PostMessageW(hwnd, WM_IME_CHAR,
 									(WPARAM)strtol(nm + 1, NULL, 16), 1);
 					}
 					else if (!strcmp(nm, "CR")) text_key('\r');

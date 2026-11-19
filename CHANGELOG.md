@@ -10,6 +10,25 @@ repository and would drift within three releases.
 
 ## Unreleased
 
+### Fixed
+
+- **A character committed by the IME could disappear.** The GUI's message loop
+  picked key messages out of the queue with a range filter, which skipped the
+  `WM_IME_CHAR` an IME commit arrives as: a key typed after the commit was
+  handled first, so ESC left insert mode before the character was put down and
+  it was read as a normal-mode command. Messages are now taken in the order they
+  arrived, and `WM_IME_CHAR` is handed to `WM_CHAR` at once instead of being
+  posted to the back of the queue.
+
+### 日本語
+
+- **IME が確定した文字が消えることがありました。** GUI 版のメッセージループが
+  キー入力だけを範囲指定で取り出していたため、確定文字が届く `WM_IME_CHAR` を
+  飛ばし、確定の直後に打ったキーを先に処理していました。ESC が先に挿入モードを
+  抜けてしまい、確定文字はノーマルモードのコマンドとして読まれて消えていました。
+  メッセージは到着順に処理し、`WM_IME_CHAR` は後ろに積み直さずその場で
+  `WM_CHAR` に渡すようにしました。
+
 ## 1.3.0 — 2026-09-19
 
 ### Added

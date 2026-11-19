@@ -353,6 +353,12 @@ run gui "kanji input holding 0xa0"  'i<u30A0><u3042><ESC>' 'X\n' '\xe3\x82\xa0\x
 # the bytes a,e5,8c,e3,81,97,e3,81,a6,96 -- 化's 0x96 moved behind て. The
 # <eNNNN> keys are posted in one burst, the way an IME commits a string.
 run gui "kanji committed after ascii" 'ia<e5316><e3057><e3066><ESC>' '\n' 'a\xe5\x8c\x96\xe3\x81\x97\xe3\x81\xa6\n'
+# A commit really arrives as WM_IME_CHAR. The message loop looked for key
+# messages with a range filter, which skipped the IME message and took a key
+# that followed out of the queue first: the commit then landed after ESC had
+# left insert mode and the character was lost. <e1b> is the character the
+# escape keydown translates to, posted in the same burst as the commit.
+run gui "ime commit then escape" 'i<m3042><e1b>' '\n' '\xe3\x81\x82\n'
 # a Unicode WM_CHAR is checked against the control codes by its low byte, so a
 # committed character whose low byte is Ctrl-@ (0x00) or Ctrl-^ (0x1e) is
 # swallowed as "already processed on WM_KEYDOWN" (issue #125): U+3000, the
