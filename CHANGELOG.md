@@ -10,8 +10,12 @@ repository and would drift within three releases.
 
 ## Unreleased
 
+## 1.3.1 — 2026-11-23
+
 ### Fixed
 
+- **The Unix build failed on distributions without `<termio.h>`.** glibc has
+  dropped it, so Linux now uses `<termios.h>` like the BSDs already did.
 - **A character committed by the IME could disappear.** The GUI's message loop
   picked key messages out of the queue with a range filter, which skipped the
   `WM_IME_CHAR` an IME commit arrives as: a key typed after the commit was
@@ -22,6 +26,8 @@ repository and would drift within three releases.
 
 ### 日本語
 
+- **`<termio.h>` のない環境で Unix 版がビルドできませんでした。** glibc が
+  削除したため、Linux でも BSD と同じ `<termios.h>` を使うようにしました。
 - **IME が確定した文字が消えることがありました。** GUI 版のメッセージループが
   キー入力だけを範囲指定で取り出していたため、確定文字が届く `WM_IME_CHAR` を
   飛ばし、確定の直後に打ったキーを先に処理していました。ESC が先に挿入モードを
