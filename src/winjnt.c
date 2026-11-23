@@ -2706,6 +2706,15 @@ WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			lpCurrCurs = IDC_ARROW;
 		}
 		break;
+	case WM_IME_CHAR:
+		/*
+		 * Hand the committed character to WM_CHAR now. Letting
+		 * DefWindowProc post it would put it behind keys the user typed
+		 * after committing, so it could be handled after they had left
+		 * insert mode.
+		 */
+		SendMessageW(hWnd, WM_CHAR, wParam, lParam);
+		return(0);
 	case WM_CHAR:
 		{
 			static WCHAR	hisur = 0;		/* pending high surrogate */
@@ -6158,15 +6167,13 @@ WaitForChar(int msec)
 			else
 				fepsync = FALSE;
 #endif
-			if (PeekMessageW(&msg, NULL, WM_KEYFIRST, WM_KEYLAST, PM_REMOVE))
-			{
-				if (!TranslateAcceleratorW(hVimWnd, hAcc, &msg))
-				{
-					TranslateMessage(&msg);
-					DispatchMessageW(&msg);
-				}
-				continue;
-			}
+			/*
+			 * Take the messages in the order they arrived. A range filter
+			 * that picked out key messages would skip the WM_IME_CHAR an
+			 * IME commit arrives as and handle a key typed after the commit
+			 * first -- ESC then left insert mode before the committed
+			 * character was put down, and the character was lost.
+			 */
 			if (GetMessageW(&msg, NULL, 0, 0))
 			{
 				if (!TranslateAcceleratorW(hVimWnd, hAcc, &msg))
