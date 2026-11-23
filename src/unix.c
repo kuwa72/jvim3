@@ -73,11 +73,15 @@ extern int execvp __ARGS((const char *, const char **));
 # include <termio.h>
 #else	/* SYSV_UNIX */
 # include <sys/time.h>
-# if defined(hpux) || defined(linux) || defined(__CYGWIN__)
+# if defined(hpux) || defined(__CYGWIN__)
 #  include <termio.h>
 #  if defined(hpux) && !defined(SIGWINCH)	/* hpux 9.01 has it */
 #   define SIGWINCH SIGWINDOW
 #  endif
+# elif defined(linux)
+#  include <termios.h>		/* termio.h is gone from modern glibc */
+#  define TCGETA TCGETS
+#  define TCSETA TCSETS
 # elif defined(BSD4_4)
 #  include <termios.h>
 #  define TCGETA TIOCGETA
@@ -955,7 +959,7 @@ mch_settmode(int raw)
 {
 #if defined(ECHOE) && defined(ICANON) && !defined(__NeXT__)
 	/* for "new" tty systems */
-#if defined(CONVEX) || defined(BSD4_4)
+#if defined(CONVEX) || defined(BSD4_4) || defined(linux)
 	static struct termios told;
 		   struct termios tnew;
 # else
